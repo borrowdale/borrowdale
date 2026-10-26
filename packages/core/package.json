@@ -1,0 +1,41 @@
+{
+  "name": "@borrowdale/core",
+  "version": "0.0.0",
+  "description": "Deterministic hand-drawn shapes for SVG and canvas.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "@borrowdale/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "!dist/*.tsbuildinfo",
+    "src"
+  ],
+  "scripts": {
+    "prepack": "tsc -b"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/borrowdale/borrowdale.git",
+    "directory": "packages/core"
+  },
+  "keywords": [
+    "hand-drawn",
+    "sketch",
+    "rough",
+    "svg",
+    "canvas"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "roughjs": "4.6.6"
+  }
+}

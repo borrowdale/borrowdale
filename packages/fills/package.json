@@ -1,0 +1,41 @@
+{
+  "name": "@borrowdale/fills",
+  "version": "0.0.0",
+  "description": "Hand-drawn SVG pattern fills and backgrounds.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "@borrowdale/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "!dist/*.tsbuildinfo",
+    "src"
+  ],
+  "scripts": {
+    "prepack": "tsc -b"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/borrowdale/borrowdale.git",
+    "directory": "packages/fills"
+  },
+  "keywords": [
+    "hand-drawn",
+    "sketch",
+    "svg",
+    "pattern",
+    "texture"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@borrowdale/core": "0.0.0"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "name": "@borrowdale/examples",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@borrowdale/core": "0.0.0",
+    "@borrowdale/fills": "0.0.0"
+  }
+}
