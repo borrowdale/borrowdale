@@ -1,0 +1,22 @@
+{
+  "name": "borrowdale-monorepo",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "typecheck": "tsc -b && tsc -p tsconfig.test.json",
+    "test": "vitest run",
+    "example": "node apps/examples/core-and-fills.mjs"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^3.0.3",
+    "happy-dom": "^21.0.4",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.5",
+    "vitest": "^5.0.5"
+  }
+}

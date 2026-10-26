@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "noEmit": true,
+    "types": [],
+    "customConditions": ["@borrowdale/source"]
+  },
+  "include": ["packages/*/src", "packages/*/test", "vitest.config.ts"]
+}
