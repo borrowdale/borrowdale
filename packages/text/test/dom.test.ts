@@ -289,6 +289,14 @@ describe('drawText', () => {
     );
   });
 
+  it('draws when one face of the family has loaded and another has not, leaving the rest to check()', () => {
+    const context = fakeContext(fontSet(true, loadedFace('Hand Test'), { family: 'Hand Test', status: 'unloaded' }));
+
+    drawText(context as unknown as CanvasRenderingContext2D, layoutText('AB', at));
+
+    expect(context.fillText).toHaveBeenCalledTimes(1);
+  });
+
   it('finds the loaded face among faces of other families', () => {
     const context = fakeContext(fontSet(true, loadedFace('Hand Test'), loadedFace('Other Font')));
 
@@ -510,9 +518,28 @@ describe('loadFont', () => {
     expect(other.load).not.toHaveBeenCalled();
   });
 
-  it('fails when a face of the family the set already has cannot load', async () => {
+  it('still fails when a face it made in an earlier call cannot load', async () => {
+    vi.stubGlobal('FontFace', BrokenFontFace);
+    const fonts = pageFonts();
+    await expect(loadInto(fonts)).rejects.toThrow('the font file is broken');
+
+    const again = loadInto(fonts);
+
+    await expect(again).rejects.toThrow('the font file is broken');
+  });
+
+  it('does not fail when a face of the family from elsewhere cannot load', async () => {
     vi.stubGlobal('FontFace', RecordingFontFace);
 
-    await expect(loadInto(pageFonts(blockedFace('Hand Test')))).rejects.toThrow('the face was blocked');
+    await expect(loadInto(pageFonts(blockedFace('Hand Test')))).resolves.toBeUndefined();
+  });
+
+  it('still tries to load a face of the family from elsewhere that cannot load', async () => {
+    vi.stubGlobal('FontFace', RecordingFontFace);
+    const blocked = blockedFace('Hand Test');
+
+    await loadInto(pageFonts(blocked));
+
+    expect(blocked.load).toHaveBeenCalledTimes(1);
   });
 });

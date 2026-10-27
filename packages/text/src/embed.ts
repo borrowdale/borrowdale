@@ -22,12 +22,16 @@ export function fontFaceCss(fontFiles: FontFiles, labels?: readonly string[]): s
 
 /**
  * Adds every file of a font to a page's fonts (`document.fonts`), except those an earlier call
- * already added, and waits until every face of the font's family there has loaded. Every file, not
- * only those some text needs: `drawText` can only check faces that are in the set, so a face left
- * out would let text in its range draw in a fallback font. Every face of the family, not only these:
- * `drawText` also counts faces from elsewhere, such as those of `fontFaceCss` rules, which stay
- * unloaded until the page draws text with them. The faces are made from the files' bytes, not
- * fetched from a URL, so no Content-Security-Policy blocks them. Needs `FontFace` and `atob`.
+ * already added, and waits until every face of the font's family there has loaded or failed, or
+ * until a face it made fails. Every file, not only those some text needs: `drawText` can only check
+ * faces that are in the set, so a face left out would let text in its range draw in a fallback
+ * font. Every face of the family, not only these: `drawText` also counts faces from elsewhere, such
+ * as those of `fontFaceCss` rules, which stay unloaded until the page draws text with them. Those
+ * are fetched if they come from a URL, with no time limit, and one that fails does not fail this
+ * call; `drawText` then throws for any text in that face's range, even where this call's faces
+ * could draw it. This call fails only if a face that `loadFont` made for the family, in this call
+ * or an earlier one, cannot load. Its faces are made from the files' bytes, not fetched from a URL,
+ * so no Content-Security-Policy blocks them. Needs `FontFace` and `atob`.
  */
 export async function loadFont(fonts: FontFaceSet, fontFiles: FontFiles): Promise<void> {
   checkFontFiles(fontFiles);
@@ -48,7 +52,7 @@ export async function loadFont(fonts: FontFaceSet, fontFiles: FontFiles): Promis
       faces.push(face);
     }
   }
-  await Promise.all(faces.map((face) => face.load()));
+  await Promise.all(faces.map((face) => (sources.has(face) ? face.load() : face.load().catch(() => face))));
 }
 
 /**
