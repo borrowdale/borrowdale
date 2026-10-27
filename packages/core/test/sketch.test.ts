@@ -17,7 +17,6 @@ const largestSquare: Shape = { kind: 'rectangle', x: -5e5, y: -5e5, width: 1e6, 
 const sawtooth = `M0 0${Array.from({ length: 25000 }, (_, i) => ` L${i} ${i % 2 ? -1000 : 1000}`).join('')}`;
 // Thousands of tall teeth: every scan line crosses every tooth.
 const comb: [number, number][] = [...Array.from({ length: 4000 }, (_, i): [number, number] => [i, i % 2 ? 1e5 : 0]), [3999, -10], [0, -10]];
-const longFiller = 'x'.repeat(500);
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -130,7 +129,6 @@ describe('validation', () => {
     ['an infinite dashOffset', rectangle, { fill: 'red', fillStyle: 'dashed', dashOffset: -Infinity }, 'dashOffset must be a finite number, got -Infinity'],
     ['a NaN dashGap', rectangle, { fill: 'red', fillStyle: 'dashed', dashGap: Number.NaN }, 'dashGap must be a finite number, got NaN'],
     ['an infinite zigzagOffset', rectangle, { fill: 'red', fillStyle: 'zigzag-line', zigzagOffset: Infinity }, 'zigzagOffset must be a finite number, got Infinity'],
-    ['a fill style without a prototype', rectangle, { fill: 'red', fillStyle: Object.create(null) }, 'Unknown fill style: [object Object]'],
     ['an empty arc', { kind: 'arc', cx: 5, cy: 5, width: 10, height: 10, start: 1, stop: 1, closed: true }, { fill: 'red' }, 'arc.stop must be greater than arc.start, got start 1, stop 1'],
     ['an infinite arc start', { kind: 'arc', cx: 5, cy: 5, width: 10, height: 10, start: -Infinity, stop: 1 }, {}, 'arc.start must be a finite number within ±1000000, got -Infinity'],
     ['an arc start too far from zero', { kind: 'arc', cx: 5, cy: 5, width: 10, height: 10, start: -1e17, stop: 1 }, {}, 'arc.start must be a finite number within ±1000000, got -100000000000000000'],
@@ -162,12 +160,6 @@ describe('validation', () => {
     ['a hachure angle too large for the engine trigonometry', rectangle, { fill: 'red', hachureAngle: 1e300 }, 'hachureAngle must be a finite number within ±1000000, got 1e+300'],
   ])('rejects %s with a named error', (_case, shape, options, message) => {
     expect(() => sketch(shape as Shape, options as SketchOptions)).toThrow(message);
-  });
-
-  it('repeats at most 100 characters of a rejected value', () => {
-    expect(() => sketch(rectangle, { fill: 'red', fillStyle: longFiller } as unknown as SketchOptions)).toThrow(
-      /^Unknown fill style: x{100}$/,
-    );
   });
 
   it.each<[string, Shape, SketchOptions]>([

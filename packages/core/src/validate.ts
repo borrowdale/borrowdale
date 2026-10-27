@@ -6,8 +6,6 @@ const MAX_CURVE_STEPS = 1000;
 const MAX_ROUGHNESS = 10;
 // Degrees. The engine's own trigonometry reduces arguments only up to about 1.6e6 radians.
 const MAX_ANGLE = 1e6;
-// Longest value an error message repeats back.
-const MAX_SHOWN = 100;
 
 // Both must be finite and within ±MAX_COORDINATE; a size must also not be negative.
 type FieldRule = 'number' | 'size';
@@ -60,7 +58,7 @@ const OPTION_RULES: Record<keyof SketchOptions, OptionRule> = {
   fillStyle: {
     ok: (value) => (FILL_STYLES as readonly unknown[]).includes(value),
     expected: 'a fill style',
-    message: (value) => `Unknown fill style: ${typeof value === 'string' ? value.slice(0, MAX_SHOWN) : show(value)}`,
+    message: (value) => `Unknown fill style: ${String(value)}`,
   },
   fillWeight: FINITE,
   hachureAngle: { ok: (value) => isWithin(value, MAX_ANGLE), expected: `a finite number within ±${MAX_ANGLE}` },
@@ -166,14 +164,7 @@ function assertNumber(name: string, value: unknown): asserts value is number {
   }
 }
 
-// Strings are quoted so `"10"` is visibly not the number 10. Objects are shown by their tag, which
-// works for objects without a prototype too, and long values are cut short.
+// Strings are quoted so `"10"` is visibly not the number 10.
 function show(value: unknown): string {
-  const text =
-    typeof value === 'string'
-      ? JSON.stringify(value)
-      : typeof value === 'object' && value !== null && !Array.isArray(value)
-        ? Object.prototype.toString.call(value)
-        : String(value);
-  return text.length > MAX_SHOWN ? `${text.slice(0, MAX_SHOWN)}…` : text;
+  return typeof value === 'string' ? JSON.stringify(value) : String(value);
 }
