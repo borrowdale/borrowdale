@@ -31,7 +31,7 @@ describe('stableKey', () => {
 });
 
 describe('seedFromHash', () => {
-  it('never returns 0, which rough.js would treat as unseeded', () => {
+  it('never returns 0, which the stroke engine would treat as unseeded', () => {
     expect(seedFromHash(0)).toBe(1);
   });
 

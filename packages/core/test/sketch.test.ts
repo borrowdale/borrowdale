@@ -120,6 +120,16 @@ describe('sketch', () => {
     );
   });
 
+  it('keeps a line outline even with stroke none, as the engine always has', () => {
+    expect(sketch({ kind: 'line', x1: 0, y1: 0, x2: 10, y2: 10 }, { stroke: 'none' }).paths).toHaveLength(1);
+  });
+
+  it('drops the outline of a filled shape when stroke is none', () => {
+    expect(sketch(rectangle, { stroke: 'none', fill: 'red', fillStyle: 'solid' }).paths).toMatchObject([
+      { fill: 'red', stroke: 'none' },
+    ]);
+  });
+
   it('passes the stroke style through', () => {
     expect(sketch(rectangle, { stroke: '#333', strokeWidth: 2 }).paths[0]).toMatchObject({
       stroke: '#333',
