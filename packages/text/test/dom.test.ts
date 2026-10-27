@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { appendText, drawText, layoutText, loadFont, type TextStyle } from '@borrowdale/text';
+import { appendText, drawText, layoutText, loadFont, type FontFile, type TextStyle } from '@borrowdale/text';
 import { at, handFiles } from './support/hand-font.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -101,10 +101,10 @@ class BrokenFontFace extends RecordingFontFace {
   });
 }
 
-type SetFace = { family: string; load: () => Promise<unknown> };
+type PageFace = { family: string; load: () => Promise<unknown> };
 
 // A FontFaceSet that holds what is added to it, in order, as a page's `document.fonts` does.
-function faceSet(...faces: SetFace[]) {
+function pageFonts(...faces: PageFace[]) {
   const held = new Set<unknown>(faces);
   return {
     add: vi.fn((face: unknown) => held.add(face)),
@@ -113,9 +113,10 @@ function faceSet(...faces: SetFace[]) {
   };
 }
 
-// A face the page has from elsewhere, such as a `fontFaceCss` rule, which the page reports in quotes.
+// A face the page has from elsewhere, such as a `fontFaceCss` rule, whose family the page reports in
+// quotes.
 function ruleFace(family: string) {
-  return { family, load: vi.fn(async () => undefined) };
+  return { family: `"${family}"`, load: vi.fn(async () => undefined) };
 }
 
 // A face the page has from elsewhere that cannot load, as a rule's face under a strict font-src.
@@ -128,7 +129,7 @@ function blockedFace(family: string) {
   };
 }
 
-function loadingInto(fonts: unknown, files = handFiles) {
+function loadInto(fonts: unknown, files = handFiles) {
   return loadFont(fonts as FontFaceSet, files);
 }
 
@@ -365,9 +366,9 @@ describe('drawText', () => {
 describe('loadFont', () => {
   it('adds a face for every file, each with its unicode-range', async () => {
     vi.stubGlobal('FontFace', RecordingFontFace);
-    const fonts = faceSet();
+    const fonts = pageFonts();
 
-    await loadingInto(fonts);
+    await loadInto(fonts);
 
     expect(RecordingFontFace.made).toEqual([
       expect.objectContaining({
@@ -388,27 +389,27 @@ describe('loadFont', () => {
   it('waits for the faces to load, so a file that fails to load fails the call', async () => {
     vi.stubGlobal('FontFace', BrokenFontFace);
 
-    await expect(loadingInto(faceSet())).rejects.toThrow('the font file is broken');
+    await expect(loadInto(pageFonts())).rejects.toThrow('the font file is broken');
   });
 
   it('decodes each file to its bytes', async () => {
     vi.stubGlobal('FontFace', RecordingFontFace);
 
-    await loadingInto(faceSet(), { ...handFiles, files: [{ ranges: [[0x41, 0x41]], woff2: '/w==' }] });
+    await loadInto(pageFonts(), { ...handFiles, files: [{ ranges: [[0x41, 0x41]], woff2: '/w==' }] });
 
     expect(RecordingFontFace.made[0]?.source).toEqual(Uint8Array.from([0xff]));
   });
 
   it('rejects font files it cannot use', async () => {
-    await expect(loadingInto(faceSet(), { ...handFiles, family: 'a;b' })).rejects.toThrow('Invalid font files: family must be');
+    await expect(loadInto(pageFonts(), { ...handFiles, family: 'a;b' })).rejects.toThrow('Invalid font files: family must be');
   });
 
   it('adds no file a second time to the same set', async () => {
     vi.stubGlobal('FontFace', RecordingFontFace);
-    const fonts = faceSet();
+    const fonts = pageFonts();
 
-    await loadingInto(fonts);
-    await loadingInto(fonts);
+    await loadInto(fonts);
+    await loadInto(fonts);
 
     expect(fonts.add).toHaveBeenCalledTimes(2);
   });
@@ -416,68 +417,78 @@ describe('loadFont', () => {
   it('adds the files to each set it is given', async () => {
     vi.stubGlobal('FontFace', RecordingFontFace);
 
-    await loadingInto(faceSet());
-    await loadingInto(faceSet());
+    await loadInto(pageFonts());
+    await loadInto(pageFonts());
 
     expect(RecordingFontFace.made).toHaveLength(4);
   });
 
   it('adds a file again once its face has left the set', async () => {
     vi.stubGlobal('FontFace', RecordingFontFace);
-    const fonts = faceSet();
+    const fonts = pageFonts();
 
-    await loadingInto(fonts);
+    await loadInto(fonts);
     fonts.delete(RecordingFontFace.made[0]);
-    await loadingInto(fonts);
+    await loadInto(fonts);
 
     expect(RecordingFontFace.made).toHaveLength(3);
   });
 
   it('adds no file again for the same family named in another letter case, as CSS matches names', async () => {
     vi.stubGlobal('FontFace', RecordingFontFace);
-    const fonts = faceSet();
+    const fonts = pageFonts();
 
-    await loadingInto(fonts);
-    await loadingInto(fonts, { ...handFiles, family: 'hand test' });
+    await loadInto(fonts);
+    await loadInto(fonts, { ...handFiles, family: 'hand test' });
 
     expect(RecordingFontFace.made).toHaveLength(2);
   });
 
+  it('adds a file listed twice in one call once', async () => {
+    vi.stubGlobal('FontFace', RecordingFontFace);
+
+    const file: FontFile = { ranges: [[0x41, 0x41]], woff2: 'QUJD' };
+
+    await loadInto(pageFonts(), { ...handFiles, files: [file, file] });
+
+    expect(RecordingFontFace.made).toHaveLength(1);
+  });
+
   it('adds the same file again for another family', async () => {
     vi.stubGlobal('FontFace', RecordingFontFace);
-    const fonts = faceSet();
+    const fonts = pageFonts();
 
-    await loadingInto(fonts);
-    await loadingInto(fonts, { ...handFiles, family: 'Other Font' });
+    await loadInto(fonts);
+    await loadInto(fonts, { ...handFiles, family: 'Other Font' });
 
     expect(RecordingFontFace.made).toHaveLength(4);
   });
 
   it('adds the same bytes again for other ranges', async () => {
     vi.stubGlobal('FontFace', RecordingFontFace);
-    const fonts = faceSet();
+    const fonts = pageFonts();
 
-    await loadingInto(fonts);
-    await loadingInto(fonts, { ...handFiles, files: [{ ranges: [[0x41, 0x41]], woff2: 'QUJD' }] });
+    await loadInto(fonts);
+    await loadInto(fonts, { ...handFiles, files: [{ ranges: [[0x41, 0x41]], woff2: 'QUJD' }] });
 
     expect(RecordingFontFace.made).toHaveLength(3);
   });
 
   it('adds other bytes for the same ranges', async () => {
     vi.stubGlobal('FontFace', RecordingFontFace);
-    const fonts = faceSet();
+    const fonts = pageFonts();
 
-    await loadingInto(fonts);
-    await loadingInto(fonts, { ...handFiles, files: [{ ranges: [[0x41, 0x42], [0x44, 0x44]], woff2: 'R0hJ' }] });
+    await loadInto(fonts);
+    await loadInto(fonts, { ...handFiles, files: [{ ranges: [[0x41, 0x42], [0x44, 0x44]], woff2: 'R0hJ' }] });
 
     expect(RecordingFontFace.made).toHaveLength(3);
   });
 
   it('loads the faces of the family the set already has, such as those of fontFaceCss rules', async () => {
     vi.stubGlobal('FontFace', RecordingFontFace);
-    const rule = ruleFace('"Hand Test"');
+    const rule = ruleFace('Hand Test');
 
-    await loadingInto(faceSet(rule));
+    await loadInto(pageFonts(rule));
 
     expect(rule.load).toHaveBeenCalledTimes(1);
   });
@@ -485,16 +496,16 @@ describe('loadFont', () => {
   it('still adds its own faces beside the faces of a fontFaceCss rule', async () => {
     vi.stubGlobal('FontFace', RecordingFontFace);
 
-    await loadingInto(faceSet(ruleFace('"Hand Test"')));
+    await loadInto(pageFonts(ruleFace('Hand Test')));
 
     expect(RecordingFontFace.made).toHaveLength(2);
   });
 
   it('leaves the faces of other families as they are', async () => {
     vi.stubGlobal('FontFace', RecordingFontFace);
-    const other = ruleFace('"Other Font"');
+    const other = ruleFace('Other Font');
 
-    await loadingInto(faceSet(other));
+    await loadInto(pageFonts(other));
 
     expect(other.load).not.toHaveBeenCalled();
   });
@@ -502,6 +513,6 @@ describe('loadFont', () => {
   it('fails when a face of the family the set already has cannot load', async () => {
     vi.stubGlobal('FontFace', RecordingFontFace);
 
-    await expect(loadingInto(faceSet(blockedFace('Hand Test')))).rejects.toThrow('the face was blocked');
+    await expect(loadInto(pageFonts(blockedFace('Hand Test')))).rejects.toThrow('the face was blocked');
   });
 });

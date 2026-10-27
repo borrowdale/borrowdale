@@ -13,8 +13,8 @@ import { at, handFont, splitFont } from './support/hand-font.js';
 
 // Characters drawn as nothing but switching their neighbours' presentation or order: removed.
 const PRESENTATION_CONTROLS = ['\uFE0E', '\uFE0F', '\u061C', '\u200E', '\u200F', '\u202A', '\u202B', '\u202C', '\u202D', '\u202E', '\u2066', '\u2067', '\u2068', '\u2069'];
-// Default-ignorable characters Chromium nevertheless draws with a width, from a fallback font. The
-// seventh, U+180F, is a combining mark, so it is listed with the character before it.
+// Default-ignorable characters Chromium nevertheless draws with a width, from a fallback font. There
+// are seven: U+180F, a combining mark, has its own test below, listed with the character before it.
 const VISIBLE_IGNORABLES = ['\u3164', '\uFFA0', '\u{1BCA0}', '\u{1BCA1}', '\u{1BCA2}', '\u{1BCA3}'];
 // Read as 10 the first time and 1 after: a font that would change between checking and measuring.
 function shiftingFont(): Font {
@@ -29,7 +29,7 @@ function shiftingFont(): Font {
 }
 
 // A font in one file whose ranges serve A, B and U+0301 the first time they are read, and only A after.
-function shiftingFiles(): Font {
+function fontWithShiftingFiles(): Font {
   let reads = 0;
   return {
     ...handFont,
@@ -176,10 +176,10 @@ describe('measureText', () => {
   });
 
   it('reads the ranges of each file once, so the ranges it checked are the ranges it measures with', () => {
-    expect(measureText('B\u0301', { fontSize: 10, font: shiftingFiles() }).missing).toEqual([]);
+    expect(measureText('B\u0301', { fontSize: 10, font: fontWithShiftingFiles() }).missing).toEqual([]);
   });
 
-  it('lists each such character and mark once', () => {
+  it('lists each character and mark from different files once', () => {
     expect(measureText('B\u0301AB\u0301', { fontSize: 10, font: splitFont }).missing).toEqual(['B\u0301']);
   });
 

@@ -21,14 +21,15 @@ import goldens from './golden/goldens.json' with { type: 'json' };
 // right-to-left pages check that the renderers keep text left to right: one whose own stylesheet
 // embeds the font with fontFaceCss and turns text right to left, where loadFont must also load the
 // rules' faces before drawText can draw, and one whose Content-Security-Policy blocks style
-// attributes. Each group of checks opens its own page, so a page that fails to load fails only its
-// own checks.
+// attributes. Each group of checks opens its own pages, so a page that fails to load fails only the
+// checks of its group.
 
 type Case = { name: string; text: string; options: LayoutOptions; style?: TextStyle };
 type Golden = TextLayout & { svg: string };
 type Drawn = { golden: Golden; svgWidth: number; domWidth: number; canvasWidth: number; shapedWidth: number };
 type Embedded = { faces: number; width: number };
-// Where Chromium puts the left edge of each renderer's text on a right-to-left page.
+// What the right-to-left pages measure: whether drawText threw and how wide it drew, and where
+// Chromium puts the left edge of each renderer's text.
 type Ruled = { drawError: string; canvasWidth: number; svgX: number; attributeX: number; domX: number };
 type Strict = { svgX: number; domX: number; domRuleX: number; svgRuleX: number };
 type Text = typeof import('@borrowdale/text');
@@ -132,7 +133,7 @@ describe('Chromium parity', () => {
   });
 
   it('draws a letter whose mark is in another Excalifont file in a fallback font, which is why it is listed', () => {
-    expect(drawn['cyrillic-stress-mark']?.svgWidth).not.toBeCloseTo(stressed.width, 1);
+    expect(Math.abs(Number(drawn['cyrillic-stress-mark']?.svgWidth) - stressed.width)).toBeGreaterThan(0.05);
   });
 
   it('adds no file a second time when loadFont is called again', () => {
@@ -160,7 +161,7 @@ describe('Chromium parity', () => {
   });
 
   it.each(shaped)('$name would be drawn at another width with kerning and ligatures left on', ({ name }) => {
-    expect(drawn[name]?.shapedWidth).not.toBeCloseTo(Number(expected[name]?.width), 1);
+    expect(Math.abs(Number(drawn[name]?.shapedWidth) - Number(expected[name]?.width))).toBeGreaterThan(0.05);
   });
 });
 
@@ -185,7 +186,7 @@ describe('Chromium, with only the files fontFaceCss picks for a label', () => {
     expect(embeddedGreek.faces).toBe(1);
   });
 
-  it('draws that label as wide as it was measured, without the file that holds the soft hyphen', () => {
+  it('draws the Greek label with a soft hyphen as wide as it was measured, without the file that holds the hyphen', () => {
     expect(embeddedGreek.width).toBeCloseTo(hyphenated.width, 1);
   });
 });
@@ -254,7 +255,7 @@ describe('Chromium, with fontFaceCss rules and a right-to-left rule in the page 
   });
 
   it('would let the rule turn the text right to left with only the direction attribute', () => {
-    expect(ruled.attributeX).not.toBeCloseTo(tickLayout.x, 1);
+    expect(ruled.attributeX).toBeLessThan(tickLayout.x - 1);
   });
 });
 
@@ -268,8 +269,9 @@ describe('Chromium, right to left under a Content-Security-Policy that blocks st
       `<html dir="rtl"><head><meta http-equiv="Content-Security-Policy" content="style-src 'none'; font-src 'none'"></head>` +
         '<body><svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1000"></svg></body></html>',
       async ({ entry, files, rule }: { entry: Case; files: typeof excalifontFiles; rule: string }) => {
-        const { appendText, layoutText, loadFont, toSvgText } = (globalThis as unknown as { borrowdaleText: Text })
-          .borrowdaleText;
+        const { appendText, layoutText, loadFont, toSvgText } = (
+          globalThis as unknown as { borrowdaleText: Text }
+        ).borrowdaleText;
         await loadFont(document.fonts, files);
         const layout = layoutText(entry.text, entry.options);
         const svg = document.querySelector('svg') as SVGSVGElement;
@@ -304,7 +306,7 @@ describe('Chromium, right to left under a Content-Security-Policy that blocks st
     expect(strict.domRuleX).toBeCloseTo(tickLayout.x, 1);
   });
 
-  it('lets a stylesheet rule turn toSvgText text right to left, as the README says, since its style is blocked', () => {
-    expect(strict.svgRuleX).not.toBeCloseTo(tickLayout.x, 1);
+  it('lets a stylesheet rule turn toSvgText text right to left, since its style is blocked', () => {
+    expect(strict.svgRuleX).toBeLessThan(tickLayout.x - 1);
   });
 });
