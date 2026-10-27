@@ -302,6 +302,7 @@ function _computeEllipsePoints(
     increment = increment / 4;
     allPoints.push([cx + rx * cos(-increment), cy + ry * sin(-increment)]);
     for (let angle = 0; angle <= Math.PI * 2; angle = angle + increment) {
+      charge();
       const p: Point = [cx + rx * cos(angle), cy + ry * sin(angle)];
       corePoints.push(p);
       allPoints.push(p);
@@ -316,6 +317,7 @@ function _computeEllipsePoints(
     ]);
     const endAngle = Math.PI * 2 + radOffset - 0.01;
     for (let angle = radOffset; angle < endAngle; angle = angle + increment) {
+      charge();
       const p: Point = [
         randomOffsetAround(offset, o) + cx + rx * cos(angle),
         randomOffsetAround(offset, o) + cy + ry * sin(angle),
