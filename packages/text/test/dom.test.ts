@@ -433,6 +433,16 @@ describe('loadFont', () => {
     expect(RecordingFontFace.made).toHaveLength(3);
   });
 
+  it('adds no file again for the same family named in another letter case, as CSS matches names', async () => {
+    vi.stubGlobal('FontFace', RecordingFontFace);
+    const fonts = faceSet();
+
+    await loadingInto(fonts);
+    await loadingInto(fonts, { ...handFiles, family: 'hand test' });
+
+    expect(RecordingFontFace.made).toHaveLength(2);
+  });
+
   it('adds the same file again for another family', async () => {
     vi.stubGlobal('FontFace', RecordingFontFace);
     const fonts = faceSet();

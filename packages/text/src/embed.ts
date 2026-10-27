@@ -1,10 +1,8 @@
 import type { FontFile, FontFiles } from './types.js';
-import { checkFontFiles, checkText, codePointName, codePointOf, cssFamily, IGNORABLE, isFamily, show } from './validate.js';
+import { checkFontFiles, checkText, codePointName, codePointOf, cssFamily, IGNORABLE, show } from './validate.js';
 
-type FaceSource = { family: string; unicodeRange: string; woff2: string };
-
-// What each face `loadFont` made was made from, so a later call can tell which files a set has.
-const sources = new WeakMap<FontFace, FaceSource>();
+// The file each face `loadFont` made came from, so a later call can tell which files a set has.
+const sources = new WeakMap<FontFace, { unicodeRange: string; woff2: string }>();
 
 /**
  * `@font-face` rules that embed a font, for a `<style>` element. With `labels`, every label of the
@@ -33,17 +31,14 @@ export function fontFaceCss(fontFiles: FontFiles, labels?: readonly string[]): s
  */
 export async function loadFont(fonts: FontFaceSet, fontFiles: FontFiles): Promise<void> {
   checkFontFiles(fontFiles);
-  const { family } = fontFiles;
-  const faces: FontFace[] = [];
-  fonts.forEach((face) => {
-    if (isFamily(face, family)) {
-      faces.push(face);
-    }
-  });
+  const faces = facesOf(fonts, fontFiles.family);
   for (const file of fontFiles.files) {
-    const source = { family, unicodeRange: unicodeRange(file), woff2: file.woff2 };
-    if (!faces.some((face) => isSource(sources.get(face), source))) {
-      const face = new FontFace(family, Uint8Array.from(atob(file.woff2), codePointOf), {
+    const source = { unicodeRange: unicodeRange(file), woff2: file.woff2 };
+    const added = faces.some(
+      (face) => sources.get(face)?.woff2 === source.woff2 && sources.get(face)?.unicodeRange === source.unicodeRange,
+    );
+    if (!added) {
+      const face = new FontFace(fontFiles.family, Uint8Array.from(atob(file.woff2), codePointOf), {
         unicodeRange: source.unicodeRange,
       });
       sources.set(face, source);
@@ -54,13 +49,19 @@ export async function loadFont(fonts: FontFaceSet, fontFiles: FontFiles): Promis
   await Promise.all(faces.map((face) => face.load()));
 }
 
-function isSource(made: FaceSource | undefined, wanted: FaceSource): boolean {
-  return (
-    made !== undefined &&
-    made.family === wanted.family &&
-    made.unicodeRange === wanted.unicodeRange &&
-    made.woff2 === wanted.woff2
-  );
+/**
+ * The faces of a family in a FontFaceSet. CSS matches family names without regard to ASCII case,
+ * and a page may report a face's family in quotes.
+ */
+export function facesOf(fonts: FontFaceSet, family: string): FontFace[] {
+  const name = family.toLowerCase();
+  const faces: FontFace[] = [];
+  fonts.forEach((face) => {
+    if (face.family.replace(/^"(.*)"$/, '$1').toLowerCase() === name) {
+      faces.push(face);
+    }
+  });
+  return faces;
 }
 
 function filesFor(fontFiles: FontFiles, labels: readonly string[] | undefined): readonly FontFile[] {

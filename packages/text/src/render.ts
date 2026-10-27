@@ -1,7 +1,8 @@
 import { escapeAttribute, svgElement } from '@borrowdale/core';
 import type { SvgAttributes } from '@borrowdale/core';
+import { facesOf } from './embed.js';
 import type { TextLayout, TextStyle } from './types.js';
-import { checkStyle, cssFamily, isFamily } from './validate.js';
+import { checkStyle, cssFamily } from './validate.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -111,11 +112,8 @@ function assertFontLoaded(
   if (!fonts) {
     return;
   }
-  let loaded = false;
-  fonts.forEach((face) => {
-    loaded ||= face.status === 'loaded' && isFamily(face, family);
-  });
   // check() alone passes for a family that was never added: it only reports on faces in the set.
+  const loaded = facesOf(fonts, family).some((face) => face.status === 'loaded');
   if (!loaded || !fonts.check(font, text)) {
     throw new Error(`Font not loaded: ${family}. Load it with loadFont() before drawing on a canvas.`);
   }
