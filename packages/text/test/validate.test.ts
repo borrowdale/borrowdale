@@ -128,7 +128,10 @@ describe('fonts', () => {
     ['a positive descender', { ...handFont, descender: 1 }, 'Invalid font: descender must be a number from -32768 to 0, got 1'],
     ['a descender below -32768', { ...handFont, descender: -32769 }, 'Invalid font: descender must be a number from -32768 to 0, got -32769'],
     ['a descender as a string', { ...handFont, descender: '-2' }, 'Invalid font: descender must be a number from -32768 to 0, got "-2"'],
-    ['files that are not a list', { ...handFont, files: 'latin' }, 'Invalid font: files must be an array, got "latin"'],
+    ['files that are not a list', { ...handFont, files: 'latin' }, 'Invalid font: files must be a list of one or more files, got "latin"'],
+    ['an empty list of files', { ...handFont, files: [] }, 'Invalid font: files must be a list of one or more files, got object'],
+    ['a list of files with a hole', { ...handFont, files: [, { ranges: [[0x41, 0x41]] }] }, 'Invalid font: files[0].ranges must be'],
+    ['a file whose ranges have a hole', { ...handFont, files: [{ ranges: [, [0x41, 0x41]] }] }, 'Invalid font: files[0].ranges must be'],
     ['a file with no ranges', { ...handFont, files: [{ ranges: [] }] }, 'Invalid font: files[0].ranges must be one or more [first, last] code point pairs'],
     ['a null file', { ...handFont, files: [{ ranges: [[0x41, 0x42]] }, null] }, 'Invalid font: files[1].ranges must be one or more'],
     ['a file range that runs backwards', { ...handFont, files: [{ ranges: [[0x42, 0x41]] }] }, 'Invalid font: files[0].ranges must be'],
@@ -288,6 +291,8 @@ describe('font files', () => {
     ['a fractional first code point', { ...handFiles, files: [{ ranges: [[64.5, 0x41]], woff2: 'QQ==' }] }, 'files[0].ranges must be'],
     ['a range with one end', { ...handFiles, files: [{ ranges: [[0x41]], woff2: 'QQ==' }] }, 'files[0].ranges must be'],
     ['ranges that are not a list', { ...handFiles, files: [{ ranges: 'A-B', woff2: 'QQ==' }] }, 'files[0].ranges must be'],
+    ['ranges with a hole', { ...handFiles, files: [{ ranges: [, [0x41, 0x41]], woff2: 'QQ==' }] }, 'files[0].ranges must be'],
+    ['ranges that are only a hole', { ...handFiles, files: [{ ranges: [,], woff2: 'QQ==' }] }, 'files[0].ranges must be'],
   ])('rejects %s', (_case, files, message) => {
     expect(embedding(files)).toThrow(message);
   });

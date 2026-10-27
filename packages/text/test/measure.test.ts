@@ -171,7 +171,7 @@ describe('measureText', () => {
     expect(measureText('B\u0301', { fontSize: 10, font: oneFile })).toMatchObject({ width: 7, missing: [] });
   });
 
-  it('treats a font that lists no files as one file', () => {
+  it('treats a font that leaves out its files as one file', () => {
     expect(measureText('B\u0301', { fontSize: 10, font: handFont })).toMatchObject({ width: 7, missing: [] });
   });
 

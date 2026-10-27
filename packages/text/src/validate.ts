@@ -63,7 +63,7 @@ const PRESENTATION_CONTROLS = /[\uFE0E\uFE0F\u061C\u200E\u200F\u202A-\u202E\u206
 // other than tab and the line breaks above, U+FFFE, U+FFFF and unpaired surrogates. With the `u`
 // flag a surrogate pair is one character, so the surrogate range matches only unpaired halves.
 const NOT_XML = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF\uD800-\uDFFF]/u;
-// A font that lists no files is one file, serving every code point it covers.
+// A font that leaves out its files is one file, serving every code point it covers.
 const ONE_FILE: CheckedFont['files'] = [{ ranges: [[0, 0x10ffff]] }];
 
 /** A checked font: always one or more files, each with its own copy of the ranges it serves. */
@@ -222,20 +222,24 @@ function checkFiles(files: unknown): CheckedFont['files'] {
   if (files === undefined) {
     return ONE_FILE;
   }
-  if (!Array.isArray(files)) {
-    throw new Error(`Invalid font: files must be an array, got ${show(files)}`);
+  // A font with no file would draw nothing.
+  if (!Array.isArray(files) || files.length === 0) {
+    throw new Error(`Invalid font: files must be a list of one or more files, got ${show(files)}`);
   }
-  return files.map((file: { ranges?: unknown } | null | undefined, index: number) => ({
+  // Array.from rather than map, which skips the holes of a sparse list: a hole is checked, and fails.
+  return Array.from(files, (file: { ranges?: unknown } | null | undefined, index) => ({
     ranges: checkRanges('font', index, file?.ranges),
   }));
 }
 
-// The same rule for a font's files and the woff2 files that hold them. Returns a copy of the ranges:
-// copied first and checked second, so the pairs checked are the pairs used.
+// The same rule for a font's files and the woff2 files that hold them. Returns a copy of the
+// ranges, copied first and checked second, which is what measuring reads: the pairs a font was
+// checked with are the pairs it is measured with. Font files are trusted, and their callers read
+// the ranges again.
 function checkRanges(owner: string, index: number, ranges: unknown): [first: number, last: number][] {
-  const pairs: unknown[] = Array.isArray(ranges)
-    ? ranges.map((range: unknown) => (Array.isArray(range) ? [...range] : range))
-    : [];
+  const pairs: unknown[] = Array.from(Array.isArray(ranges) ? ranges : [], (range: unknown) =>
+    Array.isArray(range) ? [...range] : range,
+  );
   // An empty list would make the face claim every code point.
   if (pairs.length === 0 || !pairs.every(isRange)) {
     throw new Error(`Invalid ${owner}: files[${index}].ranges must be one or more [first, last] code point pairs`);

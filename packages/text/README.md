@@ -148,7 +148,8 @@ A value that cannot be drawn throws an error naming it:
 - A `Font`'s `family` must be letters, digits, spaces, hyphens and underscores, starting and ending
   with a letter or digit. `unitsPerEm` must be from 1 to 16,384, `ascender` from 0 to 32,767,
   `descender` from −32,768 to 0, and every advance from 0 to 65,535. Its `files`, when given, must
-  each have one or more `[first, last]` ranges of code points, as `FontFiles` files must.
+  be one or more files, each with one or more `[first, last]` ranges of code points, as `FontFiles`
+  files must.
 - `fill` must be a string without characters an XML document cannot hold.
 - `fontFaceCss` takes its labels as an array, and checks each label as text.
 - Unknown option names are rejected (`Unknown option: fontSzie`). An option set to `undefined`
