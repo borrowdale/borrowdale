@@ -78,11 +78,9 @@ export class Random {
     this.seed = seed;
   }
 
+  // rough.js fell back to Math.random() for a seed of 0. toSeed() never returns 0, so there is no
+  // fallback: every drawing is reproducible from its seed.
   next(): number {
-    if (this.seed) {
-      return ((2 ** 31 - 1) & (this.seed = Math.imul(48271, this.seed))) / 2 ** 31;
-    } else {
-      return Math.random();
-    }
+    return ((2 ** 31 - 1) & (this.seed = Math.imul(48271, this.seed))) / 2 ** 31;
   }
 }

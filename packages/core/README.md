@@ -56,7 +56,7 @@ Use the same `@borrowdale/core` version on the server and in the browser.
 | Option | Applies to |
 |---|---|
 | `stroke`, `strokeWidth` | outline |
-| `fill`, `fillStyle` (`hachure`, `solid`, `zigzag`, `cross-hatch`, `dashed`, `zigzag-line`) | fill |
+| `fill`, `fillStyle` (`hachure`, `solid`, `zigzag`, `cross-hatch`, `dashed`, `zigzag-line`, `dots`) | fill |
 | `fillWeight`, `hachureAngle` (default −41°; use 41 to mirror), `hachureGap` | line-based fills |
 | `dashOffset`, `dashGap` | `dashed` fill |
 | `zigzagOffset` | `zigzag-line` fill |

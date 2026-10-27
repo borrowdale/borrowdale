@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { sketch, type FillStyle, type Shape, type SketchOptions } from '@borrowdale/core';
+import { sketch, type Shape, type SketchOptions } from '@borrowdale/core';
 
 const rectangle: Shape = { kind: 'rectangle', x: 0, y: 0, width: 40, height: 20 };
 const wave: Shape = { kind: 'curve', points: [[0, 0], [10, 10], [20, 0], [30, 10]] };
@@ -69,10 +69,12 @@ describe('sketch', () => {
     );
   });
 
-  it('rejects the dots fill, which rough.js draws with Math.random regardless of the seed', () => {
-    expect(() =>
-      sketch(rectangle, { fill: 'red', fillStyle: 'dots' as unknown as FillStyle }),
-    ).toThrow('Unknown fill style: dots');
+  it('draws the dots fill from the seed, where rough.js used Math.random', () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0.1);
+    const first = sketch(rectangle, { fill: 'red', fillStyle: 'dots' });
+    vi.spyOn(Math, 'random').mockReturnValue(0.9);
+
+    expect(sketch(rectangle, { fill: 'red', fillStyle: 'dots' })).toEqual(first);
   });
 
   it.each<[string, Shape, SketchOptions, string]>([

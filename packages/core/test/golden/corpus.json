@@ -310,6 +310,21 @@
   }
  },
  {
+  "name": "rectangle/dots/a",
+  "shape": {
+   "kind": "rectangle",
+   "x": 2,
+   "y": 2,
+   "width": 36,
+   "height": 24
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "fillStyle": "dots"
+  }
+ },
+ {
   "name": "ellipse/hachure/a",
   "shape": {
    "kind": "ellipse",
@@ -648,6 +663,31 @@
   }
  },
  {
+  "name": "polygon/dots/a",
+  "shape": {
+   "kind": "polygon",
+   "points": [
+    [
+     2,
+     28
+    ],
+    [
+     20,
+     2
+    ],
+    [
+     38,
+     28
+    ]
+   ]
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "fillStyle": "dots"
+  }
+ },
+ {
   "name": "star/hachure/a",
   "shape": {
    "kind": "polygon",
@@ -846,6 +886,39 @@
   }
  },
  {
+  "name": "star/dots/a",
+  "shape": {
+   "kind": "polygon",
+   "points": [
+    [
+     20,
+     2
+    ],
+    [
+     31,
+     36
+    ],
+    [
+     2,
+     14
+    ],
+    [
+     38,
+     14
+    ],
+    [
+     9,
+     36
+    ]
+   ]
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "fillStyle": "dots"
+  }
+ },
+ {
   "name": "curve/hachure/a",
   "shape": {
    "kind": "curve",
@@ -1020,6 +1093,35 @@
   }
  },
  {
+  "name": "curve/dots/a",
+  "shape": {
+   "kind": "curve",
+   "points": [
+    [
+     2,
+     20
+    ],
+    [
+     12,
+     4
+    ],
+    [
+     22,
+     22
+    ],
+    [
+     34,
+     6
+    ]
+   ]
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "fillStyle": "dots"
+  }
+ },
+ {
   "name": "path-lines/hachure/a",
   "shape": {
    "kind": "path",
@@ -1089,6 +1191,18 @@
    "seed": "a",
    "fill": "#c33",
    "fillStyle": "zigzag-line"
+  }
+ },
+ {
+  "name": "path-lines/dots/a",
+  "shape": {
+   "kind": "path",
+   "d": "M4 4 L36 4 L30 26 Z"
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "fillStyle": "dots"
   }
  },
  {
@@ -1450,6 +1564,21 @@
   }
  },
  {
+  "name": "rectangle/dots/b",
+  "shape": {
+   "kind": "rectangle",
+   "x": 2,
+   "y": 2,
+   "width": 36,
+   "height": 24
+  },
+  "options": {
+   "seed": "b",
+   "fill": "#c33",
+   "fillStyle": "dots"
+  }
+ },
+ {
   "name": "ellipse/hachure/b",
   "shape": {
    "kind": "ellipse",
@@ -1788,6 +1917,31 @@
   }
  },
  {
+  "name": "polygon/dots/b",
+  "shape": {
+   "kind": "polygon",
+   "points": [
+    [
+     2,
+     28
+    ],
+    [
+     20,
+     2
+    ],
+    [
+     38,
+     28
+    ]
+   ]
+  },
+  "options": {
+   "seed": "b",
+   "fill": "#c33",
+   "fillStyle": "dots"
+  }
+ },
+ {
   "name": "star/hachure/b",
   "shape": {
    "kind": "polygon",
@@ -1986,6 +2140,39 @@
   }
  },
  {
+  "name": "star/dots/b",
+  "shape": {
+   "kind": "polygon",
+   "points": [
+    [
+     20,
+     2
+    ],
+    [
+     31,
+     36
+    ],
+    [
+     2,
+     14
+    ],
+    [
+     38,
+     14
+    ],
+    [
+     9,
+     36
+    ]
+   ]
+  },
+  "options": {
+   "seed": "b",
+   "fill": "#c33",
+   "fillStyle": "dots"
+  }
+ },
+ {
   "name": "curve/hachure/b",
   "shape": {
    "kind": "curve",
@@ -2160,6 +2347,35 @@
   }
  },
  {
+  "name": "curve/dots/b",
+  "shape": {
+   "kind": "curve",
+   "points": [
+    [
+     2,
+     20
+    ],
+    [
+     12,
+     4
+    ],
+    [
+     22,
+     22
+    ],
+    [
+     34,
+     6
+    ]
+   ]
+  },
+  "options": {
+   "seed": "b",
+   "fill": "#c33",
+   "fillStyle": "dots"
+  }
+ },
+ {
   "name": "path-lines/hachure/b",
   "shape": {
    "kind": "path",
@@ -2229,6 +2445,18 @@
    "seed": "b",
    "fill": "#c33",
    "fillStyle": "zigzag-line"
+  }
+ },
+ {
+  "name": "path-lines/dots/b",
+  "shape": {
+   "kind": "path",
+   "d": "M4 4 L36 4 L30 26 Z"
+  },
+  "options": {
+   "seed": "b",
+   "fill": "#c33",
+   "fillStyle": "dots"
   }
  },
  {

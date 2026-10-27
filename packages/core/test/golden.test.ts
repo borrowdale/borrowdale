@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { sketch, type Shape, type Sketch, type SketchOptions } from '@borrowdale/core';
 import corpus from './golden/corpus.json' with { type: 'json' };
 import goldens from './golden/goldens.json' with { type: 'json' };
@@ -8,6 +8,17 @@ import goldens from './golden/goldens.json' with { type: 'json' };
 const cases = corpus as unknown as { name: string; shape: Shape; options: SketchOptions }[];
 const expected = goldens as unknown as Record<string, Sketch>;
 const names = cases.map((entry) => entry.name);
+
+// Every drawing must come from its seed alone: any Math.random() call fails the case.
+beforeEach(() => {
+  vi.spyOn(Math, 'random').mockImplementation(() => {
+    throw new Error('Math.random() called while drawing');
+  });
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 describe('golden drawings', () => {
   it('has exactly one golden per corpus case, in corpus order', () => {

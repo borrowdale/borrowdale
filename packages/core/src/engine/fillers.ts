@@ -1,10 +1,11 @@
 // Ported from rough.js 4.6.6 (src/fillers/*.ts). MIT License, Copyright (c) 2019 Preet Shihn.
-// See THIRD_PARTY_NOTICES.md. The dots filler is not ported: it draws with Math.random()
-// regardless of the seed, and `FILL_STYLES` excludes it.
+// See THIRD_PARTY_NOTICES.md. The dots filler draws its jitter from the seeded random stream,
+// where rough.js used Math.random() regardless of the seed.
 
 import { lineLength, type Line, type Op, type OpSet, type Point, type ResolvedOptions } from './core.js';
 import { hachureLines } from './hachure.js';
-import { doubleLineFillOps } from './strokes.js';
+import { ellipseWithParams, generateEllipseParams } from './renderer.js';
+import { doubleLineFillOps, nextRandom } from './strokes.js';
 
 type Filler = (polygonList: Point[][], o: ResolvedOptions) => OpSet;
 
@@ -23,6 +24,8 @@ function fillerFor(fillStyle: string): Filler {
       return dashedFill;
     case 'zigzag-line':
       return zigzagLineFill;
+    case 'dots':
+      return dotsFill;
     default:
       return hachureFill;
   }
@@ -37,7 +40,7 @@ function polygonHachureLines(polygonList: Point[][], o: ResolvedOptions): Line[]
   gap = Math.round(Math.max(gap, 0.1));
   let skipOffset = 1;
   if (o.roughness >= 1) {
-    if ((o.randomizer?.next() || Math.random()) > 0.7) {
+    if (nextRandom(o) > 0.7) {
       skipOffset = gap;
     }
   }
@@ -157,6 +160,38 @@ function zigzagLineFill(polygonList: Point[][], o: ResolvedOptions): OpSet {
         ...doubleLineFillOps(start[0], start[1], middle[0], middle[1], o),
         ...doubleLineFillOps(middle[0], middle[1], end[0], end[1], o),
       );
+    }
+  }
+  return { type: 'fillSketch', ops };
+}
+
+function dotsFill(polygonList: Point[][], o: ResolvedOptions): OpSet {
+  o = Object.assign({}, o, { hachureAngle: 0 });
+  const lines = polygonHachureLines(polygonList, o);
+  let gap = o.hachureGap;
+  if (gap < 0) {
+    gap = o.strokeWidth * 4;
+  }
+  gap = Math.max(gap, 0.1);
+  let fweight = o.fillWeight;
+  if (fweight < 0) {
+    fweight = o.strokeWidth / 2;
+  }
+  const ro = gap / 4;
+  const ops: Op[] = [];
+  for (const line of lines) {
+    const length = lineLength(line);
+    const dl = length / gap;
+    const count = Math.ceil(dl) - 1;
+    const offset = length - count * gap;
+    const x = (line[0][0] + line[1][0]) / 2 - gap / 4;
+    const minY = Math.min(line[0][1], line[1][1]);
+    for (let i = 0; i < count; i++) {
+      const y = minY + offset + i * gap;
+      const cx = x - ro + nextRandom(o) * 2 * ro;
+      const cy = y - ro + nextRandom(o) * 2 * ro;
+      const dot = ellipseWithParams(cx, cy, o, generateEllipseParams(fweight, fweight, o));
+      ops.push(...dot.opset.ops);
     }
   }
   return { type: 'fillSketch', ops };
