@@ -1,9 +1,10 @@
 // Bounds the work of one drawing, so a shape that would hang or exhaust memory fails fast instead.
-// Not part of rough.js. Every stroke charges, and so does every loop whose iteration count is NOT
-// bounded by the size of its own input: angle and scan-line loops stepping by an option-derived
-// increment, curve subdivision, simplification, and path tokenizing. A loop over an input it was
-// handed (a point list, a set of lines) does not charge again. The unit is a rough "work unit", not
-// an exact operation count; the public error keeps the word "operations".
+// Not part of rough.js. Charged: every stroke; every loop whose iteration count is not bounded by
+// the size of its input (angle and scan-line loops stepping by an option-derived increment, curve
+// subdivision, path tokenizing); and the per-point loops that build output paths (solid fills,
+// curves, simplification). Loops that only transform points already counted (rotating, sorting
+// edges, converting curves) are not charged. The unit is a rough "work unit", not an exact
+// operation count; the public error keeps the word "operations".
 
 export const MAX_OPERATIONS = 200_000;
 

@@ -4,9 +4,9 @@
 import { charge } from './budget.js';
 import type { Op, OpSet, Point, ResolvedOptions } from './core.js';
 import { splineSegment } from './bezier.js';
+import { cos, sin, square } from './math.js';
 import type { Segment } from './path-data.js';
 import { cloneOptionsAlterSeed, doubleLine, randomOffset, randomOffsetAround, strokeLine } from './strokes.js';
-import { cos, sin, square } from './math.js';
 
 interface EllipseParams {
   rx: number;

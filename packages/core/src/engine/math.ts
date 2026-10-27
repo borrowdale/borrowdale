@@ -26,8 +26,8 @@ const C4 = -2.75573143513906633035e-7;
 const C5 = 2.08757232129817482790e-9;
 const C6 = -1.13596475577881948265e-11;
 
-const ATAN_HI = [4.63647609000806093515e-1, 7.85398163397448278999e-1, 9.82793723247329054082e-1, 1.57079632679489655800];
-const ATAN_LO = [2.26987774529616870924e-17, 3.06161699786838301793e-17, 1.39033110312309984516e-17, 6.12323399573676603587e-17];
+const ATAN_HI = [4.63647609000806093515e-1, 7.85398163397448278999e-1, 9.82793723247329054082e-1, 1.57079632679489655800] as const;
+const ATAN_LO = [2.26987774529616870924e-17, 3.06161699786838301793e-17, 1.39033110312309984516e-17, 6.12323399573676603587e-17] as const;
 const AT = [
   3.33333333333329318027e-1, -1.99999999998764832476e-1, 1.42857142725034663711e-1, -1.11111104054623557880e-1,
   9.09088713343650656196e-2, -7.69187620504482999495e-2, 6.66107313738753120669e-2, -5.83357013379057348645e-2,
@@ -54,7 +54,7 @@ function reduce(x: number): [number, number] {
   return [((n % 4) + 4) % 4, r];
 }
 
-// sin(n · π/2 + r) for the quadrant n mod 4.
+/** sin(n · π/2 + r) for the quadrant n mod 4. */
 function sinInQuadrant(quadrant: number, r: number): number {
   switch (quadrant) {
     case 0:
@@ -77,7 +77,7 @@ export function sin(x: number): number {
   return sinInQuadrant(quadrant, r);
 }
 
-// cos(x) = sin(x + π/2): one quadrant further on.
+/** cos(x) = sin(x + π/2): one quadrant further on. */
 export function cos(x: number): number {
   const [quadrant, r] = reduce(x);
   return sinInQuadrant((quadrant + 1) % 4, r);
@@ -94,13 +94,14 @@ export function atan(x: number): number {
   const negative = x < 0;
   let t = Math.abs(x);
   if (t >= 2 ** 66) {
-    const z = ATAN_HI[3]! + ATAN_LO[3]!;
+    const z = ATAN_HI[3] + ATAN_LO[3];
     return negative ? -z : z;
   }
-  let id: number;
   if (t < 2 ** -27) {
     return x;
-  } else if (t < 0.4375) {
+  }
+  let id: number;
+  if (t < 0.4375) {
     id = -1;
   } else if (t < 0.6875) {
     id = 0;

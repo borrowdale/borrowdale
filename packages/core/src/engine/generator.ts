@@ -5,6 +5,7 @@
 import { curveToBezier, pointsOnBezierCurves } from './bezier.js';
 import type { Point as ShapePoint, Shape } from '../types.js';
 import type { Op, OpSet, Point, ResolvedOptions } from './core.js';
+import { fillArc, fillPolygons } from './fillers.js';
 import { normalizedPath, pointsOnPath } from './path-data.js';
 import {
   arc as arcOps,
@@ -17,7 +18,6 @@ import {
   solidFillPolygon,
   svgPath,
 } from './renderer.js';
-import { fillArc, fillPolygons } from './fillers.js';
 
 const NOS = 'none';
 

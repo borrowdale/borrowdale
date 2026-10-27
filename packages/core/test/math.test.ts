@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { asin, atan, cos, sin } from '../src/engine/math.js';
 
-// Expected values are the correctly rounded results, so these hold in every JavaScript engine.
+// The engine computes these with IEEE-exact operations only, so each value is the same in every
+// JavaScript engine.
 describe('engine trigonometry', () => {
   it.each<[string, (x: number) => number, number, number]>([
     ['sin of a large argument', sin, 1e6, -0.34999350217129294],

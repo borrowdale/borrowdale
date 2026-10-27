@@ -1,4 +1,4 @@
-// The boundary to the stroke engine (./engine/, a TypeScript port of rough.js 4.6.6).
+// The boundary to the stroke engine (./engine/, which began as a TypeScript port of rough.js 4.6.6).
 // Replacing the engine means replacing this file and that directory.
 import { resetBudget } from './engine/budget.js';
 import { DEFAULT_OPTIONS, fillWeight, type OpSet, type ResolvedOptions } from './engine/core.js';

@@ -5,9 +5,9 @@
 import { charge } from './budget.js';
 import { fillWeight, lineLength, type Line, type Op, type OpSet, type Point, type ResolvedOptions } from './core.js';
 import { hachureLines } from './hachure.js';
+import { atan, cos, sin, square } from './math.js';
 import { ellipseWithParams, generateEllipseParams, normalizedArc } from './renderer.js';
 import { doubleLineFillOps, nextRandom } from './strokes.js';
-import { atan, cos, sin, square } from './math.js';
 
 type Filler = (polygonList: Point[][], o: ResolvedOptions) => OpSet;
 
@@ -16,7 +16,7 @@ export function fillPolygons(polygonList: Point[][], o: ResolvedOptions): OpSet 
   return fillerFor(o.fillStyle)(polygonList, o);
 }
 
-// The fill of a closed arc: the arc's points plus its centre, filled as a polygon.
+/** The fill of a closed arc: the arc's points plus its centre, filled as a polygon. */
 export function fillArc(
   x: number,
   y: number,
