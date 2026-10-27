@@ -79,12 +79,46 @@ describe('sketch', () => {
     ['an arc start too far from zero', { kind: 'arc', cx: 5, cy: 5, width: 10, height: 10, start: -1e17, stop: 1 }, {}, 'arc.start must be a finite number within'],
     ['an empty polygon', { kind: 'polygon', points: [] }, { fill: 'red' }, 'polygon needs at least 3 points, got 0'],
     ['a one-point curve', { kind: 'curve', points: [[0, 0]] }, {}, 'curve needs at least 2 points, got 1'],
-    ['a NaN point', { kind: 'linearPath', points: [[0, 0], [Number.NaN, 1]] }, {}, 'linearPath.points must be a finite number'],
+    ['a NaN point', { kind: 'linearPath', points: [[0, 0], [Number.NaN, 1]] }, {}, 'linearPath.points[1] must be a finite number'],
     ['a huge curveStepCount', { kind: 'circle', cx: 0, cy: 0, diameter: 10 }, { curveStepCount: 1e7 }, 'curveStepCount must be an integer from 1 to 1000'],
     ['a negative curveStepCount', { kind: 'ellipse', cx: 0, cy: 0, width: 10, height: 10 }, { curveStepCount: -1 }, 'curveStepCount must be an integer from 1 to 1000'],
-    ['an infinite style number', rectangle, { roughness: Infinity }, 'roughness must be a finite number'],
+    ['an infinite style number', rectangle, { roughness: Infinity }, 'roughness must be a number from 0 to 10, got Infinity'],
   ])('rejects %s instead of hanging or exhausting memory', (_case, shape, options, message) => {
     expect(() => sketch(shape, options)).toThrow(message);
+  });
+
+  it.each<[string, unknown, unknown, string]>([
+    ['a missing field', { kind: 'rectangle', x: 0, y: 0, width: 20 }, { fill: 'red' }, 'rectangle.height must be a finite number within ±1000000, got undefined'],
+    ['a number given as a string', { kind: 'line', x1: '1', y1: 0, x2: 5, y2: 5 }, {}, 'line.x1 must be a finite number within ±1000000, got "1"'],
+    ['missing points', { kind: 'polygon' }, {}, 'polygon.points must be an array of [x, y] pairs, got undefined'],
+    ['a point that is not a pair', { kind: 'curve', points: [[0, 0], { x: 1, y: 1 }] }, {}, 'curve.points[1] must be an [x, y] pair, got [object Object]'],
+    ['a point with three numbers', { kind: 'polygon', points: [[0, 0], [1, 0], [0, 1, 2]] }, {}, 'polygon.points[2] must be an [x, y] pair, got 0,1,2'],
+    ['path data that is not a string', { kind: 'path', d: 5 }, {}, 'path.d must be a string, got 5'],
+    ['a number after Z', { kind: 'path', d: 'M0 0 Z 1' }, {}, 'Path data: a number cannot follow Z'],
+    ['a huge number inside path data', { kind: 'path', d: 'M0 0 S1 1 2e20 0' }, {}, 'path.d contains 200000000000000000000, outside ±1000000'],
+    ['a non-boolean arc closed flag', { kind: 'arc', cx: 0, cy: 0, width: 4, height: 4, start: 0, stop: 1, closed: 'yes' }, {}, 'arc.closed must be a boolean, got "yes"'],
+    ['an unknown option', rectangle, { roughnes: 2 }, 'Unknown option: roughnes'],
+    ['an engine-internal option', rectangle, { maxRandomnessOffset: 1e300 }, 'Unknown option: maxRandomnessOffset'],
+    ['a stroke that is not a string', rectangle, { stroke: 5 }, 'stroke must be a string, got 5'],
+    ['a seed that is an object', rectangle, { seed: { a: 1 } }, 'seed must be a string or a number, got [object Object]'],
+    ['a negative roughness', wave, { fill: 'red', roughness: -1 }, 'roughness must be a number from 0 to 10, got -1'],
+    ['a bowing above 10', rectangle, { bowing: 11 }, 'bowing must be a number from 0 to 10, got 11'],
+    ['a kind that is missing', { x: 0 }, {}, 'Unknown shape kind: undefined'],
+  ])('rejects %s with a named error', (_case, shape, options, message) => {
+    expect(() => sketch(shape as Shape, options as SketchOptions)).toThrow(message);
+  });
+
+  it.each<[string, Shape, SketchOptions]>([
+    ['coordinates at exactly ±1,000,000', { kind: 'line', x1: -1e6, y1: 0, x2: 1e6, y2: 0 }, {}],
+    ['a zero-size rectangle', { kind: 'rectangle', x: 0, y: 0, width: 0, height: 0 }, {}],
+    ['roughness 0', rectangle, { roughness: 0 }],
+    ['roughness 10', rectangle, { roughness: 10 }],
+    ['curveStepCount 1', { kind: 'ellipse', cx: 5, cy: 5, width: 10, height: 6 }, { curveStepCount: 1 }],
+    ['curveStepCount 1000', { kind: 'circle', cx: 5, cy: 5, diameter: 10 }, { curveStepCount: 1000 }],
+    ['a numeric seed', rectangle, { seed: 42 }],
+    ['an explicit closed: false', { kind: 'arc', cx: 0, cy: 0, width: 4, height: 4, start: 0, stop: 1, closed: false }, {}],
+  ])('accepts %s', (_case, shape, options) => {
+    expect(sketch(shape, options).paths.length).toBeGreaterThan(0);
   });
 
   it('rejects an unknown kind instead of drawing nothing', () => {

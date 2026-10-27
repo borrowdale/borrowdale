@@ -5,7 +5,8 @@
 import { curveToBezier, pointsOnBezierCurves } from './bezier.js';
 import type { Point as ShapePoint, Shape } from '../types.js';
 import type { Op, OpSet, Point, ResolvedOptions } from './core.js';
-import { pointsOnPath } from './path-data.js';
+import { assertPathData } from '../validate.js';
+import { normalizedPath, pointsOnPath } from './path-data.js';
 import {
   arc as arcOps,
   curve as curveOps,
@@ -180,9 +181,12 @@ function path(d: string, o: ResolvedOptions): OpSet[] {
   // literal text "/(ss)/g" ("\s" in a string literal is just "s"). Kept for byte-identical output.
   d = (d || '').replace(/\n/g, ' ').replace(/(-\s)/g, '-').replace('/(ss)/g', ' ');
 
+  // Parsed once: the range check, the fill polygons and the strokes all read the same segments.
+  const segments = normalizedPath(d);
+  assertPathData(segments);
   const distance = (1 + o.roughness) / 2;
-  const sets = pointsOnPath(d, 1, distance);
-  const outline = svgPath(d, o);
+  const sets = pointsOnPath(segments, 1, distance);
+  const outline = svgPath(segments, o);
   const fill = (): OpSet => {
     if (o.fillStyle !== 'solid') {
       return patternFillPolygons(sets, o);
@@ -190,7 +194,7 @@ function path(d: string, o: ResolvedOptions): OpSet[] {
     if (sets.length !== 1) {
       return solidFillPolygon(sets, o);
     }
-    const fillShape = svgPath(d, {
+    const fillShape = svgPath(segments, {
       ...o,
       disableMultiStroke: true,
       roughness: o.roughness ? o.roughness + o.fillShapeRoughnessGain : 0,

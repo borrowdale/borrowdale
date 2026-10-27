@@ -73,6 +73,10 @@ export function parsePath(d: string): Segment[] {
       }
     } else if (isType(token, NUMBER)) {
       paramsCount = PARAMS[mode]!;
+      // rough.js loops forever here: a command with no parameters (Z) never advances the index.
+      if (paramsCount === 0) {
+        throw new Error(`Path data: a number cannot follow ${mode}`);
+      }
     } else {
       index++;
       paramsCount = PARAMS[token.text]!;
@@ -476,9 +480,12 @@ function arcToCubicCurves(
   return curves;
 }
 
-export function pointsOnPath(path: string, tolerance?: number, distance?: number): Point[][] {
-  const segments = parsePath(path);
-  const normalized = normalize(absolutize(segments));
+/** Path text parsed into absolute M, L, C and Z segments. */
+export function normalizedPath(path: string): Segment[] {
+  return normalize(absolutize(parsePath(path)));
+}
+
+export function pointsOnPath(normalized: Segment[], tolerance?: number, distance?: number): Point[][] {
 
   const sets: Point[][] = [];
   let currentPoints: Point[] = [];

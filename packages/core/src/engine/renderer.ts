@@ -4,7 +4,7 @@
 import type { Op, OpSet, Point, ResolvedOptions } from './core.js';
 import { fillPolygons } from './fillers.js';
 import { splineSegment } from './bezier.js';
-import { absolutize, normalize, parsePath } from './path-data.js';
+import type { Segment } from './path-data.js';
 import { cloneOptionsAlterSeed, doubleLine, randomOffset, randomOffsetAround, strokeLine } from './strokes.js';
 
 interface EllipseParams {
@@ -161,8 +161,7 @@ function normalizedArc(width: number, height: number, start: number, stop: numbe
   return { rx, ry, strt, stp };
 }
 
-export function svgPath(path: string, o: ResolvedOptions): OpSet {
-  const segments = normalize(absolutize(parsePath(path)));
+export function svgPath(segments: Segment[], o: ResolvedOptions): OpSet {
   const ops: Op[] = [];
   let first: Point = [0, 0];
   let current: Point = [0, 0];

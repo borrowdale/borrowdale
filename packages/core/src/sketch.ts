@@ -6,10 +6,10 @@ import { assertDrawable } from './validate.js';
 type DefinedOptions = { [K in keyof SketchOptions]?: Exclude<SketchOptions[K], undefined> };
 
 export function sketch(shape: Shape, options: SketchOptions = {}): Sketch {
+  assertDrawable(shape, options);
   // `{ stroke: undefined }` must mean "default", not override the engine's default with undefined.
   const { seed, ...style } = Object.fromEntries(
     Object.entries(options).filter(([, value]) => value !== undefined),
   ) as DefinedOptions;
-  assertDrawable(shape, style);
   return { paths: drawShape(shape, { ...style, seed: toSeed(seed ?? stableKey(shape)) }) };
 }
