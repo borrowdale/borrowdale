@@ -3,7 +3,6 @@
 
 import { charge } from './budget.js';
 import type { Op, OpSet, Point, ResolvedOptions } from './core.js';
-import { fillPolygons } from './fillers.js';
 import { splineSegment } from './bezier.js';
 import type { Segment } from './path-data.js';
 import { cloneOptionsAlterSeed, doubleLine, randomOffset, randomOffsetAround, strokeLine } from './strokes.js';
@@ -145,7 +144,7 @@ interface NormalizedArc {
 
 // Shared by the arc outline and the arc fill: jittered radii (rx drawn before ry), the start moved
 // into [0, 2π) by whole turns, and spans over a full turn clamped to one turn.
-function normalizedArc(width: number, height: number, start: number, stop: number, o: ResolvedOptions): NormalizedArc {
+export function normalizedArc(width: number, height: number, start: number, stop: number, o: ResolvedOptions): NormalizedArc {
   let rx = Math.abs(width / 2);
   let ry = Math.abs(height / 2);
   rx += randomOffsetAround(rx * 0.01, o);
@@ -211,33 +210,6 @@ export function solidFillPolygon(polygonList: Point[][], o: ResolvedOptions): Op
     }
   }
   return { type: 'fillPath', ops };
-}
-
-export function patternFillPolygons(polygonList: Point[][], o: ResolvedOptions): OpSet {
-  return fillPolygons(polygonList, o);
-}
-
-export function patternFillArc(
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  start: number,
-  stop: number,
-  o: ResolvedOptions,
-): OpSet {
-  const cx = x;
-  const cy = y;
-  const { rx, ry, strt, stp } = normalizedArc(width, height, start, stop, o);
-  const increment = (stp - strt) / o.curveStepCount;
-  const points: Point[] = [];
-  for (let angle = strt; angle <= stp; angle = angle + increment) {
-    charge();
-    points.push([cx + rx * cos(angle), cy + ry * sin(angle)]);
-  }
-  points.push([cx + rx * cos(stp), cy + ry * sin(stp)]);
-  points.push([cx, cy]);
-  return patternFillPolygons([points], o);
 }
 
 function _curveWithOffset(points: Point[], offset: number, o: ResolvedOptions): Op[] {

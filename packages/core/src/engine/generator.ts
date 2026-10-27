@@ -13,12 +13,11 @@ import {
   generateEllipseParams,
   line as lineOps,
   linearPath as linearPathOps,
-  patternFillArc,
-  patternFillPolygons,
   rectangle as rectangleOps,
   solidFillPolygon,
   svgPath,
 } from './renderer.js';
+import { fillArc, fillPolygons } from './fillers.js';
 
 const NOS = 'none';
 
@@ -89,7 +88,7 @@ function hasFill(o: ResolvedOptions): boolean {
 }
 
 function polygonFill(points: Point[], o: ResolvedOptions): OpSet {
-  return o.fillStyle === 'solid' ? solidFillPolygon([points], o) : patternFillPolygons([points], o);
+  return o.fillStyle === 'solid' ? solidFillPolygon([points], o) : fillPolygons([points], o);
 }
 
 function rectangle(x: number, y: number, width: number, height: number, o: ResolvedOptions): OpSet[] {
@@ -117,7 +116,7 @@ function ellipse(x: number, y: number, width: number, height: number, o: Resolve
       shape.type = 'fillPath';
       return shape;
     }
-    return patternFillPolygons([ellipseResponse.estimatedPoints], o);
+    return fillPolygons([ellipseResponse.estimatedPoints], o);
   };
   return assemble(o, ellipseResponse.opset, hasFill(o) ? fill : undefined);
 }
@@ -141,7 +140,7 @@ function arc(
       shape.type = 'fillPath';
       return shape;
     }
-    return patternFillArc(x, y, width, height, start, stop, o);
+    return fillArc(x, y, width, height, start, stop, o);
   };
   return assemble(o, outline, closed && hasFill(o) ? fill : undefined);
 }
@@ -167,7 +166,7 @@ function curve(points: Point[], o: ResolvedOptions): OpSet[] {
     } else {
       polyPoints.push(...pointsOnBezierCurves(curveToBezier(points), 10, (1 + o.roughness) / 2));
     }
-    return polyPoints.length ? patternFillPolygons([polyPoints], o) : undefined;
+    return polyPoints.length ? fillPolygons([polyPoints], o) : undefined;
   };
   return assemble(o, outline, hasFill(o) ? fill : undefined);
 }
@@ -187,7 +186,7 @@ function path(d: string, o: ResolvedOptions): OpSet[] {
   const outline = svgPath(segments, o);
   const fill = (): OpSet => {
     if (o.fillStyle !== 'solid') {
-      return patternFillPolygons(sets, o);
+      return fillPolygons(sets, o);
     }
     if (sets.length !== 1) {
       return solidFillPolygon(sets, o);

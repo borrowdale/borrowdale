@@ -2,9 +2,10 @@
 // See THIRD_PARTY_NOTICES.md. The dots filler draws its jitter from the seeded random stream,
 // where rough.js used Math.random() regardless of the seed.
 
+import { charge } from './budget.js';
 import { lineLength, type Line, type Op, type OpSet, type Point, type ResolvedOptions } from './core.js';
 import { hachureLines } from './hachure.js';
-import { ellipseWithParams, generateEllipseParams } from './renderer.js';
+import { ellipseWithParams, generateEllipseParams, normalizedArc } from './renderer.js';
 import { doubleLineFillOps, nextRandom } from './strokes.js';
 import { atan, cos, sin, square } from './math.js';
 
@@ -13,6 +14,30 @@ type Filler = (polygonList: Point[][], o: ResolvedOptions) => OpSet;
 // rough.js falls back to hachure for any unknown style; validation rejects those before here.
 export function fillPolygons(polygonList: Point[][], o: ResolvedOptions): OpSet {
   return fillerFor(o.fillStyle)(polygonList, o);
+}
+
+// The fill of a closed arc: the arc's points plus its centre, filled as a polygon.
+export function fillArc(
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  start: number,
+  stop: number,
+  o: ResolvedOptions,
+): OpSet {
+  const cx = x;
+  const cy = y;
+  const { rx, ry, strt, stp } = normalizedArc(width, height, start, stop, o);
+  const increment = (stp - strt) / o.curveStepCount;
+  const points: Point[] = [];
+  for (let angle = strt; angle <= stp; angle = angle + increment) {
+    charge();
+    points.push([cx + rx * cos(angle), cy + ry * sin(angle)]);
+  }
+  points.push([cx + rx * cos(stp), cy + ry * sin(stp)]);
+  points.push([cx, cy]);
+  return fillPolygons([points], o);
 }
 
 function fillerFor(fillStyle: string): Filler {
