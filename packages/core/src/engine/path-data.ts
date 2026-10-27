@@ -3,7 +3,9 @@
 // See THIRD_PARTY_NOTICES.md.
 
 import { pointsOnBezierCurves, simplify } from './bezier.js';
-import type { Point } from './core.js';
+import { charge } from './budget.js';
+import { MAX_COORDINATE, type Point } from './core.js';
+import { asin, cos, sin, tan } from './math.js';
 
 export interface Segment {
   key: string;
@@ -33,6 +35,7 @@ const NUMBER_TEXT = /^(([-+]?[0-9]+(\.[0-9]*)?|[-+]?\.[0-9]+)([eE][-+]?[0-9]+)?)
 function tokenize(d: string): PathToken[] {
   const tokens: PathToken[] = [];
   while (d !== '') {
+    charge();
     let match: RegExpExecArray | null;
     if ((match = SEPARATOR.exec(d))) {
       d = d.slice(match[1]!.length);
@@ -43,7 +46,7 @@ function tokenize(d: string): PathToken[] {
       tokens[tokens.length] = { type: NUMBER, text: `${parseFloat(match[1]!)}` };
       d = d.slice(match[1]!.length);
     } else {
-      return [];
+      throw new Error(`Invalid shape: path.d: unexpected ${JSON.stringify(d.slice(0, 20))}`);
     }
   }
   tokens[tokens.length] = { type: EOD, text: '' };
@@ -73,6 +76,10 @@ export function parsePath(d: string): Segment[] {
       }
     } else if (isType(token, NUMBER)) {
       paramsCount = PARAMS[mode]!;
+      // rough.js loops forever here: a command with no parameters (Z) never advances the index.
+      if (paramsCount === 0) {
+        throw new Error(`Invalid shape: path.d: a number cannot follow ${mode}`);
+      }
     } else {
       index++;
       paramsCount = PARAMS[token.text]!;
@@ -84,7 +91,7 @@ export function parsePath(d: string): Segment[] {
         if (isType(numberToken, NUMBER)) {
           params[params.length] = +numberToken.text;
         } else {
-          throw new Error('Param not a number: ' + mode + ',' + numberToken.text);
+          throw new Error(`Invalid shape: path.d: ${mode} needs a number, got ${numberToken.text}`);
         }
       }
       if (typeof PARAMS[mode] === 'number') {
@@ -95,10 +102,10 @@ export function parsePath(d: string): Segment[] {
         if (mode === 'M') mode = 'L';
         if (mode === 'm') mode = 'l';
       } else {
-        throw new Error('Bad segment: ' + mode);
+        throw new Error(`Invalid shape: path.d: bad segment ${mode}`);
       }
     } else {
-      throw new Error('Path data ended short');
+      throw new Error('Invalid shape: path.d ended in the middle of a command');
     }
   }
   return segments;
@@ -349,8 +356,8 @@ function degToRad(degrees: number): number {
 }
 
 function rotate(x: number, y: number, angleRad: number): [number, number] {
-  const X = x * Math.cos(angleRad) - y * Math.sin(angleRad);
-  const Y = x * Math.sin(angleRad) + y * Math.cos(angleRad);
+  const X = x * cos(angleRad) - y * sin(angleRad);
+  const Y = x * sin(angleRad) + y * cos(angleRad);
   return [X, Y];
 }
 
@@ -401,8 +408,8 @@ function arcToCubicCurves(
     cx = (k * r1 * y) / r2 + (x1 + x2) / 2;
     cy = (k * -r2 * x) / r1 + (y1 + y2) / 2;
 
-    f1 = Math.asin(parseFloat(((y1 - cy) / r2).toFixed(9)));
-    f2 = Math.asin(parseFloat(((y2 - cy) / r2).toFixed(9)));
+    f1 = asin(parseFloat(((y1 - cy) / r2).toFixed(9)));
+    f2 = asin(parseFloat(((y2 - cy) / r2).toFixed(9)));
 
     if (x1 < cx) {
       f1 = Math.PI - f1;
@@ -439,18 +446,18 @@ function arcToCubicCurves(
       f2 = f1 + ((Math.PI * 120) / 180) * -1;
     }
 
-    x2 = cx + r1 * Math.cos(f2);
-    y2 = cy + r2 * Math.sin(f2);
+    x2 = cx + r1 * cos(f2);
+    y2 = cy + r2 * sin(f2);
     params = arcToCubicCurves(x2, y2, x2old, y2old, r1, r2, angle, 0, sweepFlag, [f2, f2old, cx, cy]);
   }
 
   df = f2 - f1;
 
-  const c1 = Math.cos(f1);
-  const s1 = Math.sin(f1);
-  const c2 = Math.cos(f2);
-  const s2 = Math.sin(f2);
-  const t = Math.tan(df / 4);
+  const c1 = cos(f1);
+  const s1 = sin(f1);
+  const c2 = cos(f2);
+  const s2 = sin(f2);
+  const t = tan(df / 4);
   const hx = (4 / 3) * r1 * t;
   const hy = (4 / 3) * r2 * t;
 
@@ -476,10 +483,26 @@ function arcToCubicCurves(
   return curves;
 }
 
-export function pointsOnPath(path: string, tolerance?: number, distance?: number): Point[][] {
-  const segments = parsePath(path);
-  const normalized = normalize(absolutize(segments));
+/** Path text parsed into absolute M, L, C and Z segments, every number within ±MAX_COORDINATE. */
+export function normalizedPath(path: string): Segment[] {
+  // Checked as written, which covers arc radii and rotation before arcs become curves, and again
+  // once relative coordinates and arcs have become absolute.
+  const parsed = assertWithinRange(parsePath(path), 'contains');
+  return assertWithinRange(normalize(absolutize(parsed)), 'reaches, once arcs and relative coordinates are resolved,');
+}
 
+function assertWithinRange(segments: Segment[], verb: string): Segment[] {
+  for (const { data } of segments) {
+    for (const value of data) {
+      if (!(Number.isFinite(value) && Math.abs(value) <= MAX_COORDINATE)) {
+        throw new Error(`Invalid shape: path.d ${verb} ${value}, outside ±${MAX_COORDINATE}`);
+      }
+    }
+  }
+  return segments;
+}
+
+export function pointsOnPath(segments: Segment[], tolerance?: number, distance?: number): Point[][] {
   const sets: Point[][] = [];
   let currentPoints: Point[] = [];
   let start: Point = [0, 0];
@@ -500,7 +523,7 @@ export function pointsOnPath(path: string, tolerance?: number, distance?: number
     }
   };
 
-  for (const { key, data } of normalized) {
+  for (const { key, data } of segments) {
     switch (key) {
       case 'M':
         appendPendingPoints();

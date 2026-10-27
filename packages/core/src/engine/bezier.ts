@@ -1,14 +1,16 @@
 // Ported from points-on-curve 0.2.0 (src/index.ts, src/curve-to-bezier.ts).
 // MIT License, Copyright (c) 2020 Preet Shihn. See THIRD_PARTY_NOTICES.md.
 
+import { charge } from './budget.js';
 import type { Point } from './core.js';
+import { square } from './math.js';
 
 function distance(p1: Point, p2: Point): number {
   return Math.sqrt(distanceSq(p1, p2));
 }
 
 function distanceSq(p1: Point, p2: Point): number {
-  return Math.pow(p1[0] - p2[0], 2) + Math.pow(p1[1] - p2[1], 2);
+  return square(p1[0] - p2[0]) + square(p1[1] - p2[1]);
 }
 
 function distanceToSegmentSq(p: Point, v: Point, w: Point): number {
@@ -56,6 +58,7 @@ function getPointsOnBezierCurveWithSplitting(
   tolerance: number,
   newPoints?: Point[],
 ): Point[] {
+  charge();
   const outPoints = newPoints || [];
   if (flatness(points, offset) < tolerance) {
     const p0 = points[offset + 0]!;
@@ -102,6 +105,7 @@ function simplifyPoints(
   epsilon: number,
   newPoints?: Point[],
 ): Point[] {
+  charge(end - start);
   const outPoints = newPoints || [];
 
   const s = points[start]!;

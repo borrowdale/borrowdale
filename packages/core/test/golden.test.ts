@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { sketch, type Shape, type Sketch, type SketchOptions } from '@borrowdale/core';
 import corpus from './golden/corpus.json' with { type: 'json' };
 import goldens from './golden/goldens.json' with { type: 'json' };
+import './support/forbid-unportable-math.js';
 
-// Recorded once from rough.js 4.6.6, then frozen. See scripts/record-goldens.mjs for how to add
-// cases (from rough.js) and how to re-record after a deliberate change (from this engine).
+// Recorded from rough.js 4.6.6, then re-recorded from this engine after each deliberate change.
+// See scripts/record-goldens.mjs for how to add cases (from rough.js) and how to re-record after a
+// deliberate change (from this engine).
 const cases = corpus as unknown as { name: string; shape: Shape; options: SketchOptions }[];
 const expected = goldens as unknown as Record<string, Sketch>;
 const names = cases.map((entry) => entry.name);

@@ -22,7 +22,6 @@ export type Shape =
 
 export type ShapeKind = Shape['kind'];
 
-// rough.js's 'dots' fill is left out: it calls Math.random() regardless of the seed.
 export const FILL_STYLES = [
   'hachure',
   'solid',
@@ -30,6 +29,7 @@ export const FILL_STYLES = [
   'cross-hatch',
   'dashed',
   'zigzag-line',
+  'dots',
 ] as const;
 
 export type FillStyle = (typeof FILL_STYLES)[number];
@@ -71,6 +71,8 @@ export interface SketchPath {
   stroke: string;
   strokeWidth: number;
   fill: string;
+  /** 'evenodd' on the solid fill of polygons, curves and paths: self-intersections leave holes. */
+  fillRule?: 'evenodd';
 }
 
 export interface Sketch {

@@ -1,6 +1,8 @@
 // Ported from rough.js 4.6.6 (src/core.ts, src/geometry.ts, src/math.ts).
 // MIT License, Copyright (c) 2019 Preet Shihn. See THIRD_PARTY_NOTICES.md.
 
+import { square } from './math.js';
+
 export type Point = [number, number];
 export type Line = [Point, Point];
 
@@ -65,24 +67,35 @@ export const DEFAULT_OPTIONS: ResolvedOptions = {
   fillShapeRoughnessGain: 0.8,
 };
 
+// The largest coordinate the engine draws. Validation holds shape fields to it, and the path
+// parser holds path data to it.
+export const MAX_COORDINATE = 1e6;
+
+/** A negative fillWeight means the default: half the stroke width. */
+export function fillWeight(o: ResolvedOptions): number {
+  return o.fillWeight < 0 ? o.strokeWidth / 2 : o.fillWeight;
+}
+
 export function lineLength(line: Line): number {
   const p1 = line[0];
   const p2 = line[1];
-  return Math.sqrt(Math.pow(p1[0] - p2[0], 2) + Math.pow(p1[1] - p2[1], 2));
+  return Math.sqrt(square(p1[0] - p2[0]) + square(p1[1] - p2[1]));
 }
 
+// mulberry32, in place of rough.js's LCG, which had degenerate seeds (2^30 gives a constant 0.5)
+// and fell back to Math.random() for a seed of 0. Only 32-bit integer arithmetic, so every
+// JavaScript engine produces the same stream.
 export class Random {
-  private seed: number;
+  private state: number;
 
   constructor(seed: number) {
-    this.seed = seed;
+    this.state = seed | 0;
   }
 
   next(): number {
-    if (this.seed) {
-      return ((2 ** 31 - 1) & (this.seed = Math.imul(48271, this.seed))) / 2 ** 31;
-    } else {
-      return Math.random();
-    }
+    let t = (this.state = (this.state + 0x6d2b79f5) | 0);
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   }
 }

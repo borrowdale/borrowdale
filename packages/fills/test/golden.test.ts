@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { pattern, type Pattern, type PatternOptions } from '@borrowdale/fills';
 import corpus from './golden/corpus.json' with { type: 'json' };
 import goldens from './golden/goldens.json' with { type: 'json' };
+import '../../core/test/support/forbid-unportable-math.js';
 
-// Recorded once from rough.js 4.6.6, then frozen. See scripts/record-goldens.mjs.
+// Recorded from rough.js 4.6.6, then re-recorded from this engine after each deliberate change.
+// See scripts/record-goldens.mjs.
 const cases = corpus as unknown as { name: string; options: PatternOptions }[];
 const expected = goldens as unknown as Record<string, Pattern>;
 const names = cases.map((entry) => entry.name);

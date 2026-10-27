@@ -1,7 +1,9 @@
 // Ported from hachure-fill 0.5.2 (bin/hachure.js). MIT License, Copyright (c) 2023 Preet Shihn.
 // See THIRD_PARTY_NOTICES.md.
 
+import { charge } from './budget.js';
 import type { Line, Point } from './core.js';
+import { cos, sin } from './math.js';
 
 interface Edge {
   ymin: number;
@@ -18,12 +20,12 @@ function rotatePoints(points: Point[], center: Point, degrees: number): void {
   if (points && points.length) {
     const [cx, cy] = center;
     const angle = (Math.PI / 180) * degrees;
-    const cos = Math.cos(angle);
-    const sin = Math.sin(angle);
+    const cosAngle = cos(angle);
+    const sinAngle = sin(angle);
     for (const p of points) {
       const [x, y] = p;
-      p[0] = (x - cx) * cos - (y - cy) * sin + cx;
-      p[1] = (x - cx) * sin + (y - cy) * cos + cy;
+      p[0] = (x - cx) * cosAngle - (y - cy) * sinAngle + cx;
+      p[1] = (x - cx) * sinAngle + (y - cy) * cosAngle + cy;
     }
   }
 }
@@ -119,6 +121,9 @@ function straightHachureLines(polygons: Point[][], gap: number, hachureStepOffse
   let y = edges[0]!.ymin;
   let iteration = 0;
   while (activeEdges.length || edges.length) {
+    // Charged per active edge: this loop advances y by hachureStepOffset, which may be 1 whatever
+    // the gap, so it runs whether or not it draws.
+    charge(1 + activeEdges.length);
     if (edges.length) {
       let ix = -1;
       for (let i = 0; i < edges.length; i++) {
