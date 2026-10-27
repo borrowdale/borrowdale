@@ -130,10 +130,7 @@ export function checkFontFiles(fontFiles: FontFiles): void {
     if (typeof file?.woff2 !== 'string' || !BASE64.test(file.woff2) || file.woff2.length % 4 !== 0) {
       throw new Error(`Invalid font files: files[${index}].woff2 must be base64`);
     }
-    // An empty list would make the face claim every code point.
-    if (!Array.isArray(file.ranges) || file.ranges.length === 0 || !file.ranges.every(isRange)) {
-      throw new Error(`Invalid font files: files[${index}].ranges must be one or more [first, last] code point pairs`);
-    }
+    checkRanges('font files', index, file.ranges);
   }
 }
 
@@ -191,8 +188,8 @@ function checkFont(given: Font): Font {
     throw new Error(`Invalid font: expected an object, got ${show(given)}`);
   }
   // Each field read once: a getter cannot pass these checks and then return another value.
-  const { family, unitsPerEm, ascender, descender, advances } = given;
-  const font: Font = { family, unitsPerEm, ascender, descender, advances };
+  const { family, unitsPerEm, ascender, descender, advances, files } = given;
+  const font: Font = { family, unitsPerEm, ascender, descender, advances, files };
   checkFamily(font.family, 'font');
   if (typeof font.advances !== 'object' || font.advances === null) {
     throw new Error('Invalid font: advances must be an object');
@@ -200,7 +197,23 @@ function checkFont(given: Font): Font {
   for (const [name, min, max] of FONT_NUMBERS) {
     checkNumber(`Invalid font: ${name}`, font[name], min, max);
   }
+  if (font.files !== undefined) {
+    if (!Array.isArray(font.files)) {
+      throw new Error(`Invalid font: files must be an array, got ${show(font.files)}`);
+    }
+    for (const [index, file] of font.files.entries()) {
+      checkRanges('font', index, file?.ranges);
+    }
+  }
   return font;
+}
+
+// The same rule for a font's files and the woff2 files that hold them.
+function checkRanges(owner: string, index: number, ranges: unknown): void {
+  // An empty list would make the face claim every code point.
+  if (!Array.isArray(ranges) || ranges.length === 0 || !ranges.every(isRange)) {
+    throw new Error(`Invalid ${owner}: files[${index}].ranges must be one or more [first, last] code point pairs`);
+  }
 }
 
 function checkFamily(family: unknown, owner: string): void {

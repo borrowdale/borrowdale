@@ -65,10 +65,12 @@ zero-width joiner and the remaining variation selectors, are measured as nothing
 characters Chromium draws with a width (the Hangul fillers U+3164 and U+FFA0, U+180F and
 U+1BCA0-U+1BCA3) count as uncovered.
 
-A letter followed by a combining mark that cannot be composed into one character (a Cyrillic or
-Greek stress mark, for example) is drawn by the browser in a fallback font when the letter and the
-mark come from different Excalifont files. It is still measured as Excalifont and is not listed in
-`missing`.
+A browser draws a character and the combining marks after it from one font file, or all of them in
+a fallback font, so `missing` lists a letter together with its marks. Excalifont keeps most of its
+marks in other files than its letters, so a letter with a mark that cannot be composed with it into
+one character (a Cyrillic or Greek stress mark, for example) is drawn in a fallback font and listed:
+`measureText('приве́т').missing` is `['е́']`. It is measured at Excalifont's widths, so the
+measurement is then approximate.
 
 Kerning and ligatures are not applied when measuring, and every renderer switches them off, so the
 drawn text is as wide as measured. The test suite draws every reference label the font covers in
@@ -139,7 +141,8 @@ A value that cannot be drawn throws an error naming it:
 - `fontSize` must be greater than 0 and at most 10,000. `x` and `y` must be within ±1,000,000.
 - A `Font`'s `family` must be letters, digits, spaces, hyphens and underscores, starting and ending
   with a letter or digit. `unitsPerEm` must be from 1 to 16,384, `ascender` from 0 to 32,767,
-  `descender` from −32,768 to 0, and every advance from 0 to 65,535.
+  `descender` from −32,768 to 0, and every advance from 0 to 65,535. Its `files`, when given, must
+  each have one or more `[first, last]` ranges of code points, as `FontFiles` files must.
 - `fill` must be a string without characters an XML document cannot hold.
 - Unknown option names are rejected (`Unknown option: fontSzie`). An option set to `undefined`
   counts as not set. Only an options object's own properties are read: inherited values, including
@@ -148,8 +151,12 @@ A value that cannot be drawn throws an error naming it:
 ## Fonts
 
 A `Font` holds what measuring needs: `family`, `unitsPerEm`, `ascender`, `descender` and the
-`advances` of the code points it covers. `excalifont` is the default. Measurement and rendering
-both take the family from the `Font`, so a label is always drawn in the font it was measured with.
+`advances` of the code points it covers. A font split into files by Unicode range, as Excalifont
+is, also lists its `files`, each with the `ranges` of code points it serves: its `FontFiles` files
+without their bytes. Measuring uses them to find a letter and a combining mark that come from
+different files, which the browser draws in a fallback font. Leave `files` out for a font in one
+file. `excalifont` is the default. Measurement and rendering both take the family from the `Font`,
+so a label is always drawn in the font it was measured with.
 
 `FontFiles` holds a font's woff2 files as base64, each with the code points it serves. Excalifont's
 are in `@borrowdale/text/excalifont-files`, a separate entry point, so code that only measures does

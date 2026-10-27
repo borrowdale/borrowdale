@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { excalifont, layoutText, measureText, type Font, type TextAnchor, type TextBaseline } from '@borrowdale/text';
-import { at, handFont } from './support/hand-font.js';
+import { excalifontFiles } from '@borrowdale/text/excalifont-files';
+import { at, handFont, splitFont } from './support/hand-font.js';
 
 // Characters drawn as nothing but switching their neighbours' presentation or order: removed.
 const PRESENTATION_CONTROLS = ['\uFE0E', '\uFE0F', '\u061C', '\u200E', '\u200F', '\u202A', '\u202B', '\u202C', '\u202D', '\u202E', '\u2066', '\u2067', '\u2068', '\u2069'];
-// Default-ignorable characters Chromium nevertheless draws with a width, from a fallback font.
-const VISIBLE_IGNORABLES = ['\u180F', '\u3164', '\uFFA0', '\u{1BCA0}', '\u{1BCA1}', '\u{1BCA2}', '\u{1BCA3}'];
+// Default-ignorable characters Chromium nevertheless draws with a width, from a fallback font. The
+// seventh, U+180F, is a combining mark, so it is listed with the character before it.
+const VISIBLE_IGNORABLES = ['\u3164', '\uFFA0', '\u{1BCA0}', '\u{1BCA1}', '\u{1BCA2}', '\u{1BCA3}'];
 // Read as 10 the first time and 1 after: a font that would change between checking and measuring.
 function shiftingFont(): Font {
   let reads = 0;
@@ -91,6 +93,10 @@ describe('measureText', () => {
     expect(measureText(`A${character}B`, { fontSize: 10, font: handFont })).toMatchObject({ width: 22, missing: [character] });
   });
 
+  it('counts U+180F, a mark Chromium draws with a width, as uncovered, with the character it follows', () => {
+    expect(measureText('A\u180FB', { fontSize: 10, font: handFont })).toMatchObject({ width: 22, missing: ['A\u180F'] });
+  });
+
   it('removes presentation controls before composing, so a letter and its accent still join', () => {
     expect(measureText('o\u200E\u030B').text).toBe('\u0151');
   });
@@ -127,6 +133,62 @@ describe('measureText', () => {
     expect(measureText('A', { fontSize: 10, font: inherited })).toMatchObject({ width: 10, missing: ['A'] });
   });
 
+  it('lists a character and its mark when they come from different files, which the browser draws in a fallback font', () => {
+    expect(measureText('AB\u0301', { fontSize: 10, font: splitFont })).toMatchObject({ width: 12, missing: ['B\u0301'] });
+  });
+
+  it('measures a character and its mark from different files at the font widths', () => {
+    expect(measureText('B\u0301', { fontSize: 10, font: splitFont }).width).toBe(7);
+  });
+
+  it('does not list a character and its mark that come from the same file', () => {
+    const oneFile: Font = { ...splitFont, files: [{ ranges: [[0x41, 0x42], [0x0301, 0x0301]] }] };
+
+    expect(measureText('B\u0301', { fontSize: 10, font: oneFile })).toMatchObject({ width: 7, missing: [] });
+  });
+
+  it('treats a font that lists no files as one file', () => {
+    expect(measureText('B\u0301', { fontSize: 10, font: handFont })).toMatchObject({ width: 7, missing: [] });
+  });
+
+  it('lists each such character and mark once', () => {
+    expect(measureText('B\u0301AB\u0301', { fontSize: 10, font: splitFont }).missing).toEqual(['B\u0301']);
+  });
+
+  it('lists a Cyrillic letter with a stress mark, which Excalifont keeps in another file', () => {
+    expect(measureText('приве\u0301т')).toMatchObject({ width: 50.51, missing: ['е\u0301'] });
+  });
+
+  it('does not list a character and a mark from the same Excalifont file', () => {
+    expect(measureText('\u212E\u0302').missing).toEqual([]);
+  });
+
+  it('keeps a zero-width joiner between a character and its mark in their cluster', () => {
+    expect(measureText('B\u200D\u0301', { fontSize: 10, font: splitFont }).missing).toEqual(['B\u200D\u0301']);
+  });
+
+  it('ends the cluster at a soft hyphen, so a mark after it is drawn on its own', () => {
+    expect(measureText('B\u00AD\u0301', { fontSize: 10, font: splitFont }).missing).toEqual([]);
+  });
+
+  it('skips a default-ignorable mark when it finds the files of a cluster', () => {
+    expect(measureText('B\uFE00', { fontSize: 10, font: splitFont }).missing).toEqual([]);
+  });
+
+  it('lists marks at the start of the text from different files as one cluster', () => {
+    expect(measureText('\u0301\u0302A').missing).toEqual(['\u0301\u0302']);
+  });
+
+  it('lists a character the font lacks with the marks after it', () => {
+    expect(measureText('A東\u0301', { fontSize: 10, font: handFont })).toMatchObject({ width: 15, missing: ['東\u0301'] });
+  });
+
+  it('lists a character that has an advance but no file of the font serves', () => {
+    const noSpace: Font = { ...splitFont, files: [{ ranges: [[0x41, 0x42]] }] };
+
+    expect(measureText('A B', { fontSize: 10, font: noSpace })).toMatchObject({ width: 15, missing: [' '] });
+  });
+
   it('collapses runs of spaces and tabs to one space, as SVG draws them', () => {
     expect(measureText('A \t  B', { fontSize: 10, font: handFont })).toMatchObject({ text: 'A B', width: 15 });
   });
@@ -149,6 +211,16 @@ describe('measureText', () => {
 
   it('measures the longest text it accepts', () => {
     expect(measureText('A'.repeat(1000), { fontSize: 10, font: handFont }).width).toBe(5000);
+  });
+});
+
+describe('excalifont', () => {
+  it('lists the code points each of its files serves, as the files do', () => {
+    expect(excalifontFiles.files).toMatchObject(excalifont.files as object);
+  });
+
+  it('lists its seven files', () => {
+    expect(excalifont.files).toHaveLength(7);
   });
 });
 

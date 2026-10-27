@@ -1,4 +1,4 @@
-import type { LayoutOptions, MeasureOptions, TextAnchor, TextBaseline, TextExtent, TextLayout } from './types.js';
+import type { Font, LayoutOptions, MeasureOptions, TextAnchor, TextBaseline, TextExtent, TextLayout } from './types.js';
 import { advanceOf, checkLayout, checkMeasure, codePointOf, type CheckedMeasure } from './validate.js';
 
 // Characters browsers draw as nothing (soft hyphens, zero-width joiners, variation selectors), so
@@ -6,6 +6,11 @@ import { advanceOf, checkLayout, checkMeasure, codePointOf, type CheckedMeasure 
 // from a fallback font (measured over all 4,174 of them): U+180F, U+3164, U+FFA0, U+1BCA0-1BCA3.
 // Those count as uncovered. The whole set, without the exceptions, measures them wrongly as nothing.
 const IGNORABLE = /(?![\u180F\u3164\uFFA0\u{1BCA0}-\u{1BCA3}])\p{Default_Ignorable_Code_Point}/u;
+
+// A character and the combining marks after it, with any zero-width joiner among them. Measured in
+// Chromium: the browser draws such a cluster from one font file, or all of it in a fallback font.
+// Marks with no character before them make a cluster of their own.
+const CLUSTER = /[^\p{M}\u200D][\p{M}\u200D]*|[\p{M}\u200D]+/gu;
 
 // How far left of `x` the text starts, as a share of its width.
 const ANCHOR_SHARE: Record<TextAnchor, number> = { start: 0, middle: 0.5, end: 1 };
@@ -54,15 +59,21 @@ export function layoutText(text: string, options: LayoutOptions): TextLayout {
 function extent({ text, font, fontSize }: CheckedMeasure): TextExtent {
   const missing = new Set<string>();
   let units = 0;
-  for (const character of text) {
-    if (IGNORABLE.test(character)) {
-      continue;
+  for (const [cluster] of text.matchAll(CLUSTER)) {
+    // The files serving the cluster's characters, with undefined for one the font cannot draw.
+    const files = new Set<number | undefined>();
+    for (const character of cluster) {
+      if (IGNORABLE.test(character)) {
+        continue;
+      }
+      const codePoint = codePointOf(character);
+      const advance = advanceOf(font, codePoint);
+      files.add(advance === undefined ? undefined : fileOf(font, codePoint));
+      units += advance ?? font.unitsPerEm;
     }
-    const advance = advanceOf(font, codePointOf(character));
-    if (advance === undefined) {
-      missing.add(character);
+    if (files.has(undefined) || files.size > 1) {
+      missing.add(cluster);
     }
-    units += advance ?? font.unitsPerEm;
   }
   const scale = fontSize / font.unitsPerEm;
   return {
@@ -72,6 +83,18 @@ function extent({ text, font, fontSize }: CheckedMeasure): TextExtent {
     descent: -font.descender * scale,
     missing: [...missing],
   };
+}
+
+// The index of the font file that serves a code point, or undefined when none does. A font that
+// lists no files is one file.
+function fileOf(font: Font, codePoint: number): number | undefined {
+  if (font.files === undefined) {
+    return 0;
+  }
+  const index = font.files.findIndex(({ ranges }) =>
+    ranges.some(([first, last]) => codePoint >= first && codePoint <= last),
+  );
+  return index === -1 ? undefined : index;
 }
 
 function rounded({ width, ascent, descent, ...rest }: TextExtent): TextExtent {

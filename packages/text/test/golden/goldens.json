@@ -691,5 +691,30 @@
    450
   ],
   "svg": "<text x=\"10\" y=\"450\" font-family=\"&quot;Excalifont&quot;\" font-size=\"16\" fill=\"#000\" direction=\"ltr\" style=\"font-kerning:none;font-variant-ligatures:none\">A(B) © 1</text>"
+ },
+ "cyrillic-stress-mark": {
+  "text": "приве́т",
+  "missing": [
+   "е́"
+  ],
+  "width": 50.51,
+  "ascent": 14.18,
+  "descent": 5.98,
+  "family": "Excalifont",
+  "fontSize": 16,
+  "x": 10,
+  "y": 480,
+  "box": {
+   "x": 10,
+   "y": 465.82,
+   "width": 50.51,
+   "height": 20.16
+  },
+  "rotate": 0,
+  "pivot": [
+   10,
+   480
+  ],
+  "svg": "<text x=\"10\" y=\"480\" font-family=\"&quot;Excalifont&quot;\" font-size=\"16\" fill=\"#000\" direction=\"ltr\" style=\"font-kerning:none;font-variant-ligatures:none\">приве́т</text>"
  }
 }

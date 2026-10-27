@@ -9,6 +9,12 @@ export const handFont: Font = {
   advances: { 0x20: 3, 0x41: 5, 0x42: 7, 0x0301: 0 },
 };
 
+/** The hand font split into files, as Excalifont is: the space, A and B in one, U+0301 in another. */
+export const splitFont: Font = {
+  ...handFont,
+  files: [{ ranges: [[0x20, 0x20], [0x41, 0x42]] }, { ranges: [[0x0301, 0x0301]] }],
+};
+
 /** Two files: one serving A, B and D, one serving the Cyrillic block. */
 export const handFiles: FontFiles = {
   family: 'Hand Test',

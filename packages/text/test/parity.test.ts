@@ -20,7 +20,7 @@ type Text = typeof import('@borrowdale/text');
 
 const cases = corpus as unknown as Case[];
 const expected = goldens as unknown as Record<string, Golden>;
-// Characters the font does not cover are drawn by Chromium in a fallback font, at its own width.
+// What `missing` lists is drawn by Chromium in a fallback font, at its own width.
 const covered = cases.filter(({ name }) => expected[name]?.missing.length === 0);
 const uncovered = cases.filter((entry) => !covered.includes(entry)).map(({ name }) => name);
 // The cases whose width kerning or ligatures would change, if the renderers left them on.
@@ -29,6 +29,7 @@ const shapedNames = shaped.map(({ name }) => name);
 
 const SOURCE = new URL('../src/index.ts', import.meta.url);
 const zurich = expected['category-zurich'] as Golden;
+const stressed = expected['cyrillic-stress-mark'] as Golden;
 
 let drawn: Record<string, Drawn> = {};
 let embedded: Embedded = { faces: NaN, width: NaN };
@@ -93,8 +94,12 @@ describe('Chromium parity', () => {
     expect(Object.keys(drawn)).toEqual(Object.keys(expected));
   });
 
-  it('checks the width of every case except the one with uncovered characters', () => {
-    expect(uncovered).toEqual(['uncovered-characters']);
+  it('checks the width of every case except those with text drawn in a fallback font', () => {
+    expect(uncovered).toEqual(['uncovered-characters', 'cyrillic-stress-mark']);
+  });
+
+  it('draws a letter whose mark is in another Excalifont file in a fallback font, which is why it is listed', () => {
+    expect(drawn['cyrillic-stress-mark']?.svgWidth).not.toBeCloseTo(stressed.width, 1);
   });
 
   it.each(cases)('$name is laid out and rendered byte for byte the same in Chromium', ({ name }) => {
