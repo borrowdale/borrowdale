@@ -23,7 +23,7 @@ const SHAPE_FIELDS = {
 
 const MIN_POINTS = { polygon: 3, linearPath: 2, curve: 2 } as const;
 
-type OptionRule = 'string' | 'number' | 'angle' | 'roughness' | 'steps' | 'fillStyle' | 'seed';
+type OptionRule = 'string' | 'number' | 'angle' | 'unit' | 'roughness' | 'steps' | 'fillStyle' | 'seed';
 
 // The complete list of accepted options: anything else is a typo or an engine internal.
 const OPTION_RULES: Record<keyof SketchOptions, OptionRule> = {
@@ -37,8 +37,8 @@ const OPTION_RULES: Record<keyof SketchOptions, OptionRule> = {
   dashOffset: 'number',
   dashGap: 'number',
   zigzagOffset: 'number',
-  curveTightness: 'number',
-  curveFitting: 'number',
+  curveTightness: 'unit',
+  curveFitting: 'unit',
   curveStepCount: 'steps',
   roughness: 'roughness',
   bowing: 'roughness',
@@ -125,6 +125,12 @@ function assertOption(key: string, value: unknown): void {
       // Degrees. The engine's own trigonometry reduces arguments only up to about 1.6e6 radians.
       if (!(typeof value === 'number' && Number.isFinite(value) && Math.abs(value) <= MAX_COORDINATE)) {
         throw new Error(`Invalid style: ${key} must be a finite number within ±${MAX_COORDINATE}, got ${show(value)}`);
+      }
+      break;
+    case 'unit':
+      // Both scale coordinates: far outside 0–1 they put Infinity into the path data.
+      if (!(typeof value === 'number' && value >= 0 && value <= 1)) {
+        throw new Error(`Invalid style: ${key} must be a number from 0 to 1, got ${show(value)}`);
       }
       break;
     case 'roughness':
