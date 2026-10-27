@@ -1,0 +1,10 @@
+[
+ { "name": "lines/a", "options": { "kind": "lines", "seed": "a" } },
+ { "name": "lines/b", "options": { "kind": "lines", "seed": "b" } },
+ { "name": "crosshatch/a", "options": { "kind": "crosshatch", "seed": "a" } },
+ { "name": "crosshatch/b", "options": { "kind": "crosshatch", "seed": "b" } },
+ { "name": "circles/a", "options": { "kind": "circles", "seed": "a" } },
+ { "name": "circles/b", "options": { "kind": "circles", "seed": "b" } },
+ { "name": "lines/styled", "options": { "kind": "lines", "seed": "a", "size": 14, "stroke": "#9fb3cf", "background": "#f7f9fc" } },
+ { "name": "circles/default-seed", "options": { "kind": "circles" } }
+]

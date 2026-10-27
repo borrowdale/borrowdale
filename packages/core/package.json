@@ -15,7 +15,8 @@
   "files": [
     "dist",
     "!dist/*.tsbuildinfo",
-    "src"
+    "src",
+    "THIRD_PARTY_NOTICES.md"
   ],
   "scripts": {
     "prepack": "tsc -b"
@@ -34,8 +35,5 @@
   ],
   "publishConfig": {
     "access": "public"
-  },
-  "dependencies": {
-    "roughjs": "4.6.6"
   }
 }

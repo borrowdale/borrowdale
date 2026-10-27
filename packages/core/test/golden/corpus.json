@@ -1,0 +1,2936 @@
+[
+ {
+  "name": "line/outline/a",
+  "shape": {
+   "kind": "line",
+   "x1": 2,
+   "y1": 3,
+   "x2": 38,
+   "y2": 27
+  },
+  "options": {
+   "seed": "a"
+  }
+ },
+ {
+  "name": "rectangle/outline/a",
+  "shape": {
+   "kind": "rectangle",
+   "x": 2,
+   "y": 2,
+   "width": 36,
+   "height": 24
+  },
+  "options": {
+   "seed": "a"
+  }
+ },
+ {
+  "name": "ellipse/outline/a",
+  "shape": {
+   "kind": "ellipse",
+   "cx": 20,
+   "cy": 15,
+   "width": 34,
+   "height": 22
+  },
+  "options": {
+   "seed": "a"
+  }
+ },
+ {
+  "name": "circle/outline/a",
+  "shape": {
+   "kind": "circle",
+   "cx": 20,
+   "cy": 20,
+   "diameter": 30
+  },
+  "options": {
+   "seed": "a"
+  }
+ },
+ {
+  "name": "arc-closed/outline/a",
+  "shape": {
+   "kind": "arc",
+   "cx": 20,
+   "cy": 20,
+   "width": 32,
+   "height": 32,
+   "start": 0.3,
+   "stop": 2.4,
+   "closed": true
+  },
+  "options": {
+   "seed": "a"
+  }
+ },
+ {
+  "name": "arc-open/outline/a",
+  "shape": {
+   "kind": "arc",
+   "cx": 20,
+   "cy": 20,
+   "width": 32,
+   "height": 24,
+   "start": 4,
+   "stop": 5.5
+  },
+  "options": {
+   "seed": "a"
+  }
+ },
+ {
+  "name": "polygon/outline/a",
+  "shape": {
+   "kind": "polygon",
+   "points": [
+    [
+     2,
+     28
+    ],
+    [
+     20,
+     2
+    ],
+    [
+     38,
+     28
+    ]
+   ]
+  },
+  "options": {
+   "seed": "a"
+  }
+ },
+ {
+  "name": "star/outline/a",
+  "shape": {
+   "kind": "polygon",
+   "points": [
+    [
+     20,
+     2
+    ],
+    [
+     31,
+     36
+    ],
+    [
+     2,
+     14
+    ],
+    [
+     38,
+     14
+    ],
+    [
+     9,
+     36
+    ]
+   ]
+  },
+  "options": {
+   "seed": "a"
+  }
+ },
+ {
+  "name": "linearPath/outline/a",
+  "shape": {
+   "kind": "linearPath",
+   "points": [
+    [
+     2,
+     20
+    ],
+    [
+     12,
+     4
+    ],
+    [
+     22,
+     22
+    ],
+    [
+     34,
+     6
+    ]
+   ]
+  },
+  "options": {
+   "seed": "a"
+  }
+ },
+ {
+  "name": "curve/outline/a",
+  "shape": {
+   "kind": "curve",
+   "points": [
+    [
+     2,
+     20
+    ],
+    [
+     12,
+     4
+    ],
+    [
+     22,
+     22
+    ],
+    [
+     34,
+     6
+    ]
+   ]
+  },
+  "options": {
+   "seed": "a"
+  }
+ },
+ {
+  "name": "path-lines/outline/a",
+  "shape": {
+   "kind": "path",
+   "d": "M4 4 L36 4 L30 26 Z"
+  },
+  "options": {
+   "seed": "a"
+  }
+ },
+ {
+  "name": "path-quadratic/outline/a",
+  "shape": {
+   "kind": "path",
+   "d": "M2 20 Q 12 2 22 18 T 38 10"
+  },
+  "options": {
+   "seed": "a"
+  }
+ },
+ {
+  "name": "path-arc/outline/a",
+  "shape": {
+   "kind": "path",
+   "d": "M4 20 A 16 12 0 0 1 36 20 Z"
+  },
+  "options": {
+   "seed": "a"
+  }
+ },
+ {
+  "name": "rectangle/hachure/a",
+  "shape": {
+   "kind": "rectangle",
+   "x": 2,
+   "y": 2,
+   "width": 36,
+   "height": 24
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "fillStyle": "hachure"
+  }
+ },
+ {
+  "name": "rectangle/solid/a",
+  "shape": {
+   "kind": "rectangle",
+   "x": 2,
+   "y": 2,
+   "width": 36,
+   "height": 24
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "fillStyle": "solid"
+  }
+ },
+ {
+  "name": "rectangle/zigzag/a",
+  "shape": {
+   "kind": "rectangle",
+   "x": 2,
+   "y": 2,
+   "width": 36,
+   "height": 24
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "fillStyle": "zigzag"
+  }
+ },
+ {
+  "name": "rectangle/cross-hatch/a",
+  "shape": {
+   "kind": "rectangle",
+   "x": 2,
+   "y": 2,
+   "width": 36,
+   "height": 24
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "fillStyle": "cross-hatch"
+  }
+ },
+ {
+  "name": "rectangle/dashed/a",
+  "shape": {
+   "kind": "rectangle",
+   "x": 2,
+   "y": 2,
+   "width": 36,
+   "height": 24
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "fillStyle": "dashed"
+  }
+ },
+ {
+  "name": "rectangle/zigzag-line/a",
+  "shape": {
+   "kind": "rectangle",
+   "x": 2,
+   "y": 2,
+   "width": 36,
+   "height": 24
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "fillStyle": "zigzag-line"
+  }
+ },
+ {
+  "name": "ellipse/hachure/a",
+  "shape": {
+   "kind": "ellipse",
+   "cx": 20,
+   "cy": 15,
+   "width": 34,
+   "height": 22
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "fillStyle": "hachure"
+  }
+ },
+ {
+  "name": "ellipse/solid/a",
+  "shape": {
+   "kind": "ellipse",
+   "cx": 20,
+   "cy": 15,
+   "width": 34,
+   "height": 22
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "fillStyle": "solid"
+  }
+ },
+ {
+  "name": "ellipse/zigzag/a",
+  "shape": {
+   "kind": "ellipse",
+   "cx": 20,
+   "cy": 15,
+   "width": 34,
+   "height": 22
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "fillStyle": "zigzag"
+  }
+ },
+ {
+  "name": "ellipse/cross-hatch/a",
+  "shape": {
+   "kind": "ellipse",
+   "cx": 20,
+   "cy": 15,
+   "width": 34,
+   "height": 22
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "fillStyle": "cross-hatch"
+  }
+ },
+ {
+  "name": "circle/hachure/a",
+  "shape": {
+   "kind": "circle",
+   "cx": 20,
+   "cy": 20,
+   "diameter": 30
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "fillStyle": "hachure"
+  }
+ },
+ {
+  "name": "circle/solid/a",
+  "shape": {
+   "kind": "circle",
+   "cx": 20,
+   "cy": 20,
+   "diameter": 30
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "fillStyle": "solid"
+  }
+ },
+ {
+  "name": "circle/zigzag/a",
+  "shape": {
+   "kind": "circle",
+   "cx": 20,
+   "cy": 20,
+   "diameter": 30
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "fillStyle": "zigzag"
+  }
+ },
+ {
+  "name": "circle/cross-hatch/a",
+  "shape": {
+   "kind": "circle",
+   "cx": 20,
+   "cy": 20,
+   "diameter": 30
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "fillStyle": "cross-hatch"
+  }
+ },
+ {
+  "name": "arc-closed/hachure/a",
+  "shape": {
+   "kind": "arc",
+   "cx": 20,
+   "cy": 20,
+   "width": 32,
+   "height": 32,
+   "start": 0.3,
+   "stop": 2.4,
+   "closed": true
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "fillStyle": "hachure"
+  }
+ },
+ {
+  "name": "arc-closed/solid/a",
+  "shape": {
+   "kind": "arc",
+   "cx": 20,
+   "cy": 20,
+   "width": 32,
+   "height": 32,
+   "start": 0.3,
+   "stop": 2.4,
+   "closed": true
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "fillStyle": "solid"
+  }
+ },
+ {
+  "name": "arc-closed/zigzag/a",
+  "shape": {
+   "kind": "arc",
+   "cx": 20,
+   "cy": 20,
+   "width": 32,
+   "height": 32,
+   "start": 0.3,
+   "stop": 2.4,
+   "closed": true
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "fillStyle": "zigzag"
+  }
+ },
+ {
+  "name": "arc-closed/cross-hatch/a",
+  "shape": {
+   "kind": "arc",
+   "cx": 20,
+   "cy": 20,
+   "width": 32,
+   "height": 32,
+   "start": 0.3,
+   "stop": 2.4,
+   "closed": true
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "fillStyle": "cross-hatch"
+  }
+ },
+ {
+  "name": "polygon/hachure/a",
+  "shape": {
+   "kind": "polygon",
+   "points": [
+    [
+     2,
+     28
+    ],
+    [
+     20,
+     2
+    ],
+    [
+     38,
+     28
+    ]
+   ]
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "fillStyle": "hachure"
+  }
+ },
+ {
+  "name": "polygon/solid/a",
+  "shape": {
+   "kind": "polygon",
+   "points": [
+    [
+     2,
+     28
+    ],
+    [
+     20,
+     2
+    ],
+    [
+     38,
+     28
+    ]
+   ]
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "fillStyle": "solid"
+  }
+ },
+ {
+  "name": "polygon/zigzag/a",
+  "shape": {
+   "kind": "polygon",
+   "points": [
+    [
+     2,
+     28
+    ],
+    [
+     20,
+     2
+    ],
+    [
+     38,
+     28
+    ]
+   ]
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "fillStyle": "zigzag"
+  }
+ },
+ {
+  "name": "polygon/cross-hatch/a",
+  "shape": {
+   "kind": "polygon",
+   "points": [
+    [
+     2,
+     28
+    ],
+    [
+     20,
+     2
+    ],
+    [
+     38,
+     28
+    ]
+   ]
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "fillStyle": "cross-hatch"
+  }
+ },
+ {
+  "name": "polygon/dashed/a",
+  "shape": {
+   "kind": "polygon",
+   "points": [
+    [
+     2,
+     28
+    ],
+    [
+     20,
+     2
+    ],
+    [
+     38,
+     28
+    ]
+   ]
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "fillStyle": "dashed"
+  }
+ },
+ {
+  "name": "polygon/zigzag-line/a",
+  "shape": {
+   "kind": "polygon",
+   "points": [
+    [
+     2,
+     28
+    ],
+    [
+     20,
+     2
+    ],
+    [
+     38,
+     28
+    ]
+   ]
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "fillStyle": "zigzag-line"
+  }
+ },
+ {
+  "name": "star/hachure/a",
+  "shape": {
+   "kind": "polygon",
+   "points": [
+    [
+     20,
+     2
+    ],
+    [
+     31,
+     36
+    ],
+    [
+     2,
+     14
+    ],
+    [
+     38,
+     14
+    ],
+    [
+     9,
+     36
+    ]
+   ]
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "fillStyle": "hachure"
+  }
+ },
+ {
+  "name": "star/solid/a",
+  "shape": {
+   "kind": "polygon",
+   "points": [
+    [
+     20,
+     2
+    ],
+    [
+     31,
+     36
+    ],
+    [
+     2,
+     14
+    ],
+    [
+     38,
+     14
+    ],
+    [
+     9,
+     36
+    ]
+   ]
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "fillStyle": "solid"
+  }
+ },
+ {
+  "name": "star/zigzag/a",
+  "shape": {
+   "kind": "polygon",
+   "points": [
+    [
+     20,
+     2
+    ],
+    [
+     31,
+     36
+    ],
+    [
+     2,
+     14
+    ],
+    [
+     38,
+     14
+    ],
+    [
+     9,
+     36
+    ]
+   ]
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "fillStyle": "zigzag"
+  }
+ },
+ {
+  "name": "star/cross-hatch/a",
+  "shape": {
+   "kind": "polygon",
+   "points": [
+    [
+     20,
+     2
+    ],
+    [
+     31,
+     36
+    ],
+    [
+     2,
+     14
+    ],
+    [
+     38,
+     14
+    ],
+    [
+     9,
+     36
+    ]
+   ]
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "fillStyle": "cross-hatch"
+  }
+ },
+ {
+  "name": "star/dashed/a",
+  "shape": {
+   "kind": "polygon",
+   "points": [
+    [
+     20,
+     2
+    ],
+    [
+     31,
+     36
+    ],
+    [
+     2,
+     14
+    ],
+    [
+     38,
+     14
+    ],
+    [
+     9,
+     36
+    ]
+   ]
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "fillStyle": "dashed"
+  }
+ },
+ {
+  "name": "star/zigzag-line/a",
+  "shape": {
+   "kind": "polygon",
+   "points": [
+    [
+     20,
+     2
+    ],
+    [
+     31,
+     36
+    ],
+    [
+     2,
+     14
+    ],
+    [
+     38,
+     14
+    ],
+    [
+     9,
+     36
+    ]
+   ]
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "fillStyle": "zigzag-line"
+  }
+ },
+ {
+  "name": "curve/hachure/a",
+  "shape": {
+   "kind": "curve",
+   "points": [
+    [
+     2,
+     20
+    ],
+    [
+     12,
+     4
+    ],
+    [
+     22,
+     22
+    ],
+    [
+     34,
+     6
+    ]
+   ]
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "fillStyle": "hachure"
+  }
+ },
+ {
+  "name": "curve/solid/a",
+  "shape": {
+   "kind": "curve",
+   "points": [
+    [
+     2,
+     20
+    ],
+    [
+     12,
+     4
+    ],
+    [
+     22,
+     22
+    ],
+    [
+     34,
+     6
+    ]
+   ]
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "fillStyle": "solid"
+  }
+ },
+ {
+  "name": "curve/zigzag/a",
+  "shape": {
+   "kind": "curve",
+   "points": [
+    [
+     2,
+     20
+    ],
+    [
+     12,
+     4
+    ],
+    [
+     22,
+     22
+    ],
+    [
+     34,
+     6
+    ]
+   ]
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "fillStyle": "zigzag"
+  }
+ },
+ {
+  "name": "curve/cross-hatch/a",
+  "shape": {
+   "kind": "curve",
+   "points": [
+    [
+     2,
+     20
+    ],
+    [
+     12,
+     4
+    ],
+    [
+     22,
+     22
+    ],
+    [
+     34,
+     6
+    ]
+   ]
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "fillStyle": "cross-hatch"
+  }
+ },
+ {
+  "name": "curve/dashed/a",
+  "shape": {
+   "kind": "curve",
+   "points": [
+    [
+     2,
+     20
+    ],
+    [
+     12,
+     4
+    ],
+    [
+     22,
+     22
+    ],
+    [
+     34,
+     6
+    ]
+   ]
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "fillStyle": "dashed"
+  }
+ },
+ {
+  "name": "curve/zigzag-line/a",
+  "shape": {
+   "kind": "curve",
+   "points": [
+    [
+     2,
+     20
+    ],
+    [
+     12,
+     4
+    ],
+    [
+     22,
+     22
+    ],
+    [
+     34,
+     6
+    ]
+   ]
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "fillStyle": "zigzag-line"
+  }
+ },
+ {
+  "name": "path-lines/hachure/a",
+  "shape": {
+   "kind": "path",
+   "d": "M4 4 L36 4 L30 26 Z"
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "fillStyle": "hachure"
+  }
+ },
+ {
+  "name": "path-lines/solid/a",
+  "shape": {
+   "kind": "path",
+   "d": "M4 4 L36 4 L30 26 Z"
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "fillStyle": "solid"
+  }
+ },
+ {
+  "name": "path-lines/zigzag/a",
+  "shape": {
+   "kind": "path",
+   "d": "M4 4 L36 4 L30 26 Z"
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "fillStyle": "zigzag"
+  }
+ },
+ {
+  "name": "path-lines/cross-hatch/a",
+  "shape": {
+   "kind": "path",
+   "d": "M4 4 L36 4 L30 26 Z"
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "fillStyle": "cross-hatch"
+  }
+ },
+ {
+  "name": "path-lines/dashed/a",
+  "shape": {
+   "kind": "path",
+   "d": "M4 4 L36 4 L30 26 Z"
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "fillStyle": "dashed"
+  }
+ },
+ {
+  "name": "path-lines/zigzag-line/a",
+  "shape": {
+   "kind": "path",
+   "d": "M4 4 L36 4 L30 26 Z"
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "fillStyle": "zigzag-line"
+  }
+ },
+ {
+  "name": "path-arc/hachure/a",
+  "shape": {
+   "kind": "path",
+   "d": "M4 20 A 16 12 0 0 1 36 20 Z"
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "fillStyle": "hachure"
+  }
+ },
+ {
+  "name": "path-arc/solid/a",
+  "shape": {
+   "kind": "path",
+   "d": "M4 20 A 16 12 0 0 1 36 20 Z"
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "fillStyle": "solid"
+  }
+ },
+ {
+  "name": "path-arc/zigzag/a",
+  "shape": {
+   "kind": "path",
+   "d": "M4 20 A 16 12 0 0 1 36 20 Z"
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "fillStyle": "zigzag"
+  }
+ },
+ {
+  "name": "path-arc/cross-hatch/a",
+  "shape": {
+   "kind": "path",
+   "d": "M4 20 A 16 12 0 0 1 36 20 Z"
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "fillStyle": "cross-hatch"
+  }
+ },
+ {
+  "name": "line/outline/b",
+  "shape": {
+   "kind": "line",
+   "x1": 2,
+   "y1": 3,
+   "x2": 38,
+   "y2": 27
+  },
+  "options": {
+   "seed": "b"
+  }
+ },
+ {
+  "name": "rectangle/outline/b",
+  "shape": {
+   "kind": "rectangle",
+   "x": 2,
+   "y": 2,
+   "width": 36,
+   "height": 24
+  },
+  "options": {
+   "seed": "b"
+  }
+ },
+ {
+  "name": "ellipse/outline/b",
+  "shape": {
+   "kind": "ellipse",
+   "cx": 20,
+   "cy": 15,
+   "width": 34,
+   "height": 22
+  },
+  "options": {
+   "seed": "b"
+  }
+ },
+ {
+  "name": "circle/outline/b",
+  "shape": {
+   "kind": "circle",
+   "cx": 20,
+   "cy": 20,
+   "diameter": 30
+  },
+  "options": {
+   "seed": "b"
+  }
+ },
+ {
+  "name": "arc-closed/outline/b",
+  "shape": {
+   "kind": "arc",
+   "cx": 20,
+   "cy": 20,
+   "width": 32,
+   "height": 32,
+   "start": 0.3,
+   "stop": 2.4,
+   "closed": true
+  },
+  "options": {
+   "seed": "b"
+  }
+ },
+ {
+  "name": "arc-open/outline/b",
+  "shape": {
+   "kind": "arc",
+   "cx": 20,
+   "cy": 20,
+   "width": 32,
+   "height": 24,
+   "start": 4,
+   "stop": 5.5
+  },
+  "options": {
+   "seed": "b"
+  }
+ },
+ {
+  "name": "polygon/outline/b",
+  "shape": {
+   "kind": "polygon",
+   "points": [
+    [
+     2,
+     28
+    ],
+    [
+     20,
+     2
+    ],
+    [
+     38,
+     28
+    ]
+   ]
+  },
+  "options": {
+   "seed": "b"
+  }
+ },
+ {
+  "name": "star/outline/b",
+  "shape": {
+   "kind": "polygon",
+   "points": [
+    [
+     20,
+     2
+    ],
+    [
+     31,
+     36
+    ],
+    [
+     2,
+     14
+    ],
+    [
+     38,
+     14
+    ],
+    [
+     9,
+     36
+    ]
+   ]
+  },
+  "options": {
+   "seed": "b"
+  }
+ },
+ {
+  "name": "linearPath/outline/b",
+  "shape": {
+   "kind": "linearPath",
+   "points": [
+    [
+     2,
+     20
+    ],
+    [
+     12,
+     4
+    ],
+    [
+     22,
+     22
+    ],
+    [
+     34,
+     6
+    ]
+   ]
+  },
+  "options": {
+   "seed": "b"
+  }
+ },
+ {
+  "name": "curve/outline/b",
+  "shape": {
+   "kind": "curve",
+   "points": [
+    [
+     2,
+     20
+    ],
+    [
+     12,
+     4
+    ],
+    [
+     22,
+     22
+    ],
+    [
+     34,
+     6
+    ]
+   ]
+  },
+  "options": {
+   "seed": "b"
+  }
+ },
+ {
+  "name": "path-lines/outline/b",
+  "shape": {
+   "kind": "path",
+   "d": "M4 4 L36 4 L30 26 Z"
+  },
+  "options": {
+   "seed": "b"
+  }
+ },
+ {
+  "name": "path-quadratic/outline/b",
+  "shape": {
+   "kind": "path",
+   "d": "M2 20 Q 12 2 22 18 T 38 10"
+  },
+  "options": {
+   "seed": "b"
+  }
+ },
+ {
+  "name": "path-arc/outline/b",
+  "shape": {
+   "kind": "path",
+   "d": "M4 20 A 16 12 0 0 1 36 20 Z"
+  },
+  "options": {
+   "seed": "b"
+  }
+ },
+ {
+  "name": "rectangle/hachure/b",
+  "shape": {
+   "kind": "rectangle",
+   "x": 2,
+   "y": 2,
+   "width": 36,
+   "height": 24
+  },
+  "options": {
+   "seed": "b",
+   "fill": "#c33",
+   "fillStyle": "hachure"
+  }
+ },
+ {
+  "name": "rectangle/solid/b",
+  "shape": {
+   "kind": "rectangle",
+   "x": 2,
+   "y": 2,
+   "width": 36,
+   "height": 24
+  },
+  "options": {
+   "seed": "b",
+   "fill": "#c33",
+   "fillStyle": "solid"
+  }
+ },
+ {
+  "name": "rectangle/zigzag/b",
+  "shape": {
+   "kind": "rectangle",
+   "x": 2,
+   "y": 2,
+   "width": 36,
+   "height": 24
+  },
+  "options": {
+   "seed": "b",
+   "fill": "#c33",
+   "fillStyle": "zigzag"
+  }
+ },
+ {
+  "name": "rectangle/cross-hatch/b",
+  "shape": {
+   "kind": "rectangle",
+   "x": 2,
+   "y": 2,
+   "width": 36,
+   "height": 24
+  },
+  "options": {
+   "seed": "b",
+   "fill": "#c33",
+   "fillStyle": "cross-hatch"
+  }
+ },
+ {
+  "name": "rectangle/dashed/b",
+  "shape": {
+   "kind": "rectangle",
+   "x": 2,
+   "y": 2,
+   "width": 36,
+   "height": 24
+  },
+  "options": {
+   "seed": "b",
+   "fill": "#c33",
+   "fillStyle": "dashed"
+  }
+ },
+ {
+  "name": "rectangle/zigzag-line/b",
+  "shape": {
+   "kind": "rectangle",
+   "x": 2,
+   "y": 2,
+   "width": 36,
+   "height": 24
+  },
+  "options": {
+   "seed": "b",
+   "fill": "#c33",
+   "fillStyle": "zigzag-line"
+  }
+ },
+ {
+  "name": "ellipse/hachure/b",
+  "shape": {
+   "kind": "ellipse",
+   "cx": 20,
+   "cy": 15,
+   "width": 34,
+   "height": 22
+  },
+  "options": {
+   "seed": "b",
+   "fill": "#c33",
+   "fillStyle": "hachure"
+  }
+ },
+ {
+  "name": "ellipse/solid/b",
+  "shape": {
+   "kind": "ellipse",
+   "cx": 20,
+   "cy": 15,
+   "width": 34,
+   "height": 22
+  },
+  "options": {
+   "seed": "b",
+   "fill": "#c33",
+   "fillStyle": "solid"
+  }
+ },
+ {
+  "name": "ellipse/zigzag/b",
+  "shape": {
+   "kind": "ellipse",
+   "cx": 20,
+   "cy": 15,
+   "width": 34,
+   "height": 22
+  },
+  "options": {
+   "seed": "b",
+   "fill": "#c33",
+   "fillStyle": "zigzag"
+  }
+ },
+ {
+  "name": "ellipse/cross-hatch/b",
+  "shape": {
+   "kind": "ellipse",
+   "cx": 20,
+   "cy": 15,
+   "width": 34,
+   "height": 22
+  },
+  "options": {
+   "seed": "b",
+   "fill": "#c33",
+   "fillStyle": "cross-hatch"
+  }
+ },
+ {
+  "name": "circle/hachure/b",
+  "shape": {
+   "kind": "circle",
+   "cx": 20,
+   "cy": 20,
+   "diameter": 30
+  },
+  "options": {
+   "seed": "b",
+   "fill": "#c33",
+   "fillStyle": "hachure"
+  }
+ },
+ {
+  "name": "circle/solid/b",
+  "shape": {
+   "kind": "circle",
+   "cx": 20,
+   "cy": 20,
+   "diameter": 30
+  },
+  "options": {
+   "seed": "b",
+   "fill": "#c33",
+   "fillStyle": "solid"
+  }
+ },
+ {
+  "name": "circle/zigzag/b",
+  "shape": {
+   "kind": "circle",
+   "cx": 20,
+   "cy": 20,
+   "diameter": 30
+  },
+  "options": {
+   "seed": "b",
+   "fill": "#c33",
+   "fillStyle": "zigzag"
+  }
+ },
+ {
+  "name": "circle/cross-hatch/b",
+  "shape": {
+   "kind": "circle",
+   "cx": 20,
+   "cy": 20,
+   "diameter": 30
+  },
+  "options": {
+   "seed": "b",
+   "fill": "#c33",
+   "fillStyle": "cross-hatch"
+  }
+ },
+ {
+  "name": "arc-closed/hachure/b",
+  "shape": {
+   "kind": "arc",
+   "cx": 20,
+   "cy": 20,
+   "width": 32,
+   "height": 32,
+   "start": 0.3,
+   "stop": 2.4,
+   "closed": true
+  },
+  "options": {
+   "seed": "b",
+   "fill": "#c33",
+   "fillStyle": "hachure"
+  }
+ },
+ {
+  "name": "arc-closed/solid/b",
+  "shape": {
+   "kind": "arc",
+   "cx": 20,
+   "cy": 20,
+   "width": 32,
+   "height": 32,
+   "start": 0.3,
+   "stop": 2.4,
+   "closed": true
+  },
+  "options": {
+   "seed": "b",
+   "fill": "#c33",
+   "fillStyle": "solid"
+  }
+ },
+ {
+  "name": "arc-closed/zigzag/b",
+  "shape": {
+   "kind": "arc",
+   "cx": 20,
+   "cy": 20,
+   "width": 32,
+   "height": 32,
+   "start": 0.3,
+   "stop": 2.4,
+   "closed": true
+  },
+  "options": {
+   "seed": "b",
+   "fill": "#c33",
+   "fillStyle": "zigzag"
+  }
+ },
+ {
+  "name": "arc-closed/cross-hatch/b",
+  "shape": {
+   "kind": "arc",
+   "cx": 20,
+   "cy": 20,
+   "width": 32,
+   "height": 32,
+   "start": 0.3,
+   "stop": 2.4,
+   "closed": true
+  },
+  "options": {
+   "seed": "b",
+   "fill": "#c33",
+   "fillStyle": "cross-hatch"
+  }
+ },
+ {
+  "name": "polygon/hachure/b",
+  "shape": {
+   "kind": "polygon",
+   "points": [
+    [
+     2,
+     28
+    ],
+    [
+     20,
+     2
+    ],
+    [
+     38,
+     28
+    ]
+   ]
+  },
+  "options": {
+   "seed": "b",
+   "fill": "#c33",
+   "fillStyle": "hachure"
+  }
+ },
+ {
+  "name": "polygon/solid/b",
+  "shape": {
+   "kind": "polygon",
+   "points": [
+    [
+     2,
+     28
+    ],
+    [
+     20,
+     2
+    ],
+    [
+     38,
+     28
+    ]
+   ]
+  },
+  "options": {
+   "seed": "b",
+   "fill": "#c33",
+   "fillStyle": "solid"
+  }
+ },
+ {
+  "name": "polygon/zigzag/b",
+  "shape": {
+   "kind": "polygon",
+   "points": [
+    [
+     2,
+     28
+    ],
+    [
+     20,
+     2
+    ],
+    [
+     38,
+     28
+    ]
+   ]
+  },
+  "options": {
+   "seed": "b",
+   "fill": "#c33",
+   "fillStyle": "zigzag"
+  }
+ },
+ {
+  "name": "polygon/cross-hatch/b",
+  "shape": {
+   "kind": "polygon",
+   "points": [
+    [
+     2,
+     28
+    ],
+    [
+     20,
+     2
+    ],
+    [
+     38,
+     28
+    ]
+   ]
+  },
+  "options": {
+   "seed": "b",
+   "fill": "#c33",
+   "fillStyle": "cross-hatch"
+  }
+ },
+ {
+  "name": "polygon/dashed/b",
+  "shape": {
+   "kind": "polygon",
+   "points": [
+    [
+     2,
+     28
+    ],
+    [
+     20,
+     2
+    ],
+    [
+     38,
+     28
+    ]
+   ]
+  },
+  "options": {
+   "seed": "b",
+   "fill": "#c33",
+   "fillStyle": "dashed"
+  }
+ },
+ {
+  "name": "polygon/zigzag-line/b",
+  "shape": {
+   "kind": "polygon",
+   "points": [
+    [
+     2,
+     28
+    ],
+    [
+     20,
+     2
+    ],
+    [
+     38,
+     28
+    ]
+   ]
+  },
+  "options": {
+   "seed": "b",
+   "fill": "#c33",
+   "fillStyle": "zigzag-line"
+  }
+ },
+ {
+  "name": "star/hachure/b",
+  "shape": {
+   "kind": "polygon",
+   "points": [
+    [
+     20,
+     2
+    ],
+    [
+     31,
+     36
+    ],
+    [
+     2,
+     14
+    ],
+    [
+     38,
+     14
+    ],
+    [
+     9,
+     36
+    ]
+   ]
+  },
+  "options": {
+   "seed": "b",
+   "fill": "#c33",
+   "fillStyle": "hachure"
+  }
+ },
+ {
+  "name": "star/solid/b",
+  "shape": {
+   "kind": "polygon",
+   "points": [
+    [
+     20,
+     2
+    ],
+    [
+     31,
+     36
+    ],
+    [
+     2,
+     14
+    ],
+    [
+     38,
+     14
+    ],
+    [
+     9,
+     36
+    ]
+   ]
+  },
+  "options": {
+   "seed": "b",
+   "fill": "#c33",
+   "fillStyle": "solid"
+  }
+ },
+ {
+  "name": "star/zigzag/b",
+  "shape": {
+   "kind": "polygon",
+   "points": [
+    [
+     20,
+     2
+    ],
+    [
+     31,
+     36
+    ],
+    [
+     2,
+     14
+    ],
+    [
+     38,
+     14
+    ],
+    [
+     9,
+     36
+    ]
+   ]
+  },
+  "options": {
+   "seed": "b",
+   "fill": "#c33",
+   "fillStyle": "zigzag"
+  }
+ },
+ {
+  "name": "star/cross-hatch/b",
+  "shape": {
+   "kind": "polygon",
+   "points": [
+    [
+     20,
+     2
+    ],
+    [
+     31,
+     36
+    ],
+    [
+     2,
+     14
+    ],
+    [
+     38,
+     14
+    ],
+    [
+     9,
+     36
+    ]
+   ]
+  },
+  "options": {
+   "seed": "b",
+   "fill": "#c33",
+   "fillStyle": "cross-hatch"
+  }
+ },
+ {
+  "name": "star/dashed/b",
+  "shape": {
+   "kind": "polygon",
+   "points": [
+    [
+     20,
+     2
+    ],
+    [
+     31,
+     36
+    ],
+    [
+     2,
+     14
+    ],
+    [
+     38,
+     14
+    ],
+    [
+     9,
+     36
+    ]
+   ]
+  },
+  "options": {
+   "seed": "b",
+   "fill": "#c33",
+   "fillStyle": "dashed"
+  }
+ },
+ {
+  "name": "star/zigzag-line/b",
+  "shape": {
+   "kind": "polygon",
+   "points": [
+    [
+     20,
+     2
+    ],
+    [
+     31,
+     36
+    ],
+    [
+     2,
+     14
+    ],
+    [
+     38,
+     14
+    ],
+    [
+     9,
+     36
+    ]
+   ]
+  },
+  "options": {
+   "seed": "b",
+   "fill": "#c33",
+   "fillStyle": "zigzag-line"
+  }
+ },
+ {
+  "name": "curve/hachure/b",
+  "shape": {
+   "kind": "curve",
+   "points": [
+    [
+     2,
+     20
+    ],
+    [
+     12,
+     4
+    ],
+    [
+     22,
+     22
+    ],
+    [
+     34,
+     6
+    ]
+   ]
+  },
+  "options": {
+   "seed": "b",
+   "fill": "#c33",
+   "fillStyle": "hachure"
+  }
+ },
+ {
+  "name": "curve/solid/b",
+  "shape": {
+   "kind": "curve",
+   "points": [
+    [
+     2,
+     20
+    ],
+    [
+     12,
+     4
+    ],
+    [
+     22,
+     22
+    ],
+    [
+     34,
+     6
+    ]
+   ]
+  },
+  "options": {
+   "seed": "b",
+   "fill": "#c33",
+   "fillStyle": "solid"
+  }
+ },
+ {
+  "name": "curve/zigzag/b",
+  "shape": {
+   "kind": "curve",
+   "points": [
+    [
+     2,
+     20
+    ],
+    [
+     12,
+     4
+    ],
+    [
+     22,
+     22
+    ],
+    [
+     34,
+     6
+    ]
+   ]
+  },
+  "options": {
+   "seed": "b",
+   "fill": "#c33",
+   "fillStyle": "zigzag"
+  }
+ },
+ {
+  "name": "curve/cross-hatch/b",
+  "shape": {
+   "kind": "curve",
+   "points": [
+    [
+     2,
+     20
+    ],
+    [
+     12,
+     4
+    ],
+    [
+     22,
+     22
+    ],
+    [
+     34,
+     6
+    ]
+   ]
+  },
+  "options": {
+   "seed": "b",
+   "fill": "#c33",
+   "fillStyle": "cross-hatch"
+  }
+ },
+ {
+  "name": "curve/dashed/b",
+  "shape": {
+   "kind": "curve",
+   "points": [
+    [
+     2,
+     20
+    ],
+    [
+     12,
+     4
+    ],
+    [
+     22,
+     22
+    ],
+    [
+     34,
+     6
+    ]
+   ]
+  },
+  "options": {
+   "seed": "b",
+   "fill": "#c33",
+   "fillStyle": "dashed"
+  }
+ },
+ {
+  "name": "curve/zigzag-line/b",
+  "shape": {
+   "kind": "curve",
+   "points": [
+    [
+     2,
+     20
+    ],
+    [
+     12,
+     4
+    ],
+    [
+     22,
+     22
+    ],
+    [
+     34,
+     6
+    ]
+   ]
+  },
+  "options": {
+   "seed": "b",
+   "fill": "#c33",
+   "fillStyle": "zigzag-line"
+  }
+ },
+ {
+  "name": "path-lines/hachure/b",
+  "shape": {
+   "kind": "path",
+   "d": "M4 4 L36 4 L30 26 Z"
+  },
+  "options": {
+   "seed": "b",
+   "fill": "#c33",
+   "fillStyle": "hachure"
+  }
+ },
+ {
+  "name": "path-lines/solid/b",
+  "shape": {
+   "kind": "path",
+   "d": "M4 4 L36 4 L30 26 Z"
+  },
+  "options": {
+   "seed": "b",
+   "fill": "#c33",
+   "fillStyle": "solid"
+  }
+ },
+ {
+  "name": "path-lines/zigzag/b",
+  "shape": {
+   "kind": "path",
+   "d": "M4 4 L36 4 L30 26 Z"
+  },
+  "options": {
+   "seed": "b",
+   "fill": "#c33",
+   "fillStyle": "zigzag"
+  }
+ },
+ {
+  "name": "path-lines/cross-hatch/b",
+  "shape": {
+   "kind": "path",
+   "d": "M4 4 L36 4 L30 26 Z"
+  },
+  "options": {
+   "seed": "b",
+   "fill": "#c33",
+   "fillStyle": "cross-hatch"
+  }
+ },
+ {
+  "name": "path-lines/dashed/b",
+  "shape": {
+   "kind": "path",
+   "d": "M4 4 L36 4 L30 26 Z"
+  },
+  "options": {
+   "seed": "b",
+   "fill": "#c33",
+   "fillStyle": "dashed"
+  }
+ },
+ {
+  "name": "path-lines/zigzag-line/b",
+  "shape": {
+   "kind": "path",
+   "d": "M4 4 L36 4 L30 26 Z"
+  },
+  "options": {
+   "seed": "b",
+   "fill": "#c33",
+   "fillStyle": "zigzag-line"
+  }
+ },
+ {
+  "name": "path-arc/hachure/b",
+  "shape": {
+   "kind": "path",
+   "d": "M4 20 A 16 12 0 0 1 36 20 Z"
+  },
+  "options": {
+   "seed": "b",
+   "fill": "#c33",
+   "fillStyle": "hachure"
+  }
+ },
+ {
+  "name": "path-arc/solid/b",
+  "shape": {
+   "kind": "path",
+   "d": "M4 20 A 16 12 0 0 1 36 20 Z"
+  },
+  "options": {
+   "seed": "b",
+   "fill": "#c33",
+   "fillStyle": "solid"
+  }
+ },
+ {
+  "name": "path-arc/zigzag/b",
+  "shape": {
+   "kind": "path",
+   "d": "M4 20 A 16 12 0 0 1 36 20 Z"
+  },
+  "options": {
+   "seed": "b",
+   "fill": "#c33",
+   "fillStyle": "zigzag"
+  }
+ },
+ {
+  "name": "path-arc/cross-hatch/b",
+  "shape": {
+   "kind": "path",
+   "d": "M4 20 A 16 12 0 0 1 36 20 Z"
+  },
+  "options": {
+   "seed": "b",
+   "fill": "#c33",
+   "fillStyle": "cross-hatch"
+  }
+ },
+ {
+  "name": "option/roughness-0",
+  "shape": {
+   "kind": "rectangle",
+   "x": 2,
+   "y": 2,
+   "width": 36,
+   "height": 24
+  },
+  "options": {
+   "seed": "a",
+   "roughness": 0,
+   "fill": "#c33"
+  }
+ },
+ {
+  "name": "option/roughness-2.5",
+  "shape": {
+   "kind": "rectangle",
+   "x": 2,
+   "y": 2,
+   "width": 36,
+   "height": 24
+  },
+  "options": {
+   "seed": "a",
+   "roughness": 2.5,
+   "fill": "#c33"
+  }
+ },
+ {
+  "name": "option/bowing-3",
+  "shape": {
+   "kind": "line",
+   "x1": 2,
+   "y1": 3,
+   "x2": 38,
+   "y2": 27
+  },
+  "options": {
+   "seed": "a",
+   "bowing": 3
+  }
+ },
+ {
+  "name": "option/hachure-angle-41",
+  "shape": {
+   "kind": "rectangle",
+   "x": 2,
+   "y": 2,
+   "width": 36,
+   "height": 24
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "hachureAngle": 41
+  }
+ },
+ {
+  "name": "option/hachure-gap-8",
+  "shape": {
+   "kind": "rectangle",
+   "x": 2,
+   "y": 2,
+   "width": 36,
+   "height": 24
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "hachureGap": 8
+  }
+ },
+ {
+  "name": "option/fill-weight-2",
+  "shape": {
+   "kind": "rectangle",
+   "x": 2,
+   "y": 2,
+   "width": 36,
+   "height": 24
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "fillWeight": 2
+  }
+ },
+ {
+  "name": "option/stroke-style",
+  "shape": {
+   "kind": "rectangle",
+   "x": 2,
+   "y": 2,
+   "width": 36,
+   "height": 24
+  },
+  "options": {
+   "seed": "a",
+   "stroke": "#123",
+   "strokeWidth": 3
+  }
+ },
+ {
+  "name": "option/dash-gap-offset",
+  "shape": {
+   "kind": "rectangle",
+   "x": 2,
+   "y": 2,
+   "width": 36,
+   "height": 24
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "fillStyle": "dashed",
+   "dashOffset": 6,
+   "dashGap": 3
+  }
+ },
+ {
+  "name": "option/zigzag-offset",
+  "shape": {
+   "kind": "rectangle",
+   "x": 2,
+   "y": 2,
+   "width": 36,
+   "height": 24
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "fillStyle": "zigzag-line",
+   "zigzagOffset": 5
+  }
+ },
+ {
+  "name": "option/curve-tightness",
+  "shape": {
+   "kind": "curve",
+   "points": [
+    [
+     2,
+     20
+    ],
+    [
+     12,
+     4
+    ],
+    [
+     22,
+     22
+    ],
+    [
+     34,
+     6
+    ]
+   ]
+  },
+  "options": {
+   "seed": "a",
+   "curveTightness": 0.8
+  }
+ },
+ {
+  "name": "option/curve-fitting",
+  "shape": {
+   "kind": "ellipse",
+   "cx": 20,
+   "cy": 15,
+   "width": 34,
+   "height": 22
+  },
+  "options": {
+   "seed": "a",
+   "curveFitting": 0.6
+  }
+ },
+ {
+  "name": "option/curve-step-count",
+  "shape": {
+   "kind": "circle",
+   "cx": 20,
+   "cy": 20,
+   "diameter": 30
+  },
+  "options": {
+   "seed": "a",
+   "curveStepCount": 20
+  }
+ },
+ {
+  "name": "option/hachure-gap-fractional",
+  "shape": {
+   "kind": "rectangle",
+   "x": 2,
+   "y": 2,
+   "width": 36,
+   "height": 24
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "hachureGap": 6.5
+  }
+ },
+ {
+  "name": "option/zigzag-gap-fractional",
+  "shape": {
+   "kind": "rectangle",
+   "x": 2,
+   "y": 2,
+   "width": 36,
+   "height": 24
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "fillStyle": "zigzag",
+   "hachureGap": 5.5
+  }
+ },
+ {
+  "name": "option/path-arc-asymmetric",
+  "shape": {
+   "kind": "path",
+   "d": "M4 26 A 16 12 0 0 1 36 14 Z"
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33"
+  }
+ },
+ {
+  "name": "option/path-arc-large-sweep",
+  "shape": {
+   "kind": "path",
+   "d": "M10 20 A 12 9 30 1 0 30 22"
+  },
+  "options": {
+   "seed": "a"
+  }
+ },
+ {
+  "name": "option/path-relative-commands",
+  "shape": {
+   "kind": "path",
+   "d": "m4 4 l10 2 h8 v6 c2 4 6 4 8 0 s4 -6 8 -2 q4 4 8 0 t6 2 a6 6 0 0 1 -4 8 z"
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "fillStyle": "cross-hatch"
+  }
+ },
+ {
+  "name": "option/path-smooth-absolute",
+  "shape": {
+   "kind": "path",
+   "d": "M2 30 C 8 2 16 2 20 16 S 34 30 38 6 Q 30 2 24 10 T 6 12 H 2 V 30 Z"
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33"
+  }
+ },
+ {
+  "name": "option/curve-long-fill",
+  "shape": {
+   "kind": "curve",
+   "points": [
+    [
+     2,
+     30
+    ],
+    [
+     8,
+     2
+    ],
+    [
+     16,
+     26
+    ],
+    [
+     22,
+     4
+    ],
+    [
+     30,
+     28
+    ],
+    [
+     38,
+     6
+    ],
+    [
+     36,
+     38
+    ],
+    [
+     4,
+     38
+    ]
+   ]
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33"
+  }
+ },
+ {
+  "name": "option/curve-three-point-fill",
+  "shape": {
+   "kind": "curve",
+   "points": [
+    [
+     2,
+     30
+    ],
+    [
+     20,
+     2
+    ],
+    [
+     38,
+     30
+    ]
+   ]
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33"
+  }
+ },
+ {
+  "name": "option/line-300",
+  "shape": {
+   "kind": "line",
+   "x1": 0,
+   "y1": 0,
+   "x2": 300,
+   "y2": 40
+  },
+  "options": {
+   "seed": "a"
+  }
+ },
+ {
+  "name": "option/line-450",
+  "shape": {
+   "kind": "line",
+   "x1": 0,
+   "y1": 0,
+   "x2": 450,
+   "y2": 10
+  },
+  "options": {
+   "seed": "a"
+  }
+ },
+ {
+  "name": "option/line-700",
+  "shape": {
+   "kind": "line",
+   "x1": 0,
+   "y1": 0,
+   "x2": 700,
+   "y2": 10
+  },
+  "options": {
+   "seed": "a"
+  }
+ },
+ {
+  "name": "option/rectangle-fill-none",
+  "shape": {
+   "kind": "rectangle",
+   "x": 2,
+   "y": 2,
+   "width": 36,
+   "height": 24
+  },
+  "options": {
+   "seed": "a",
+   "fill": "none"
+  }
+ },
+ {
+  "name": "option/curve-fill-none",
+  "shape": {
+   "kind": "curve",
+   "points": [
+    [
+     2,
+     20
+    ],
+    [
+     12,
+     4
+    ],
+    [
+     22,
+     22
+    ],
+    [
+     34,
+     6
+    ]
+   ]
+  },
+  "options": {
+   "seed": "a",
+   "fill": "none"
+  }
+ },
+ {
+  "name": "option/path-fill-transparent",
+  "shape": {
+   "kind": "path",
+   "d": "M4 4 L36 4 L30 26 Z"
+  },
+  "options": {
+   "seed": "a",
+   "fill": "transparent"
+  }
+ },
+ {
+  "name": "option/arc-open-with-fill",
+  "shape": {
+   "kind": "arc",
+   "cx": 20,
+   "cy": 20,
+   "width": 32,
+   "height": 24,
+   "start": 4,
+   "stop": 5.5
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33"
+  }
+ },
+ {
+  "name": "option/arc-over-full-turn",
+  "shape": {
+   "kind": "arc",
+   "cx": 20,
+   "cy": 20,
+   "width": 30,
+   "height": 30,
+   "start": 0,
+   "stop": 7
+  },
+  "options": {
+   "seed": "a"
+  }
+ },
+ {
+  "name": "option/arc-roughness-0",
+  "shape": {
+   "kind": "arc",
+   "cx": 20,
+   "cy": 20,
+   "width": 30,
+   "height": 30,
+   "start": 0,
+   "stop": 1
+  },
+  "options": {
+   "seed": "a",
+   "roughness": 0
+  }
+ },
+ {
+  "name": "option/arc-half-closed-filled-roughness-0",
+  "shape": {
+   "kind": "arc",
+   "cx": 20,
+   "cy": 20,
+   "width": 30,
+   "height": 30,
+   "start": 0,
+   "stop": 3.141592653589793,
+   "closed": true
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "roughness": 0
+  }
+ },
+ {
+  "name": "option/ellipse-roughness-0",
+  "shape": {
+   "kind": "ellipse",
+   "cx": 20,
+   "cy": 15,
+   "width": 34,
+   "height": 22
+  },
+  "options": {
+   "seed": "a",
+   "roughness": 0
+  }
+ },
+ {
+  "name": "option/hachure-angle-vertical",
+  "shape": {
+   "kind": "rectangle",
+   "x": 2,
+   "y": 2,
+   "width": 36,
+   "height": 24
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "hachureAngle": -90
+  }
+ },
+ {
+  "name": "option/dashed-angle-horizontal",
+  "shape": {
+   "kind": "rectangle",
+   "x": 2,
+   "y": 2,
+   "width": 36,
+   "height": 24
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "fillStyle": "dashed",
+   "hachureAngle": 0
+  }
+ },
+ {
+  "name": "option/path-implicit-lineto-after-m",
+  "shape": {
+   "kind": "path",
+   "d": "m4 4 10 2 5 8"
+  },
+  "options": {
+   "seed": "a"
+  }
+ },
+ {
+  "name": "option/path-t-after-t",
+  "shape": {
+   "kind": "path",
+   "d": "M2 20 Q 8 4 14 20 T 26 20 T 38 20"
+  },
+  "options": {
+   "seed": "a"
+  }
+ },
+ {
+  "name": "option/path-s-after-s",
+  "shape": {
+   "kind": "path",
+   "d": "M2 20 C 6 2 10 2 14 20 S 22 38 26 20 S 34 2 38 20"
+  },
+  "options": {
+   "seed": "a"
+  }
+ },
+ {
+  "name": "option/path-relative-after-z",
+  "shape": {
+   "kind": "path",
+   "d": "m4 4 l10 0 l0 10 z m6 6 l8 0 l0 8 z"
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33"
+  }
+ },
+ {
+  "name": "option/path-arc-zero-radius",
+  "shape": {
+   "kind": "path",
+   "d": "M4 20 A 0 12 0 0 1 36 20"
+  },
+  "options": {
+   "seed": "a"
+  }
+ },
+ {
+  "name": "option/path-asymmetric-cubic-fill",
+  "shape": {
+   "kind": "path",
+   "d": "M2 30 C 4 2 30 6 38 30 Z"
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33"
+  }
+ },
+ {
+  "name": "option/curve-asymmetric-fill",
+  "shape": {
+   "kind": "curve",
+   "points": [
+    [
+     2,
+     30
+    ],
+    [
+     4,
+     4
+    ],
+    [
+     30,
+     8
+    ],
+    [
+     38,
+     30
+    ],
+    [
+     20,
+     36
+    ]
+   ]
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "fillStyle": "cross-hatch"
+  }
+ },
+ {
+  "name": "option/path-large-s-cubic-fill",
+  "shape": {
+   "kind": "path",
+   "d": "M0 0 C 200 0 0 200 200 200 Z"
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33"
+  }
+ },
+ {
+  "name": "option/default-seed",
+  "shape": {
+   "kind": "rectangle",
+   "x": 2,
+   "y": 2,
+   "width": 36,
+   "height": 24
+  },
+  "options": {}
+ }
+]

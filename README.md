@@ -25,6 +25,7 @@ npm run build
 npm test
 npm run typecheck
 npm run example
+npm run goldens   # re-record golden drawings after a deliberate output change
 ```
 
 ## License

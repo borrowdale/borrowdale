@@ -1,6 +1,7 @@
 # @borrowdale/core
 
-Deterministic hand-drawn shapes for SVG and canvas, built on [rough.js](https://roughjs.com).
+Deterministic hand-drawn shapes for SVG and canvas. The stroke engine is a TypeScript port of
+[rough.js](https://roughjs.com) 4.6.6 and has no runtime dependencies.
 
 ```sh
 npm install @borrowdale/core
@@ -33,8 +34,8 @@ identical for the `dashed` and `zigzag-line` fills on ellipses, circles and `pat
 arc (`A`) commands: about 2–5% of those drawings had a dash or zigzag more or fewer. This is a
 measurement, not a guarantee.
 
-The drawing depends on the exact version of the stroke engine and its dependencies. Use the same
-`@borrowdale/core` version, installed from the same lockfile, on the server and in the browser.
+The drawing depends on the exact version of the stroke engine, which ships inside this package.
+Use the same `@borrowdale/core` version on the server and in the browser.
 
 ## Shapes
 
@@ -74,7 +75,7 @@ large coordinates inside a filled `path`, can make drawing extremely slow or exh
 ## Seeds and escaping
 
 `toSeed(value)` turns any string or number into the seed a drawing uses. It never returns 0,
-because rough.js treats 0 as "unseeded" and would draw differently each time.
+because the stroke engine treats 0 as "unseeded" and would draw differently each time.
 
 Without a `seed`, the seed comes from `stableKey(shape)`: the shape serialised with its keys sorted.
 `{ x: 0, y: 0, … }` and `{ y: 0, x: 0, … }` are therefore drawn identically.
@@ -106,4 +107,5 @@ projects need `"dom"` in `compilerOptions.lib`, even when they only render on th
 
 ## License
 
-MIT
+MIT. The stroke engine is ported from MIT-licensed code by Preet Shihn; see
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
