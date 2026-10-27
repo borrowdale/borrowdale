@@ -63,19 +63,19 @@ function extent({ text, font, fontSize }: CheckedMeasure): TextExtent {
   const missing = new Set<string>();
   let units = 0;
   for (const [cluster] of text.matchAll(CLUSTER)) {
-    // The indexes of the files serving the cluster's characters, with undefined for one the font
-    // cannot draw.
-    const fileIndexes = new Set<number | undefined>();
+    const codePoints: number[] = [];
+    let covered = true;
     for (const character of cluster) {
       if (IGNORABLE.test(character)) {
         continue;
       }
       const codePoint = codePointOf(character);
       const advance = advanceOf(font, codePoint);
-      fileIndexes.add(advance === undefined ? undefined : fileIndexOf(font, codePoint));
+      codePoints.push(codePoint);
+      covered &&= advance !== undefined;
       units += advance ?? font.unitsPerEm;
     }
-    if (fileIndexes.has(undefined) || fileIndexes.size > 1) {
+    if (!covered || !oneFileServes(font, codePoints)) {
       missing.add(cluster);
     }
   }
@@ -89,12 +89,12 @@ function extent({ text, font, fontSize }: CheckedMeasure): TextExtent {
   };
 }
 
-// The index of the font file that serves a code point, or undefined when none does.
-function fileIndexOf(font: CheckedFont, codePoint: number): number | undefined {
-  const index = font.files.findIndex(({ ranges }) =>
-    ranges.some(([first, last]) => codePoint >= first && codePoint <= last),
+// Whether one of the font's files serves every one of the code points. Measured in Chromium: the
+// browser draws a cluster from any one file that serves all of it, whatever the order of the files.
+function oneFileServes(font: CheckedFont, codePoints: readonly number[]): boolean {
+  return font.files.some(({ ranges }) =>
+    codePoints.every((codePoint) => ranges.some(([first, last]) => codePoint >= first && codePoint <= last)),
   );
-  return index === -1 ? undefined : index;
 }
 
 function rounded({ width, ascent, descent, ...rest }: TextExtent): TextExtent {

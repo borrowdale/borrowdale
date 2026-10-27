@@ -28,6 +28,25 @@ function shiftingFont(): Font {
   };
 }
 
+// A font in one file whose first range reads as A-B the first time its first end is read, and B-B after.
+function fontWithShiftingPair(): Font {
+  let reads = 0;
+  const pair: [number, number] = [0, 0x42];
+  Object.defineProperty(pair, 0, {
+    get: () => {
+      reads += 1;
+      return reads === 1 ? 0x41 : 0x42;
+    },
+  });
+  return { ...handFont, files: [{ ranges: [pair, [0x0301, 0x0301]] }] };
+}
+
+// Marks that are not plain combining marks: an enclosing mark (Me) and a spacing mark (Mc).
+const OTHER_MARKS = [
+  ['an enclosing mark', '\u20DD'],
+  ['a spacing mark', '\u0903'],
+] as const;
+
 // A font in one file whose ranges serve A, B and U+0301 the first time they are read, and only A after.
 function fontWithShiftingFiles(): Font {
   let reads = 0;
@@ -171,8 +190,22 @@ describe('measureText', () => {
     expect(measureText('B\u0301', { fontSize: 10, font: oneFile })).toMatchObject({ width: 7, missing: [] });
   });
 
+  it('does not list a character and its mark that one file serves, when an earlier file also serves the mark', () => {
+    const overlapping: Font = { ...splitFont, files: [{ ranges: [[0x0301, 0x0301]] }, { ranges: [[0x41, 0x42], [0x0301, 0x0301]] }] };
+
+    expect(measureText('B\u0301', { fontSize: 10, font: overlapping }).missing).toEqual([]);
+  });
+
   it('treats a font that leaves out its files as one file', () => {
     expect(measureText('B\u0301', { fontSize: 10, font: handFont })).toMatchObject({ width: 7, missing: [] });
+  });
+
+  it('reads each end of a range once, so the ranges it checked are the ranges it measures with', () => {
+    expect(measureText('A', { fontSize: 10, font: fontWithShiftingPair() }).missing).toEqual([]);
+  });
+
+  it.each(OTHER_MARKS)('keeps %s with the character before it', (_name, mark) => {
+    expect(measureText(`A${mark}`, { fontSize: 10, font: handFont }).missing).toEqual([`A${mark}`]);
   });
 
   it('reads the ranges of each file once, so the ranges it checked are the ranges it measures with', () => {
