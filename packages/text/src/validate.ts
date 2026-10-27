@@ -263,6 +263,14 @@ export function cssFamily(family: string): string {
   return `"${family}"`;
 }
 
+/**
+ * Whether a font face belongs to a family. CSS matches family names without regard to ASCII case,
+ * and a page may report a face's family in quotes.
+ */
+export function isFamily(face: Pick<FontFace, 'family'>, family: string): boolean {
+  return face.family.replace(/^"(.*)"$/, '$1').toLowerCase() === family.toLowerCase();
+}
+
 /** A character's code point. Iterating a string yields whole characters, so there always is one. */
 export function codePointOf(character: string): number {
   return character.codePointAt(0) as number;

@@ -32,10 +32,11 @@ const zurich = expected['category-zurich'] as Golden;
 const stressed = expected['cyrillic-stress-mark'] as Golden;
 
 let drawn: Record<string, Drawn> = {};
+let corpusFaces = NaN;
 let embedded: Embedded = { faces: NaN, width: NaN };
 
 beforeAll(async () => {
-  drawn = await evaluateInChromium(
+  ({ drawn, faces: corpusFaces } = await evaluateInChromium(
     SOURCE,
     'borrowdaleText',
     `<meta http-equiv="Content-Security-Policy" content="font-src 'none'">` +
@@ -45,6 +46,9 @@ beforeAll(async () => {
         globalThis as unknown as { borrowdaleText: Text }
       ).borrowdaleText;
       await loadFont(document.fonts, files);
+      // Again, as a page might: it adds nothing the first call added.
+      await loadFont(document.fonts, files);
+      const faces = document.fonts.size;
       const svg = document.querySelector('svg') as SVGSVGElement;
       const context = (document.querySelector('canvas') as HTMLCanvasElement).getContext('2d') as CanvasRenderingContext2D;
       const widthOf = (markup: string) => {
@@ -58,7 +62,7 @@ beforeAll(async () => {
         canvasWidth = context.measureText(text).width;
         fillText(text, x, y);
       };
-      return Object.fromEntries(
+      const drawn = Object.fromEntries(
         entries.map(({ name, text, options, style }) => {
           const layout = layoutText(text, options);
           const markup = toSvgText(layout, style);
@@ -72,9 +76,10 @@ beforeAll(async () => {
           return [name, { golden: { ...layout, svg: markup }, svgWidth, domWidth, canvasWidth, shapedWidth }];
         }),
       );
+      return { drawn, faces };
     },
     { entries: cases, files: excalifontFiles },
-  );
+  ));
   embedded = await evaluateInChromium(
     SOURCE,
     'borrowdaleText',
@@ -100,6 +105,10 @@ describe('Chromium parity', () => {
 
   it('draws a letter whose mark is in another Excalifont file in a fallback font, which is why it is listed', () => {
     expect(drawn['cyrillic-stress-mark']?.svgWidth).not.toBeCloseTo(stressed.width, 1);
+  });
+
+  it('adds no file a second time when loadFont is called again', () => {
+    expect(corpusFaces).toBe(7);
   });
 
   it.each(cases)('$name is laid out and rendered byte for byte the same in Chromium', ({ name }) => {

@@ -1,7 +1,7 @@
 import { escapeAttribute, svgElement } from '@borrowdale/core';
 import type { SvgAttributes } from '@borrowdale/core';
 import type { TextLayout, TextStyle } from './types.js';
-import { checkStyle, cssFamily } from './validate.js';
+import { checkStyle, cssFamily, isFamily } from './validate.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -110,8 +110,7 @@ function assertFontLoaded(
   }
   let loaded = false;
   fonts.forEach((face) => {
-    // CSS matches family names without regard to ASCII case.
-    loaded ||= face.status === 'loaded' && face.family.replace(/^"(.*)"$/, '$1').toLowerCase() === family.toLowerCase();
+    loaded ||= face.status === 'loaded' && isFamily(face, family);
   });
   // check() alone passes for a family that was never added: it only reports on faces in the set.
   if (!loaded || !fonts.check(font, text)) {

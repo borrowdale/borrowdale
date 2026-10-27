@@ -99,14 +99,17 @@ The font has to reach whoever views the drawing:
   document, joined with spaces. Latin text needs one file of about 34 KB; the whole font is about
   88 KB.
 - **A page** can use the same rules, or load every file of the font with
-  `await loadFont(document.fonts, excalifontFiles)`. Call it once per page. It hands the browser the
-  font's bytes rather than a URL, so a Content-Security-Policy's `font-src` does not block it.
+  `await loadFont(document.fonts, excalifontFiles)`. A second call adds no file the first one
+  added. It hands the browser the font's bytes rather than a URL, so a Content-Security-Policy's
+  `font-src` does not block it.
 - **A canvas** draws once and never redraws, so text drawn before its font has loaded would keep
   a fallback font. `drawText` throws `Font not loaded` instead. Load the font with `loadFont`
-  first, not with `fontFaceCss(files, text)`: the browser only knows about the files those rules
-  name, so `drawText` cannot tell that text outside them would fall back. Use one or the other on
-  a page: `drawText` also counts the faces of `fontFaceCss` rules, which stay unloaded until the
-  page draws text with them, so with both it keeps throwing.
+  first, not with `fontFaceCss(files, text)` alone: the browser only knows about the files those
+  rules name, so `drawText` cannot tell that text outside them would fall back. A page can have
+  both: `drawText` also counts the faces of `fontFaceCss` rules, which stay unloaded until the page
+  draws text with them, so `loadFont` loads every face of the font's family the page already has.
+  Call it after adding such rules, and again after adding more. It fails if one of those faces
+  cannot load, as the rules' faces cannot under a `font-src` that blocks `data:` URLs.
 
 Font files must come from you, never from chart data: a family name is global to the page, so a
 font file named like one of the page's own fonts would redraw the page's text.
