@@ -67,12 +67,13 @@ function linearPath(points: Point[], o: ResolvedOptions): OpSet[] {
 }
 
 /**
- * The shape's fill first, then its outline if it is stroked. Callers compute the outline before
- * calling, and the fill runs here afterwards, which is the order the stroke randomness is drawn in.
+ * The shape's fill first (if it has one), then its outline (if it is stroked). Callers compute the
+ * outline before calling, and the fill runs here afterwards, which is the order the stroke
+ * randomness is drawn in.
  */
 function assemble(o: ResolvedOptions, outline: OpSet, fill?: () => OpSet | undefined): OpSet[] {
   const sets: OpSet[] = [];
-  const fillSet = fill?.();
+  const fillSet = hasFill(o) ? fill?.() : undefined;
   if (fillSet) {
     sets.push(fillSet);
   }
@@ -99,12 +100,12 @@ function rectangle(x: number, y: number, width: number, height: number, o: Resol
     [x + width, y + height],
     [x, y + height],
   ];
-  return assemble(o, outline, hasFill(o) ? () => polygonFill(corners(), o) : undefined);
+  return assemble(o, outline, () => polygonFill(corners(), o));
 }
 
 function polygon(points: Point[], o: ResolvedOptions): OpSet[] {
   const outline = linearPathOps(points, true, o);
-  return assemble(o, outline, hasFill(o) ? () => polygonFill(points, o) : undefined);
+  return assemble(o, outline, () => polygonFill(points, o));
 }
 
 function ellipse(x: number, y: number, width: number, height: number, o: ResolvedOptions): OpSet[] {
@@ -118,7 +119,7 @@ function ellipse(x: number, y: number, width: number, height: number, o: Resolve
     }
     return fillPolygons([ellipseResponse.estimatedPoints], o);
   };
-  return assemble(o, ellipseResponse.opset, hasFill(o) ? fill : undefined);
+  return assemble(o, ellipseResponse.opset, fill);
 }
 
 function arc(
@@ -142,7 +143,7 @@ function arc(
     }
     return fillArc(x, y, width, height, start, stop, o);
   };
-  return assemble(o, outline, closed && hasFill(o) ? fill : undefined);
+  return assemble(o, outline, closed ? fill : undefined);
 }
 
 function curve(points: Point[], o: ResolvedOptions): OpSet[] {
@@ -168,7 +169,7 @@ function curve(points: Point[], o: ResolvedOptions): OpSet[] {
     }
     return polyPoints.length ? fillPolygons([polyPoints], o) : undefined;
   };
-  return assemble(o, outline, hasFill(o) ? fill : undefined);
+  return assemble(o, outline, fill);
 }
 
 function path(d: string, o: ResolvedOptions): OpSet[] {
@@ -198,7 +199,7 @@ function path(d: string, o: ResolvedOptions): OpSet[] {
     });
     return { type: 'fillPath', ops: mergedShape(fillShape.ops) };
   };
-  return assemble(o, outline, hasFill(o) ? fill : undefined);
+  return assemble(o, outline, fill);
 }
 
 
