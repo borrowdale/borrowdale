@@ -1,6 +1,7 @@
 // Ported from rough.js 4.6.6 (src/renderer.ts). MIT License, Copyright (c) 2019 Preet Shihn.
 // See THIRD_PARTY_NOTICES.md.
 
+import { charge } from './budget.js';
 import type { Op, OpSet, Point, ResolvedOptions } from './core.js';
 import { fillPolygons } from './fillers.js';
 import { splineSegment } from './bezier.js';
@@ -202,6 +203,7 @@ export function solidFillPolygon(polygonList: Point[][], o: ResolvedOptions): Op
       if (len > 2) {
         ops.push({ op: 'move', data: [points[0]![0] + randomOffsetAround(offset, o), points[0]![1] + randomOffsetAround(offset, o)] });
         for (let i = 1; i < len; i++) {
+          charge();
           ops.push({ op: 'lineTo', data: [points[i]![0] + randomOffsetAround(offset, o), points[i]![1] + randomOffsetAround(offset, o)] });
         }
       }
@@ -229,6 +231,7 @@ export function patternFillArc(
   const increment = (stp - strt) / o.curveStepCount;
   const points: Point[] = [];
   for (let angle = strt; angle <= stp; angle = angle + increment) {
+    charge();
     points.push([cx + rx * Math.cos(angle), cy + ry * Math.sin(angle)]);
   }
   points.push([cx + rx * Math.cos(stp), cy + ry * Math.sin(stp)]);
@@ -244,6 +247,7 @@ function _curveWithOffset(points: Point[], offset: number, o: ResolvedOptions): 
   ps.push([points[0]![0] + randomOffsetAround(offset, o), points[0]![1] + randomOffsetAround(offset, o)]);
   ps.push([points[0]![0] + randomOffsetAround(offset, o), points[0]![1] + randomOffsetAround(offset, o)]);
   for (let i = 1; i < points.length; i++) {
+    charge();
     ps.push([points[i]![0] + randomOffsetAround(offset, o), points[i]![1] + randomOffsetAround(offset, o)]);
     if (i === points.length - 1) {
       ps.push([points[i]![0] + randomOffsetAround(offset, o), points[i]![1] + randomOffsetAround(offset, o)]);
@@ -259,6 +263,7 @@ function _curve(points: Point[], closePoint: Point | null, o: ResolvedOptions): 
     const s = 1 - o.curveTightness;
     ops.push({ op: 'move', data: [points[1]![0], points[1]![1]] });
     for (let i = 1; i + 2 < len; i++) {
+      charge();
       const [c1, c2, end] = splineSegment(points[i - 1]!, points[i]!, points[i + 1]!, points[i + 2]!, s);
       ops.push({ op: 'bcurveTo', data: [c1[0], c1[1], c2[0], c2[1], end[0], end[1]] });
     }
@@ -352,6 +357,7 @@ function _arc(
     randomOffsetAround(offset, o) + cy + 0.9 * ry * Math.sin(radOffset - increment),
   ]);
   for (let angle = radOffset; angle <= stp; angle = angle + increment) {
+    charge();
     points.push([randomOffsetAround(offset, o) + cx + rx * Math.cos(angle), randomOffsetAround(offset, o) + cy + ry * Math.sin(angle)]);
   }
   points.push([cx + rx * Math.cos(stp), cy + ry * Math.sin(stp)]);

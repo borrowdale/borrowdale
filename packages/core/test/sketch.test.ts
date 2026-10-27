@@ -4,6 +4,12 @@ import { sketch, type FillStyle, type Shape, type SketchOptions } from '@borrowd
 const rectangle: Shape = { kind: 'rectangle', x: 0, y: 0, width: 40, height: 20 };
 const wave: Shape = { kind: 'curve', points: [[0, 0], [10, 10], [20, 0], [30, 10]] };
 
+// Inputs whose drawing work exceeds the per-sketch budget. Built once, outside the tests.
+const TOO_COMPLEX = 'Drawing too complex (more than 200000 operations)';
+const manyPoints: [number, number][] = Array.from({ length: 1e5 }, (_, i) => [Math.cos(i) * 500, Math.sin(i) * 500]);
+const square: Shape = { kind: 'rectangle', x: 0, y: 0, width: 10, height: 10 };
+const largestSquare: Shape = { kind: 'rectangle', x: -5e5, y: -5e5, width: 1e6, height: 1e6 };
+
 afterEach(() => {
   vi.restoreAllMocks();
 });
@@ -119,6 +125,30 @@ describe('sketch', () => {
     ['an explicit closed: false', { kind: 'arc', cx: 0, cy: 0, width: 4, height: 4, start: 0, stop: 1, closed: false }, {}],
   ])('accepts %s', (_case, shape, options) => {
     expect(sketch(shape, options).paths.length).toBeGreaterThan(0);
+  });
+
+  it.each<[string, Shape, SketchOptions]>([
+    ['a dashed fill with no dash length', square, { fill: 'red', fillStyle: 'dashed', dashOffset: 0, dashGap: 0 }],
+    ['a zigzag-line fill with no zigzag offset', square, { fill: 'red', fillStyle: 'zigzag-line', zigzagOffset: 0 }],
+    ['a hachure fill scanning a huge height for few lines', largestSquare, { fill: 'red', hachureGap: 1e6, roughness: 0 }],
+    ['a hachure fill of the largest shape', largestSquare, { fill: 'red' }],
+    ['a huge ellipse at the most curve steps', { kind: 'ellipse', cx: 0, cy: 0, width: 1e6, height: 1e6 }, { curveStepCount: 1000 }],
+    ['an arc at the most curve steps', { kind: 'arc', cx: 0, cy: 0, width: 1e6, height: 1e6, start: 0, stop: 6, closed: true }, { fill: 'red', curveStepCount: 1000 }],
+    ['a polygon of 100,000 points with a solid fill', { kind: 'polygon', points: manyPoints }, { fill: 'red', fillStyle: 'solid' }],
+    ['a curve of 100,000 points', { kind: 'curve', points: manyPoints }, {}],
+    ['path data of 500,000 segments', { kind: 'path', d: `M0 0${' L1 1 L0 0'.repeat(250000)}` }, {}],
+    ['path data of 300,000 moves', { kind: 'path', d: 'M0 0'.repeat(300000) }, {}],
+    ['a few path curves spanning the coordinate range', { kind: 'path', d: `M0 0${' C1e6 0 -1e6 1e6 1e6 1e6'.repeat(1000)}` }, {}],
+    ['an arc whose span is below the precision of its start', { kind: 'arc', cx: 0, cy: 0, width: 10, height: 10, start: 9e5, stop: 9e5 + 1e-10 }, {}],
+    ['a filled arc whose fill steps are below the precision of its start', { kind: 'arc', cx: 0, cy: 0, width: 10, height: 10, start: 9e5, stop: 9e5 + 1e-8, closed: true }, { fill: 'red', curveStepCount: 1000, roughness: 0 }],
+  ])('stops %s with a budget error', (_case, shape, options) => {
+    expect(() => sketch(shape, options)).toThrow(TOO_COMPLEX);
+  });
+
+  it('starts every sketch with a fresh budget', () => {
+    expect(() => sketch(largestSquare, { fill: 'red' })).toThrow(TOO_COMPLEX);
+
+    expect(sketch(rectangle, { fill: 'red' }).paths).toHaveLength(2);
   });
 
   it('rejects an unknown kind instead of drawing nothing', () => {

@@ -1,5 +1,6 @@
 // The boundary to the stroke engine (./engine/, a TypeScript port of rough.js 4.6.6).
 // Replacing the engine means replacing this file and that directory.
+import { resetBudget } from './engine/budget.js';
 import { DEFAULT_OPTIONS, type OpSet, type ResolvedOptions } from './engine/core.js';
 import { opsToPath, shapeSets } from './engine/generator.js';
 import type { Shape, ShapeKind, SketchPath } from './types.js';
@@ -19,6 +20,7 @@ const DECIMALS = 2;
 const EVENODD_KINDS: ReadonlySet<ShapeKind> = new Set(['polygon', 'curve', 'path']);
 
 export function drawShape(shape: Shape, options: EngineOptions): SketchPath[] {
+  resetBudget();
   const o: ResolvedOptions = { ...DEFAULT_OPTIONS, ...options };
   return shapeSets(shape, o).map((set) => toSketchPath(set, o, shape.kind));
 }

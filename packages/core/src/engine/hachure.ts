@@ -1,6 +1,7 @@
 // Ported from hachure-fill 0.5.2 (bin/hachure.js). MIT License, Copyright (c) 2023 Preet Shihn.
 // See THIRD_PARTY_NOTICES.md.
 
+import { charge } from './budget.js';
 import type { Line, Point } from './core.js';
 
 interface Edge {
@@ -119,6 +120,8 @@ function straightHachureLines(polygons: Point[][], gap: number, hachureStepOffse
   let y = edges[0]!.ymin;
   let iteration = 0;
   while (activeEdges.length || edges.length) {
+    // Charged per active edge: this loop advances one unit of y at a time, drawing or not.
+    charge(1 + activeEdges.length);
     if (edges.length) {
       let ix = -1;
       for (let i = 0; i < edges.length; i++) {

@@ -2,6 +2,7 @@
 // Preet Shihn. See THIRD_PARTY_NOTICES.md. The random-number and single-stroke primitives that both
 // the shape geometry (renderer.ts) and the fillers (fillers.ts) draw with.
 
+import { charge } from './budget.js';
 import { Random, type Op, type ResolvedOptions } from './core.js';
 
 export function doubleLineFillOps(x1: number, y1: number, x2: number, y2: number, o: ResolvedOptions): Op[] {
@@ -44,6 +45,7 @@ export function doubleLine(x1: number, y1: number, x2: number, y2: number, o: Re
 }
 
 export function strokeLine(x1: number, y1: number, x2: number, y2: number, o: ResolvedOptions, move: boolean, overlay: boolean): Op[] {
+  charge();
   const lengthSq = Math.pow(x1 - x2, 2) + Math.pow(y1 - y2, 2);
   const length = Math.sqrt(lengthSq);
   let roughnessGain = 1;

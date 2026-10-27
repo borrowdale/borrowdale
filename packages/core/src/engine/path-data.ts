@@ -2,6 +2,7 @@
 // and points-on-path 0.2.1 (src/index.ts). MIT License, Copyright (c) 2020 Preet Shihn.
 // See THIRD_PARTY_NOTICES.md.
 
+import { charge } from './budget.js';
 import { pointsOnBezierCurves, simplify } from './bezier.js';
 import type { Point } from './core.js';
 
@@ -33,6 +34,7 @@ const NUMBER_TEXT = /^(([-+]?[0-9]+(\.[0-9]*)?|[-+]?\.[0-9]+)([eE][-+]?[0-9]+)?)
 function tokenize(d: string): PathToken[] {
   const tokens: PathToken[] = [];
   while (d !== '') {
+    charge();
     let match: RegExpExecArray | null;
     if ((match = SEPARATOR.exec(d))) {
       d = d.slice(match[1]!.length);
