@@ -29,7 +29,10 @@ the shape itself.
 The engine never calls `Math.random`, and computes sine, cosine and arctangent with plain
 arithmetic instead of `Math.sin` and friends, whose last bit can differ between JavaScript engines.
 The test suite draws every reference drawing of this package in Node.js and in Chromium and
-requires identical output. Coordinates are rounded to two decimals, which keeps the markup small.
+requires identical output. Both run V8, so the test checks the build and the browser environment
+rather than a different JavaScript engine; for Firefox and Safari the guarantee rests on the engine
+using only exactly specified arithmetic. Coordinates are rounded to two decimals, which keeps the
+markup small.
 
 The drawing depends on the exact version of the stroke engine, which ships inside this package.
 Use the same `@borrowdale/core` version on the server and in the browser.
@@ -74,8 +77,15 @@ be drawn throws an error naming the field or option, and the value where one was
 
 Valid input can still describe an enormous amount of work, such as a dashed fill with no dash
 length or path data with a million segments. Each `sketch` call therefore stops after 200,000
-drawing operations and throws `Drawing too complex (more than 200000 operations)`, so a drawing
-finishes quickly or fails quickly.
+units of drawing work and throws `Drawing too complex (more than 200000 operations)` instead of
+hanging or running out of memory. The budget is coarse, with two known limits:
+
+- A drawing just under the budget can still take a few seconds and produce several megabytes of
+  path data (for example a fine `zigzag-line` fill over a 3000 × 3000 shape). Set your own time
+  and size limits around `sketch` when the input is untrusted.
+- A filled shape taller than about 66,000 units can exceed the budget even with a wide
+  `hachureGap`, and whether it does depends on the seed. Keep filled shapes smaller, or scale the
+  drawing down.
 
 ## Seeds and escaping
 

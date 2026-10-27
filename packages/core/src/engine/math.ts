@@ -1,10 +1,11 @@
 // Trigonometry from + − × ÷, floor, abs and sqrt only. Those are exact or exactly rounded by
 // IEEE 754 in every JavaScript engine, while Math.sin and friends may differ in the last bit between
 // engines, which can change how many dashes or zigzags a fill draws. Polynomials and constants are
-// from fdlibm (Copyright (C) 1993 by Sun Microsystems, Inc.; see THIRD_PARTY_NOTICES.md). sin, cos
-// and asin are within 2 units in the last place of Math, and atan matches it, for |x| < 2^20 · π/2;
-// tan, a quotient of the two, within about 3. Larger arguments are NOT reduced and give wrong
-// results; validation keeps every angle the engine computes within ±1e6.
+// from fdlibm (Copyright (C) 1993 by Sun Microsystems, Inc.; see THIRD_PARTY_NOTICES.md). For
+// |x| < 2^20 · π/2, sin, cos and asin are within 2 units in the last place of Math, except near
+// their zeros, where the absolute error stays below 1e-26; atan matches Math; tan, a quotient of
+// the two, is within about 3. Larger arguments are NOT reduced and give wrong results; validation
+// keeps every angle the engine computes within ±1e6.
 
 const INV_PIO2 = 6.36619772367581382433e-1;
 // π/2 split into three parts of 33 bits each, so n · part is exact for n < 2^20 (Cody–Waite).

@@ -46,7 +46,7 @@ function tokenize(d: string): PathToken[] {
       tokens[tokens.length] = { type: NUMBER, text: `${parseFloat(match[1]!)}` };
       d = d.slice(match[1]!.length);
     } else {
-      return [];
+      throw new Error(`Invalid shape: path.d: unexpected ${JSON.stringify(d.slice(0, 20))}`);
     }
   }
   tokens[tokens.length] = { type: EOD, text: '' };
@@ -91,7 +91,7 @@ export function parsePath(d: string): Segment[] {
         if (isType(numberToken, NUMBER)) {
           params[params.length] = +numberToken.text;
         } else {
-          throw new Error('Param not a number: ' + mode + ',' + numberToken.text);
+          throw new Error(`Invalid shape: path.d: ${mode} needs a number, got ${numberToken.text}`);
         }
       }
       if (typeof PARAMS[mode] === 'number') {
@@ -102,10 +102,10 @@ export function parsePath(d: string): Segment[] {
         if (mode === 'M') mode = 'L';
         if (mode === 'm') mode = 'l';
       } else {
-        throw new Error('Bad segment: ' + mode);
+        throw new Error(`Invalid shape: path.d: bad segment ${mode}`);
       }
     } else {
-      throw new Error('Path data ended short');
+      throw new Error('Invalid shape: path.d ended in the middle of a command');
     }
   }
   return segments;
@@ -487,15 +487,15 @@ function arcToCubicCurves(
 export function normalizedPath(path: string): Segment[] {
   // Checked as written, which covers arc radii and rotation before arcs become curves, and again
   // once relative coordinates and arcs have become absolute.
-  const parsed = assertWithinRange(parsePath(path));
-  return assertWithinRange(normalize(absolutize(parsed)));
+  const parsed = assertWithinRange(parsePath(path), 'contains');
+  return assertWithinRange(normalize(absolutize(parsed)), 'reaches, once arcs and relative coordinates are resolved,');
 }
 
-function assertWithinRange(segments: Segment[]): Segment[] {
+function assertWithinRange(segments: Segment[], verb: string): Segment[] {
   for (const { data } of segments) {
     for (const value of data) {
       if (!(Number.isFinite(value) && Math.abs(value) <= MAX_COORDINATE)) {
-        throw new Error(`Invalid shape: path.d contains ${value}, outside ±${MAX_COORDINATE}`);
+        throw new Error(`Invalid shape: path.d ${verb} ${value}, outside ±${MAX_COORDINATE}`);
       }
     }
   }

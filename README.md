@@ -29,8 +29,10 @@ npm run example
 npm run goldens   # re-record golden drawings after a deliberate output change
 ```
 
-`npm test` includes a parity test that draws every `@borrowdale/core` golden in headless Chromium and requires the
-output to match Node's byte for byte. It fails, rather than skips, when Chromium is not installed.
+`npm test` includes a parity test that draws every `@borrowdale/core` golden in headless Chromium
+and requires the output to match Node's byte for byte. It fails, rather than skips, when Chromium
+is not installed. Node and Chromium both run V8, so this does not exercise another JavaScript
+engine.
 
 ## License
 
