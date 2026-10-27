@@ -169,7 +169,7 @@ describe('appendText', () => {
     expect(element.style.getPropertyValue('font-variant-ligatures')).toBe('none');
   });
 
-  it('sets the direction through the CSSOM, which a stylesheet rule cannot override', () => {
+  it('sets the direction through the CSSOM, which a stylesheet rule overrides only with !important', () => {
     expect(appendText(svgRoot(), layoutText('AB', at)).style.getPropertyValue('direction')).toBe('ltr');
   });
 

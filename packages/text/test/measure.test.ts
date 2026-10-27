@@ -195,6 +195,10 @@ describe('measureText', () => {
     expect(measureText('B\u200D\u0301', { fontSize: 10, font: splitFont }).missing).toEqual(['B\u200D\u0301']);
   });
 
+  it('keeps a zero-width joiner with the character before it, so that character may be listed twice', () => {
+    expect(measureText('東\u200DA東', { fontSize: 10, font: handFont }).missing).toEqual(['東\u200D', '東']);
+  });
+
   it('ends the cluster at a soft hyphen, so a mark after it is drawn on its own', () => {
     expect(measureText('B\u00AD\u0301', { fontSize: 10, font: splitFont }).missing).toEqual([]);
   });

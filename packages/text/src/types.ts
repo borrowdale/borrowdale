@@ -75,9 +75,9 @@ export interface TextExtent {
   descent: number;
   /**
    * What the browser draws in a fallback font, each once: a character with the combining marks
-   * after it, when the font does not cover one of them or when they come from different files of
-   * the font. A character the font does not cover was measured as 1 em wide; the others at the
-   * font's own widths.
+   * after it, and any zero-width joiner, when the font does not cover one of them, no file of the
+   * font serves one of them, or they come from different files of the font. A character the font
+   * does not cover was measured as 1 em wide; the others at the font's own widths.
    */
   missing: string[];
 }

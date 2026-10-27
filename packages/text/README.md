@@ -95,8 +95,8 @@ parent's fill and a canvas keeps the fill it had.
 The font has to reach whoever views the drawing:
 
 - **An SVG document** carries it in a `<style>` element: `fontFaceCss(excalifontFiles, labels)`
-  returns `@font-face` rules for only the font files that `labels`, every label of the document,
-  need. Each label counts as it is drawn, so the spaces at either end of a label and characters
+  returns `@font-face` rules for only the font files that `labels` need. Pass every label of the
+  document. Each label counts as it is drawn, so the spaces at either end of a label and characters
   drawn as nothing, such as the soft hyphen, add no file. Latin text needs one file of about 34 KB;
   the whole font is about 88 KB.
 - **A page** can use the same rules, or load every file of the font with
@@ -126,9 +126,9 @@ The measurement assumes nothing around the text changes how it is drawn. Do not 
 `alignment-baseline` to Borrowdale text through CSS or a parent element, and keep stylesheet rules
 that select the text elements themselves (`.tick text { font-size: 10px }`) away from them: such a
 rule overrides the font family and size the renderers set. The renderers keep the text left to
-right against the page, a parent element and such rules, except `toSvgText` text under a
-Content-Security-Policy that blocks its `style` attribute (below): there only its `direction`
-attribute remains, and a stylesheet rule overrides that. A page's `lang` can switch on a
+right against the page, a parent element and such rules, unless a rule is `!important`, and
+except `toSvgText` text under a Content-Security-Policy that blocks its `style` attribute (below):
+there only its `direction` attribute remains, and a stylesheet rule overrides that. A page's `lang` can switch on a
 language's own letter forms: on a Catalan (`ca`) page, `l·l` draws narrower than measured.
 
 `toSvgText` sets the direction and switches kerning and ligatures off with a `style` attribute, and
@@ -151,7 +151,7 @@ A value that cannot be drawn throws an error naming it:
   be one or more files, each with one or more `[first, last]` ranges of code points, as `FontFiles`
   files must.
 - `fill` must be a string without characters an XML document cannot hold.
-- `fontFaceCss` takes its labels as an array, and checks each label as text.
+- `fontFaceCss`'s labels must be an array, and each label must pass the checks for text above.
 - Unknown option names are rejected (`Unknown option: fontSzie`). An option set to `undefined`
   counts as not set. Only an options object's own properties are read: inherited values, including
   any on `Object.prototype`, are ignored.
@@ -162,7 +162,7 @@ A `Font` holds what measuring needs: `family`, `unitsPerEm`, `ascender`, `descen
 `advances` of the code points it covers. A font split into files by Unicode range, as Excalifont
 is, also lists its `files`, each with the `ranges` of code points it serves: its `FontFiles` files
 without their bytes. Measuring uses them to find a letter and a combining mark that come from
-different files, which the browser draws in a fallback font. Leave `files` out for a font in one
+different files, or a character no file serves, which the browser draws in a fallback font. Leave `files` out for a font in one
 file. `excalifont` is the default. Measurement and rendering both take the family from the `Font`,
 so a label is always drawn in the font it was measured with.
 

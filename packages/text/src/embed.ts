@@ -5,9 +5,9 @@ import { checkFontFiles, checkText, codePointName, codePointOf, cssFamily, IGNOR
 const sources = new WeakMap<FontFace, { unicodeRange: string; woff2: string }>();
 
 /**
- * `@font-face` rules that embed a font, for a `<style>` element. With `labels`, every label of the
- * document, only the files that serve them are included. The rules hold no caller text, so they are
- * safe to insert as markup.
+ * `@font-face` rules that embed a font, for a `<style>` element. With `labels`, only the files that
+ * serve them are included; pass every label of the document. The rules hold no caller text, so they
+ * are safe to insert as markup.
  */
 export function fontFaceCss(fontFiles: FontFiles, labels?: readonly string[]): string {
   return filesFor(fontFiles, labels)
@@ -34,11 +34,13 @@ export async function loadFont(fonts: FontFaceSet, fontFiles: FontFiles): Promis
   const faces = facesOf(fonts, fontFiles.family);
   for (const file of fontFiles.files) {
     const source = { unicodeRange: unicodeRange(file), woff2: file.woff2 };
-    const added = faces.some(
-      (face) => sources.get(face)?.woff2 === source.woff2 && sources.get(face)?.unicodeRange === source.unicodeRange,
-    );
+    const added = faces.some((face) => {
+      const made = sources.get(face);
+      return made?.woff2 === source.woff2 && made.unicodeRange === source.unicodeRange;
+    });
     if (!added) {
-      const face = new FontFace(fontFiles.family, Uint8Array.from(atob(file.woff2), codePointOf), {
+      // From the bytes just recorded, so the face is made from exactly the file it is recorded as.
+      const face = new FontFace(fontFiles.family, Uint8Array.from(atob(source.woff2), codePointOf), {
         unicodeRange: source.unicodeRange,
       });
       sources.set(face, source);
@@ -50,8 +52,9 @@ export async function loadFont(fonts: FontFaceSet, fontFiles: FontFiles): Promis
 }
 
 /**
- * The faces of a family in a FontFaceSet. CSS matches family names without regard to ASCII case,
- * and a page may report a face's family in quotes.
+ * The faces of a family in a FontFaceSet, whose family the page may report in quotes. CSS matches
+ * family names without regard to ASCII case; this ignores all case, which differs only for a
+ * page's face with a non-ASCII family name, and checked families are ASCII.
  */
 export function facesOf(fonts: FontFaceSet, family: string): FontFace[] {
   const name = family.toLowerCase();

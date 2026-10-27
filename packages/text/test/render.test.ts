@@ -39,7 +39,7 @@ describe('toSvgText', () => {
     );
   });
 
-  it('sets the direction in the style too, which a stylesheet rule cannot override', () => {
+  it('sets the direction in the style too, which a stylesheet rule overrides only with !important', () => {
     expect(toSvgText(layoutText('A', at))).toContain(' style="direction:ltr;');
   });
 

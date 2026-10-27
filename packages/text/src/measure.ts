@@ -9,9 +9,10 @@ import {
   type CheckedMeasure,
 } from './validate.js';
 
-// A character and the combining marks after it, with any zero-width joiner among them. Measured in
-// Chromium: the browser draws such a cluster from one font file, or all of it in a fallback font.
-// Marks with no character before them make a cluster of their own.
+// A character and the combining marks after it, with any zero-width joiner among or after them:
+// Unicode keeps a joiner with the character before it. Measured in Chromium: the browser draws such
+// a cluster from one font file, or all of it in a fallback font. Marks with no character before
+// them make a cluster of their own.
 const CLUSTER = /[^\p{M}\u200D][\p{M}\u200D]*|[\p{M}\u200D]+/gu;
 
 // How far left of `x` the text starts, as a share of its width.
@@ -62,18 +63,19 @@ function extent({ text, font, fontSize }: CheckedMeasure): TextExtent {
   const missing = new Set<string>();
   let units = 0;
   for (const [cluster] of text.matchAll(CLUSTER)) {
-    // The files serving the cluster's characters, with undefined for one the font cannot draw.
-    const files = new Set<number | undefined>();
+    // The indexes of the files serving the cluster's characters, with undefined for one the font
+    // cannot draw.
+    const fileIndexes = new Set<number | undefined>();
     for (const character of cluster) {
       if (IGNORABLE.test(character)) {
         continue;
       }
       const codePoint = codePointOf(character);
       const advance = advanceOf(font, codePoint);
-      files.add(advance === undefined ? undefined : fileOf(font, codePoint));
+      fileIndexes.add(advance === undefined ? undefined : fileIndexOf(font, codePoint));
       units += advance ?? font.unitsPerEm;
     }
-    if (files.has(undefined) || files.size > 1) {
+    if (fileIndexes.has(undefined) || fileIndexes.size > 1) {
       missing.add(cluster);
     }
   }
@@ -88,7 +90,7 @@ function extent({ text, font, fontSize }: CheckedMeasure): TextExtent {
 }
 
 // The index of the font file that serves a code point, or undefined when none does.
-function fileOf(font: CheckedFont, codePoint: number): number | undefined {
+function fileIndexOf(font: CheckedFont, codePoint: number): number | undefined {
   const index = font.files.findIndex(({ ranges }) =>
     ranges.some(([first, last]) => codePoint >= first && codePoint <= last),
   );
