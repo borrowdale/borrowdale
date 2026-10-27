@@ -13,6 +13,11 @@ const TOO_COMPLEX = 'Drawing too complex (more than 200000 operations)';
 const manyPoints: [number, number][] = Array.from({ length: 1e5 }, (_, i) => [Math.cos(i) * 500, Math.sin(i) * 500]);
 const smallSquare: Shape = { kind: 'rectangle', x: 0, y: 0, width: 10, height: 10 };
 const largestSquare: Shape = { kind: 'rectangle', x: -5e5, y: -5e5, width: 1e6, height: 1e6 };
+// A zigzag line whose simplification recurses once per point.
+const sawtooth = `M0 0${Array.from({ length: 25000 }, (_, i) => ` L${i} ${i % 2 ? -1000 : 1000}`).join('')}`;
+// Thousands of tall teeth: every scan line crosses every tooth.
+const comb: [number, number][] = [...Array.from({ length: 4000 }, (_, i): [number, number] => [i, i % 2 ? 1e5 : 0]), [3999, -10], [0, -10]];
+const longFiller = 'x'.repeat(500);
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -111,6 +116,21 @@ describe('validation', () => {
     ['a NaN coordinate', { kind: 'line', x1: Number.NaN, y1: 0, x2: 1, y2: 1 }, {}, 'line.x1 must be a finite number within ±1000000, got NaN'],
     ['a huge size', { kind: 'ellipse', cx: 0, cy: 0, width: 1e9, height: 10 }, {}, 'ellipse.width must be a finite number within ±1000000, got 1000000000'],
     ['a negative size', { kind: 'rectangle', x: 0, y: 0, width: -5, height: 5 }, {}, 'rectangle.width must not be negative, got -5'],
+    ['a slightly negative size', { kind: 'rectangle', x: 0, y: 0, width: -0.5, height: 5 }, {}, 'rectangle.width must not be negative, got -0.5'],
+    ['a shape that is not an object', null, {}, 'Invalid shape: expected an object, got null'],
+    ['options that are not an object', rectangle, null, 'Invalid style: options must be an object, got null'],
+    ['a one-point linear path', { kind: 'linearPath', points: [[0, 0]] }, {}, 'linearPath needs at least 2 points, got 1'],
+    ['path data with an unknown character', { kind: 'path', d: 'M0 0 L10 x' }, {}, 'Invalid shape: path.d: unexpected "x"'],
+    ['path data that stops mid-command', { kind: 'path', d: 'M0' }, {}, 'Invalid shape: path.d ended in the middle of a command'],
+    ['relative path data that leaves the range', { kind: 'path', d: 'M1e6 0 l1e6 0' }, {}, 'path.d reaches, once arcs and relative coordinates are resolved, 2000000, outside ±1000000'],
+    ['an inherited option name', rectangle, { constructor: 1 }, 'Unknown option: constructor'],
+    ['a NaN strokeWidth', rectangle, { strokeWidth: Number.NaN }, 'strokeWidth must be a finite number, got NaN'],
+    ['an infinite fillWeight', rectangle, { fill: 'red', fillWeight: Infinity }, 'fillWeight must be a finite number, got Infinity'],
+    ['a hachureGap given as a string', rectangle, { fill: 'red', hachureGap: '3' }, 'hachureGap must be a finite number, got "3"'],
+    ['an infinite dashOffset', rectangle, { fill: 'red', fillStyle: 'dashed', dashOffset: -Infinity }, 'dashOffset must be a finite number, got -Infinity'],
+    ['a NaN dashGap', rectangle, { fill: 'red', fillStyle: 'dashed', dashGap: Number.NaN }, 'dashGap must be a finite number, got NaN'],
+    ['an infinite zigzagOffset', rectangle, { fill: 'red', fillStyle: 'zigzag-line', zigzagOffset: Infinity }, 'zigzagOffset must be a finite number, got Infinity'],
+    ['a fill style without a prototype', rectangle, { fill: 'red', fillStyle: Object.create(null) }, 'Unknown fill style: [object Object]'],
     ['an empty arc', { kind: 'arc', cx: 5, cy: 5, width: 10, height: 10, start: 1, stop: 1, closed: true }, { fill: 'red' }, 'arc.stop must be greater than arc.start, got start 1, stop 1'],
     ['an infinite arc start', { kind: 'arc', cx: 5, cy: 5, width: 10, height: 10, start: -Infinity, stop: 1 }, {}, 'arc.start must be a finite number within ±1000000, got -Infinity'],
     ['an arc start too far from zero', { kind: 'arc', cx: 5, cy: 5, width: 10, height: 10, start: -1e17, stop: 1 }, {}, 'arc.start must be a finite number within ±1000000, got -100000000000000000'],
@@ -142,6 +162,12 @@ describe('validation', () => {
     ['a hachure angle too large for the engine trigonometry', rectangle, { fill: 'red', hachureAngle: 1e300 }, 'hachureAngle must be a finite number within ±1000000, got 1e+300'],
   ])('rejects %s with a named error', (_case, shape, options, message) => {
     expect(() => sketch(shape as Shape, options as SketchOptions)).toThrow(message);
+  });
+
+  it('repeats at most 100 characters of a rejected value', () => {
+    expect(() => sketch(rectangle, { fill: 'red', fillStyle: longFiller } as unknown as SketchOptions)).toThrow(
+      /^Unknown fill style: x{100}$/,
+    );
   });
 
   it.each<[string, Shape, SketchOptions]>([
@@ -181,6 +207,9 @@ describe('work budget', () => {
     ['a few path curves spanning the coordinate range', { kind: 'path', d: `M0 0${' C1e6 0 -1e6 1e6 1e6 1e6'.repeat(1000)}` }, {}],
     ['an arc whose span is below the precision of its start', { kind: 'arc', cx: 0, cy: 0, width: 10, height: 10, start: 9e5, stop: 9e5 + 1e-10 }, {}],
     ['a filled arc whose fill steps are below the precision of its start', { kind: 'arc', cx: 0, cy: 0, width: 10, height: 10, start: 9e5, stop: 9e5 + 1e-8, closed: true }, { fill: 'red', curveStepCount: 1000, roughness: 0 }],
+    ['a sawtooth path of 25,000 points', { kind: 'path', d: sawtooth }, {}],
+    ['a hachure fill of a comb with thousands of teeth', { kind: 'polygon', points: comb }, { fill: 'red' }],
+    ['path data too long to read, before an error at its end', { kind: 'path', d: `M0 0${' 1'.repeat(2e6)}#` }, {}],
   ])('stops %s with a budget error', (_case, shape, options) => {
     expect(() => sketch(shape, options)).toThrow(TOO_COMPLEX);
   });
