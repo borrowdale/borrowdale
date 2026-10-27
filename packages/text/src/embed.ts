@@ -5,6 +5,7 @@ import {
   codePointOf,
   cssFamily,
   drawnForm,
+  IGNORABLE,
   isFamily,
   LINE_BREAK,
   show,
@@ -81,12 +82,14 @@ function filesFor(fontFiles: FontFiles, text: string | undefined): readonly Font
     throw new Error(`Text must be a string, got ${show(text)}`);
   }
   // Each label in its drawn form, so the files chosen serve exactly the characters that are drawn:
-  // the line breaks between labels, and spaces at their ends, select no file. Each code point once:
-  // the text is every label of a document, and may be long.
+  // the line breaks between labels, spaces at their ends and characters drawn as nothing select no
+  // file. Each code point once: the text is every label of a document, and may be long.
   const unique = new Set<number>();
   for (const label of text.split(LINE_BREAK)) {
     for (const character of drawnForm(label)) {
-      unique.add(codePointOf(character));
+      if (!IGNORABLE.test(character)) {
+        unique.add(codePointOf(character));
+      }
     }
   }
   const codePoints = [...unique];

@@ -119,6 +119,20 @@ describe('fontFaceCss', () => {
     expect(fontFaceCss(excalifontFiles, ' Ελλάδα \n\tΑθήνα ').match(/unicode-range:U\+[0-9A-F]+/g)).toEqual(['unicode-range:U+037E']);
   });
 
+  it('embeds only the Greek file of Excalifont for a Greek label with a soft hyphen, which is never drawn', () => {
+    expect(fontFaceCss(excalifontFiles, 'Ελ\u00ADλάδα').match(/unicode-range:U\+[0-9A-F]+/g)).toEqual(['unicode-range:U+037E']);
+  });
+
+  it('embeds no file for a character drawn as nothing, even a file that serves it', () => {
+    expect(fontFaceCss({ ...handFiles, files: [{ ranges: [[0xad, 0xad], [0x200d, 0x200d]], woff2: 'QUJD' }] }, 'A\u00AD\u200DB')).toBe('');
+  });
+
+  it('embeds the file of a default-ignorable character that Chromium draws with a width', () => {
+    expect(fontFaceCss({ ...handFiles, files: [{ ranges: [[0x3164, 0x3164]], woff2: 'QUJD' }] }, '\u3164')).toContain(
+      'unicode-range:U+3164}',
+    );
+  });
+
   it('adds the file of the space for a tab inside a label, which is drawn as a space', () => {
     expect(fontFaceCss(excalifontFiles, 'Київ\tМосква')).toBe(fontFaceCss(excalifontFiles, 'Київ Москва'));
   });

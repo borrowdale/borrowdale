@@ -1,11 +1,5 @@
 import type { Font, LayoutOptions, MeasureOptions, TextAnchor, TextBaseline, TextExtent, TextLayout } from './types.js';
-import { advanceOf, checkLayout, checkMeasure, codePointOf, type CheckedMeasure } from './validate.js';
-
-// Characters browsers draw as nothing (soft hyphens, zero-width joiners, variation selectors), so
-// measured as nothing: Unicode's default-ignorable set, less the seven Chromium draws with a width
-// from a fallback font (measured over all 4,174 of them): U+180F, U+3164, U+FFA0, U+1BCA0-1BCA3.
-// Those count as uncovered. The whole set, without the exceptions, measures them wrongly as nothing.
-const IGNORABLE = /(?![\u180F\u3164\uFFA0\u{1BCA0}-\u{1BCA3}])\p{Default_Ignorable_Code_Point}/u;
+import { advanceOf, checkLayout, checkMeasure, codePointOf, IGNORABLE, type CheckedMeasure } from './validate.js';
 
 // A character and the combining marks after it, with any zero-width joiner among them. Measured in
 // Chromium: the browser draws such a cluster from one font file, or all of it in a fallback font.

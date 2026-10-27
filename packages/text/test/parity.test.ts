@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from 'vitest';
-import { fontFaceCss, type LayoutOptions, type TextLayout, type TextStyle } from '@borrowdale/text';
+import { fontFaceCss, layoutText, toSvgText, type LayoutOptions, type TextLayout, type TextStyle } from '@borrowdale/text';
 import { excalifontFiles } from '@borrowdale/text/excalifont-files';
 import { evaluateInChromium } from '../../core/test/support/chromium.js';
 import corpus from './golden/corpus.json' with { type: 'json' };
@@ -9,8 +9,8 @@ import goldens from './golden/goldens.json' with { type: 'json' };
 // the layout and markup are byte for byte the goldens Node produces, and the text Chromium actually
 // draws, through each of the three renderers, is as wide as measureText said. The second check is
 // what proves the advance table matches the font, because Chromium measures with the font itself.
-// The corpus page forbids fetching fonts, so its font can only come from loadFont's bytes; a second
-// page loads the font through fontFaceCss instead. Two right-to-left pages check that the renderers
+// The corpus page forbids fetching fonts, so its font can only come from loadFont's bytes; two more
+// pages load the font through fontFaceCss instead, each with only the files its label needs. Two right-to-left pages check that the renderers
 // keep text left to right: one whose own stylesheet embeds the font with fontFaceCss and turns text
 // right to left, where loadFont must also load the rules' faces before drawText can draw, and one
 // whose Content-Security-Policy blocks style attributes.
@@ -35,6 +35,10 @@ const shapedNames = shaped.map(({ name }) => name);
 
 const SOURCE = new URL('../src/index.ts', import.meta.url);
 const zurich = expected['category-zurich'] as Golden;
+// A soft hyphen is drawn as nothing, so the label needs the Greek file only, not the Latin one that
+// holds the hyphen.
+const hyphenatedLayout = layoutText('Ελ\u00ADλάδα', { x: 10, y: 40 });
+const hyphenated: Golden = { ...hyphenatedLayout, svg: toSvgText(hyphenatedLayout) };
 const stressed = expected['cyrillic-stress-mark'] as Golden;
 // Anchored at its end, so its left edge also depends on its width.
 const tick = cases.find(({ name }) => name === 'tick-ten-thousands') as Case;
@@ -45,6 +49,7 @@ const RIGHT_TO_LEFT = 'text{direction:rtl}';
 let drawn: Record<string, Drawn> = {};
 let corpusFaces = NaN;
 let embedded: Embedded = { faces: NaN, width: NaN };
+let embeddedGreek: Embedded = { faces: NaN, width: NaN };
 let ruled: Ruled = { drawError: '', canvasWidth: NaN, svgX: NaN, attributeX: NaN, domX: NaN };
 let strict: Strict = { svgX: NaN, domX: NaN, domRuleX: NaN, svgRuleX: NaN };
 
@@ -93,18 +98,8 @@ beforeAll(async () => {
     },
     { entries: cases, files: excalifontFiles },
   ));
-  embedded = await evaluateInChromium(
-    SOURCE,
-    'borrowdaleText',
-    `<style>${fontFaceCss(excalifontFiles, zurich.text)}</style>` +
-      `<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1000">${zurich.svg}</svg>`,
-    async (label: string) => {
-      await document.fonts.load('16px "Excalifont"', label);
-      const text = document.querySelector('text') as SVGTextElement;
-      return { faces: document.fonts.size, width: text.getComputedTextLength() };
-    },
-    zurich.text,
-  );
+  embedded = await embed(zurich);
+  embeddedGreek = await embed(hyphenated);
   ruled = await evaluateInChromium(
     SOURCE,
     'borrowdaleText',
@@ -175,6 +170,22 @@ beforeAll(async () => {
   );
 }, 120_000);
 
+// Draws a label on a page that embeds only the files fontFaceCss picks for it.
+function embed(label: Golden): Promise<Embedded> {
+  return evaluateInChromium(
+    SOURCE,
+    'borrowdaleText',
+    `<style>${fontFaceCss(excalifontFiles, label.text)}</style>` +
+      `<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1000">${label.svg}</svg>`,
+    async (text: string) => {
+      await document.fonts.load('16px "Excalifont"', text);
+      const element = document.querySelector('text') as SVGTextElement;
+      return { faces: document.fonts.size, width: element.getComputedTextLength() };
+    },
+    label.text,
+  );
+}
+
 describe('Chromium parity', () => {
   it('lays out exactly the corpus in Chromium', () => {
     expect(Object.keys(drawn)).toEqual(Object.keys(expected));
@@ -222,6 +233,14 @@ describe('Chromium parity', () => {
 
   it('draws text in the font fontFaceCss embeds, as wide as it was measured', () => {
     expect(embedded.width).toBeCloseTo(zurich.width, 1);
+  });
+
+  it('embeds through fontFaceCss only the Greek file for a Greek label with a soft hyphen', () => {
+    expect(embeddedGreek.faces).toBe(1);
+  });
+
+  it('draws that label as wide as it was measured, without the file that holds the soft hyphen', () => {
+    expect(embeddedGreek.width).toBeCloseTo(hyphenated.width, 1);
   });
 });
 

@@ -48,6 +48,12 @@ const FAMILY_RULE =
   'family must be letters, digits, spaces, hyphens and underscores, starting and ending with a letter or digit';
 const BASE64 = /^[A-Za-z0-9+/]*={0,2}$/;
 export const LINE_BREAK = /[\n\r\u0085\u2028\u2029]/;
+// Characters browsers draw as nothing (soft hyphens, zero-width joiners, variation selectors), so
+// measured as nothing and served by no font file: Unicode's default-ignorable set, less the seven
+// Chromium draws with a width from a fallback font (measured over all 4,174 of them): U+180F,
+// U+3164, U+FFA0, U+1BCA0-1BCA3. Those count as uncovered. The whole set, without the exceptions,
+// measures them wrongly as nothing.
+export const IGNORABLE = /(?![\u180F\u3164\uFFA0\u{1BCA0}-\u{1BCA3}])\p{Default_Ignorable_Code_Point}/u;
 // Removed from the text, because they change how their neighbours are drawn in ways the measurement
 // cannot follow: variation selectors 15 and 16 switch a character between text and emoji
 // presentation, and bidirectional controls reorder the text and mirror brackets.
