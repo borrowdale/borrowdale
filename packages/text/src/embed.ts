@@ -1,5 +1,5 @@
 import type { FontFile, FontFiles } from './types.js';
-import { checkFontFiles, checkText, codePointName, codePointOf, cssFamily, IGNORABLE, show } from './validate.js';
+import { checkFontFiles, checkText, codePointName, codePointOf, cssFamily, IGNORABLE } from './validate.js';
 
 // The file each face `loadFont` made came from, so a later call can tell which files a set has.
 const sources = new WeakMap<FontFace, { unicodeRange: string; woff2: string }>();
@@ -73,7 +73,8 @@ function filesFor(fontFiles: FontFiles, labels: readonly string[] | undefined): 
     return fontFiles.files;
   }
   if (!Array.isArray(labels)) {
-    throw new Error(`Labels must be an array, got ${show(labels)}`);
+    // The type alone: a caller of the old form passes every label of a document as one string.
+    throw new Error(`Labels must be an array, got ${typeof labels}`);
   }
   // Each label checked as layoutText checks it, and in the form it is drawn, so the files chosen
   // serve exactly the characters that are drawn: spaces at a label's ends and characters drawn as

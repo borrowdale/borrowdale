@@ -32,6 +32,13 @@ function embedding(files: unknown, labels?: unknown) {
   return () => fontFaceCss(files as FontFiles, labels as string[]);
 }
 
+// A list that claims `length` entries and holds none: built at once, whatever the length.
+function sparse(length: number): unknown[] {
+  const list: unknown[] = [];
+  list.length = length;
+  return list;
+}
+
 function withFont(font: unknown) {
   return measuring('A', { font });
 }
@@ -132,6 +139,9 @@ describe('fonts', () => {
     ['an empty list of files', { ...handFont, files: [] }, 'Invalid font: files must be a list of one or more files, got object'],
     ['a list of files with a hole', { ...handFont, files: [, { ranges: [[0x41, 0x41]] }] }, 'Invalid font: files[0].ranges must be'],
     ['a file whose ranges have a hole', { ...handFont, files: [{ ranges: [, [0x41, 0x41]] }] }, 'Invalid font: files[0].ranges must be'],
+    ['a pair claiming 2^32-1 ends', { ...handFont, files: [{ ranges: [sparse(2 ** 32 - 1)] }] }, 'Invalid font: files[0].ranges must be'],
+    ['a bad pair after a good one', { ...handFont, files: [{ ranges: [[0x41, 0x41], [0x42, 0x41]] }] }, 'Invalid font: files[0].ranges must be'],
+    ['ranges claiming 2^32-1 pairs', { ...handFont, files: [{ ranges: sparse(2 ** 32 - 1) }] }, 'Invalid font: files[0].ranges must be'],
     ['a file with no ranges', { ...handFont, files: [{ ranges: [] }] }, 'Invalid font: files[0].ranges must be one or more [first, last] code point pairs'],
     ['a null file', { ...handFont, files: [{ ranges: [[0x41, 0x42]] }, null] }, 'Invalid font: files[1].ranges must be one or more'],
     ['a file range that runs backwards', { ...handFont, files: [{ ranges: [[0x42, 0x41]] }] }, 'Invalid font: files[0].ranges must be'],
@@ -226,12 +236,14 @@ describe('a polluted Object.prototype', () => {
     Object.defineProperty(Object.prototype, 'baseline', { value: 'top', configurable: true, writable: true });
     Object.defineProperty(Object.prototype, 'fontSize', { value: 500, configurable: true, writable: true });
     Object.defineProperty(Object.prototype, 'fill', { value: 'red', configurable: true, writable: true });
+    Object.defineProperty(Object.prototype, 'files', { value: [{ ranges: [[0, 0]] }], configurable: true, writable: true });
   });
 
   afterEach(() => {
     delete (Object.prototype as { baseline?: unknown }).baseline;
     delete (Object.prototype as { fontSize?: unknown }).fontSize;
     delete (Object.prototype as { fill?: unknown }).fill;
+    delete (Object.prototype as { files?: unknown }).files;
   });
 
   it('cannot supply a layout option', () => {
@@ -240,6 +252,10 @@ describe('a polluted Object.prototype', () => {
 
   it('cannot supply a measuring option', () => {
     expect(measureText('A', { font: handFont }).width).toBe(8);
+  });
+
+  it('cannot supply the files of a font', () => {
+    expect(measureText('A', { fontSize: 10, font: handFont }).missing).toEqual([]);
   });
 
   it('cannot supply a style', () => {
@@ -293,12 +309,15 @@ describe('font files', () => {
     ['ranges that are not a list', { ...handFiles, files: [{ ranges: 'A-B', woff2: 'QQ==' }] }, 'files[0].ranges must be'],
     ['ranges with a hole', { ...handFiles, files: [{ ranges: [, [0x41, 0x41]], woff2: 'QQ==' }] }, 'files[0].ranges must be'],
     ['ranges that are only a hole', { ...handFiles, files: [{ ranges: [,], woff2: 'QQ==' }] }, 'files[0].ranges must be'],
+    ['a pair claiming 2^32-1 ends', { ...handFiles, files: [{ ranges: [sparse(2 ** 32 - 1)], woff2: 'QQ==' }] }, 'files[0].ranges must be'],
+    ['a bad pair after a good one', { ...handFiles, files: [{ ranges: [[0x41, 0x41], [0x42, 0x41]], woff2: 'QQ==' }] }, 'files[0].ranges must be'],
+    ['an empty list of files', { ...handFiles, files: [] }, 'Invalid font files: files must be a list of one or more files'],
   ])('rejects %s', (_case, files, message) => {
     expect(embedding(files)).toThrow(message);
   });
 
   it('rejects labels given as one string rather than a list', () => {
-    expect(embedding(handFiles, 'Zürich')).toThrow('Labels must be an array, got "Zürich"');
+    expect(embedding(handFiles, 'Zürich')).toThrow('Labels must be an array, got string');
   });
 
   it('rejects a label that is not a string', () => {

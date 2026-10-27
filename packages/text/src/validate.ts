@@ -140,6 +140,9 @@ export function checkFontFiles(fontFiles: FontFiles): void {
     throw new Error('Invalid font files: expected { family, files }');
   }
   checkFamily(fontFiles.family, 'font files');
+  if (fontFiles.files.length === 0) {
+    throw new Error('Invalid font files: files must be a list of one or more files');
+  }
   for (const [index, file] of fontFiles.files.entries()) {
     if (typeof file?.woff2 !== 'string' || !BASE64.test(file.woff2) || file.woff2.length % 4 !== 0) {
       throw new Error(`Invalid font files: files[${index}].woff2 must be base64`);
@@ -206,7 +209,9 @@ function checkFont(given: Font): CheckedFont {
     throw new Error(`Invalid font: expected an object, got ${show(given)}`);
   }
   // Each field read once: a getter cannot pass these checks and then return another value.
-  const { family, unitsPerEm, ascender, descender, advances, files } = given;
+  const { family, unitsPerEm, ascender, descender, advances } = given;
+  // Own only: `files` is optional, so a font without it would otherwise read Object.prototype's.
+  const files: unknown = Object.hasOwn(given, 'files') ? given.files : undefined;
   const font: Font = { family, unitsPerEm, ascender, descender, advances };
   checkFamily(font.family, 'font');
   if (typeof font.advances !== 'object' || font.advances === null) {
@@ -233,18 +238,31 @@ function checkFiles(files: unknown): CheckedFont['files'] {
 }
 
 // The same rule for a font's files and the woff2 files that hold them. Returns a copy of the
-// ranges, copied first and checked second, which is what measuring reads: the pairs a font was
-// checked with are the pairs it is measured with. Font files are trusted, and their callers read
-// the ranges again.
+// ranges, which is what measuring reads: the pairs a font was checked with are the pairs it is
+// measured with. Font files are trusted, and their callers read the ranges again.
+// Each entry is read once, by index, and checked as it is copied, stopping at the first that is not
+// a pair: a sparse list or pair can claim billions of entries, and copying it before checking it
+// would exhaust memory. An empty list would make the face claim every code point.
 function checkRanges(owner: string, index: number, ranges: unknown): [first: number, last: number][] {
-  const pairs: unknown[] = Array.from(Array.isArray(ranges) ? ranges : [], (range: unknown) =>
-    Array.isArray(range) ? [...range] : range,
-  );
-  // An empty list would make the face claim every code point.
-  if (pairs.length === 0 || !pairs.every(isRange)) {
+  const list: readonly unknown[] = Array.isArray(ranges) ? ranges : [];
+  const count = list.length;
+  const pairs: [first: number, last: number][] = [];
+  for (let at = 0; at < count; at += 1) {
+    const pair = pairOf(list[at]);
+    if (!isRange(pair)) {
+      break;
+    }
+    pairs.push(pair);
+  }
+  if (count === 0 || pairs.length < count) {
     throw new Error(`Invalid ${owner}: files[${index}].ranges must be one or more [first, last] code point pairs`);
   }
   return pairs;
+}
+
+// A copy of a pair's two ends, each read once; anything but a two-element list is no pair.
+function pairOf(range: unknown): unknown {
+  return Array.isArray(range) && range.length === 2 ? [range[0], range[1]] : undefined;
 }
 
 function checkFamily(family: unknown, owner: string): void {
