@@ -11,14 +11,18 @@
     "typecheck": "tsc -b && tsc -p tsconfig.test.json",
     "test": "vitest run",
     "example": "node apps/examples/core-and-fills.mjs",
-    "goldens": "npm run build && node scripts/record-goldens.mjs"
+    "example:text": "node apps/examples/text.mjs",
+    "goldens": "npm run build && node scripts/record-goldens.mjs",
+    "fonts": "node scripts/generate-font.mjs"
   },
   "devDependencies": {
     "@changesets/cli": "^3.0.3",
     "happy-dom": "^21.0.4",
+    "opentype.js": "2.0.0",
     "playwright-core": "1.61.1",
     "typescript": "^7.0.2",
     "vite": "^8.3.5",
-    "vitest": "^5.0.5"
+    "vitest": "^5.0.5",
+    "wawoff2": "2.0.1"
   }
 }
