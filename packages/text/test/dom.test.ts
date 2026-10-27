@@ -167,7 +167,14 @@ describe('appendText', () => {
 
     expect(element.style.getPropertyValue('font-kerning')).toBe('none');
     expect(element.style.getPropertyValue('font-variant-ligatures')).toBe('none');
-    expect(element.getAttribute('direction')).toBe('ltr');
+  });
+
+  it('sets the direction through the CSSOM, which a stylesheet rule cannot override', () => {
+    expect(appendText(svgRoot(), layoutText('AB', at)).style.getPropertyValue('direction')).toBe('ltr');
+  });
+
+  it('sets the direction as an attribute too', () => {
+    expect(appendText(svgRoot(), layoutText('AB', at)).getAttribute('direction')).toBe('ltr');
   });
 
   it('rejects a style it cannot draw, and appends nothing', () => {

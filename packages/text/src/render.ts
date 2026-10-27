@@ -5,10 +5,13 @@ import { checkStyle, cssFamily, isFamily } from './validate.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
-// Browsers kern and form ligatures by default, which would make the drawn text narrower than its
-// measurement. Measured in Chromium: these two properties are the only switch SVG text honours;
-// the `font-kerning` and `text-rendering` attributes are ignored.
-const NO_SHAPING = [
+// Set as the element's own style, which a stylesheet rule cannot override. A right-to-left page or
+// rule would anchor the text at its right end. And browsers kern and form ligatures by default,
+// which would make the drawn text narrower than its measurement. Measured in Chromium: these two
+// properties are the only switch SVG text honours; the `font-kerning` and `text-rendering`
+// attributes are ignored.
+const OWN_STYLE = [
+  ['direction', 'ltr'],
   ['font-kerning', 'none'],
   ['font-variant-ligatures', 'none'],
 ] as const;
@@ -20,7 +23,7 @@ const NO_SHAPING = [
 export function toSvgText(layout: TextLayout, style?: TextStyle): string {
   return svgElement(
     'text',
-    { ...textAttributes(layout, style), style: NO_SHAPING.map(([name, value]) => `${name}:${value}`).join(';') },
+    { ...textAttributes(layout, style), style: OWN_STYLE.map(([name, value]) => `${name}:${value}`).join(';') },
     // Escapes &, < and > (and quotes, which is harmless here), so text cannot become markup.
     escapeAttribute(layout.text),
   );
@@ -33,7 +36,7 @@ export function appendText(parent: Element, layout: TextLayout, style?: TextStyl
     element.setAttribute(name, String(value));
   }
   // Through the CSSOM rather than a style attribute, which a strict Content-Security-Policy blocks.
-  for (const [name, value] of NO_SHAPING) {
+  for (const [name, value] of OWN_STYLE) {
     element.style.setProperty(name, value);
   }
   element.textContent = layout.text;
@@ -85,8 +88,8 @@ function textAttributes(layout: TextLayout, style: TextStyle | undefined): SvgAt
     'font-size': layout.fontSize,
     fill,
     ...(layout.rotate === 0 ? {} : { transform: `rotate(${layout.rotate} ${pivotX} ${pivotY})` }),
-    // A right-to-left page would anchor the text at its right end. An attribute rather than a style
-    // property, so a Content-Security-Policy that blocks style attributes cannot remove it.
+    // In the style too, but also an attribute, which a Content-Security-Policy that blocks style
+    // attributes cannot remove. Against a stylesheet rule only the style holds.
     direction: 'ltr',
   };
 }

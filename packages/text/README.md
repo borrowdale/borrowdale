@@ -124,14 +124,16 @@ The measurement assumes nothing around the text changes how it is drawn. Do not 
 `font-feature-settings`, `text-transform`, `text-anchor`, `dominant-baseline` or
 `alignment-baseline` to Borrowdale text through CSS or a parent element, and keep stylesheet rules
 that select the text elements themselves (`.tick text { font-size: 10px }`) away from them: such a
-rule overrides the font family, size and direction the renderers set. Against a parent element or
-the page, the renderers keep the direction left-to-right. A page's `lang` can switch on a
+rule overrides the font family and size the renderers set. The renderers keep the text left to
+right against the page, a parent element and such rules, except `toSvgText` text under a
+Content-Security-Policy that blocks its `style` attribute (below): there only its `direction`
+attribute remains, and a stylesheet rule overrides that. A page's `lang` can switch on a
 language's own letter forms: on a Catalan (`ca`) page, `l·l` draws narrower than measured.
 
-`toSvgText` switches kerning and ligatures off with a `style` attribute, and embedded fonts arrive
-in a `<style>` element. A Content-Security-Policy without `'unsafe-inline'` in `style-src` blocks
-both, and the embedded fonts also need `data:` in `font-src`: use `appendText`, which sets the same
-properties through the CSSOM, and load the font with `loadFont`.
+`toSvgText` sets the direction and switches kerning and ligatures off with a `style` attribute, and
+embedded fonts arrive in a `<style>` element. A Content-Security-Policy without `'unsafe-inline'`
+in `style-src` blocks both, and the embedded fonts also need `data:` in `font-src`: use
+`appendText`, which sets the same properties through the CSSOM, and load the font with `loadFont`.
 
 ## Validation
 

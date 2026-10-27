@@ -10,12 +10,18 @@ import goldens from './golden/goldens.json' with { type: 'json' };
 // draws, through each of the three renderers, is as wide as measureText said. The second check is
 // what proves the advance table matches the font, because Chromium measures with the font itself.
 // The corpus page forbids fetching fonts, so its font can only come from loadFont's bytes; a second
-// page loads the font through fontFaceCss instead.
+// page loads the font through fontFaceCss instead. Two right-to-left pages check that the renderers
+// keep text left to right: one whose own stylesheet embeds the font with fontFaceCss and turns text
+// right to left, where loadFont must also load the rules' faces before drawText can draw, and one
+// whose Content-Security-Policy blocks style attributes.
 
 type Case = { name: string; text: string; options: LayoutOptions; style?: TextStyle };
 type Golden = TextLayout & { svg: string };
 type Drawn = { golden: Golden; svgWidth: number; domWidth: number; canvasWidth: number; shapedWidth: number };
 type Embedded = { faces: number; width: number };
+// Where Chromium puts the left edge of each renderer's text on a right-to-left page.
+type Ruled = { drawError: string; canvasWidth: number; svgX: number; attributeX: number; domX: number };
+type Strict = { svgX: number; domX: number; domRuleX: number; svgRuleX: number };
 type Text = typeof import('@borrowdale/text');
 
 const cases = corpus as unknown as Case[];
@@ -30,10 +36,17 @@ const shapedNames = shaped.map(({ name }) => name);
 const SOURCE = new URL('../src/index.ts', import.meta.url);
 const zurich = expected['category-zurich'] as Golden;
 const stressed = expected['cyrillic-stress-mark'] as Golden;
+// Anchored at its end, so its left edge also depends on its width.
+const tick = cases.find(({ name }) => name === 'tick-ten-thousands') as Case;
+const tickLayout = expected[tick.name] as Golden;
+// A stylesheet rule that selects the text elements themselves, which outranks a direction attribute.
+const RIGHT_TO_LEFT = 'text{direction:rtl}';
 
 let drawn: Record<string, Drawn> = {};
 let corpusFaces = NaN;
 let embedded: Embedded = { faces: NaN, width: NaN };
+let ruled: Ruled = { drawError: '', canvasWidth: NaN, svgX: NaN, attributeX: NaN, domX: NaN };
+let strict: Strict = { svgX: NaN, domX: NaN, domRuleX: NaN, svgRuleX: NaN };
 
 beforeAll(async () => {
   ({ drawn, faces: corpusFaces } = await evaluateInChromium(
@@ -92,6 +105,74 @@ beforeAll(async () => {
     },
     zurich.text,
   );
+  ruled = await evaluateInChromium(
+    SOURCE,
+    'borrowdaleText',
+    `<html dir="rtl"><head><style>${fontFaceCss(excalifontFiles, tickLayout.text)}${RIGHT_TO_LEFT}</style></head>` +
+      '<body><svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1000"></svg><canvas width="1" height="1"></canvas></body></html>',
+    async ({ entry, files }: { entry: Case; files: typeof excalifontFiles }) => {
+      const { appendText, drawText, layoutText, loadFont, toSvgText } = (
+        globalThis as unknown as { borrowdaleText: Text }
+      ).borrowdaleText;
+      await loadFont(document.fonts, files);
+      const layout = layoutText(entry.text, entry.options);
+      // Drawn first, before laying out SVG text could load the rules' faces by itself.
+      const context = (document.querySelector('canvas') as HTMLCanvasElement).getContext('2d') as CanvasRenderingContext2D;
+      let canvasWidth = NaN;
+      const fillText = context.fillText.bind(context);
+      context.fillText = (text: string, x: number, y: number) => {
+        canvasWidth = context.measureText(text).width;
+        fillText(text, x, y);
+      };
+      let drawError = '';
+      try {
+        drawText(context, layout);
+      } catch (error) {
+        drawError = String(error);
+      }
+      const svg = document.querySelector('svg') as SVGSVGElement;
+      const leftOf = (markup: string) => {
+        svg.innerHTML = markup;
+        return (svg.firstElementChild as SVGTextElement).getBBox().x;
+      };
+      const markup = toSvgText(layout);
+      const svgX = leftOf(markup);
+      // The same markup with only the direction attribute: the control that shows the rule applies.
+      const attributeX = leftOf(markup.replace(/ style="[^"]*"/, ''));
+      svg.replaceChildren();
+      const domX = appendText(svg, layout).getBBox().x;
+      return { drawError, canvasWidth, svgX, attributeX, domX };
+    },
+    { entry: tick, files: excalifontFiles },
+  );
+  strict = await evaluateInChromium(
+    SOURCE,
+    'borrowdaleText',
+    `<html dir="rtl"><head><meta http-equiv="Content-Security-Policy" content="style-src 'none'; font-src 'none'"></head>` +
+      '<body><svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1000"></svg></body></html>',
+    async ({ entry, files, rule }: { entry: Case; files: typeof excalifontFiles; rule: string }) => {
+      const { appendText, layoutText, loadFont, toSvgText } = (globalThis as unknown as { borrowdaleText: Text })
+        .borrowdaleText;
+      await loadFont(document.fonts, files);
+      const layout = layoutText(entry.text, entry.options);
+      const svg = document.querySelector('svg') as SVGSVGElement;
+      // The policy blocks the markup's style attribute, so only its direction attribute applies.
+      svg.innerHTML = toSvgText(layout);
+      const svgX = (svg.firstElementChild as SVGTextElement).getBBox().x;
+      svg.replaceChildren();
+      const element = appendText(svg, layout);
+      const domX = element.getBBox().x;
+      // A stylesheet rule, which the policy still allows from script.
+      const sheet = new CSSStyleSheet();
+      sheet.replaceSync(rule);
+      document.adoptedStyleSheets = [sheet];
+      const domRuleX = element.getBBox().x;
+      svg.insertAdjacentHTML('beforeend', toSvgText(layout));
+      const svgRuleX = (svg.lastElementChild as SVGTextElement).getBBox().x;
+      return { svgX, domX, domRuleX, svgRuleX };
+    },
+    { entry: tick, files: excalifontFiles, rule: RIGHT_TO_LEFT },
+  );
 }, 120_000);
 
 describe('Chromium parity', () => {
@@ -141,5 +222,45 @@ describe('Chromium parity', () => {
 
   it('draws text in the font fontFaceCss embeds, as wide as it was measured', () => {
     expect(embedded.width).toBeCloseTo(zurich.width, 1);
+  });
+});
+
+describe('Chromium, with fontFaceCss rules and a right-to-left rule in the page stylesheet', () => {
+  it('draws on a canvas once loadFont has also loaded the faces of the rules', () => {
+    expect(ruled.drawError).toBe('');
+  });
+
+  it('draws on the canvas as wide as it was measured', () => {
+    expect(ruled.canvasWidth).toBeCloseTo(tickLayout.width, 1);
+  });
+
+  it('keeps toSvgText text left to right, starting where it was laid out', () => {
+    expect(ruled.svgX).toBeCloseTo(tickLayout.x, 1);
+  });
+
+  it('keeps appendText text left to right, starting where it was laid out', () => {
+    expect(ruled.domX).toBeCloseTo(tickLayout.x, 1);
+  });
+
+  it('would let the rule turn the text right to left with only the direction attribute', () => {
+    expect(ruled.attributeX).not.toBeCloseTo(tickLayout.x, 1);
+  });
+});
+
+describe('Chromium, right to left under a Content-Security-Policy that blocks style attributes', () => {
+  it('keeps toSvgText text left to right by its direction attribute', () => {
+    expect(strict.svgX).toBeCloseTo(tickLayout.x, 1);
+  });
+
+  it('keeps appendText text left to right', () => {
+    expect(strict.domX).toBeCloseTo(tickLayout.x, 1);
+  });
+
+  it('keeps appendText text left to right against a stylesheet rule, through the CSSOM', () => {
+    expect(strict.domRuleX).toBeCloseTo(tickLayout.x, 1);
+  });
+
+  it('lets a stylesheet rule turn toSvgText text right to left, as the README says, since its style is blocked', () => {
+    expect(strict.svgRuleX).not.toBeCloseTo(tickLayout.x, 1);
   });
 });

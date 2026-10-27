@@ -3,7 +3,8 @@ import { fontFaceCss, layoutText, toSvgText } from '@borrowdale/text';
 import { excalifontFiles } from '@borrowdale/text/excalifont-files';
 import { at, handFiles } from './support/hand-font.js';
 
-const NO_SHAPING = 'direction="ltr" style="font-kerning:none;font-variant-ligatures:none"';
+// How every element ends: left to right, as an attribute and in the style, with kerning and ligatures off.
+const LTR_UNSHAPED = 'direction="ltr" style="direction:ltr;font-kerning:none;font-variant-ligatures:none"';
 // The start tag of every element laid out `at` with the default anchor, up to its fill.
 const START_TAG = '<text x="100" y="50" font-family="&quot;Hand Test&quot;" font-size="20"';
 const LATIN_RULE =
@@ -14,33 +15,41 @@ const CYRILLIC_RULE =
 describe('toSvgText', () => {
   it('draws the text where the layout put it, in the layout font, with kerning and ligatures off', () => {
     expect(toSvgText(layoutText('AB', { ...at, anchor: 'end' }))).toBe(
-      `<text x="76" y="50" font-family="&quot;Hand Test&quot;" font-size="20" fill="#000" ${NO_SHAPING}>AB</text>`,
+      `<text x="76" y="50" font-family="&quot;Hand Test&quot;" font-size="20" fill="#000" ${LTR_UNSHAPED}>AB</text>`,
     );
   });
 
   it('rotates around the layout pivot', () => {
     expect(toSvgText(layoutText('AB', { ...at, anchor: 'middle', rotate: -45 }))).toBe(
-      `<text x="88" y="50" font-family="&quot;Hand Test&quot;" font-size="20" fill="#000" transform="rotate(-45 100 50)" ${NO_SHAPING}>AB</text>`,
+      `<text x="88" y="50" font-family="&quot;Hand Test&quot;" font-size="20" fill="#000" transform="rotate(-45 100 50)" ${LTR_UNSHAPED}>AB</text>`,
     );
   });
 
   it('fills with the style colour', () => {
-    expect(toSvgText(layoutText('A', at), { fill: '#e76f51' })).toBe(`${START_TAG} fill="#e76f51" ${NO_SHAPING}>A</text>`);
+    expect(toSvgText(layoutText('A', at), { fill: '#e76f51' })).toBe(`${START_TAG} fill="#e76f51" ${LTR_UNSHAPED}>A</text>`);
   });
 
   it('draws the collapsed text that was measured', () => {
-    expect(toSvgText(layoutText('  A   B ', at))).toBe(`${START_TAG} fill="#000" ${NO_SHAPING}>A B</text>`);
+    expect(toSvgText(layoutText('  A   B ', at))).toBe(`${START_TAG} fill="#000" ${LTR_UNSHAPED}>A B</text>`);
   });
 
   it('escapes the text so it cannot become markup', () => {
     expect(toSvgText(layoutText('</text><script>&\'"', at))).toBe(
-      `${START_TAG} fill="#000" ${NO_SHAPING}>&lt;/text&gt;&lt;script&gt;&amp;&#39;&quot;</text>`,
+      `${START_TAG} fill="#000" ${LTR_UNSHAPED}>&lt;/text&gt;&lt;script&gt;&amp;&#39;&quot;</text>`,
     );
+  });
+
+  it('sets the direction in the style too, which a stylesheet rule cannot override', () => {
+    expect(toSvgText(layoutText('A', at))).toContain(' style="direction:ltr;');
+  });
+
+  it('keeps the direction attribute, which a policy that blocks style attributes cannot remove', () => {
+    expect(toSvgText(layoutText('A', at))).toContain(' direction="ltr" ');
   });
 
   it('escapes the fill so it cannot become markup', () => {
     expect(toSvgText(layoutText('A', at), { fill: '"/><script>' })).toBe(
-      `${START_TAG} fill="&quot;/&gt;&lt;script&gt;" ${NO_SHAPING}>A</text>`,
+      `${START_TAG} fill="&quot;/&gt;&lt;script&gt;" ${LTR_UNSHAPED}>A</text>`,
     );
   });
 });
