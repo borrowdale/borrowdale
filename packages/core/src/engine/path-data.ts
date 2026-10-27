@@ -4,7 +4,7 @@
 
 import { charge } from './budget.js';
 import { pointsOnBezierCurves, simplify } from './bezier.js';
-import type { Point } from './core.js';
+import { MAX_COORDINATE, type Point } from './core.js';
 import { asin, cos, sin, tan } from './math.js';
 
 export interface Segment {
@@ -483,13 +483,21 @@ function arcToCubicCurves(
   return curves;
 }
 
-/** Path text parsed into absolute M, L, C and Z segments. */
+/** Path text parsed into absolute M, L, C and Z segments, every number within ±MAX_COORDINATE. */
 export function normalizedPath(path: string): Segment[] {
-  return normalize(absolutize(parsePath(path)));
+  // Checked after normalizing, when relative coordinates and arcs have become absolute.
+  const segments = normalize(absolutize(parsePath(path)));
+  for (const { data } of segments) {
+    for (const value of data) {
+      if (!(Number.isFinite(value) && Math.abs(value) <= MAX_COORDINATE)) {
+        throw new Error(`Invalid shape: path.d contains ${value}, outside ±${MAX_COORDINATE}`);
+      }
+    }
+  }
+  return segments;
 }
 
-export function pointsOnPath(normalized: Segment[], tolerance?: number, distance?: number): Point[][] {
-
+export function pointsOnPath(segments: Segment[], tolerance?: number, distance?: number): Point[][] {
   const sets: Point[][] = [];
   let currentPoints: Point[] = [];
   let start: Point = [0, 0];
@@ -510,7 +518,7 @@ export function pointsOnPath(normalized: Segment[], tolerance?: number, distance
     }
   };
 
-  for (const { key, data } of normalized) {
+  for (const { key, data } of segments) {
     switch (key) {
       case 'M':
         appendPendingPoints();

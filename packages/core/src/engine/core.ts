@@ -67,6 +67,10 @@ export const DEFAULT_OPTIONS: ResolvedOptions = {
   fillShapeRoughnessGain: 0.8,
 };
 
+// The largest coordinate the engine draws. Validation holds shape fields to it, and the path
+// parser holds path data to it.
+export const MAX_COORDINATE = 1e6;
+
 export function lineLength(line: Line): number {
   const p1 = line[0];
   const p2 = line[1];

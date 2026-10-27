@@ -1,9 +1,11 @@
+import { MAX_COORDINATE } from './engine/core.js';
 import { FILL_STYLES, type Shape, type ShapeKind, type SketchOptions } from './types.js';
 
 // Bounds on what callers may pass. The engine additionally bounds its total work per drawing.
-export const MAX_COORDINATE = 1e6;
 const MAX_CURVE_STEPS = 1000;
 const MAX_ROUGHNESS = 10;
+// Degrees. The engine's own trigonometry reduces arguments only up to about 1.6e6 radians.
+const MAX_ANGLE = 1e6;
 
 type FieldRule = 'coordinate' | 'size';
 
@@ -23,48 +25,78 @@ const SHAPE_FIELDS = {
 
 const MIN_POINTS = { polygon: 3, linearPath: 2, curve: 2 } as const;
 
-type OptionRule = 'string' | 'number' | 'angle' | 'unit' | 'roughness' | 'steps' | 'fillStyle' | 'seed';
+interface OptionRule {
+  ok: (value: unknown) => boolean;
+  /** Completes "must be …" in the error message. */
+  expected: string;
+  /** Replaces the whole message, for errors worded differently. */
+  message?: (value: unknown) => string;
+}
+
+const isWithin = (value: unknown, max: number): value is number =>
+  typeof value === 'number' && Number.isFinite(value) && Math.abs(value) <= max;
+
+const range = (min: number, max: number, integer = false): OptionRule => ({
+  ok: (value) => typeof value === 'number' && (!integer || Number.isInteger(value)) && value >= min && value <= max,
+  expected: `${integer ? 'an integer' : 'a number'} from ${min} to ${max}`,
+});
+
+const STRING: OptionRule = { ok: (value) => typeof value === 'string', expected: 'a string' };
+const FINITE: OptionRule = { ok: Number.isFinite, expected: 'a finite number' };
+const UNIT = range(0, 1);
+const ROUGHNESS = range(0, MAX_ROUGHNESS);
 
 // The complete list of accepted options: anything else is a typo or an engine internal.
 const OPTION_RULES: Record<keyof SketchOptions, OptionRule> = {
-  stroke: 'string',
-  strokeWidth: 'number',
-  fill: 'string',
-  fillStyle: 'fillStyle',
-  fillWeight: 'number',
-  hachureAngle: 'angle',
-  hachureGap: 'number',
-  dashOffset: 'number',
-  dashGap: 'number',
-  zigzagOffset: 'number',
-  curveTightness: 'unit',
-  curveFitting: 'unit',
-  curveStepCount: 'steps',
-  roughness: 'roughness',
-  bowing: 'roughness',
-  seed: 'seed',
+  stroke: STRING,
+  strokeWidth: FINITE,
+  fill: STRING,
+  fillStyle: {
+    ok: (value) => (FILL_STYLES as readonly unknown[]).includes(value),
+    expected: 'a fill style',
+    message: (value) => `Unknown fill style: ${String(value)}`,
+  },
+  fillWeight: FINITE,
+  hachureAngle: { ok: (value) => isWithin(value, MAX_ANGLE), expected: `a finite number within ±${MAX_ANGLE}` },
+  hachureGap: FINITE,
+  dashOffset: FINITE,
+  dashGap: FINITE,
+  zigzagOffset: FINITE,
+  // Both scale coordinates: far outside 0–1 they put Infinity into the path data.
+  curveTightness: UNIT,
+  curveFitting: UNIT,
+  curveStepCount: range(1, MAX_CURVE_STEPS, true),
+  roughness: ROUGHNESS,
+  bowing: ROUGHNESS,
+  seed: { ok: (value) => typeof value === 'string' || typeof value === 'number', expected: 'a string or a number' },
 };
 
-/** Throws a descriptive error if the shape or options cannot be drawn. */
-export function assertDrawable(shape: Shape, options: SketchOptions): void {
+export type DefinedOptions = { [K in keyof SketchOptions]?: Exclude<SketchOptions[K], undefined> };
+
+/**
+ * Throws a descriptive error if the shape or options cannot be drawn. Returns the options without
+ * the ones set to `undefined`, which count as not set.
+ */
+export function assertDrawable(shape: Shape, options: SketchOptions): DefinedOptions {
   assertShape(shape);
-  for (const [key, value] of Object.entries(options)) {
-    if (value !== undefined) {
-      assertOption(key, value);
-    }
+  const defined = Object.entries(options).filter(([, value]) => value !== undefined);
+  for (const [key, value] of defined) {
+    assertOption(key, value);
   }
+  return Object.fromEntries(defined);
 }
 
 function assertShape(shape: Shape): void {
-  const kind: unknown = (shape as { kind?: unknown }).kind;
-  if (typeof kind !== 'string' || !Object.hasOwn(SHAPE_FIELDS, kind)) {
-    throw new Error(`Unknown shape kind: ${String(kind)}`);
+  // The shape comes from callers' data, so its type is a claim until checked here.
+  const raw = shape as unknown as Record<string, unknown>;
+  if (typeof raw.kind !== 'string' || !Object.hasOwn(SHAPE_FIELDS, raw.kind)) {
+    throw new Error(`Unknown shape kind: ${String(raw.kind)}`);
   }
   const fields: Record<string, FieldRule> = SHAPE_FIELDS[shape.kind];
   for (const [field, rule] of Object.entries(fields)) {
-    const value: unknown = (shape as unknown as Record<string, unknown>)[field];
+    const value = raw[field];
     assertNumber(`${shape.kind}.${field}`, value);
-    if (rule === 'size' && (value as number) < 0) {
+    if (rule === 'size' && value < 0) {
       throw new Error(`Invalid shape: ${shape.kind}.${field} must not be negative, got ${show(value)}`);
     }
   }
@@ -110,66 +142,15 @@ function assertOption(key: string, value: unknown): void {
   if (!Object.hasOwn(OPTION_RULES, key)) {
     throw new Error(`Unknown option: ${key}`);
   }
-  switch (OPTION_RULES[key as keyof SketchOptions]) {
-    case 'string':
-      if (typeof value !== 'string') {
-        throw new Error(`Invalid style: ${key} must be a string, got ${show(value)}`);
-      }
-      break;
-    case 'number':
-      if (!(typeof value === 'number' && Number.isFinite(value))) {
-        throw new Error(`Invalid style: ${key} must be a finite number, got ${show(value)}`);
-      }
-      break;
-    case 'angle':
-      // Degrees. The engine's own trigonometry reduces arguments only up to about 1.6e6 radians.
-      if (!(typeof value === 'number' && Number.isFinite(value) && Math.abs(value) <= MAX_COORDINATE)) {
-        throw new Error(`Invalid style: ${key} must be a finite number within ±${MAX_COORDINATE}, got ${show(value)}`);
-      }
-      break;
-    case 'unit':
-      // Both scale coordinates: far outside 0–1 they put Infinity into the path data.
-      if (!(typeof value === 'number' && value >= 0 && value <= 1)) {
-        throw new Error(`Invalid style: ${key} must be a number from 0 to 1, got ${show(value)}`);
-      }
-      break;
-    case 'roughness':
-      if (!(typeof value === 'number' && value >= 0 && value <= MAX_ROUGHNESS)) {
-        throw new Error(`Invalid style: ${key} must be a number from 0 to ${MAX_ROUGHNESS}, got ${show(value)}`);
-      }
-      break;
-    case 'steps':
-      if (!(Number.isInteger(value) && (value as number) >= 1 && (value as number) <= MAX_CURVE_STEPS)) {
-        throw new Error(`Invalid style: ${key} must be an integer from 1 to ${MAX_CURVE_STEPS}, got ${show(value)}`);
-      }
-      break;
-    case 'fillStyle':
-      if (!(FILL_STYLES as readonly unknown[]).includes(value)) {
-        throw new Error(`Unknown fill style: ${String(value)}`);
-      }
-      break;
-    case 'seed':
-      if (!(typeof value === 'string' || typeof value === 'number')) {
-        throw new Error(`Invalid style: seed must be a string or a number, got ${show(value)}`);
-      }
-      break;
+  const rule = OPTION_RULES[key as keyof SketchOptions];
+  if (!rule.ok(value)) {
+    throw new Error(rule.message?.(value) ?? `Invalid style: ${key} must be ${rule.expected}, got ${show(value)}`);
   }
 }
 
-function assertNumber(name: string, value: unknown): void {
-  if (!(typeof value === 'number' && Number.isFinite(value) && Math.abs(value) <= MAX_COORDINATE)) {
+function assertNumber(name: string, value: unknown): asserts value is number {
+  if (!isWithin(value, MAX_COORDINATE)) {
     throw new Error(`Invalid shape: ${name} must be a finite number within ±${MAX_COORDINATE}, got ${show(value)}`);
-  }
-}
-
-/** Throws if a parsed path contains a number outside ±MAX_COORDINATE. */
-export function assertPathData(segments: readonly { data: readonly number[] }[]): void {
-  for (const { data } of segments) {
-    for (const value of data) {
-      if (!(Number.isFinite(value) && Math.abs(value) <= MAX_COORDINATE)) {
-        throw new Error(`Invalid shape: path.d contains ${value}, outside ±${MAX_COORDINATE}`);
-      }
-    }
   }
 }
 

@@ -111,6 +111,8 @@ describe('sketch', () => {
     ['a seed that is an object', rectangle, { seed: { a: 1 } }, 'seed must be a string or a number, got [object Object]'],
     ['a negative roughness', wave, { fill: 'red', roughness: -1 }, 'roughness must be a number from 0 to 10, got -1'],
     ['a bowing above 10', rectangle, { bowing: 11 }, 'bowing must be a number from 0 to 10, got 11'],
+    ['a fractional curveStepCount', rectangle, { curveStepCount: 2.5 }, 'curveStepCount must be an integer from 1 to 1000, got 2.5'],
+    ['an unknown fill style', rectangle, { fill: 'red', fillStyle: 'crayon' }, 'Unknown fill style: crayon'],
     ['a curveTightness above 1', wave, { curveTightness: 1e308 }, 'curveTightness must be a number from 0 to 1, got 1e+308'],
     ['a negative curveFitting', { kind: 'ellipse', cx: 0, cy: 0, width: 10, height: 10 }, { curveFitting: -0.1 }, 'curveFitting must be a number from 0 to 1, got -0.1'],
     ['a hachure angle too large for the engine trigonometry', rectangle, { fill: 'red', hachureAngle: 1e300 }, 'hachureAngle must be a finite number within ±1000000, got 1e+300'],

@@ -5,7 +5,6 @@
 import { curveToBezier, pointsOnBezierCurves } from './bezier.js';
 import type { Point as ShapePoint, Shape } from '../types.js';
 import type { Op, OpSet, Point, ResolvedOptions } from './core.js';
-import { assertPathData } from '../validate.js';
 import { normalizedPath, pointsOnPath } from './path-data.js';
 import {
   arc as arcOps,
@@ -183,7 +182,6 @@ function path(d: string, o: ResolvedOptions): OpSet[] {
 
   // Parsed once: the range check, the fill polygons and the strokes all read the same segments.
   const segments = normalizedPath(d);
-  assertPathData(segments);
   const distance = (1 + o.roughness) / 2;
   const sets = pointsOnPath(segments, 1, distance);
   const outline = svgPath(segments, o);
