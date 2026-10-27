@@ -6,9 +6,6 @@ const MAX_SEED = 2 ** 31 - 1;
 
 /**
  * Maps any seed to an integer in [1, 2^31 - 1].
- *
- * Never 0: the stroke engine treats a seed of 0 as "unseeded" and falls back to Math.random(),
- * which would make the output differ on every render.
  */
 export function toSeed(seed: Seed): number {
   return seedFromHash(fnv1a(String(seed)));

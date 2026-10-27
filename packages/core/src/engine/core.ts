@@ -71,16 +71,20 @@ export function lineLength(line: Line): number {
   return Math.sqrt(Math.pow(p1[0] - p2[0], 2) + Math.pow(p1[1] - p2[1], 2));
 }
 
+// mulberry32, in place of rough.js's LCG, which had degenerate seeds (2^30 gives a constant 0.5)
+// and fell back to Math.random() for a seed of 0. Only 32-bit integer arithmetic, so every
+// JavaScript engine produces the same stream.
 export class Random {
-  private seed: number;
+  private state: number;
 
   constructor(seed: number) {
-    this.seed = seed;
+    this.state = seed | 0;
   }
 
-  // rough.js fell back to Math.random() for a seed of 0. toSeed() never returns 0, so there is no
-  // fallback: every drawing is reproducible from its seed.
   next(): number {
-    return ((2 ** 31 - 1) & (this.seed = Math.imul(48271, this.seed))) / 2 ** 31;
+    let t = (this.state = (this.state + 0x6d2b79f5) | 0);
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   }
 }
