@@ -71,6 +71,11 @@ export const DEFAULT_OPTIONS: ResolvedOptions = {
 // parser holds path data to it.
 export const MAX_COORDINATE = 1e6;
 
+/** A negative fillWeight means the default: half the stroke width. */
+export function fillWeight(o: ResolvedOptions): number {
+  return o.fillWeight < 0 ? o.strokeWidth / 2 : o.fillWeight;
+}
+
 export function lineLength(line: Line): number {
   const p1 = line[0];
   const p2 = line[1];

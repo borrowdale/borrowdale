@@ -3,7 +3,7 @@
 // where rough.js used Math.random() regardless of the seed.
 
 import { charge } from './budget.js';
-import { lineLength, type Line, type Op, type OpSet, type Point, type ResolvedOptions } from './core.js';
+import { fillWeight, lineLength, type Line, type Op, type OpSet, type Point, type ResolvedOptions } from './core.js';
 import { hachureLines } from './hachure.js';
 import { ellipseWithParams, generateEllipseParams, normalizedArc } from './renderer.js';
 import { doubleLineFillOps, nextRandom } from './strokes.js';
@@ -57,13 +57,21 @@ function fillerFor(fillStyle: string): Filler {
   }
 }
 
+// A negative hachureGap means the default: four stroke widths. Each filler clamps or rounds the
+// result its own way.
+function defaultGap(o: ResolvedOptions): number {
+  return o.hachureGap < 0 ? o.strokeWidth * 4 : o.hachureGap;
+}
+
+// The line's left end and its angle, so a filler can walk along it from left to right.
+function lineDirection([a, b]: Line): [Point, number] {
+  const [p1, p2] = a[0] > b[0] ? [b, a] : [a, b];
+  return [p1, atan((p2[1] - p1[1]) / (p2[0] - p1[0]))];
+}
+
 function polygonHachureLines(polygonList: Point[][], o: ResolvedOptions): Line[] {
   const angle = o.hachureAngle + 90;
-  let gap = o.hachureGap;
-  if (gap < 0) {
-    gap = o.strokeWidth * 4;
-  }
-  gap = Math.round(Math.max(gap, 0.1));
+  const gap = Math.round(Math.max(defaultGap(o), 0.1));
   let skipOffset = 1;
   if (o.roughness >= 1) {
     if (nextRandom(o) > 0.7) {
@@ -95,11 +103,7 @@ function hatchFill(polygonList: Point[][], o: ResolvedOptions): OpSet {
 }
 
 function zigzagFill(polygonList: Point[][], o: ResolvedOptions): OpSet {
-  let gap = o.hachureGap;
-  if (gap < 0) {
-    gap = o.strokeWidth * 4;
-  }
-  gap = Math.max(gap, 0.1);
+  const gap = Math.max(defaultGap(o), 0.1);
   const o2 = Object.assign({}, o, { hachureGap: gap });
   const lines = polygonHachureLines(polygonList, o2);
   const zigZagAngle = (Math.PI / 180) * o.hachureAngle;
@@ -125,20 +129,14 @@ function zigzagFill(polygonList: Point[][], o: ResolvedOptions): OpSet {
 
 function dashedFill(polygonList: Point[][], o: ResolvedOptions): OpSet {
   const lines = polygonHachureLines(polygonList, o);
-  const offset = o.dashOffset < 0 ? (o.hachureGap < 0 ? o.strokeWidth * 4 : o.hachureGap) : o.dashOffset;
-  const gap = o.dashGap < 0 ? (o.hachureGap < 0 ? o.strokeWidth * 4 : o.hachureGap) : o.dashGap;
+  const offset = o.dashOffset < 0 ? defaultGap(o) : o.dashOffset;
+  const gap = o.dashGap < 0 ? defaultGap(o) : o.dashGap;
   const ops: Op[] = [];
   for (const line of lines) {
     const length = lineLength(line);
     const count = Math.floor(length / (offset + gap));
     const startOffset = (length + gap - count * (offset + gap)) / 2;
-    let p1 = line[0];
-    let p2 = line[1];
-    if (p1[0] > p2[0]) {
-      p1 = line[1];
-      p2 = line[0];
-    }
-    const alpha = atan((p2[1] - p1[1]) / (p2[0] - p1[0]));
+    const [p1, alpha] = lineDirection(line);
     for (let i = 0; i < count; i++) {
       const lstart = i * (offset + gap);
       const lend = lstart + offset;
@@ -157,7 +155,7 @@ function dashedFill(polygonList: Point[][], o: ResolvedOptions): OpSet {
 }
 
 function zigzagLineFill(polygonList: Point[][], o: ResolvedOptions): OpSet {
-  const gap = o.hachureGap < 0 ? o.strokeWidth * 4 : o.hachureGap;
+  const gap = defaultGap(o);
   const zo = o.zigzagOffset < 0 ? gap : o.zigzagOffset;
   o = Object.assign({}, o, { hachureGap: gap + zo });
   const lines = polygonHachureLines(polygonList, o);
@@ -165,13 +163,7 @@ function zigzagLineFill(polygonList: Point[][], o: ResolvedOptions): OpSet {
   for (const line of lines) {
     const length = lineLength(line);
     const count = Math.round(length / (2 * zo));
-    let p1 = line[0];
-    let p2 = line[1];
-    if (p1[0] > p2[0]) {
-      p1 = line[1];
-      p2 = line[0];
-    }
-    const alpha = atan((p2[1] - p1[1]) / (p2[0] - p1[0]));
+    const [p1, alpha] = lineDirection(line);
     for (let i = 0; i < count; i++) {
       const lstart = i * 2 * zo;
       const lend = (i + 1) * 2 * zo;
@@ -194,15 +186,8 @@ function zigzagLineFill(polygonList: Point[][], o: ResolvedOptions): OpSet {
 function dotsFill(polygonList: Point[][], o: ResolvedOptions): OpSet {
   o = Object.assign({}, o, { hachureAngle: 0 });
   const lines = polygonHachureLines(polygonList, o);
-  let gap = o.hachureGap;
-  if (gap < 0) {
-    gap = o.strokeWidth * 4;
-  }
-  gap = Math.max(gap, 0.1);
-  let fweight = o.fillWeight;
-  if (fweight < 0) {
-    fweight = o.strokeWidth / 2;
-  }
+  const gap = Math.max(defaultGap(o), 0.1);
+  const fweight = fillWeight(o);
   const ro = gap / 4;
   const ops: Op[] = [];
   for (const line of lines) {

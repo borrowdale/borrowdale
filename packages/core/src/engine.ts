@@ -1,7 +1,7 @@
 // The boundary to the stroke engine (./engine/, a TypeScript port of rough.js 4.6.6).
 // Replacing the engine means replacing this file and that directory.
 import { resetBudget } from './engine/budget.js';
-import { DEFAULT_OPTIONS, type OpSet, type ResolvedOptions } from './engine/core.js';
+import { DEFAULT_OPTIONS, fillWeight, type OpSet, type ResolvedOptions } from './engine/core.js';
 import { opsToPath, shapeSets } from './engine/generator.js';
 import type { Shape, ShapeKind, SketchPath } from './types.js';
 
@@ -37,7 +37,7 @@ function toSketchPath(set: OpSet, o: ResolvedOptions, kind: ShapeKind): SketchPa
       return {
         d,
         stroke: o.fill || 'none',
-        strokeWidth: o.fillWeight < 0 ? o.strokeWidth / 2 : o.fillWeight,
+        strokeWidth: fillWeight(o),
         fill: 'none',
       };
   }
