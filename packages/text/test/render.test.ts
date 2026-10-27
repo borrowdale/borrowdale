@@ -55,89 +55,89 @@ describe('toSvgText', () => {
 });
 
 describe('fontFaceCss', () => {
-  it('embeds every file when no text is given', () => {
+  it('embeds every file when no labels are given', () => {
     expect(fontFaceCss(handFiles)).toBe(LATIN_RULE + CYRILLIC_RULE);
   });
 
-  it('embeds only the files that serve the text', () => {
-    expect(fontFaceCss(handFiles, 'BA')).toBe(LATIN_RULE);
+  it('embeds only the files that serve the labels', () => {
+    expect(fontFaceCss(handFiles, ['BA'])).toBe(LATIN_RULE);
   });
 
-  it('embeds a file when the text uses the single code point of a range', () => {
-    expect(fontFaceCss(handFiles, 'D')).toBe(LATIN_RULE);
+  it('embeds a file when a label uses the single code point of a range', () => {
+    expect(fontFaceCss(handFiles, ['D'])).toBe(LATIN_RULE);
   });
 
-  it('embeds a file when the text uses the last code point of a range', () => {
-    expect(fontFaceCss(handFiles, 'џ')).toBe(CYRILLIC_RULE);
+  it('embeds a file when a label uses the last code point of a range', () => {
+    expect(fontFaceCss(handFiles, ['џ'])).toBe(CYRILLIC_RULE);
   });
 
-  it('embeds each file once, in file order, whatever the text order', () => {
-    expect(fontFaceCss(handFiles, 'ЖAЖB')).toBe(LATIN_RULE + CYRILLIC_RULE);
+  it('embeds each file once, in file order, whatever the order of the labels', () => {
+    expect(fontFaceCss(handFiles, ['Ж', 'AЖB'])).toBe(LATIN_RULE + CYRILLIC_RULE);
   });
 
-  it('embeds nothing for empty text', () => {
-    expect(fontFaceCss(handFiles, '')).toBe('');
+  it('embeds nothing for no labels', () => {
+    expect(fontFaceCss(handFiles, [])).toBe('');
   });
 
-  it('embeds nothing for text no file serves', () => {
-    expect(fontFaceCss(handFiles, 'C東')).toBe('');
+  it('embeds nothing for an empty label', () => {
+    expect(fontFaceCss(handFiles, [''])).toBe('');
   });
 
-  it('picks exactly the files the composed text needs', () => {
-    expect(fontFaceCss(excalifontFiles, 'Gyo\u030Br')).toBe(fontFaceCss(excalifontFiles, 'Gy\u0151r'));
+  it('embeds nothing for labels no file serves', () => {
+    expect(fontFaceCss(handFiles, ['C東'])).toBe('');
   });
 
-  it('picks the files for the text with its presentation controls removed, as it is drawn', () => {
-    expect(fontFaceCss(excalifontFiles, 'Gyo\u200E\u030Br')).toBe(fontFaceCss(excalifontFiles, 'Gy\u0151r'));
+  it('picks exactly the files the composed label needs', () => {
+    expect(fontFaceCss(excalifontFiles, ['Gyo\u030Br'])).toBe(fontFaceCss(excalifontFiles, ['Gy\u0151r']));
   });
 
-  it('picks the files for the text as it will be drawn, with its accents composed', () => {
-    expect(fontFaceCss(excalifontFiles, 'Gyo\u030Br').match(/unicode-range:U\+0100-0130,/g)).toHaveLength(1);
+  it('picks the files for a label with its presentation controls removed, as it is drawn', () => {
+    expect(fontFaceCss(excalifontFiles, ['Gyo\u200E\u030Br'])).toBe(fontFaceCss(excalifontFiles, ['Gy\u0151r']));
+  });
+
+  it('picks the files for a label as it will be drawn, with its accents composed', () => {
+    expect(fontFaceCss(excalifontFiles, ['Gyo\u030Br']).match(/unicode-range:U\+0100-0130,/g)).toHaveLength(1);
   });
 
   it('embeds only the Latin file of Excalifont for a Latin label', () => {
-    expect(fontFaceCss(excalifontFiles, 'Zürich').match(/@font-face/g)).toHaveLength(1);
-    expect(fontFaceCss(excalifontFiles, 'Zürich')).toContain('unicode-range:U+0020-007E,');
+    expect(fontFaceCss(excalifontFiles, ['Zürich']).match(/@font-face/g)).toHaveLength(1);
+    expect(fontFaceCss(excalifontFiles, ['Zürich'])).toContain('unicode-range:U+0020-007E,');
   });
 
   it('adds the Latin Extended file of Excalifont for a Polish label', () => {
-    expect(fontFaceCss(excalifontFiles, 'Łódź').match(/unicode-range:U\+0020-007E,|unicode-range:U\+0100-0130,/g)).toEqual([
+    expect(fontFaceCss(excalifontFiles, ['Łódź']).match(/unicode-range:U\+0020-007E,|unicode-range:U\+0100-0130,/g)).toEqual([
       'unicode-range:U+0020-007E,',
       'unicode-range:U+0100-0130,',
     ]);
   });
 
-  it('takes each line as one label, so the line breaks between labels select no file', () => {
-    expect(fontFaceCss({ ...handFiles, files: [{ ranges: [[0x0a, 0x0d], [0x2028, 0x2029]], woff2: 'QUJD' }] }, 'A\nB\r\n\u2028')).toBe('');
-  });
-
-  it('embeds only the Greek file of Excalifont for Greek labels joined with line breaks', () => {
-    expect(fontFaceCss(excalifontFiles, 'Ελλάδα\nΑθήνα').match(/unicode-range:U\+[0-9A-F]+/g)).toEqual(['unicode-range:U+037E']);
+  it('embeds only the Greek file of Excalifont for Greek labels, with nothing between them', () => {
+    expect(fontFaceCss(excalifontFiles, ['Ελλάδα', 'Αθήνα']).match(/unicode-range:U\+[0-9A-F]+/g)).toEqual(['unicode-range:U+037E']);
   });
 
   it('adds no file for the spaces at the ends of a label, which are not drawn', () => {
-    expect(fontFaceCss(excalifontFiles, ' Ελλάδα \n\tΑθήνα ').match(/unicode-range:U\+[0-9A-F]+/g)).toEqual(['unicode-range:U+037E']);
+    expect(fontFaceCss(excalifontFiles, [' Ελλάδα ', '\tΑθήνα ']).match(/unicode-range:U\+[0-9A-F]+/g)).toEqual(['unicode-range:U+037E']);
   });
 
   it('embeds only the Greek file of Excalifont for a Greek label with a soft hyphen, which is never drawn', () => {
-    expect(fontFaceCss(excalifontFiles, 'Ελ\u00ADλάδα').match(/unicode-range:U\+[0-9A-F]+/g)).toEqual(['unicode-range:U+037E']);
+    expect(fontFaceCss(excalifontFiles, ['Ελ\u00ADλάδα']).match(/unicode-range:U\+[0-9A-F]+/g)).toEqual(['unicode-range:U+037E']);
   });
 
   it('embeds no file for a character drawn as nothing, even a file that serves it', () => {
-    expect(fontFaceCss({ ...handFiles, files: [{ ranges: [[0xad, 0xad], [0x200d, 0x200d]], woff2: 'QUJD' }] }, 'A\u00AD\u200DB')).toBe('');
+    expect(fontFaceCss({ ...handFiles, files: [{ ranges: [[0xad, 0xad], [0x200d, 0x200d]], woff2: 'QUJD' }] }, ['A\u00AD\u200DB'])).toBe('');
   });
 
   it('embeds the file of a default-ignorable character that Chromium draws with a width', () => {
-    expect(fontFaceCss({ ...handFiles, files: [{ ranges: [[0x3164, 0x3164]], woff2: 'QUJD' }] }, '\u3164')).toContain(
+    expect(fontFaceCss({ ...handFiles, files: [{ ranges: [[0x3164, 0x3164]], woff2: 'QUJD' }] }, ['\u3164'])).toContain(
       'unicode-range:U+3164}',
     );
   });
 
   it('adds the file of the space for a tab inside a label, which is drawn as a space', () => {
-    expect(fontFaceCss(excalifontFiles, 'Київ\tМосква')).toBe(fontFaceCss(excalifontFiles, 'Київ Москва'));
+    expect(fontFaceCss(excalifontFiles, ['Київ\tМосква'])).toBe(fontFaceCss(excalifontFiles, ['Київ Москва']));
   });
 
-  it('embeds all seven Excalifont files without text', () => {
+  it('embeds all seven Excalifont files without labels', () => {
     expect(fontFaceCss(excalifontFiles).match(/@font-face/g)).toHaveLength(7);
   });
 });

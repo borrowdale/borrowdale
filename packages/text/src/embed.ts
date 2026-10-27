@@ -1,15 +1,5 @@
 import type { FontFile, FontFiles } from './types.js';
-import {
-  checkFontFiles,
-  codePointName,
-  codePointOf,
-  cssFamily,
-  drawnForm,
-  IGNORABLE,
-  isFamily,
-  LINE_BREAK,
-  show,
-} from './validate.js';
+import { checkFontFiles, checkText, codePointName, codePointOf, cssFamily, IGNORABLE, isFamily, show } from './validate.js';
 
 type FaceSource = { family: string; unicodeRange: string; woff2: string };
 
@@ -17,12 +7,12 @@ type FaceSource = { family: string; unicodeRange: string; woff2: string };
 const sources = new WeakMap<FontFace, FaceSource>();
 
 /**
- * `@font-face` rules that embed a font, for a `<style>` element. With `text`, only the files that
- * serve its characters are included; pass every label of the document, one per line (joined with
- * `\n`). The rules hold no caller text, so they are safe to insert as markup.
+ * `@font-face` rules that embed a font, for a `<style>` element. With `labels`, every label of the
+ * document, only the files that serve them are included. The rules hold no caller text, so they are
+ * safe to insert as markup.
  */
-export function fontFaceCss(fontFiles: FontFiles, text?: string): string {
-  return filesFor(fontFiles, text)
+export function fontFaceCss(fontFiles: FontFiles, labels?: readonly string[]): string {
+  return filesFor(fontFiles, labels)
     .map(
       (file) =>
         `@font-face{font-family:${cssFamily(fontFiles.family)};` +
@@ -73,20 +63,20 @@ function isSource(made: FaceSource | undefined, wanted: FaceSource): boolean {
   );
 }
 
-function filesFor(fontFiles: FontFiles, text: string | undefined): readonly FontFile[] {
+function filesFor(fontFiles: FontFiles, labels: readonly string[] | undefined): readonly FontFile[] {
   checkFontFiles(fontFiles);
-  if (text === undefined) {
+  if (labels === undefined) {
     return fontFiles.files;
   }
-  if (typeof text !== 'string') {
-    throw new Error(`Text must be a string, got ${show(text)}`);
+  if (!Array.isArray(labels)) {
+    throw new Error(`Labels must be an array, got ${show(labels)}`);
   }
-  // Each label in its drawn form, so the files chosen serve exactly the characters that are drawn:
-  // the line breaks between labels, spaces at their ends and characters drawn as nothing select no
-  // file. Each code point once: the text is every label of a document, and may be long.
+  // Each label checked as layoutText checks it, and in the form it is drawn, so the files chosen
+  // serve exactly the characters that are drawn: spaces at a label's ends and characters drawn as
+  // nothing select no file. Each code point once: the labels are every label of a document.
   const unique = new Set<number>();
-  for (const label of text.split(LINE_BREAK)) {
-    for (const character of drawnForm(label)) {
+  for (const label of labels) {
+    for (const character of checkText(label)) {
       if (!IGNORABLE.test(character)) {
         unique.add(codePointOf(character));
       }

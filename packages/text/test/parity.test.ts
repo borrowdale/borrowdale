@@ -103,7 +103,7 @@ beforeAll(async () => {
   ruled = await evaluateInChromium(
     SOURCE,
     'borrowdaleText',
-    `<html dir="rtl"><head><style>${fontFaceCss(excalifontFiles, tickLayout.text)}${RIGHT_TO_LEFT}</style></head>` +
+    `<html dir="rtl"><head><style>${fontFaceCss(excalifontFiles, [tickLayout.text])}${RIGHT_TO_LEFT}</style></head>` +
       '<body><svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1000"></svg><canvas width="1" height="1"></canvas></body></html>',
     async ({ entry, files }: { entry: Case; files: typeof excalifontFiles }) => {
       const { appendText, drawText, layoutText, loadFont, toSvgText } = (
@@ -175,7 +175,7 @@ function embed(label: Golden): Promise<Embedded> {
   return evaluateInChromium(
     SOURCE,
     'borrowdaleText',
-    `<style>${fontFaceCss(excalifontFiles, label.text)}</style>` +
+    `<style>${fontFaceCss(excalifontFiles, [label.text])}</style>` +
       `<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1000">${label.svg}</svg>`,
     async (text: string) => {
       await document.fonts.load('16px "Excalifont"', text);

@@ -28,8 +28,8 @@ function rendering(style: unknown) {
   return () => toSvgText(layoutText('A', placed), style as TextStyle);
 }
 
-function embedding(files: unknown, text?: unknown) {
-  return () => fontFaceCss(files as FontFiles, text as string);
+function embedding(files: unknown, labels?: unknown) {
+  return () => fontFaceCss(files as FontFiles, labels as string[]);
 }
 
 function withFont(font: unknown) {
@@ -292,8 +292,16 @@ describe('font files', () => {
     expect(embedding(files)).toThrow(message);
   });
 
-  it('rejects text that is not a string', () => {
-    expect(embedding(handFiles, 42)).toThrow('Text must be a string, got 42');
+  it('rejects labels given as one string rather than a list', () => {
+    expect(embedding(handFiles, 'Zürich')).toThrow('Labels must be an array, got "Zürich"');
+  });
+
+  it('rejects a label that is not a string', () => {
+    expect(embedding(handFiles, ['A', 42])).toThrow('Text must be a string, got 42');
+  });
+
+  it('rejects a label of more than one line, as layoutText does', () => {
+    expect(embedding(handFiles, ['A\nB'])).toThrow('Text must be a single line');
   });
 
   it('accepts a range starting at U+0000', () => {
@@ -303,7 +311,7 @@ describe('font files', () => {
   });
 
   it('serves characters above U+FFFF from their range', () => {
-    expect(fontFaceCss({ ...handFiles, files: [{ ranges: [[0x1f600, 0x1f64f]], woff2: 'QQ==' }] }, '\u{1F600}')).toContain(
+    expect(fontFaceCss({ ...handFiles, files: [{ ranges: [[0x1f600, 0x1f64f]], woff2: 'QQ==' }] }, ['\u{1F600}'])).toContain(
       'unicode-range:U+1F600-1F64F}',
     );
   });

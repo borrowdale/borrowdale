@@ -22,7 +22,7 @@ const label = layoutText('12,500', { x: 60, y: 40, fontSize: 12, anchor: 'end', 
 const svg = toSvgDocument({
   width: 120,
   height: 80,
-  defs: [svgElement('style', {}, fontFaceCss(excalifontFiles, label.text))],
+  defs: [svgElement('style', {}, fontFaceCss(excalifontFiles, [label.text]))],
   body: [toSvgText(label)],
 });
 ```
@@ -94,20 +94,18 @@ parent's fill and a canvas keeps the fill it had.
 
 The font has to reach whoever views the drawing:
 
-- **An SVG document** carries it in a `<style>` element: `fontFaceCss(excalifontFiles, text)`
-  returns `@font-face` rules for only the font files that `text` needs. Pass every label of the
-  document, one per line (joined with `'\n'`). Each line counts as the label is drawn, so the line
-  breaks, the spaces at either end of a label and characters drawn as nothing, such as the soft
-  hyphen, add no file; joined with spaces, the labels would add the Latin file, which holds the
-  space, to a document whose labels are all Greek or Cyrillic.
-  Latin text needs one file of about 34 KB; the whole font is about 88 KB.
+- **An SVG document** carries it in a `<style>` element: `fontFaceCss(excalifontFiles, labels)`
+  returns `@font-face` rules for only the font files that `labels`, every label of the document,
+  need. Each label counts as it is drawn, so the spaces at either end of a label and characters
+  drawn as nothing, such as the soft hyphen, add no file. Latin text needs one file of about 34 KB;
+  the whole font is about 88 KB.
 - **A page** can use the same rules, or load every file of the font with
   `await loadFont(document.fonts, excalifontFiles)`. A second call adds no file the first one
   added. It hands the browser the font's bytes rather than a URL, so a Content-Security-Policy's
   `font-src` does not block it.
 - **A canvas** draws once and never redraws, so text drawn before its font has loaded would keep
   a fallback font. `drawText` throws `Font not loaded` instead. Load the font with `loadFont`
-  first, not with `fontFaceCss(files, text)` alone: the browser only knows about the files those
+  first, not with `fontFaceCss(files, labels)` alone: the browser only knows about the files those
   rules name, so `drawText` cannot tell that text outside them would fall back. A page can have
   both: `drawText` also counts the faces of `fontFaceCss` rules, which stay unloaded until the page
   draws text with them, so `loadFont` loads every face of the font's family the page already has.
@@ -152,6 +150,7 @@ A value that cannot be drawn throws an error naming it:
   `descender` from −32,768 to 0, and every advance from 0 to 65,535. Its `files`, when given, must
   each have one or more `[first, last]` ranges of code points, as `FontFiles` files must.
 - `fill` must be a string without characters an XML document cannot hold.
+- `fontFaceCss` takes its labels as an array, and checks each label as text.
 - Unknown option names are rejected (`Unknown option: fontSzie`). An option set to `undefined`
   counts as not set. Only an options object's own properties are read: inherited values, including
   any on `Object.prototype`, are ignored.

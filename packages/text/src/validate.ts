@@ -48,7 +48,7 @@ const FAMILY = /^[A-Za-z0-9](?:[A-Za-z0-9 _-]*[A-Za-z0-9])?$/;
 const FAMILY_RULE =
   'family must be letters, digits, spaces, hyphens and underscores, starting and ending with a letter or digit';
 const BASE64 = /^[A-Za-z0-9+/]*={0,2}$/;
-export const LINE_BREAK = /[\n\r\u0085\u2028\u2029]/;
+const LINE_BREAK = /[\n\r\u0085\u2028\u2029]/;
 // Characters browsers draw as nothing (soft hyphens, zero-width joiners, variation selectors), so
 // measured as nothing and served by no font file: Unicode's default-ignorable set, less the seven
 // Chromium draws with a width from a fallback font (measured over all 4,174 of them): U+180F,
@@ -179,7 +179,7 @@ function checkXml(name: string, value: string): void {
  * tabs collapsed and trimmed, because SVG draws a run of spaces as one. Measuring and choosing font
  * files both use it, so they always see the same characters.
  */
-export function drawnForm(text: string): string {
+function drawnForm(text: string): string {
   return text
     .replace(PRESENTATION_CONTROLS, '')
     .normalize('NFC')
