@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { excalifont, layoutText, measureText, type Font, type TextAnchor, type TextBaseline } from '@borrowdale/text';
+import {
+  excalifont,
+  layoutText,
+  measureText,
+  type Font,
+  type FontFile,
+  type TextAnchor,
+  type TextBaseline,
+} from '@borrowdale/text';
 import { excalifontFiles } from '@borrowdale/text/excalifont-files';
 import { at, handFont, splitFont } from './support/hand-font.js';
 
@@ -17,6 +25,22 @@ function shiftingFont(): Font {
       reads += 1;
       return reads === 1 ? 10 : 1;
     },
+  };
+}
+
+// A font in one file whose ranges serve A, B and U+0301 the first time they are read, and only A after.
+function shiftingFiles(): Font {
+  let reads = 0;
+  return {
+    ...handFont,
+    files: [
+      {
+        get ranges(): FontFile['ranges'] {
+          reads += 1;
+          return reads === 1 ? [[0x41, 0x42], [0x0301, 0x0301]] : [[0x41, 0x41]];
+        },
+      },
+    ],
   };
 }
 
@@ -149,6 +173,10 @@ describe('measureText', () => {
 
   it('treats a font that lists no files as one file', () => {
     expect(measureText('B\u0301', { fontSize: 10, font: handFont })).toMatchObject({ width: 7, missing: [] });
+  });
+
+  it('reads the ranges of each file once, so the ranges it checked are the ranges it measures with', () => {
+    expect(measureText('B\u0301', { fontSize: 10, font: shiftingFiles() }).missing).toEqual([]);
   });
 
   it('lists each such character and mark once', () => {

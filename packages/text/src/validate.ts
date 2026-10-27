@@ -3,6 +3,7 @@ import {
   TEXT_ANCHORS,
   TEXT_BASELINES,
   type Font,
+  type FontFile,
   type FontFiles,
   type LayoutOptions,
   type MeasureOptions,
@@ -62,11 +63,18 @@ const PRESENTATION_CONTROLS = /[\uFE0E\uFE0F\u061C\u200E\u200F\u202A-\u202E\u206
 // other than tab and the line breaks above, U+FFFE, U+FFFF and unpaired surrogates. With the `u`
 // flag a surrogate pair is one character, so the surrogate range matches only unpaired halves.
 const NOT_XML = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF\uD800-\uDFFF]/u;
+// A font that lists no files is one file, serving every code point it covers.
+const ONE_FILE: CheckedFont['files'] = [{ ranges: [[0, 0x10ffff]] }];
+
+/** A checked font: always one or more files, each with its own copy of the ranges it serves. */
+export interface CheckedFont extends Font {
+  files: readonly Pick<FontFile, 'ranges'>[];
+}
 
 export interface CheckedMeasure {
   text: string;
   fontSize: number;
-  font: Font;
+  font: CheckedFont;
 }
 
 export interface CheckedLayout extends CheckedMeasure {
@@ -193,13 +201,13 @@ function measureInput(text: unknown, options: MeasureOptions): CheckedMeasure {
   return { text: checkText(text), fontSize, font: checkFont(font) };
 }
 
-function checkFont(given: Font): Font {
+function checkFont(given: Font): CheckedFont {
   if (typeof given !== 'object' || given === null) {
     throw new Error(`Invalid font: expected an object, got ${show(given)}`);
   }
   // Each field read once: a getter cannot pass these checks and then return another value.
   const { family, unitsPerEm, ascender, descender, advances, files } = given;
-  const font: Font = { family, unitsPerEm, ascender, descender, advances, files };
+  const font: Font = { family, unitsPerEm, ascender, descender, advances };
   checkFamily(font.family, 'font');
   if (typeof font.advances !== 'object' || font.advances === null) {
     throw new Error('Invalid font: advances must be an object');
@@ -207,23 +215,32 @@ function checkFont(given: Font): Font {
   for (const [name, min, max] of FONT_NUMBERS) {
     checkNumber(`Invalid font: ${name}`, font[name], min, max);
   }
-  if (font.files !== undefined) {
-    if (!Array.isArray(font.files)) {
-      throw new Error(`Invalid font: files must be an array, got ${show(font.files)}`);
-    }
-    for (const [index, file] of font.files.entries()) {
-      checkRanges('font', index, file?.ranges);
-    }
-  }
-  return font;
+  return { ...font, files: checkFiles(files) };
 }
 
-// The same rule for a font's files and the woff2 files that hold them.
-function checkRanges(owner: string, index: number, ranges: unknown): void {
+function checkFiles(files: unknown): CheckedFont['files'] {
+  if (files === undefined) {
+    return ONE_FILE;
+  }
+  if (!Array.isArray(files)) {
+    throw new Error(`Invalid font: files must be an array, got ${show(files)}`);
+  }
+  return files.map((file: { ranges?: unknown } | null | undefined, index: number) => ({
+    ranges: checkRanges('font', index, file?.ranges),
+  }));
+}
+
+// The same rule for a font's files and the woff2 files that hold them. Returns a copy of the ranges:
+// copied first and checked second, so the pairs checked are the pairs used.
+function checkRanges(owner: string, index: number, ranges: unknown): [first: number, last: number][] {
+  const pairs: unknown[] = Array.isArray(ranges)
+    ? ranges.map((range: unknown) => (Array.isArray(range) ? [...range] : range))
+    : [];
   // An empty list would make the face claim every code point.
-  if (!Array.isArray(ranges) || ranges.length === 0 || !ranges.every(isRange)) {
+  if (pairs.length === 0 || !pairs.every(isRange)) {
     throw new Error(`Invalid ${owner}: files[${index}].ranges must be one or more [first, last] code point pairs`);
   }
+  return pairs;
 }
 
 function checkFamily(family: unknown, owner: string): void {
@@ -256,7 +273,7 @@ function checkNumber(name: string, value: unknown, min: number, max: number): nu
   return value;
 }
 
-function isRange(range: unknown): boolean {
+function isRange(range: unknown): range is [first: number, last: number] {
   return (
     Array.isArray(range) &&
     range.length === 2 &&

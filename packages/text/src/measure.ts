@@ -1,5 +1,13 @@
-import type { Font, LayoutOptions, MeasureOptions, TextAnchor, TextBaseline, TextExtent, TextLayout } from './types.js';
-import { advanceOf, checkLayout, checkMeasure, codePointOf, IGNORABLE, type CheckedMeasure } from './validate.js';
+import type { LayoutOptions, MeasureOptions, TextAnchor, TextBaseline, TextExtent, TextLayout } from './types.js';
+import {
+  advanceOf,
+  checkLayout,
+  checkMeasure,
+  codePointOf,
+  IGNORABLE,
+  type CheckedFont,
+  type CheckedMeasure,
+} from './validate.js';
 
 // A character and the combining marks after it, with any zero-width joiner among them. Measured in
 // Chromium: the browser draws such a cluster from one font file, or all of it in a fallback font.
@@ -79,12 +87,8 @@ function extent({ text, font, fontSize }: CheckedMeasure): TextExtent {
   };
 }
 
-// The index of the font file that serves a code point, or undefined when none does. A font that
-// lists no files is one file.
-function fileOf(font: Font, codePoint: number): number | undefined {
-  if (font.files === undefined) {
-    return 0;
-  }
+// The index of the font file that serves a code point, or undefined when none does.
+function fileOf(font: CheckedFont, codePoint: number): number | undefined {
   const index = font.files.findIndex(({ ranges }) =>
     ranges.some(([first, last]) => codePoint >= first && codePoint <= last),
   );
