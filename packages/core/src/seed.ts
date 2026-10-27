@@ -5,7 +5,8 @@ const FNV_PRIME = 0x01000193;
 const MAX_SEED = 2 ** 31 - 1;
 
 /**
- * Maps any seed to an integer in [1, 2^31 - 1].
+ * Maps any seed to an integer in [1, 2^31 - 1]. The random generator accepts 0 too; the range is
+ * kept because changing it would change every drawing.
  */
 export function toSeed(seed: Seed): number {
   return seedFromHash(fnv1a(String(seed)));

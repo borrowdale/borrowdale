@@ -121,7 +121,8 @@ function straightHachureLines(polygons: Point[][], gap: number, hachureStepOffse
   let y = edges[0]!.ymin;
   let iteration = 0;
   while (activeEdges.length || edges.length) {
-    // Charged per active edge: this loop advances one unit of y at a time, drawing or not.
+    // Charged per active edge: this loop advances y by hachureStepOffset, which may be 1 whatever
+    // the gap, so it runs whether or not it draws.
     charge(1 + activeEdges.length);
     if (edges.length) {
       let ix = -1;

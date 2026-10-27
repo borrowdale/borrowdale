@@ -1,8 +1,9 @@
-// Trigonometry from + − × ÷, floor and sqrt only. Those are exactly rounded by IEEE 754 in every
-// JavaScript engine, while Math.sin and friends may differ in the last bit between engines, which
-// can change how many dashes or zigzags a fill draws. Polynomials and constants are from fdlibm
-// (Copyright (C) 1993 by Sun Microsystems, Inc.; see THIRD_PARTY_NOTICES.md). Within 1.5 units in
-// the last place of Math for |x| < 2^20 · π/2. Larger arguments are NOT reduced and give wrong
+// Trigonometry from + − × ÷, floor, abs and sqrt only. Those are exact or exactly rounded by
+// IEEE 754 in every JavaScript engine, while Math.sin and friends may differ in the last bit between
+// engines, which can change how many dashes or zigzags a fill draws. Polynomials and constants are
+// from fdlibm (Copyright (C) 1993 by Sun Microsystems, Inc.; see THIRD_PARTY_NOTICES.md). sin, cos
+// and asin are within 2 units in the last place of Math, and atan matches it, for |x| < 2^20 · π/2;
+// tan, a quotient of the two, within about 3. Larger arguments are NOT reduced and give wrong
 // results; validation keeps every angle the engine computes within ±1e6.
 
 const INV_PIO2 = 6.36619772367581382433e-1;
@@ -53,11 +54,8 @@ function reduce(x: number): [number, number] {
   return [((n % 4) + 4) % 4, r];
 }
 
-export function sin(x: number): number {
-  if (Math.abs(x) < 2 ** -27) {
-    return x;
-  }
-  const [quadrant, r] = reduce(x);
+// sin(n · π/2 + r) for the quadrant n mod 4.
+function sinInQuadrant(quadrant: number, r: number): number {
   switch (quadrant) {
     case 0:
       return kernelSin(r);
@@ -70,18 +68,19 @@ export function sin(x: number): number {
   }
 }
 
+export function sin(x: number): number {
+  // Returned as is, which also keeps the sign of −0.
+  if (Math.abs(x) < 2 ** -27) {
+    return x;
+  }
+  const [quadrant, r] = reduce(x);
+  return sinInQuadrant(quadrant, r);
+}
+
+// cos(x) = sin(x + π/2): one quadrant further on.
 export function cos(x: number): number {
   const [quadrant, r] = reduce(x);
-  switch (quadrant) {
-    case 0:
-      return kernelCos(r);
-    case 1:
-      return -kernelSin(r);
-    case 2:
-      return -kernelCos(r);
-    default:
-      return kernelSin(r);
-  }
+  return sinInQuadrant((quadrant + 1) % 4, r);
 }
 
 export function tan(x: number): number {
@@ -128,11 +127,13 @@ export function atan(x: number): number {
   return negative ? -result : result;
 }
 
-export function square(x: number): number {
-  return x * x;
-}
-
 // (1 − x)(1 + x) rather than 1 − x², which loses precision as |x| approaches 1.
 export function asin(x: number): number {
   return atan(x / Math.sqrt((1 - x) * (1 + x)));
+}
+
+// Not Math.pow(x, 2) or x ** 2: both are implementation-approximated and may differ between engines,
+// and ** would also slip past the golden test, which makes Math.pow throw.
+export function square(x: number): number {
+  return x * x;
 }
