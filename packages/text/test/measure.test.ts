@@ -1,0 +1,213 @@
+import { describe, expect, it } from 'vitest';
+import { excalifont, layoutText, measureText, type Font, type TextAnchor, type TextBaseline } from '@borrowdale/text';
+import { at, handFont } from './support/hand-font.js';
+
+// Characters drawn as nothing but switching their neighbours' presentation or order: removed.
+const PRESENTATION_CONTROLS = ['\uFE0E', '\uFE0F', '\u061C', '\u200E', '\u200F', '\u202A', '\u202B', '\u202C', '\u202D', '\u202E', '\u2066', '\u2067', '\u2068', '\u2069'];
+// Default-ignorable characters Chromium nevertheless draws with a width, from a fallback font.
+const VISIBLE_IGNORABLES = ['\u180F', '\u3164', '\uFFA0', '\u{1BCA0}', '\u{1BCA1}', '\u{1BCA2}', '\u{1BCA3}'];
+// Read as 10 the first time and 1 after: a font that would change between checking and measuring.
+function shiftingFont(): Font {
+  let reads = 0;
+  return {
+    ...handFont,
+    get unitsPerEm() {
+      reads += 1;
+      return reads === 1 ? 10 : 1;
+    },
+  };
+}
+
+describe('measureText', () => {
+  it('adds up the advances and scales them to the font size', () => {
+    expect(measureText('AB', { fontSize: 20, font: handFont })).toEqual({
+      text: 'AB',
+      width: 24,
+      ascent: 16,
+      descent: 4,
+      missing: [],
+    });
+  });
+
+  it('measures in Excalifont at 16 by default', () => {
+    expect(measureText('Hello')).toEqual({ text: 'Hello', width: 34.56, ascent: 14.18, descent: 5.98, missing: [] });
+  });
+
+  it('uses Excalifont when the options leave the font out', () => {
+    expect(measureText('Hello', { fontSize: 16, font: excalifont })).toEqual(measureText('Hello', { fontSize: 16 }));
+  });
+
+  it('counts a character the font does not cover as 1 em and lists it', () => {
+    expect(measureText('A東', { fontSize: 10, font: handFont })).toEqual({
+      text: 'A東',
+      width: 15,
+      ascent: 8,
+      descent: 2,
+      missing: ['東'],
+    });
+  });
+
+  it('lists each uncovered character once, in the order they first appear', () => {
+    expect(measureText('東京東', { fontSize: 10, font: handFont }).missing).toEqual(['東', '京']);
+  });
+
+  it('still counts a repeated uncovered character every time it appears', () => {
+    expect(measureText('東京東', { fontSize: 10, font: handFont }).width).toBe(30);
+  });
+
+  it('counts a character outside the Basic Multilingual Plane once', () => {
+    expect(measureText('😀', { fontSize: 10, font: handFont })).toMatchObject({ width: 10, missing: ['😀'] });
+  });
+
+  it('gives a combining mark the width the font gives it', () => {
+    expect(measureText('B\u0301', { fontSize: 10, font: handFont }).width).toBe(7);
+  });
+
+  it('composes a letter and its accent into one character, as browsers draw them', () => {
+    expect(measureText('Cafe\u0301').text).toBe('Caf\u00E9');
+  });
+
+  it('measures a soft hyphen, which browsers do not draw, as nothing', () => {
+    expect(measureText('A\u00ADB', { fontSize: 10, font: handFont })).toMatchObject({ width: 12, missing: [] });
+  });
+
+  it('measures a zero-width joiner as nothing and does not list it as uncovered', () => {
+    expect(measureText('A\u200DB', { fontSize: 10, font: handFont })).toMatchObject({ width: 12, missing: [] });
+  });
+
+  it('counts a Hangul filler, which browsers draw with a width, as uncovered', () => {
+    expect(measureText('A\u3164B', { fontSize: 10, font: handFont })).toMatchObject({ width: 22, missing: ['\u3164'] });
+  });
+
+  it('removes variation selectors 15 and 16, which switch characters to and from emoji', () => {
+    expect(measureText('1\uFE0F2\uFE0E').text).toBe('12');
+  });
+
+  it.each(PRESENTATION_CONTROLS)('removes %j from the text', (control) => {
+    expect(measureText(`A${control}B`, { fontSize: 10, font: handFont }).text).toBe('AB');
+  });
+
+  it.each(VISIBLE_IGNORABLES)('counts %j, which Chromium draws with a width, as uncovered', (character) => {
+    expect(measureText(`A${character}B`, { fontSize: 10, font: handFont })).toMatchObject({ width: 22, missing: [character] });
+  });
+
+  it('removes presentation controls before composing, so a letter and its accent still join', () => {
+    expect(measureText('o\u200E\u030B').text).toBe('\u0151');
+  });
+
+  it('removes presentation controls before collapsing spaces', () => {
+    expect(measureText('a \u200E b').text).toBe('a b');
+  });
+
+  it('reads each number of the font once, so the font it checked is the font it measures with', () => {
+    expect(measureText('A', { fontSize: 10, font: shiftingFont() }).width).toBe(5);
+  });
+
+  it('removes bidirectional controls, which reorder the drawn text', () => {
+    expect(measureText('\u202EAB\u202C\u200F').text).toBe('AB');
+  });
+
+  it('measures a character above U+FFFF from its own advance', () => {
+    expect(
+      measureText('\u{1F600}', { fontSize: 10, font: { ...handFont, advances: { ...handFont.advances, 0x1f600: 4 } } }),
+    ).toMatchObject({ width: 4, missing: [] });
+  });
+
+  it('measures the soft hyphen Excalifont has a glyph for as nothing too', () => {
+    expect(measureText('Ex\u00ADample').width).toBe(measureText('Example').width);
+  });
+
+  it('counts the composed character, not its parts, as uncovered', () => {
+    expect(measureText('A\u0301', { fontSize: 10, font: handFont })).toMatchObject({ text: '\u00C1', missing: ['\u00C1'] });
+  });
+
+  it('ignores an advance the font only inherits', () => {
+    const inherited: Font = { ...handFont, advances: Object.create({ 0x41: 5 }) as Font['advances'] };
+
+    expect(measureText('A', { fontSize: 10, font: inherited })).toMatchObject({ width: 10, missing: ['A'] });
+  });
+
+  it('collapses runs of spaces and tabs to one space, as SVG draws them', () => {
+    expect(measureText('A \t  B', { fontSize: 10, font: handFont })).toMatchObject({ text: 'A B', width: 15 });
+  });
+
+  it('drops a space at either end', () => {
+    expect(measureText(' A ', { fontSize: 10, font: handFont })).toMatchObject({ text: 'A', width: 5 });
+  });
+
+  it('keeps a no-break space, which SVG does not collapse', () => {
+    expect(measureText('a\u00A0\u00A0b').text).toBe('a\u00A0\u00A0b');
+  });
+
+  it('measures empty text as zero wide', () => {
+    expect(measureText('', { fontSize: 10, font: handFont })).toMatchObject({ text: '', width: 0, missing: [] });
+  });
+
+  it('rounds to two decimals', () => {
+    expect(measureText('A', { fontSize: 1.234, font: handFont }).width).toBe(0.62);
+  });
+
+  it('measures the longest text it accepts', () => {
+    expect(measureText('A'.repeat(1000), { fontSize: 10, font: handFont }).width).toBe(5000);
+  });
+});
+
+describe('layoutText', () => {
+  it.each<[TextAnchor, number]>([
+    ['start', 100],
+    ['middle', 88],
+    ['end', 76],
+  ])('puts the %s of the text at x', (anchor, x) => {
+    expect(layoutText('AB', { ...at, anchor }).x).toBe(x);
+  });
+
+  it.each<[TextBaseline, number]>([
+    ['alphabetic', 50],
+    ['top', 66],
+    ['middle', 56],
+    ['bottom', 46],
+  ])('puts the %s line of the text at y', (baseline, y) => {
+    expect(layoutText('AB', { ...at, baseline }).y).toBe(y);
+  });
+
+  it('reports the box the text takes up, before rotation', () => {
+    expect(layoutText('AB', { ...at, anchor: 'end', baseline: 'top' }).box).toEqual({
+      x: 76,
+      y: 50,
+      width: 24,
+      height: 20,
+    });
+  });
+
+  it('rotates around the point it was laid out at, not where the text starts', () => {
+    expect(layoutText('AB', { ...at, anchor: 'end', rotate: -45 })).toMatchObject({ x: 76, rotate: -45, pivot: [100, 50] });
+  });
+
+  it('starts the text at x, on the baseline at y, unrotated, by default', () => {
+    expect(layoutText('AB', at)).toMatchObject({ x: 100, y: 50, rotate: 0, pivot: [100, 50] });
+  });
+
+  it('returns everything measureText returns', () => {
+    expect(layoutText('A東', at)).toMatchObject(measureText('A東', { fontSize: 20, font: handFont }));
+  });
+
+  it('keeps the font size as given, unrounded', () => {
+    expect(layoutText('A', { ...at, fontSize: 1.234 }).fontSize).toBe(1.234);
+  });
+
+  it('returns the family and size it laid the text out with', () => {
+    expect(layoutText('AB', at)).toMatchObject({ family: 'Hand Test', fontSize: 20 });
+  });
+
+  it('rounds every position to two decimals, after placing the text', () => {
+    expect(layoutText('A', { ...at, x: 0.004, fontSize: 1.234, anchor: 'middle' })).toMatchObject({
+      x: -0.3,
+      width: 0.62,
+      pivot: [0, 50],
+    });
+  });
+
+  it('never returns negative zero', () => {
+    expect(Object.is(layoutText('', { ...at, x: -0.001 }).x, 0)).toBe(true);
+  });
+});

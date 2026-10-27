@@ -5,6 +5,7 @@
   "type": "module",
   "dependencies": {
     "@borrowdale/core": "0.0.0",
-    "@borrowdale/fills": "0.0.0"
+    "@borrowdale/fills": "0.0.0",
+    "@borrowdale/text": "0.0.0"
   }
 }

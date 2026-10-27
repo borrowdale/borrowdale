@@ -1,0 +1,48 @@
+{
+  "name": "@borrowdale/text",
+  "version": "0.0.0",
+  "description": "Hand-written text for SVG and canvas, measured the same way in Node and the browser.",
+  "license": "MIT AND OFL-1.1",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "@borrowdale/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./excalifont-files": {
+      "@borrowdale/source": "./src/fonts/excalifont-files.ts",
+      "types": "./dist/fonts/excalifont-files.d.ts",
+      "default": "./dist/fonts/excalifont-files.js"
+    }
+  },
+  "files": [
+    "dist",
+    "!dist/*.tsbuildinfo",
+    "src",
+    "OFL.txt"
+  ],
+  "scripts": {
+    "prepack": "tsc -b"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/borrowdale/borrowdale.git",
+    "directory": "packages/text"
+  },
+  "keywords": [
+    "hand-drawn",
+    "handwriting",
+    "text",
+    "svg",
+    "canvas",
+    "font"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@borrowdale/core": "0.0.0"
+  }
+}

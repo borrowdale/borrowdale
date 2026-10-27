@@ -1,0 +1,695 @@
+{
+ "tick-zero": {
+  "text": "0",
+  "missing": [],
+  "width": 7.97,
+  "ascent": 10.63,
+  "descent": 4.49,
+  "family": "Excalifont",
+  "fontSize": 12,
+  "x": 32.03,
+  "y": 203.07,
+  "box": {
+   "x": 32.03,
+   "y": 192.44,
+   "width": 7.97,
+   "height": 15.12
+  },
+  "rotate": 0,
+  "pivot": [
+   40,
+   200
+  ],
+  "svg": "<text x=\"32.03\" y=\"203.07\" font-family=\"&quot;Excalifont&quot;\" font-size=\"12\" fill=\"#000\" direction=\"ltr\" style=\"font-kerning:none;font-variant-ligatures:none\">0</text>"
+ },
+ "tick-thousands": {
+  "text": "2,500",
+  "missing": [],
+  "width": 34.84,
+  "ascent": 10.63,
+  "descent": 4.49,
+  "family": "Excalifont",
+  "fontSize": 12,
+  "x": 5.16,
+  "y": 153.07,
+  "box": {
+   "x": 5.16,
+   "y": 142.44,
+   "width": 34.84,
+   "height": 15.12
+  },
+  "rotate": 0,
+  "pivot": [
+   40,
+   150
+  ],
+  "svg": "<text x=\"5.16\" y=\"153.07\" font-family=\"&quot;Excalifont&quot;\" font-size=\"12\" fill=\"#000\" direction=\"ltr\" style=\"font-kerning:none;font-variant-ligatures:none\">2,500</text>"
+ },
+ "tick-ten-thousands": {
+  "text": "12,500",
+  "missing": [],
+  "width": 39.96,
+  "ascent": 10.63,
+  "descent": 4.49,
+  "family": "Excalifont",
+  "fontSize": 12,
+  "x": 0.04,
+  "y": 103.07,
+  "box": {
+   "x": 0.04,
+   "y": 92.44,
+   "width": 39.96,
+   "height": 15.12
+  },
+  "rotate": 0,
+  "pivot": [
+   40,
+   100
+  ],
+  "svg": "<text x=\"0.04\" y=\"103.07\" font-family=\"&quot;Excalifont&quot;\" font-size=\"12\" fill=\"#000\" direction=\"ltr\" style=\"font-kerning:none;font-variant-ligatures:none\">12,500</text>"
+ },
+ "tick-decimal": {
+  "text": "0.75",
+  "missing": [],
+  "width": 25.37,
+  "ascent": 10.63,
+  "descent": 4.49,
+  "family": "Excalifont",
+  "fontSize": 12,
+  "x": 14.63,
+  "y": 53.07,
+  "box": {
+   "x": 14.63,
+   "y": 42.44,
+   "width": 25.37,
+   "height": 15.12
+  },
+  "rotate": 0,
+  "pivot": [
+   40,
+   50
+  ],
+  "svg": "<text x=\"14.63\" y=\"53.07\" font-family=\"&quot;Excalifont&quot;\" font-size=\"12\" fill=\"#000\" direction=\"ltr\" style=\"font-kerning:none;font-variant-ligatures:none\">0.75</text>"
+ },
+ "category-zurich": {
+  "text": "Zürich",
+  "missing": [],
+  "width": 36.8,
+  "ascent": 10.63,
+  "descent": 4.49,
+  "family": "Excalifont",
+  "fontSize": 12,
+  "x": 43.2,
+  "y": 240.63,
+  "box": {
+   "x": 43.2,
+   "y": 230,
+   "width": 36.8,
+   "height": 15.12
+  },
+  "rotate": -45,
+  "pivot": [
+   80,
+   230
+  ],
+  "svg": "<text x=\"43.2\" y=\"240.63\" font-family=\"&quot;Excalifont&quot;\" font-size=\"12\" fill=\"#000\" transform=\"rotate(-45 80 230)\" direction=\"ltr\" style=\"font-kerning:none;font-variant-ligatures:none\">Zürich</text>"
+ },
+ "category-lodz": {
+  "text": "Łódź",
+  "missing": [],
+  "width": 28.42,
+  "ascent": 10.63,
+  "descent": 4.49,
+  "family": "Excalifont",
+  "fontSize": 12,
+  "x": 111.58,
+  "y": 240.63,
+  "box": {
+   "x": 111.58,
+   "y": 230,
+   "width": 28.42,
+   "height": 15.12
+  },
+  "rotate": -45,
+  "pivot": [
+   140,
+   230
+  ],
+  "svg": "<text x=\"111.58\" y=\"240.63\" font-family=\"&quot;Excalifont&quot;\" font-size=\"12\" fill=\"#000\" transform=\"rotate(-45 140 230)\" direction=\"ltr\" style=\"font-kerning:none;font-variant-ligatures:none\">Łódź</text>"
+ },
+ "category-sao-paulo": {
+  "text": "São Paulo",
+  "missing": [],
+  "width": 57.73,
+  "ascent": 10.63,
+  "descent": 4.49,
+  "family": "Excalifont",
+  "fontSize": 12,
+  "x": 142.27,
+  "y": 240.63,
+  "box": {
+   "x": 142.27,
+   "y": 230,
+   "width": 57.73,
+   "height": 15.12
+  },
+  "rotate": -45,
+  "pivot": [
+   200,
+   230
+  ],
+  "svg": "<text x=\"142.27\" y=\"240.63\" font-family=\"&quot;Excalifont&quot;\" font-size=\"12\" fill=\"#000\" transform=\"rotate(-45 200 230)\" direction=\"ltr\" style=\"font-kerning:none;font-variant-ligatures:none\">São Paulo</text>"
+ },
+ "title": {
+  "text": "Quarterly revenue",
+  "missing": [],
+  "width": 171.66,
+  "ascent": 17.72,
+  "descent": 7.48,
+  "family": "Excalifont",
+  "fontSize": 20,
+  "x": 94.17,
+  "y": 27.72,
+  "box": {
+   "x": 94.17,
+   "y": 10,
+   "width": 171.66,
+   "height": 25.2
+  },
+  "rotate": 0,
+  "pivot": [
+   180,
+   10
+  ],
+  "svg": "<text x=\"94.17\" y=\"27.72\" font-family=\"&quot;Excalifont&quot;\" font-size=\"20\" fill=\"#000\" direction=\"ltr\" style=\"font-kerning:none;font-variant-ligatures:none\">Quarterly revenue</text>"
+ },
+ "legend-entry": {
+  "text": "Series A",
+  "missing": [],
+  "width": 63.54,
+  "ascent": 14.18,
+  "descent": 5.98,
+  "family": "Excalifont",
+  "fontSize": 16,
+  "x": 300,
+  "y": 44.1,
+  "box": {
+   "x": 300,
+   "y": 29.92,
+   "width": 63.54,
+   "height": 20.16
+  },
+  "rotate": 0,
+  "pivot": [
+   300,
+   40
+  ],
+  "svg": "<text x=\"300\" y=\"44.1\" font-family=\"&quot;Excalifont&quot;\" font-size=\"16\" fill=\"#000\" direction=\"ltr\" style=\"font-kerning:none;font-variant-ligatures:none\">Series A</text>"
+ },
+ "axis-title-vertical": {
+  "text": "Revenue (€)",
+  "missing": [],
+  "width": 94.43,
+  "ascent": 14.18,
+  "descent": 5.98,
+  "family": "Excalifont",
+  "fontSize": 16,
+  "x": -35.22,
+  "y": 139.18,
+  "box": {
+   "x": -35.22,
+   "y": 125,
+   "width": 94.43,
+   "height": 20.16
+  },
+  "rotate": -90,
+  "pivot": [
+   12,
+   125
+  ],
+  "svg": "<text x=\"-35.22\" y=\"139.18\" font-family=\"&quot;Excalifont&quot;\" font-size=\"16\" fill=\"#000\" transform=\"rotate(-90 12 125)\" direction=\"ltr\" style=\"font-kerning:none;font-variant-ligatures:none\">Revenue (€)</text>"
+ },
+ "kerning-pairs": {
+  "text": "AV To Wa LT Yo",
+  "missing": [],
+  "width": 198.02,
+  "ascent": 21.26,
+  "descent": 8.98,
+  "family": "Excalifont",
+  "fontSize": 24,
+  "x": 10,
+  "y": 30,
+  "box": {
+   "x": 10,
+   "y": 8.74,
+   "width": 198.02,
+   "height": 30.24
+  },
+  "rotate": 0,
+  "pivot": [
+   10,
+   30
+  ],
+  "svg": "<text x=\"10\" y=\"30\" font-family=\"&quot;Excalifont&quot;\" font-size=\"24\" fill=\"#000\" direction=\"ltr\" style=\"font-kerning:none;font-variant-ligatures:none\">AV To Wa LT Yo</text>"
+ },
+ "ligatures": {
+  "text": "fifl office",
+  "missing": [],
+  "width": 113.81,
+  "ascent": 21.26,
+  "descent": 8.98,
+  "family": "Excalifont",
+  "fontSize": 24,
+  "x": 10,
+  "y": 60,
+  "box": {
+   "x": 10,
+   "y": 38.74,
+   "width": 113.81,
+   "height": 30.24
+  },
+  "rotate": 0,
+  "pivot": [
+   10,
+   60
+  ],
+  "svg": "<text x=\"10\" y=\"60\" font-family=\"&quot;Excalifont&quot;\" font-size=\"24\" fill=\"#000\" direction=\"ltr\" style=\"font-kerning:none;font-variant-ligatures:none\">fifl office</text>"
+ },
+ "greek": {
+  "text": "Ελλάδα",
+  "missing": [],
+  "width": 54,
+  "ascent": 14.18,
+  "descent": 5.98,
+  "family": "Excalifont",
+  "fontSize": 16,
+  "x": 10,
+  "y": 90,
+  "box": {
+   "x": 10,
+   "y": 75.82,
+   "width": 54,
+   "height": 20.16
+  },
+  "rotate": 0,
+  "pivot": [
+   10,
+   90
+  ],
+  "svg": "<text x=\"10\" y=\"90\" font-family=\"&quot;Excalifont&quot;\" font-size=\"16\" fill=\"#000\" direction=\"ltr\" style=\"font-kerning:none;font-variant-ligatures:none\">Ελλάδα</text>"
+ },
+ "cyrillic": {
+  "text": "Привет",
+  "missing": [],
+  "width": 51.07,
+  "ascent": 14.18,
+  "descent": 5.98,
+  "family": "Excalifont",
+  "fontSize": 16,
+  "x": 10,
+  "y": 120,
+  "box": {
+   "x": 10,
+   "y": 105.82,
+   "width": 51.07,
+   "height": 20.16
+  },
+  "rotate": 0,
+  "pivot": [
+   10,
+   120
+  ],
+  "svg": "<text x=\"10\" y=\"120\" font-family=\"&quot;Excalifont&quot;\" font-size=\"16\" fill=\"#000\" direction=\"ltr\" style=\"font-kerning:none;font-variant-ligatures:none\">Привет</text>"
+ },
+ "decomposed-accent": {
+  "text": "Café",
+  "missing": [],
+  "width": 36.05,
+  "ascent": 14.18,
+  "descent": 5.98,
+  "family": "Excalifont",
+  "fontSize": 16,
+  "x": 10,
+  "y": 150,
+  "box": {
+   "x": 10,
+   "y": 135.82,
+   "width": 36.05,
+   "height": 20.16
+  },
+  "rotate": 0,
+  "pivot": [
+   10,
+   150
+  ],
+  "svg": "<text x=\"10\" y=\"150\" font-family=\"&quot;Excalifont&quot;\" font-size=\"16\" fill=\"#000\" direction=\"ltr\" style=\"font-kerning:none;font-variant-ligatures:none\">Café</text>"
+ },
+ "whitespace": {
+  "text": "a b",
+  "missing": [],
+  "width": 24.5,
+  "ascent": 14.18,
+  "descent": 5.98,
+  "family": "Excalifont",
+  "fontSize": 16,
+  "x": 10,
+  "y": 180,
+  "box": {
+   "x": 10,
+   "y": 165.82,
+   "width": 24.5,
+   "height": 20.16
+  },
+  "rotate": 0,
+  "pivot": [
+   10,
+   180
+  ],
+  "svg": "<text x=\"10\" y=\"180\" font-family=\"&quot;Excalifont&quot;\" font-size=\"16\" fill=\"#000\" direction=\"ltr\" style=\"font-kerning:none;font-variant-ligatures:none\">a b</text>"
+ },
+ "markup-characters": {
+  "text": "<a & \"b\">",
+  "missing": [],
+  "width": 71.86,
+  "ascent": 14.18,
+  "descent": 5.98,
+  "family": "Excalifont",
+  "fontSize": 16,
+  "x": 10,
+  "y": 210,
+  "box": {
+   "x": 10,
+   "y": 195.82,
+   "width": 71.86,
+   "height": 20.16
+  },
+  "rotate": 0,
+  "pivot": [
+   10,
+   210
+  ],
+  "svg": "<text x=\"10\" y=\"210\" font-family=\"&quot;Excalifont&quot;\" font-size=\"16\" fill=\"#000\" direction=\"ltr\" style=\"font-kerning:none;font-variant-ligatures:none\">&lt;a &amp; &quot;b&quot;&gt;</text>"
+ },
+ "small": {
+  "text": "small print",
+  "missing": [],
+  "width": 49.04,
+  "ascent": 8.86,
+  "descent": 3.74,
+  "family": "Excalifont",
+  "fontSize": 10,
+  "x": 10,
+  "y": 240,
+  "box": {
+   "x": 10,
+   "y": 231.14,
+   "width": 49.04,
+   "height": 12.6
+  },
+  "rotate": 0,
+  "pivot": [
+   10,
+   240
+  ],
+  "svg": "<text x=\"10\" y=\"240\" font-family=\"&quot;Excalifont&quot;\" font-size=\"10\" fill=\"#000\" direction=\"ltr\" style=\"font-kerning:none;font-variant-ligatures:none\">small print</text>"
+ },
+ "large": {
+  "text": "Big",
+  "missing": [],
+  "width": 74.88,
+  "ascent": 42.53,
+  "descent": 17.95,
+  "family": "Excalifont",
+  "fontSize": 48,
+  "x": 10,
+  "y": 282.05,
+  "box": {
+   "x": 10,
+   "y": 239.52,
+   "width": 74.88,
+   "height": 60.48
+  },
+  "rotate": 0,
+  "pivot": [
+   10,
+   300
+  ],
+  "svg": "<text x=\"10\" y=\"282.05\" font-family=\"&quot;Excalifont&quot;\" font-size=\"48\" fill=\"#000\" direction=\"ltr\" style=\"font-kerning:none;font-variant-ligatures:none\">Big</text>"
+ },
+ "fill": {
+  "text": "Coloured",
+  "missing": [],
+  "width": 66.5,
+  "ascent": 14.18,
+  "descent": 5.98,
+  "family": "Excalifont",
+  "fontSize": 16,
+  "x": 10,
+  "y": 330,
+  "box": {
+   "x": 10,
+   "y": 315.82,
+   "width": 66.5,
+   "height": 20.16
+  },
+  "rotate": 0,
+  "pivot": [
+   10,
+   330
+  ],
+  "svg": "<text x=\"10\" y=\"330\" font-family=\"&quot;Excalifont&quot;\" font-size=\"16\" fill=\"#e76f51\" direction=\"ltr\" style=\"font-kerning:none;font-variant-ligatures:none\">Coloured</text>"
+ },
+ "uncovered-characters": {
+  "text": "東京 Tokyo",
+  "missing": [
+   "東",
+   "京"
+  ],
+  "width": 88.32,
+  "ascent": 14.18,
+  "descent": 5.98,
+  "family": "Excalifont",
+  "fontSize": 16,
+  "x": 10,
+  "y": 360,
+  "box": {
+   "x": 10,
+   "y": 345.82,
+   "width": 88.32,
+   "height": 20.16
+  },
+  "rotate": 0,
+  "pivot": [
+   10,
+   360
+  ],
+  "svg": "<text x=\"10\" y=\"360\" font-family=\"&quot;Excalifont&quot;\" font-size=\"16\" fill=\"#000\" direction=\"ltr\" style=\"font-kerning:none;font-variant-ligatures:none\">東京 Tokyo</text>"
+ },
+ "empty": {
+  "text": "",
+  "missing": [],
+  "width": 0,
+  "ascent": 14.18,
+  "descent": 5.98,
+  "family": "Excalifont",
+  "fontSize": 16,
+  "x": 10,
+  "y": 390,
+  "box": {
+   "x": 10,
+   "y": 375.82,
+   "width": 0,
+   "height": 20.16
+  },
+  "rotate": 0,
+  "pivot": [
+   10,
+   390
+  ],
+  "svg": "<text x=\"10\" y=\"390\" font-family=\"&quot;Excalifont&quot;\" font-size=\"16\" fill=\"#000\" direction=\"ltr\" style=\"font-kerning:none;font-variant-ligatures:none\"></text>"
+ },
+ "soft-hyphen": {
+  "text": "Ex­ample",
+  "missing": [],
+  "width": 61.38,
+  "ascent": 14.18,
+  "descent": 5.98,
+  "family": "Excalifont",
+  "fontSize": 16,
+  "x": 10,
+  "y": 420,
+  "box": {
+   "x": 10,
+   "y": 405.82,
+   "width": 61.38,
+   "height": 20.16
+  },
+  "rotate": 0,
+  "pivot": [
+   10,
+   420
+  ],
+  "svg": "<text x=\"10\" y=\"420\" font-family=\"&quot;Excalifont&quot;\" font-size=\"16\" fill=\"#000\" direction=\"ltr\" style=\"font-kerning:none;font-variant-ligatures:none\">Ex­ample</text>"
+ },
+ "every-character-latin": {
+  "text": "!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~ ¡¢£¥¦¨©ª«­®¯°±´¶·¸º»¼½¾¿ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿıŒœʼˆ˚˜̄̈–—‘’‚“”„†•․‥…‰‹›€™−",
+  "missing": [],
+  "width": 12117,
+  "ascent": 88.6,
+  "descent": 37.4,
+  "family": "Excalifont",
+  "fontSize": 100,
+  "x": 10,
+  "y": 120,
+  "box": {
+   "x": 10,
+   "y": 31.4,
+   "width": 12117,
+   "height": 126
+  },
+  "rotate": 0,
+  "pivot": [
+   10,
+   120
+  ],
+  "svg": "<text x=\"10\" y=\"120\" font-family=\"&quot;Excalifont&quot;\" font-size=\"100\" fill=\"#000\" direction=\"ltr\" style=\"font-kerning:none;font-variant-ligatures:none\">!&quot;#$%&amp;&#39;()*+,-./0123456789:;&lt;=&gt;?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~ ¡¢£¥¦¨©ª«­®¯°±´¶·¸º»¼½¾¿ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿıŒœʼˆ˚˜̄̈–—‘’‚“”„†•․‥…‰‹›€™−</text>"
+ },
+ "every-character-latin-ext": {
+  "text": "ĀāĂăĄąĆćĈĉĊċČčĎďĐđĒēĔĕĖėĘęĚěĜĝĞğĠġĢģĤĥĦħĨĩĪīĬĭĮįİĲĳĴĵĶķĹĺĻļĽľĿŀŁłŃńŅņŇňŉŌōŎŏŐőŔŕŖŗŘřŚśŜŝŞşŠšŢţŤťŦŧŨũŪūŬŭŮůŰűŲųŴŵŶŷŸŹźŻżŽžƒǼǽǾǿȘșȚțȷẀẁẂẃẄẅỲỳℓ",
+  "missing": [],
+  "width": 8450.4,
+  "ascent": 88.6,
+  "descent": 37.4,
+  "family": "Excalifont",
+  "fontSize": 100,
+  "x": 10,
+  "y": 120,
+  "box": {
+   "x": 10,
+   "y": 31.4,
+   "width": 8450.4,
+   "height": 126
+  },
+  "rotate": 0,
+  "pivot": [
+   10,
+   120
+  ],
+  "svg": "<text x=\"10\" y=\"120\" font-family=\"&quot;Excalifont&quot;\" font-size=\"100\" fill=\"#000\" direction=\"ltr\" style=\"font-kerning:none;font-variant-ligatures:none\">ĀāĂăĄąĆćĈĉĊċČčĎďĐđĒēĔĕĖėĘęĚěĜĝĞğĠġĢģĤĥĦħĨĩĪīĬĭĮįİĲĳĴĵĶķĹĺĻļĽľĿŀŁłŃńŅņŇňŉŌōŎŏŐőŔŕŖŗŘřŚśŜŝŞşŠšŢţŤťŦŧŨũŪūŬŭŮůŰűŲųŴŵŶŷŸŹźŻżŽžƒǼǽǾǿȘșȚțȷẀẁẂẃẄẅỲỳℓ</text>"
+ },
+ "every-character-greek": {
+  "text": ";΄΅Ά·ΈΉΊΌΎΏΐΑΒΓΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΪΫάέήίΰαβγδεζηθικλμνξοπρςστυφχψωϊϋόύώϏϗ",
+  "missing": [],
+  "width": 4228.7,
+  "ascent": 88.6,
+  "descent": 37.4,
+  "family": "Excalifont",
+  "fontSize": 100,
+  "x": 10,
+  "y": 120,
+  "box": {
+   "x": 10,
+   "y": 31.4,
+   "width": 4228.7,
+   "height": 126
+  },
+  "rotate": 0,
+  "pivot": [
+   10,
+   120
+  ],
+  "svg": "<text x=\"10\" y=\"120\" font-family=\"&quot;Excalifont&quot;\" font-size=\"100\" fill=\"#000\" direction=\"ltr\" style=\"font-kerning:none;font-variant-ligatures:none\">;΄΅Ά·ΈΉΊΌΎΏΐΑΒΓΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΪΫάέήίΰαβγδεζηθικλμνξοπρςστυφχψωϊϋόύώϏϗ</text>"
+ },
+ "every-character-cyrillic": {
+  "text": "ЀЁЂЃЄЅІЇЈЉЊЋЌЍЎЏАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдежзийклмнопрстуфхцчшщъыьэюяѐёђѓєѕіїјљњћќѝўџҐґ№",
+  "missing": [],
+  "width": 6094.4,
+  "ascent": 88.6,
+  "descent": 37.4,
+  "family": "Excalifont",
+  "fontSize": 100,
+  "x": 10,
+  "y": 120,
+  "box": {
+   "x": 10,
+   "y": 31.4,
+   "width": 6094.4,
+   "height": 126
+  },
+  "rotate": 0,
+  "pivot": [
+   10,
+   120
+  ],
+  "svg": "<text x=\"10\" y=\"120\" font-family=\"&quot;Excalifont&quot;\" font-size=\"100\" fill=\"#000\" direction=\"ltr\" style=\"font-kerning:none;font-variant-ligatures:none\">ЀЁЂЃЄЅІЇЈЉЊЋЌЍЎЏАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдежзийклмнопрстуфхцчшщъыьэюяѐёђѓєѕіїјљњћќѝўџҐґ№</text>"
+ },
+ "every-character-cyrillic-ext": {
+  "text": "ѢѣѲѳѴѵӘәӢӣӦӧӨөӮӯ",
+  "missing": [],
+  "width": 1012.8,
+  "ascent": 88.6,
+  "descent": 37.4,
+  "family": "Excalifont",
+  "fontSize": 100,
+  "x": 10,
+  "y": 120,
+  "box": {
+   "x": 10,
+   "y": 31.4,
+   "width": 1012.8,
+   "height": 126
+  },
+  "rotate": 0,
+  "pivot": [
+   10,
+   120
+  ],
+  "svg": "<text x=\"10\" y=\"120\" font-family=\"&quot;Excalifont&quot;\" font-size=\"100\" fill=\"#000\" direction=\"ltr\" style=\"font-kerning:none;font-variant-ligatures:none\">ѢѣѲѳѴѵӘәӢӣӦӧӨөӮӯ</text>"
+ },
+ "every-character-marks": {
+  "text": "ˇ˘˙˛˝̧̨̦̂̆̇̊̋̌℮∑ﬁﬂ",
+  "missing": [],
+  "width": 608.5,
+  "ascent": 88.6,
+  "descent": 37.4,
+  "family": "Excalifont",
+  "fontSize": 100,
+  "x": 10,
+  "y": 120,
+  "box": {
+   "x": 10,
+   "y": 31.4,
+   "width": 608.5,
+   "height": 126
+  },
+  "rotate": 0,
+  "pivot": [
+   10,
+   120
+  ],
+  "svg": "<text x=\"10\" y=\"120\" font-family=\"&quot;Excalifont&quot;\" font-size=\"100\" fill=\"#000\" direction=\"ltr\" style=\"font-kerning:none;font-variant-ligatures:none\">ˇ˘˙˛˝̧̨̦̂̆̇̊̋̌℮∑ﬁﬂ</text>"
+ },
+ "presentation-controls": {
+  "text": "A(B) © 1",
+  "missing": [],
+  "width": 69.84,
+  "ascent": 14.18,
+  "descent": 5.98,
+  "family": "Excalifont",
+  "fontSize": 16,
+  "x": 10,
+  "y": 450,
+  "box": {
+   "x": 10,
+   "y": 435.82,
+   "width": 69.84,
+   "height": 20.16
+  },
+  "rotate": 0,
+  "pivot": [
+   10,
+   450
+  ],
+  "svg": "<text x=\"10\" y=\"450\" font-family=\"&quot;Excalifont&quot;\" font-size=\"16\" fill=\"#000\" direction=\"ltr\" style=\"font-kerning:none;font-variant-ligatures:none\">A(B) © 1</text>"
+ }
+}
