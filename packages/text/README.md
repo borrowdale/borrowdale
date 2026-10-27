@@ -96,8 +96,10 @@ The font has to reach whoever views the drawing:
 
 - **An SVG document** carries it in a `<style>` element: `fontFaceCss(excalifontFiles, text)`
   returns `@font-face` rules for only the font files that `text` needs. Pass every label of the
-  document, joined with spaces. Latin text needs one file of about 34 KB; the whole font is about
-  88 KB.
+  document, one per line (joined with `'\n'`). Each line counts as the label is drawn, so the line
+  breaks and the spaces at either end of a label add no file; joined with spaces, the labels would
+  add the Latin file, which holds the space, to a document whose labels are all Greek or Cyrillic.
+  Latin text needs one file of about 34 KB; the whole font is about 88 KB.
 - **A page** can use the same rules, or load every file of the font with
   `await loadFont(document.fonts, excalifontFiles)`. A second call adds no file the first one
   added. It hands the browser the font's bytes rather than a URL, so a Content-Security-Policy's

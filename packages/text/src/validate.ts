@@ -47,7 +47,7 @@ const FAMILY = /^[A-Za-z0-9](?:[A-Za-z0-9 _-]*[A-Za-z0-9])?$/;
 const FAMILY_RULE =
   'family must be letters, digits, spaces, hyphens and underscores, starting and ending with a letter or digit';
 const BASE64 = /^[A-Za-z0-9+/]*={0,2}$/;
-const LINE_BREAK = /[\n\r\u0085\u2028\u2029]/;
+export const LINE_BREAK = /[\n\r\u0085\u2028\u2029]/;
 // Removed from the text, because they change how their neighbours are drawn in ways the measurement
 // cannot follow: variation selectors 15 and 16 switch a character between text and emoji
 // presentation, and bidirectional controls reorder the text and mirror brackets.
@@ -144,10 +144,8 @@ export function checkText(text: unknown): string {
     throw new Error('Text must be a single line');
   }
   checkXml('Text', text);
-  // Checked first, changed second: a line break must be rejected, not turned into a space. Then
-  // presentation controls removed; composed (NFC), because browsers draw "e" + U+0301 as "é",
-  // which can be a different width; and collapsed, because SVG draws a run of spaces as one.
-  const drawn = drawnForm(text).replace(/[ \t]+/g, ' ').replace(/^ | $/g, '');
+  // Checked first, changed second: a line break must be rejected, not turned into a space.
+  const drawn = drawnForm(text);
   // Composing can also lengthen text (U+FB2C becomes three characters), so the drawn text is checked
   // too: the limit holds for whatever measuring returns.
   checkLength(drawn);
@@ -162,11 +160,17 @@ function checkXml(name: string, value: string): void {
 }
 
 /**
- * The characters of a text as the browser draws them: presentation controls removed, then accents
- * composed. Measuring and choosing font files both use it, so they always see the same characters.
+ * A line of text as the browser draws it: presentation controls removed; accents composed (NFC),
+ * because browsers draw "e" + U+0301 as "é", which can be a different width; and runs of spaces and
+ * tabs collapsed and trimmed, because SVG draws a run of spaces as one. Measuring and choosing font
+ * files both use it, so they always see the same characters.
  */
 export function drawnForm(text: string): string {
-  return text.replace(PRESENTATION_CONTROLS, '').normalize('NFC');
+  return text
+    .replace(PRESENTATION_CONTROLS, '')
+    .normalize('NFC')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/^ | $/g, '');
 }
 
 function checkLength(text: string): void {

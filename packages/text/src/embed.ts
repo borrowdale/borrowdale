@@ -1,5 +1,14 @@
 import type { FontFile, FontFiles } from './types.js';
-import { checkFontFiles, codePointName, codePointOf, cssFamily, drawnForm, isFamily, show } from './validate.js';
+import {
+  checkFontFiles,
+  codePointName,
+  codePointOf,
+  cssFamily,
+  drawnForm,
+  isFamily,
+  LINE_BREAK,
+  show,
+} from './validate.js';
 
 type FaceSource = { family: string; unicodeRange: string; woff2: string };
 
@@ -8,8 +17,8 @@ const sources = new WeakMap<FontFace, FaceSource>();
 
 /**
  * `@font-face` rules that embed a font, for a `<style>` element. With `text`, only the files that
- * serve its characters are included; pass every label of the document, joined with spaces.
- * The rules hold no caller text, so they are safe to insert as markup.
+ * serve its characters are included; pass every label of the document, one per line (joined with
+ * `\n`). The rules hold no caller text, so they are safe to insert as markup.
  */
 export function fontFaceCss(fontFiles: FontFiles, text?: string): string {
   return filesFor(fontFiles, text)
@@ -71,11 +80,14 @@ function filesFor(fontFiles: FontFiles, text: string | undefined): readonly Font
   if (typeof text !== 'string') {
     throw new Error(`Text must be a string, got ${show(text)}`);
   }
-  // The drawn form, so the files chosen serve the characters that are drawn. Each code point once:
+  // Each label in its drawn form, so the files chosen serve exactly the characters that are drawn:
+  // the line breaks between labels, and spaces at their ends, select no file. Each code point once:
   // the text is every label of a document, and may be long.
   const unique = new Set<number>();
-  for (const character of drawnForm(text)) {
-    unique.add(codePointOf(character));
+  for (const label of text.split(LINE_BREAK)) {
+    for (const character of drawnForm(label)) {
+      unique.add(codePointOf(character));
+    }
   }
   const codePoints = [...unique];
   return fontFiles.files.filter((file) =>

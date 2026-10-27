@@ -107,6 +107,22 @@ describe('fontFaceCss', () => {
     ]);
   });
 
+  it('takes each line as one label, so the line breaks between labels select no file', () => {
+    expect(fontFaceCss({ ...handFiles, files: [{ ranges: [[0x0a, 0x0d], [0x2028, 0x2029]], woff2: 'QUJD' }] }, 'A\nB\r\n\u2028')).toBe('');
+  });
+
+  it('embeds only the Greek file of Excalifont for Greek labels joined with line breaks', () => {
+    expect(fontFaceCss(excalifontFiles, 'Ελλάδα\nΑθήνα').match(/unicode-range:U\+[0-9A-F]+/g)).toEqual(['unicode-range:U+037E']);
+  });
+
+  it('adds no file for the spaces at the ends of a label, which are not drawn', () => {
+    expect(fontFaceCss(excalifontFiles, ' Ελλάδα \n\tΑθήνα ').match(/unicode-range:U\+[0-9A-F]+/g)).toEqual(['unicode-range:U+037E']);
+  });
+
+  it('adds the file of the space for a tab inside a label, which is drawn as a space', () => {
+    expect(fontFaceCss(excalifontFiles, 'Київ\tМосква')).toBe(fontFaceCss(excalifontFiles, 'Київ Москва'));
+  });
+
   it('embeds all seven Excalifont files without text', () => {
     expect(fontFaceCss(excalifontFiles).match(/@font-face/g)).toHaveLength(7);
   });

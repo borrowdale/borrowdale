@@ -59,8 +59,8 @@ const shapes = [
 const svg = toSvgDocument({
   width,
   height,
-  // Only the font files these labels use: Latin, Latin Extended, Greek and Cyrillic.
-  defs: [svgElement('style', {}, fontFaceCss(excalifontFiles, labels.map(({ text }) => text).join(' ')))],
+  // Only the font files these labels use: Latin, Latin Extended, Greek and Cyrillic. One label per line.
+  defs: [svgElement('style', {}, fontFaceCss(excalifontFiles, labels.map(({ text }) => text).join('\n')))],
   body: [
     svgElement('rect', { width, height, fill: '#fdf8ef' }),
     ...shapes.map(toSvgPaths),
