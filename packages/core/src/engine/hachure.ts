@@ -3,6 +3,7 @@
 
 import { charge } from './budget.js';
 import type { Line, Point } from './core.js';
+import { cos, sin } from './math.js';
 
 interface Edge {
   ymin: number;
@@ -19,12 +20,12 @@ function rotatePoints(points: Point[], center: Point, degrees: number): void {
   if (points && points.length) {
     const [cx, cy] = center;
     const angle = (Math.PI / 180) * degrees;
-    const cos = Math.cos(angle);
-    const sin = Math.sin(angle);
+    const cosAngle = cos(angle);
+    const sinAngle = sin(angle);
     for (const p of points) {
       const [x, y] = p;
-      p[0] = (x - cx) * cos - (y - cy) * sin + cx;
-      p[1] = (x - cx) * sin + (y - cy) * cos + cy;
+      p[0] = (x - cx) * cosAngle - (y - cy) * sinAngle + cx;
+      p[1] = (x - cx) * sinAngle + (y - cy) * cosAngle + cy;
     }
   }
 }

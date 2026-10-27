@@ -1,6 +1,6 @@
 # Third-party notices
 
-`src/engine/` is a TypeScript port of the following MIT-licensed packages. Their notices:
+`src/engine/` is a TypeScript port of the following packages. Their notices:
 
 ## rough.js 4.6.6
 
@@ -147,3 +147,16 @@ SOFTWARE.
 
 ```
 
+## fdlibm 5.3
+
+<https://www.netlib.org/fdlibm/>. `src/engine/math.ts` uses its polynomial coefficients and
+range-reduction constants for sin, cos and atan.
+
+```
+Copyright (C) 1993 by Sun Microsystems, Inc. All rights reserved.
+
+Developed at SunSoft, a Sun Microsystems, Inc. business.
+Permission to use, copy, modify, and distribute this
+software is freely granted, provided that this notice
+is preserved.
+```

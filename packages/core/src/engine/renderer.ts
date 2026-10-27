@@ -7,6 +7,7 @@ import { fillPolygons } from './fillers.js';
 import { splineSegment } from './bezier.js';
 import type { Segment } from './path-data.js';
 import { cloneOptionsAlterSeed, doubleLine, randomOffset, randomOffsetAround, strokeLine } from './strokes.js';
+import { cos, sin, square } from './math.js';
 
 interface EllipseParams {
   rx: number;
@@ -64,7 +65,7 @@ export function curve(points: Point[], o: ResolvedOptions): OpSet {
 }
 
 export function generateEllipseParams(width: number, height: number, o: ResolvedOptions): EllipseParams {
-  const psq = Math.sqrt(Math.PI * 2 * Math.sqrt((Math.pow(width / 2, 2) + Math.pow(height / 2, 2)) / 2));
+  const psq = Math.sqrt(Math.PI * 2 * Math.sqrt((square(width / 2) + square(height / 2)) / 2));
   const stepCount = Math.ceil(Math.max(o.curveStepCount, (o.curveStepCount / Math.sqrt(200)) * psq));
   const increment = (Math.PI * 2) / stepCount;
   let rx = Math.abs(width / 2);
@@ -122,13 +123,13 @@ export function arc(
   if (closed) {
     if (roughClosure) {
       ops.push(
-        ...doubleLine(cx, cy, cx + rx * Math.cos(strt), cy + ry * Math.sin(strt), o),
-        ...doubleLine(cx, cy, cx + rx * Math.cos(stp), cy + ry * Math.sin(stp), o),
+        ...doubleLine(cx, cy, cx + rx * cos(strt), cy + ry * sin(strt), o),
+        ...doubleLine(cx, cy, cx + rx * cos(stp), cy + ry * sin(stp), o),
       );
     } else {
       ops.push(
         { op: 'lineTo', data: [cx, cy] },
-        { op: 'lineTo', data: [cx + rx * Math.cos(strt), cy + ry * Math.sin(strt)] },
+        { op: 'lineTo', data: [cx + rx * cos(strt), cy + ry * sin(strt)] },
       );
     }
   }
@@ -232,9 +233,9 @@ export function patternFillArc(
   const points: Point[] = [];
   for (let angle = strt; angle <= stp; angle = angle + increment) {
     charge();
-    points.push([cx + rx * Math.cos(angle), cy + ry * Math.sin(angle)]);
+    points.push([cx + rx * cos(angle), cy + ry * sin(angle)]);
   }
-  points.push([cx + rx * Math.cos(stp), cy + ry * Math.sin(stp)]);
+  points.push([cx + rx * cos(stp), cy + ry * sin(stp)]);
   points.push([cx, cy]);
   return patternFillPolygons([points], o);
 }
@@ -299,40 +300,40 @@ function _computeEllipsePoints(
 
   if (coreOnly) {
     increment = increment / 4;
-    allPoints.push([cx + rx * Math.cos(-increment), cy + ry * Math.sin(-increment)]);
+    allPoints.push([cx + rx * cos(-increment), cy + ry * sin(-increment)]);
     for (let angle = 0; angle <= Math.PI * 2; angle = angle + increment) {
-      const p: Point = [cx + rx * Math.cos(angle), cy + ry * Math.sin(angle)];
+      const p: Point = [cx + rx * cos(angle), cy + ry * sin(angle)];
       corePoints.push(p);
       allPoints.push(p);
     }
-    allPoints.push([cx + rx * Math.cos(0), cy + ry * Math.sin(0)]);
-    allPoints.push([cx + rx * Math.cos(increment), cy + ry * Math.sin(increment)]);
+    allPoints.push([cx + rx * cos(0), cy + ry * sin(0)]);
+    allPoints.push([cx + rx * cos(increment), cy + ry * sin(increment)]);
   } else {
     const radOffset = randomOffsetAround(0.5, o) - Math.PI / 2;
     allPoints.push([
-      randomOffsetAround(offset, o) + cx + 0.9 * rx * Math.cos(radOffset - increment),
-      randomOffsetAround(offset, o) + cy + 0.9 * ry * Math.sin(radOffset - increment),
+      randomOffsetAround(offset, o) + cx + 0.9 * rx * cos(radOffset - increment),
+      randomOffsetAround(offset, o) + cy + 0.9 * ry * sin(radOffset - increment),
     ]);
     const endAngle = Math.PI * 2 + radOffset - 0.01;
     for (let angle = radOffset; angle < endAngle; angle = angle + increment) {
       const p: Point = [
-        randomOffsetAround(offset, o) + cx + rx * Math.cos(angle),
-        randomOffsetAround(offset, o) + cy + ry * Math.sin(angle),
+        randomOffsetAround(offset, o) + cx + rx * cos(angle),
+        randomOffsetAround(offset, o) + cy + ry * sin(angle),
       ];
       corePoints.push(p);
       allPoints.push(p);
     }
     allPoints.push([
-      randomOffsetAround(offset, o) + cx + rx * Math.cos(radOffset + Math.PI * 2 + overlap * 0.5),
-      randomOffsetAround(offset, o) + cy + ry * Math.sin(radOffset + Math.PI * 2 + overlap * 0.5),
+      randomOffsetAround(offset, o) + cx + rx * cos(radOffset + Math.PI * 2 + overlap * 0.5),
+      randomOffsetAround(offset, o) + cy + ry * sin(radOffset + Math.PI * 2 + overlap * 0.5),
     ]);
     allPoints.push([
-      randomOffsetAround(offset, o) + cx + 0.98 * rx * Math.cos(radOffset + overlap),
-      randomOffsetAround(offset, o) + cy + 0.98 * ry * Math.sin(radOffset + overlap),
+      randomOffsetAround(offset, o) + cx + 0.98 * rx * cos(radOffset + overlap),
+      randomOffsetAround(offset, o) + cy + 0.98 * ry * sin(radOffset + overlap),
     ]);
     allPoints.push([
-      randomOffsetAround(offset, o) + cx + 0.9 * rx * Math.cos(radOffset + overlap * 0.5),
-      randomOffsetAround(offset, o) + cy + 0.9 * ry * Math.sin(radOffset + overlap * 0.5),
+      randomOffsetAround(offset, o) + cx + 0.9 * rx * cos(radOffset + overlap * 0.5),
+      randomOffsetAround(offset, o) + cy + 0.9 * ry * sin(radOffset + overlap * 0.5),
     ]);
   }
 
@@ -353,15 +354,15 @@ function _arc(
   const radOffset = strt + randomOffsetAround(0.1, o);
   const points: Point[] = [];
   points.push([
-    randomOffsetAround(offset, o) + cx + 0.9 * rx * Math.cos(radOffset - increment),
-    randomOffsetAround(offset, o) + cy + 0.9 * ry * Math.sin(radOffset - increment),
+    randomOffsetAround(offset, o) + cx + 0.9 * rx * cos(radOffset - increment),
+    randomOffsetAround(offset, o) + cy + 0.9 * ry * sin(radOffset - increment),
   ]);
   for (let angle = radOffset; angle <= stp; angle = angle + increment) {
     charge();
-    points.push([randomOffsetAround(offset, o) + cx + rx * Math.cos(angle), randomOffsetAround(offset, o) + cy + ry * Math.sin(angle)]);
+    points.push([randomOffsetAround(offset, o) + cx + rx * cos(angle), randomOffsetAround(offset, o) + cy + ry * sin(angle)]);
   }
-  points.push([cx + rx * Math.cos(stp), cy + ry * Math.sin(stp)]);
-  points.push([cx + rx * Math.cos(stp), cy + ry * Math.sin(stp)]);
+  points.push([cx + rx * cos(stp), cy + ry * sin(stp)]);
+  points.push([cx + rx * cos(stp), cy + ry * sin(stp)]);
   return _curve(points, null, o);
 }
 

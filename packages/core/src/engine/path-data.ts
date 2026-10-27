@@ -5,6 +5,7 @@
 import { charge } from './budget.js';
 import { pointsOnBezierCurves, simplify } from './bezier.js';
 import type { Point } from './core.js';
+import { asin, cos, sin, tan } from './math.js';
 
 export interface Segment {
   key: string;
@@ -355,8 +356,8 @@ function degToRad(degrees: number): number {
 }
 
 function rotate(x: number, y: number, angleRad: number): [number, number] {
-  const X = x * Math.cos(angleRad) - y * Math.sin(angleRad);
-  const Y = x * Math.sin(angleRad) + y * Math.cos(angleRad);
+  const X = x * cos(angleRad) - y * sin(angleRad);
+  const Y = x * sin(angleRad) + y * cos(angleRad);
   return [X, Y];
 }
 
@@ -407,8 +408,8 @@ function arcToCubicCurves(
     cx = (k * r1 * y) / r2 + (x1 + x2) / 2;
     cy = (k * -r2 * x) / r1 + (y1 + y2) / 2;
 
-    f1 = Math.asin(parseFloat(((y1 - cy) / r2).toFixed(9)));
-    f2 = Math.asin(parseFloat(((y2 - cy) / r2).toFixed(9)));
+    f1 = asin(parseFloat(((y1 - cy) / r2).toFixed(9)));
+    f2 = asin(parseFloat(((y2 - cy) / r2).toFixed(9)));
 
     if (x1 < cx) {
       f1 = Math.PI - f1;
@@ -445,18 +446,18 @@ function arcToCubicCurves(
       f2 = f1 + ((Math.PI * 120) / 180) * -1;
     }
 
-    x2 = cx + r1 * Math.cos(f2);
-    y2 = cy + r2 * Math.sin(f2);
+    x2 = cx + r1 * cos(f2);
+    y2 = cy + r2 * sin(f2);
     params = arcToCubicCurves(x2, y2, x2old, y2old, r1, r2, angle, 0, sweepFlag, [f2, f2old, cx, cy]);
   }
 
   df = f2 - f1;
 
-  const c1 = Math.cos(f1);
-  const s1 = Math.sin(f1);
-  const c2 = Math.cos(f2);
-  const s2 = Math.sin(f2);
-  const t = Math.tan(df / 4);
+  const c1 = cos(f1);
+  const s1 = sin(f1);
+  const c2 = cos(f2);
+  const s2 = sin(f2);
+  const t = tan(df / 4);
   const hx = (4 / 3) * r1 * t;
   const hy = (4 / 3) * r2 * t;
 

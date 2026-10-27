@@ -9,11 +9,16 @@ const cases = corpus as unknown as { name: string; shape: Shape; options: Sketch
 const expected = goldens as unknown as Record<string, Sketch>;
 const names = cases.map((entry) => entry.name);
 
-// Every drawing must come from its seed alone: any Math.random() call fails the case.
+// Every drawing must come from its seed and the engine's own arithmetic alone. Math.random() is not
+// seeded, and these functions may differ in the last bit between JavaScript engines.
+const UNPORTABLE = ['random', 'sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'atan2', 'pow', 'exp', 'log', 'hypot', 'cbrt'] as const;
+
 beforeEach(() => {
-  vi.spyOn(Math, 'random').mockImplementation(() => {
-    throw new Error('Math.random() called while drawing');
-  });
+  for (const name of UNPORTABLE) {
+    vi.spyOn(Math, name).mockImplementation(() => {
+      throw new Error(`Math.${name}() called while drawing`);
+    });
+  }
 });
 
 afterEach(() => {

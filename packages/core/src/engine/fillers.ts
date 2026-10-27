@@ -6,6 +6,7 @@ import { lineLength, type Line, type Op, type OpSet, type Point, type ResolvedOp
 import { hachureLines } from './hachure.js';
 import { ellipseWithParams, generateEllipseParams } from './renderer.js';
 import { doubleLineFillOps, nextRandom } from './strokes.js';
+import { atan, cos, sin, square } from './math.js';
 
 type Filler = (polygonList: Point[][], o: ResolvedOptions) => OpSet;
 
@@ -78,8 +79,8 @@ function zigzagFill(polygonList: Point[][], o: ResolvedOptions): OpSet {
   const lines = polygonHachureLines(polygonList, o2);
   const zigZagAngle = (Math.PI / 180) * o.hachureAngle;
   const zigzagLines: Line[] = [];
-  const dgx = gap * 0.5 * Math.cos(zigZagAngle);
-  const dgy = gap * 0.5 * Math.sin(zigZagAngle);
+  const dgx = gap * 0.5 * cos(zigZagAngle);
+  const dgy = gap * 0.5 * sin(zigZagAngle);
   for (const [p1, p2] of lines) {
     if (lineLength([p1, p2])) {
       zigzagLines.push(
@@ -112,17 +113,17 @@ function dashedFill(polygonList: Point[][], o: ResolvedOptions): OpSet {
       p1 = line[1];
       p2 = line[0];
     }
-    const alpha = Math.atan((p2[1] - p1[1]) / (p2[0] - p1[0]));
+    const alpha = atan((p2[1] - p1[1]) / (p2[0] - p1[0]));
     for (let i = 0; i < count; i++) {
       const lstart = i * (offset + gap);
       const lend = lstart + offset;
       const start: Point = [
-        p1[0] + lstart * Math.cos(alpha) + startOffset * Math.cos(alpha),
-        p1[1] + lstart * Math.sin(alpha) + startOffset * Math.sin(alpha),
+        p1[0] + lstart * cos(alpha) + startOffset * cos(alpha),
+        p1[1] + lstart * sin(alpha) + startOffset * sin(alpha),
       ];
       const end: Point = [
-        p1[0] + lend * Math.cos(alpha) + startOffset * Math.cos(alpha),
-        p1[1] + lend * Math.sin(alpha) + startOffset * Math.sin(alpha),
+        p1[0] + lend * cos(alpha) + startOffset * cos(alpha),
+        p1[1] + lend * sin(alpha) + startOffset * sin(alpha),
       ];
       ops.push(...doubleLineFillOps(start[0], start[1], end[0], end[1], o));
     }
@@ -145,16 +146,16 @@ function zigzagLineFill(polygonList: Point[][], o: ResolvedOptions): OpSet {
       p1 = line[1];
       p2 = line[0];
     }
-    const alpha = Math.atan((p2[1] - p1[1]) / (p2[0] - p1[0]));
+    const alpha = atan((p2[1] - p1[1]) / (p2[0] - p1[0]));
     for (let i = 0; i < count; i++) {
       const lstart = i * 2 * zo;
       const lend = (i + 1) * 2 * zo;
-      const dz = Math.sqrt(2 * Math.pow(zo, 2));
-      const start: Point = [p1[0] + lstart * Math.cos(alpha), p1[1] + lstart * Math.sin(alpha)];
-      const end: Point = [p1[0] + lend * Math.cos(alpha), p1[1] + lend * Math.sin(alpha)];
+      const dz = Math.sqrt(2 * square(zo));
+      const start: Point = [p1[0] + lstart * cos(alpha), p1[1] + lstart * sin(alpha)];
+      const end: Point = [p1[0] + lend * cos(alpha), p1[1] + lend * sin(alpha)];
       const middle: Point = [
-        start[0] + dz * Math.cos(alpha + Math.PI / 4),
-        start[1] + dz * Math.sin(alpha + Math.PI / 4),
+        start[0] + dz * cos(alpha + Math.PI / 4),
+        start[1] + dz * sin(alpha + Math.PI / 4),
       ];
       ops.push(
         ...doubleLineFillOps(start[0], start[1], middle[0], middle[1], o),

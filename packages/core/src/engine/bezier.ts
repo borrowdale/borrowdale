@@ -3,13 +3,14 @@
 
 import { charge } from './budget.js';
 import type { Point } from './core.js';
+import { square } from './math.js';
 
 function distance(p1: Point, p2: Point): number {
   return Math.sqrt(distanceSq(p1, p2));
 }
 
 function distanceSq(p1: Point, p2: Point): number {
-  return Math.pow(p1[0] - p2[0], 2) + Math.pow(p1[1] - p2[1], 2);
+  return square(p1[0] - p2[0]) + square(p1[1] - p2[1]);
 }
 
 function distanceToSegmentSq(p: Point, v: Point, w: Point): number {

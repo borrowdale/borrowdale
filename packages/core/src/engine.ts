@@ -7,12 +7,7 @@ import type { Shape, ShapeKind, SketchPath } from './types.js';
 
 export type EngineOptions = Partial<Omit<ResolvedOptions, 'randomizer'>>;
 
-/**
- * Coordinates are rounded to this many decimals. Different JavaScript engines (and V8 versions)
- * can disagree in the last bit of Math.sin/cos; rounding hides that in the coordinates. It does
- * not stop such a difference changing a dash or zigzag count (see the README). It also keeps the
- * markup small.
- */
+/** Coordinates are rounded to this many decimals, which keeps the markup small. */
 const DECIMALS = 2;
 
 // Kinds whose solid fill uses the even-odd rule, as rough.js's canvas renderer did. Its SVG renderer

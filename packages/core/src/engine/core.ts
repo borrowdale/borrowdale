@@ -1,6 +1,8 @@
 // Ported from rough.js 4.6.6 (src/core.ts, src/geometry.ts, src/math.ts).
 // MIT License, Copyright (c) 2019 Preet Shihn. See THIRD_PARTY_NOTICES.md.
 
+import { square } from './math.js';
+
 export type Point = [number, number];
 export type Line = [Point, Point];
 
@@ -68,7 +70,7 @@ export const DEFAULT_OPTIONS: ResolvedOptions = {
 export function lineLength(line: Line): number {
   const p1 = line[0];
   const p2 = line[1];
-  return Math.sqrt(Math.pow(p1[0] - p2[0], 2) + Math.pow(p1[1] - p2[1], 2));
+  return Math.sqrt(square(p1[0] - p2[0]) + square(p1[1] - p2[1]));
 }
 
 // mulberry32, in place of rough.js's LCG, which had degenerate seeds (2^30 gives a constant 0.5)

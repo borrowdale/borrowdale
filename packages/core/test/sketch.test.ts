@@ -111,6 +111,7 @@ describe('sketch', () => {
     ['a seed that is an object', rectangle, { seed: { a: 1 } }, 'seed must be a string or a number, got [object Object]'],
     ['a negative roughness', wave, { fill: 'red', roughness: -1 }, 'roughness must be a number from 0 to 10, got -1'],
     ['a bowing above 10', rectangle, { bowing: 11 }, 'bowing must be a number from 0 to 10, got 11'],
+    ['a hachure angle too large for the engine trigonometry', rectangle, { fill: 'red', hachureAngle: 1e300 }, 'hachureAngle must be a finite number within ±1000000, got 1e+300'],
     ['a kind that is missing', { x: 0 }, {}, 'Unknown shape kind: undefined'],
   ])('rejects %s with a named error', (_case, shape, options, message) => {
     expect(() => sketch(shape as Shape, options as SketchOptions)).toThrow(message);
