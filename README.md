@@ -13,27 +13,32 @@ industry was found.
 |---|---|
 | [`@borrowdale/core`](packages/core) | Deterministic hand-drawn shapes for SVG and canvas. Framework-agnostic, SSR-safe |
 | [`@borrowdale/fills`](packages/fills) | Hand-drawn pattern fills and backgrounds |
+| [`@borrowdale/text`](packages/text) | Hand-written text for SVG and canvas, measured with no DOM |
 
-Planned: `@borrowdale/text`, `@borrowdale/svg`, `@borrowdale/charts`, `@borrowdale/react`,
+Planned: `@borrowdale/svg`, `@borrowdale/charts`, `@borrowdale/react`,
 `@borrowdale/elements`.
 
 ## Development
 
 ```sh
 npm ci
-npx playwright-core install chromium-headless-shell   # once: the parity test renders in Chromium
+npx playwright-core install chromium-headless-shell   # once: the parity tests render in Chromium
 npm run build
 npm test
 npm run typecheck
 npm run example
+npm run example:text
 npm run goldens   # re-record golden drawings after a deliberate output change
+npm run fonts     # regenerate the bundled font modules from the font files
 ```
 
-`npm test` includes a parity test that draws every `@borrowdale/core` golden in headless Chromium
-and requires the output to match Node's byte for byte. It fails, rather than skips, when Chromium
-is not installed. Node and Chromium both run V8, so this does not exercise another JavaScript
-engine.
+`npm test` includes parity tests that draw every `@borrowdale/core` and `@borrowdale/text` golden
+in headless Chromium and require the output to match Node's byte for byte. For text they also
+require the width Chromium draws to match the measured width. They fail, rather than skip, when
+Chromium is not installed. Node and Chromium both run V8, so this does not exercise another
+JavaScript engine.
 
 ## License
 
-MIT
+MIT, except the Excalifont files bundled in `packages/text`, which are licensed under the SIL Open
+Font License 1.1 (see [`packages/text/OFL.txt`](packages/text/OFL.txt)).
