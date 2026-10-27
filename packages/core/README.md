@@ -67,8 +67,11 @@ Use the same `@borrowdale/core` version on the server and in the browser.
 An option set to `undefined` counts as not set. Anything else is checked, and a value that cannot
 be drawn throws an error naming the field or option, and the value where one was given:
 
-- Every number a shape needs must be present and finite and within ±1,000,000, including every
-  number inside `path` data. Sizes must not be negative. Numbers given as strings are rejected.
+- Every number a shape needs must be present and finite and within ±1,000,000. Sizes must not be
+  negative. Numbers given as strings are rejected.
+- Every number in `path` data must be within that range as written, and again once relative
+  coordinates are resolved and arcs are turned into curves. A large arc's curve control points can
+  lie outside the drawn shape, so a path can be rejected even when everything it draws is in range.
 - `points` must be an array of `[x, y]` pairs: at least 3 for `polygon`, 2 for `linearPath` and
   `curve`. An arc's `stop` must be greater than its `start`, and `closed`, when given, a boolean.
 - Unknown option names are rejected (`Unknown option: roughnes`). `roughness` and `bowing` must be
