@@ -14,6 +14,8 @@ type Case = { name: string; shape: Shape; options: SketchOptions };
 type Core = { sketch: (shape: Shape, options: SketchOptions) => Sketch };
 
 const INSTALL = 'npx playwright-core install chromium-headless-shell';
+const cases = corpus as unknown as Case[];
+const expected = goldens as unknown as Record<string, Sketch>;
 
 let browser: Browser | undefined;
 let rendered: Record<string, Sketch> = {};
@@ -30,7 +32,14 @@ async function bundleSource(): Promise<string> {
       lib: { entry: fileURLToPath(new URL('../src/index.ts', import.meta.url)), formats: ['iife'], name: 'borrowdale' },
     },
   });
-  return ((result as Rolldown.RolldownOutput[])[0]!.output[0] as Rolldown.OutputChunk).code;
+  const outputs: Rolldown.RolldownOutput[] = Array.isArray(result) ? result : [result as Rolldown.RolldownOutput];
+  const entry = outputs
+    .flatMap(({ output }) => output)
+    .find((file): file is Rolldown.OutputChunk => file.type === 'chunk' && file.isEntry);
+  if (!entry) {
+    throw new Error('The parity test could not find the bundled entry chunk in the vite build output.');
+  }
+  return entry.code;
 }
 
 async function launch(): Promise<Browser> {
@@ -47,11 +56,11 @@ beforeAll(async () => {
   const page = await browser.newPage();
   await page.addScriptTag({ content: code });
   rendered = await page.evaluate(
-    (cases: Case[]) => {
+    (entries: Case[]) => {
       const { sketch } = (globalThis as unknown as { borrowdale: Core }).borrowdale;
-      return Object.fromEntries(cases.map((entry) => [entry.name, sketch(entry.shape, entry.options)]));
+      return Object.fromEntries(entries.map((entry) => [entry.name, sketch(entry.shape, entry.options)]));
     },
-    corpus as unknown as Case[],
+    cases,
   );
 }, 120_000);
 
@@ -60,7 +69,11 @@ afterAll(async () => {
 });
 
 describe('Chromium parity', () => {
-  it('draws every golden byte for byte in Chromium', () => {
-    expect(rendered).toEqual(goldens);
+  it('draws exactly the corpus in Chromium', () => {
+    expect(Object.keys(rendered)).toEqual(Object.keys(expected));
+  });
+
+  it.each(cases)('$name is byte for byte the same in Chromium', ({ name }) => {
+    expect(rendered[name]).toEqual(expected[name]);
   });
 });

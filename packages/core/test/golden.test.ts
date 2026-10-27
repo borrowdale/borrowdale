@@ -1,7 +1,8 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { sketch, type Shape, type Sketch, type SketchOptions } from '@borrowdale/core';
 import corpus from './golden/corpus.json' with { type: 'json' };
 import goldens from './golden/goldens.json' with { type: 'json' };
+import './support/forbid-unportable-math.js';
 
 // Recorded from rough.js 4.6.6, then re-recorded from this engine after each deliberate change.
 // See scripts/record-goldens.mjs for how to add cases (from rough.js) and how to re-record after a
@@ -9,22 +10,6 @@ import goldens from './golden/goldens.json' with { type: 'json' };
 const cases = corpus as unknown as { name: string; shape: Shape; options: SketchOptions }[];
 const expected = goldens as unknown as Record<string, Sketch>;
 const names = cases.map((entry) => entry.name);
-
-// Every drawing must come from its seed and the engine's own arithmetic alone. Math.random() is not
-// seeded, and these functions may differ in the last bit between JavaScript engines.
-const UNPORTABLE = ['random', 'sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'atan2', 'pow', 'exp', 'log', 'hypot', 'cbrt'] as const;
-
-beforeEach(() => {
-  for (const name of UNPORTABLE) {
-    vi.spyOn(Math, name).mockImplementation(() => {
-      throw new Error(`Math.${name}() called while drawing`);
-    });
-  }
-});
-
-afterEach(() => {
-  vi.restoreAllMocks();
-});
 
 describe('golden drawings', () => {
   it('has exactly one golden per corpus case, in corpus order', () => {
