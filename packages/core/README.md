@@ -28,8 +28,8 @@ the shape itself.
 
 The engine never calls `Math.random`, and computes sine, cosine and arctangent with plain
 arithmetic instead of `Math.sin` and friends, whose last bit can differ between JavaScript engines.
-The test suite draws every reference drawing in Node.js and in Chromium and requires identical
-output. Coordinates are rounded to two decimals, which keeps the markup small.
+The test suite draws every reference drawing of this package in Node.js and in Chromium and
+requires identical output. Coordinates are rounded to two decimals, which keeps the markup small.
 
 The drawing depends on the exact version of the stroke engine, which ships inside this package.
 Use the same `@borrowdale/core` version on the server and in the browser.
@@ -54,7 +54,7 @@ Use the same `@borrowdale/core` version on the server and in the browser.
 |---|---|
 | `stroke`, `strokeWidth` | outline |
 | `fill`, `fillStyle` (`hachure`, `solid`, `zigzag`, `cross-hatch`, `dashed`, `zigzag-line`, `dots`) | fill |
-| `fillWeight`, `hachureAngle` (default −41°; use 41 to mirror), `hachureGap` | line-based fills |
+| `fillWeight`, `hachureAngle` (default −41°; use 41 to mirror), `hachureGap` | line-based fills; `dots` uses `fillWeight` as the dot size and `hachureGap` as the spacing, and ignores `hachureAngle` |
 | `dashOffset`, `dashGap` | `dashed` fill |
 | `zigzagOffset` | `zigzag-line` fill |
 | `curveTightness` | `curve` shape |
@@ -62,7 +62,7 @@ Use the same `@borrowdale/core` version on the server and in the browser.
 | `roughness`, `bowing` | everything |
 
 An option set to `undefined` counts as not set. Anything else is checked, and a value that cannot
-be drawn throws an error naming the field and the value:
+be drawn throws an error naming the field or option, and the value where one was given:
 
 - Every number a shape needs must be present and finite and within ±1,000,000, including every
   number inside `path` data. Sizes must not be negative. Numbers given as strings are rejected.

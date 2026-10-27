@@ -2,8 +2,8 @@
 // and points-on-path 0.2.1 (src/index.ts). MIT License, Copyright (c) 2020 Preet Shihn.
 // See THIRD_PARTY_NOTICES.md.
 
-import { charge } from './budget.js';
 import { pointsOnBezierCurves, simplify } from './bezier.js';
+import { charge } from './budget.js';
 import { MAX_COORDINATE, type Point } from './core.js';
 import { asin, cos, sin, tan } from './math.js';
 
@@ -78,7 +78,7 @@ export function parsePath(d: string): Segment[] {
       paramsCount = PARAMS[mode]!;
       // rough.js loops forever here: a command with no parameters (Z) never advances the index.
       if (paramsCount === 0) {
-        throw new Error(`Path data: a number cannot follow ${mode}`);
+        throw new Error(`Invalid shape: path.d: a number cannot follow ${mode}`);
       }
     } else {
       index++;
@@ -485,8 +485,13 @@ function arcToCubicCurves(
 
 /** Path text parsed into absolute M, L, C and Z segments, every number within ±MAX_COORDINATE. */
 export function normalizedPath(path: string): Segment[] {
-  // Checked after normalizing, when relative coordinates and arcs have become absolute.
-  const segments = normalize(absolutize(parsePath(path)));
+  // Checked as written, which covers arc radii and rotation before arcs become curves, and again
+  // once relative coordinates and arcs have become absolute.
+  const parsed = assertWithinRange(parsePath(path));
+  return assertWithinRange(normalize(absolutize(parsed)));
+}
+
+function assertWithinRange(segments: Segment[]): Segment[] {
   for (const { data } of segments) {
     for (const value of data) {
       if (!(Number.isFinite(value) && Math.abs(value) <= MAX_COORDINATE)) {

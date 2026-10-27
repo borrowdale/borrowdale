@@ -7,16 +7,17 @@ const MAX_ROUGHNESS = 10;
 // Degrees. The engine's own trigonometry reduces arguments only up to about 1.6e6 radians.
 const MAX_ANGLE = 1e6;
 
-type FieldRule = 'coordinate' | 'size';
+// Both must be finite and within ±MAX_COORDINATE; a size must also not be negative.
+type FieldRule = 'number' | 'size';
 
 // Every numeric field each kind requires. `satisfies` makes a new kind fail to compile until its
 // fields are listed here.
 const SHAPE_FIELDS = {
-  line: { x1: 'coordinate', y1: 'coordinate', x2: 'coordinate', y2: 'coordinate' },
-  rectangle: { x: 'coordinate', y: 'coordinate', width: 'size', height: 'size' },
-  ellipse: { cx: 'coordinate', cy: 'coordinate', width: 'size', height: 'size' },
-  circle: { cx: 'coordinate', cy: 'coordinate', diameter: 'size' },
-  arc: { cx: 'coordinate', cy: 'coordinate', width: 'size', height: 'size', start: 'coordinate', stop: 'coordinate' },
+  line: { x1: 'number', y1: 'number', x2: 'number', y2: 'number' },
+  rectangle: { x: 'number', y: 'number', width: 'size', height: 'size' },
+  ellipse: { cx: 'number', cy: 'number', width: 'size', height: 'size' },
+  circle: { cx: 'number', cy: 'number', diameter: 'size' },
+  arc: { cx: 'number', cy: 'number', width: 'size', height: 'size', start: 'number', stop: 'number' },
   polygon: {},
   linearPath: {},
   curve: {},
@@ -33,13 +34,16 @@ interface OptionRule {
   message?: (value: unknown) => string;
 }
 
-const isWithin = (value: unknown, max: number): value is number =>
-  typeof value === 'number' && Number.isFinite(value) && Math.abs(value) <= max;
+function isWithin(value: unknown, max: number): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && Math.abs(value) <= max;
+}
 
-const range = (min: number, max: number, integer = false): OptionRule => ({
-  ok: (value) => typeof value === 'number' && (!integer || Number.isInteger(value)) && value >= min && value <= max,
-  expected: `${integer ? 'an integer' : 'a number'} from ${min} to ${max}`,
-});
+function range(min: number, max: number, integer = false): OptionRule {
+  return {
+    ok: (value) => typeof value === 'number' && (!integer || Number.isInteger(value)) && value >= min && value <= max,
+    expected: `${integer ? 'an integer' : 'a number'} from ${min} to ${max}`,
+  };
+}
 
 const STRING: OptionRule = { ok: (value) => typeof value === 'string', expected: 'a string' };
 const FINITE: OptionRule = { ok: Number.isFinite, expected: 'a finite number' };
@@ -103,7 +107,7 @@ function assertShape(shape: Shape): void {
   switch (shape.kind) {
     case 'arc':
       if (!(shape.stop > shape.start)) {
-        throw new Error('Invalid shape: arc.stop must be greater than arc.start');
+        throw new Error(`Invalid shape: arc.stop must be greater than arc.start, got start ${shape.start}, stop ${shape.stop}`);
       }
       if (shape.closed !== undefined && typeof shape.closed !== 'boolean') {
         throw new Error(`Invalid shape: arc.closed must be a boolean, got ${show(shape.closed)}`);

@@ -8,10 +8,10 @@ const triangle: Shape = { kind: 'polygon', points: [[0, 0], [10, 0], [5, 8]] };
 const trianglePath: Shape = { kind: 'path', d: 'M0 0 L10 0 L5 8 Z' };
 const closedArc: Shape = { kind: 'arc', cx: 5, cy: 5, width: 10, height: 10, start: 0, stop: 2, closed: true };
 
-// Inputs whose drawing work exceeds the per-sketch budget. Built once, outside the tests.
+// Inputs whose drawing work exceeds the per-sketch budget.
 const TOO_COMPLEX = 'Drawing too complex (more than 200000 operations)';
 const manyPoints: [number, number][] = Array.from({ length: 1e5 }, (_, i) => [Math.cos(i) * 500, Math.sin(i) * 500]);
-const square: Shape = { kind: 'rectangle', x: 0, y: 0, width: 10, height: 10 };
+const smallSquare: Shape = { kind: 'rectangle', x: 0, y: 0, width: 10, height: 10 };
 const largestSquare: Shape = { kind: 'rectangle', x: -5e5, y: -5e5, width: 1e6, height: 1e6 };
 
 afterEach(() => {
@@ -111,7 +111,7 @@ describe('validation', () => {
     ['a NaN coordinate', { kind: 'line', x1: Number.NaN, y1: 0, x2: 1, y2: 1 }, {}, 'line.x1 must be a finite number within ±1000000, got NaN'],
     ['a huge size', { kind: 'ellipse', cx: 0, cy: 0, width: 1e9, height: 10 }, {}, 'ellipse.width must be a finite number within ±1000000, got 1000000000'],
     ['a negative size', { kind: 'rectangle', x: 0, y: 0, width: -5, height: 5 }, {}, 'rectangle.width must not be negative, got -5'],
-    ['an empty arc', { kind: 'arc', cx: 5, cy: 5, width: 10, height: 10, start: 1, stop: 1, closed: true }, { fill: 'red' }, 'arc.stop must be greater than arc.start'],
+    ['an empty arc', { kind: 'arc', cx: 5, cy: 5, width: 10, height: 10, start: 1, stop: 1, closed: true }, { fill: 'red' }, 'arc.stop must be greater than arc.start, got start 1, stop 1'],
     ['an infinite arc start', { kind: 'arc', cx: 5, cy: 5, width: 10, height: 10, start: -Infinity, stop: 1 }, {}, 'arc.start must be a finite number within ±1000000, got -Infinity'],
     ['an arc start too far from zero', { kind: 'arc', cx: 5, cy: 5, width: 10, height: 10, start: -1e17, stop: 1 }, {}, 'arc.start must be a finite number within ±1000000, got -100000000000000000'],
     ['a non-boolean arc closed flag', { kind: 'arc', cx: 0, cy: 0, width: 4, height: 4, start: 0, stop: 1, closed: 'yes' }, {}, 'arc.closed must be a boolean, got "yes"'],
@@ -122,8 +122,10 @@ describe('validation', () => {
     ['a point with three numbers', { kind: 'polygon', points: [[0, 0], [1, 0], [0, 1, 2]] }, {}, 'polygon.points[2] must be an [x, y] pair, got 0,1,2'],
     ['a NaN point', { kind: 'linearPath', points: [[0, 0], [Number.NaN, 1]] }, {}, 'linearPath.points[1] must be a finite number within ±1000000, got NaN'],
     ['path data that is not a string', { kind: 'path', d: 5 }, {}, 'path.d must be a string, got 5'],
-    ['a number after Z', { kind: 'path', d: 'M0 0 Z 1' }, {}, 'Path data: a number cannot follow Z'],
+    ['a number after Z', { kind: 'path', d: 'M0 0 Z 1' }, {}, 'path.d: a number cannot follow Z'],
     ['a huge number inside path data', { kind: 'path', d: 'M0 0 S1 1 2e20 0' }, {}, 'path.d contains 200000000000000000000, outside ±1000000'],
+    ['a huge arc rotation inside path data', { kind: 'path', d: 'M0 0 A10 10 1e9 0 1 20 20' }, {}, 'path.d contains 1000000000, outside ±1000000'],
+    ['a huge arc radius inside path data', { kind: 'path', d: 'M0 0 A1e300 10 0 0 1 20 20' }, {}, 'path.d contains 1e+300, outside ±1000000'],
     ['an unknown option', rectangle, { roughnes: 2 }, 'Unknown option: roughnes'],
     ['an engine-internal option', rectangle, { maxRandomnessOffset: 1e300 }, 'Unknown option: maxRandomnessOffset'],
     ['a stroke that is not a string', rectangle, { stroke: 5 }, 'stroke must be a string, got 5'],
@@ -160,16 +162,16 @@ describe('validation', () => {
 
 describe('work budget', () => {
   it.each<[string, Shape, SketchOptions]>([
-    ['a dashed fill with no dash length', square, { fill: 'red', fillStyle: 'dashed', dashOffset: 0, dashGap: 0 }],
-    ['a zigzag-line fill with no zigzag offset', square, { fill: 'red', fillStyle: 'zigzag-line', zigzagOffset: 0 }],
+    ['a dashed fill with no dash length', smallSquare, { fill: 'red', fillStyle: 'dashed', dashOffset: 0, dashGap: 0 }],
+    ['a zigzag-line fill with no zigzag offset', smallSquare, { fill: 'red', fillStyle: 'zigzag-line', zigzagOffset: 0 }],
     ['a hachure fill scanning a huge height for few lines', largestSquare, { fill: 'red', hachureGap: 1e6, roughness: 0 }],
     ['a hachure fill of the largest shape', largestSquare, { fill: 'red' }],
     ['a zigzag fill of the largest shape', largestSquare, { fill: 'red', fillStyle: 'zigzag' }],
     ['a cross-hatch fill of the largest shape', largestSquare, { fill: 'red', fillStyle: 'cross-hatch' }],
     ['a dots fill of the largest shape', largestSquare, { fill: 'red', fillStyle: 'dots' }],
-    ['a dots fill with huge dots', square, { fill: 'red', fillStyle: 'dots', fillWeight: 1e300 }],
-    ['a smooth dots fill with huge dots', square, { fill: 'red', fillStyle: 'dots', fillWeight: 1e300, roughness: 0 }],
-    ['a dots fill with dots sized by a huge stroke width', square, { fill: 'red', fillStyle: 'dots', strokeWidth: 1e300, hachureGap: 2 }],
+    ['a dots fill with huge dots', smallSquare, { fill: 'red', fillStyle: 'dots', fillWeight: 1e300 }],
+    ['a smooth dots fill with huge dots', smallSquare, { fill: 'red', fillStyle: 'dots', fillWeight: 1e300, roughness: 0 }],
+    ['a dots fill with dots sized by a huge stroke width', smallSquare, { fill: 'red', fillStyle: 'dots', strokeWidth: 1e300, hachureGap: 2 }],
     ['a huge ellipse at the most curve steps', { kind: 'ellipse', cx: 0, cy: 0, width: 1e6, height: 1e6 }, { curveStepCount: 1000 }],
     ['an arc at the most curve steps', { kind: 'arc', cx: 0, cy: 0, width: 1e6, height: 1e6, start: 0, stop: 6, closed: true }, { fill: 'red', curveStepCount: 1000 }],
     ['a polygon of 100,000 points with a solid fill', { kind: 'polygon', points: manyPoints }, { fill: 'red', fillStyle: 'solid' }],
