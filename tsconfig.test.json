@@ -6,7 +6,8 @@
     "declarationMap": false,
     "noEmit": true,
     "types": [],
-    "customConditions": ["@borrowdale/source"]
+    "customConditions": ["@borrowdale/source"],
+    "resolveJsonModule": true
   },
   "include": ["packages/*/src", "packages/*/test", "vitest.config.ts"]
 }

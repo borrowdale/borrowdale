@@ -10,7 +10,8 @@
     "build": "tsc -b",
     "typecheck": "tsc -b && tsc -p tsconfig.test.json",
     "test": "vitest run",
-    "example": "node apps/examples/core-and-fills.mjs"
+    "example": "node apps/examples/core-and-fills.mjs",
+    "goldens": "npm run build && node scripts/record-goldens.mjs"
   },
   "devDependencies": {
     "@changesets/cli": "^3.0.3",
