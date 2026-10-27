@@ -147,6 +147,22 @@ describe('sketch', () => {
     expect(sketch(shape, { fill })).toMatchObject({ paths: [{ fill: 'none', stroke: '#000' }] });
   });
 
+  it.each<[string, Shape]>([
+    ['polygon', { kind: 'polygon', points: [[0, 0], [10, 0], [5, 8]] }],
+    ['curve', wave],
+    ['path', { kind: 'path', d: 'M0 0 L10 0 L5 8 Z' }],
+  ])('fills a %s with the even-odd rule', (_kind, shape) => {
+    expect(sketch(shape, { fill: 'red', fillStyle: 'solid' }).paths[0]).toMatchObject({ fill: 'red', fillRule: 'evenodd' });
+  });
+
+  it.each<[string, Shape]>([
+    ['rectangle', rectangle],
+    ['ellipse', { kind: 'ellipse', cx: 5, cy: 5, width: 10, height: 6 }],
+    ['closed arc', { kind: 'arc', cx: 5, cy: 5, width: 10, height: 10, start: 0, stop: 2, closed: true }],
+  ])('leaves the default fill rule on a %s', (_kind, shape) => {
+    expect(sketch(shape, { fill: 'red', fillStyle: 'solid' }).paths[0]).not.toHaveProperty('fillRule');
+  });
+
   it('passes the stroke style through', () => {
     expect(sketch(rectangle, { stroke: '#333', strokeWidth: 2 }).paths[0]).toMatchObject({
       stroke: '#333',

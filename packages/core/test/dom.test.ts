@@ -4,6 +4,7 @@ import { appendSketch, drawSketch, type Sketch } from '@borrowdale/core';
 
 const outlined: Sketch = { paths: [{ d: 'M0 0 L1 1', stroke: '#000', strokeWidth: 2, fill: 'none' }] };
 const filled: Sketch = { paths: [{ d: 'M0 0 L1 1 Z', stroke: 'none', strokeWidth: 0, fill: 'red' }] };
+const evenOdd: Sketch = { paths: [{ d: 'M0 0 L1 1 Z', stroke: 'none', strokeWidth: 0, fill: 'red', fillRule: 'evenodd' }] };
 const twoStrokes: Sketch = {
   paths: [
     { d: 'M0 0 L1 1', stroke: '#111', strokeWidth: 1, fill: 'none' },
@@ -43,6 +44,22 @@ describe('appendSketch', () => {
     expect(path?.getAttribute('stroke')).toBe('#000');
     expect(path?.getAttribute('fill')).toBe('none');
     expect(svg.childElementCount).toBe(1);
+  });
+
+  it('sets the fill rule attribute when a path has one', () => {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+
+    const [path] = appendSketch(svg, evenOdd);
+
+    expect(path?.getAttribute('fill-rule')).toBe('evenodd');
+  });
+
+  it('leaves the fill rule attribute off otherwise', () => {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+
+    const [path] = appendSketch(svg, filled);
+
+    expect(path?.hasAttribute('fill-rule')).toBe(false);
   });
 
   it('appends one element per path, in order', () => {
@@ -86,6 +103,15 @@ describe('drawSketch', () => {
     expect(context.stroke).toHaveBeenCalledTimes(2);
   });
 
+  it('fills with the even-odd rule when the path asks for it', () => {
+    vi.stubGlobal('Path2D', RecordingPath2D);
+    const context = fakeContext();
+
+    drawSketch(context as unknown as CanvasRenderingContext2D, evenOdd);
+
+    expect(context.fill).toHaveBeenCalledWith(new RecordingPath2D('M0 0 L1 1 Z'), 'evenodd');
+  });
+
   it('saves before drawing and restores after', () => {
     vi.stubGlobal('Path2D', RecordingPath2D);
     const context = fakeContext();
@@ -107,7 +133,7 @@ describe('drawSketch', () => {
 
     drawSketch(context as unknown as CanvasRenderingContext2D, filled);
 
-    expect(context.fill).toHaveBeenCalledWith(new RecordingPath2D('M0 0 L1 1 Z'));
+    expect(context.fill).toHaveBeenCalledWith(new RecordingPath2D('M0 0 L1 1 Z'), 'nonzero');
     expect(context.stroke).not.toHaveBeenCalled();
     expect(context.fillStyle).toBe('red');
   });

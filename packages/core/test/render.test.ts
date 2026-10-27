@@ -34,6 +34,12 @@ describe('toSvgPaths', () => {
     );
   });
 
+  it('writes the fill rule when a path has one', () => {
+    expect(toSvgPaths({ paths: [{ d: 'M0 0', stroke: 'none', strokeWidth: 0, fill: 'red', fillRule: 'evenodd' }] })).toBe(
+      '<path d="M0 0" stroke="none" stroke-width="0" fill="red" fill-rule="evenodd"/>',
+    );
+  });
+
   it('renders an empty sketch as nothing', () => {
     expect(toSvgPaths({ paths: [] })).toBe('');
   });

@@ -36,6 +36,7 @@ export function toSvgPaths(sketch: Sketch): string {
         stroke: path.stroke,
         'stroke-width': path.strokeWidth,
         fill: path.fill,
+        ...(path.fillRule ? { 'fill-rule': path.fillRule } : {}),
       }),
     )
     .join('');
@@ -59,6 +60,9 @@ export function appendSketch(parent: Element, sketch: Sketch): SVGPathElement[] 
     element.setAttribute('stroke', path.stroke);
     element.setAttribute('stroke-width', String(path.strokeWidth));
     element.setAttribute('fill', path.fill);
+    if (path.fillRule) {
+      element.setAttribute('fill-rule', path.fillRule);
+    }
     parent.appendChild(element);
     return element;
   });
@@ -71,7 +75,7 @@ export function drawSketch(context: CanvasRenderingContext2D, sketch: Sketch): v
     context.save();
     if (path.fill !== 'none') {
       context.fillStyle = path.fill;
-      context.fill(outline);
+      context.fill(outline, path.fillRule ?? 'nonzero');
     }
     if (path.stroke !== 'none') {
       context.strokeStyle = path.stroke;

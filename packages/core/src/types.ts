@@ -71,6 +71,8 @@ export interface SketchPath {
   stroke: string;
   strokeWidth: number;
   fill: string;
+  /** 'evenodd' on the solid fill of polygons, curves and paths: self-intersections leave holes. */
+  fillRule?: 'evenodd';
 }
 
 export interface Sketch {
