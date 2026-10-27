@@ -83,6 +83,11 @@ function assemble(o: ResolvedOptions, outline: OpSet, fill?: () => OpSet | undef
   return sets;
 }
 
+// One rule for every kind: rough.js used three (and drew invisible fills for 'none').
+function hasFill(o: ResolvedOptions): boolean {
+  return !!o.fill && o.fill !== NOS && o.fill !== 'transparent';
+}
+
 function polygonFill(points: Point[], o: ResolvedOptions): OpSet {
   return o.fillStyle === 'solid' ? solidFillPolygon([points], o) : patternFillPolygons([points], o);
 }
@@ -95,12 +100,12 @@ function rectangle(x: number, y: number, width: number, height: number, o: Resol
     [x + width, y + height],
     [x, y + height],
   ];
-  return assemble(o, outline, o.fill ? () => polygonFill(corners(), o) : undefined);
+  return assemble(o, outline, hasFill(o) ? () => polygonFill(corners(), o) : undefined);
 }
 
 function polygon(points: Point[], o: ResolvedOptions): OpSet[] {
   const outline = linearPathOps(points, true, o);
-  return assemble(o, outline, o.fill ? () => polygonFill(points, o) : undefined);
+  return assemble(o, outline, hasFill(o) ? () => polygonFill(points, o) : undefined);
 }
 
 function ellipse(x: number, y: number, width: number, height: number, o: ResolvedOptions): OpSet[] {
@@ -114,7 +119,7 @@ function ellipse(x: number, y: number, width: number, height: number, o: Resolve
     }
     return patternFillPolygons([ellipseResponse.estimatedPoints], o);
   };
-  return assemble(o, ellipseResponse.opset, o.fill ? fill : undefined);
+  return assemble(o, ellipseResponse.opset, hasFill(o) ? fill : undefined);
 }
 
 function arc(
@@ -138,7 +143,7 @@ function arc(
     }
     return patternFillArc(x, y, width, height, start, stop, o);
   };
-  return assemble(o, outline, closed && o.fill ? fill : undefined);
+  return assemble(o, outline, closed && hasFill(o) ? fill : undefined);
 }
 
 function curve(points: Point[], o: ResolvedOptions): OpSet[] {
@@ -164,7 +169,7 @@ function curve(points: Point[], o: ResolvedOptions): OpSet[] {
     }
     return polyPoints.length ? patternFillPolygons([polyPoints], o) : undefined;
   };
-  return assemble(o, outline, o.fill && o.fill !== NOS ? fill : undefined);
+  return assemble(o, outline, hasFill(o) ? fill : undefined);
 }
 
 function path(d: string, o: ResolvedOptions): OpSet[] {
@@ -175,7 +180,6 @@ function path(d: string, o: ResolvedOptions): OpSet[] {
   // literal text "/(ss)/g" ("\s" in a string literal is just "s"). Kept for byte-identical output.
   d = (d || '').replace(/\n/g, ' ').replace(/(-\s)/g, '-').replace('/(ss)/g', ' ');
 
-  const hasFill = o.fill && o.fill !== 'transparent' && o.fill !== NOS;
   const distance = (1 + o.roughness) / 2;
   const sets = pointsOnPath(d, 1, distance);
   const outline = svgPath(d, o);
@@ -193,7 +197,7 @@ function path(d: string, o: ResolvedOptions): OpSet[] {
     });
     return { type: 'fillPath', ops: mergedShape(fillShape.ops) };
   };
-  return assemble(o, outline, hasFill ? fill : undefined);
+  return assemble(o, outline, hasFill(o) ? fill : undefined);
 }
 
 

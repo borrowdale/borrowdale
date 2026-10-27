@@ -130,6 +130,23 @@ describe('sketch', () => {
     ]);
   });
 
+  it.each<[string, Shape, string]>([
+    ['rectangle', rectangle, 'none'],
+    ['rectangle', rectangle, 'transparent'],
+    ['polygon', { kind: 'polygon', points: [[0, 0], [10, 0], [5, 8]] }, 'none'],
+    ['polygon', { kind: 'polygon', points: [[0, 0], [10, 0], [5, 8]] }, 'transparent'],
+    ['ellipse', { kind: 'ellipse', cx: 5, cy: 5, width: 10, height: 6 }, 'none'],
+    ['ellipse', { kind: 'ellipse', cx: 5, cy: 5, width: 10, height: 6 }, 'transparent'],
+    ['closed arc', { kind: 'arc', cx: 5, cy: 5, width: 10, height: 10, start: 0, stop: 2, closed: true }, 'none'],
+    ['closed arc', { kind: 'arc', cx: 5, cy: 5, width: 10, height: 10, start: 0, stop: 2, closed: true }, 'transparent'],
+    ['curve', wave, 'none'],
+    ['curve', wave, 'transparent'],
+    ['path', { kind: 'path', d: 'M0 0 L10 0 L5 8 Z' }, 'none'],
+    ['path', { kind: 'path', d: 'M0 0 L10 0 L5 8 Z' }, 'transparent'],
+  ])('draws only the outline of a %s with fill %s', (_kind, shape, fill) => {
+    expect(sketch(shape, { fill })).toMatchObject({ paths: [{ fill: 'none', stroke: '#000' }] });
+  });
+
   it('passes the stroke style through', () => {
     expect(sketch(rectangle, { stroke: '#333', strokeWidth: 2 }).paths[0]).toMatchObject({
       stroke: '#333',
