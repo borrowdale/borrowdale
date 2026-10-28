@@ -1,0 +1,27 @@
+export { layoutChart } from './layout.js';
+export { appendChart, drawChart, toSvgChart, type SvgChartOptions } from './render.js';
+export type {
+  AreaSeries,
+  Axis,
+  BandAxis,
+  BarSeries,
+  BubbleSeries,
+  CartesianAxes,
+  ChartLayout,
+  ChartNode,
+  ChartOptions,
+  ChartSpec,
+  Curve,
+  LegendPosition,
+  LinearAxis,
+  LineSeries,
+  NumberFormat,
+  PieSeries,
+  PieSlice,
+  PolarAxes,
+  RadarSeries,
+  RangeAreaSeries,
+  ScatterSeries,
+  Series,
+  SeriesType,
+} from './types.js';
