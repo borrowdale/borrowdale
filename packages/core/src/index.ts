@@ -1,4 +1,5 @@
 export { sketch } from './sketch.js';
+export { Budget } from './engine/budget.js';
 export { stableKey, toSeed } from './seed.js';
 export {
   appendSketch,

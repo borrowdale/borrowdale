@@ -37,6 +37,8 @@ export type FillStyle = (typeof FILL_STYLES)[number];
 export interface SketchStyle {
   stroke?: string | undefined;
   strokeWidth?: number | undefined;
+  /** Dash and gap lengths along the outline, as in SVG `stroke-dasharray`. Solid when omitted. */
+  strokeLineDash?: readonly number[] | undefined;
   fill?: string | undefined;
   fillStyle?: FillStyle | undefined;
   fillWeight?: number | undefined;
@@ -70,6 +72,8 @@ export interface SketchPath {
   d: string;
   stroke: string;
   strokeWidth: number;
+  /** On outlines drawn with the `strokeLineDash` option: dash and gap lengths. */
+  strokeLineDash?: number[];
   fill: string;
   /** 'evenodd' on the solid fill of polygons, curves and paths: self-intersections leave holes. */
   fillRule?: 'evenodd';

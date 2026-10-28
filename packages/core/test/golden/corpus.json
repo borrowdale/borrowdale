@@ -3514,5 +3514,40 @@
    "height": 24
   },
   "options": {}
+ },
+ {
+  "name": "option/stroke-line-dash",
+  "shape": {
+   "kind": "line",
+   "x1": 2,
+   "y1": 3,
+   "x2": 38,
+   "y2": 27
+  },
+  "options": {
+   "seed": "a",
+   "strokeLineDash": [
+    6,
+    3
+   ]
+  }
+ },
+ {
+  "name": "option/stroke-line-dash-hachure",
+  "shape": {
+   "kind": "rectangle",
+   "x": 2,
+   "y": 2,
+   "width": 36,
+   "height": 24
+  },
+  "options": {
+   "seed": "a",
+   "fill": "#c33",
+   "strokeLineDash": [
+    4,
+    2
+   ]
+  }
  }
 ]

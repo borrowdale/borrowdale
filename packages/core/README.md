@@ -56,6 +56,7 @@ Use the same `@borrowdale/core` version on the server and in the browser.
 | Option | Applies to |
 |---|---|
 | `stroke`, `strokeWidth` | outline |
+| `strokeLineDash` (dash and gap lengths, as in SVG `stroke-dasharray`) | outline; fill lines stay solid |
 | `fill`, `fillStyle` (`hachure`, `solid`, `zigzag`, `cross-hatch`, `dashed`, `zigzag-line`, `dots`) | fill |
 | `fillWeight`, `hachureAngle` (default −41°; use 41 to mirror), `hachureGap` | line-based fills; `dots` uses `fillWeight` as the dot size and `hachureGap` as the spacing, and ignores `hachureAngle` |
 | `dashOffset`, `dashGap` | `dashed` fill |
@@ -68,7 +69,7 @@ An option set to `undefined` counts as not set. Anything else is checked, and a 
 be drawn throws an error naming the field or option, and the value where one was given:
 
 - Every number a shape needs must be present and finite and within ±1,000,000. Sizes must not be
-  negative. Numbers given as strings are rejected.
+  negative. Numbers given as strings are rejected, and the message quotes them (`got "10"`).
 - Every number in `path` data must be within that range as written, and again once relative
   coordinates are resolved and arcs are turned into curves. A large arc's curve control points can
   lie outside the drawn shape, so a path can be rejected even when everything it draws is in range.
@@ -76,12 +77,14 @@ be drawn throws an error naming the field or option, and the value where one was
   `curve`. An arc's `stop` must be greater than its `start`, and `closed`, when given, a boolean.
 - Unknown option names are rejected (`Unknown option: roughnes`). `roughness` and `bowing` must be
   from 0 to 10, `curveTightness` and `curveFitting` from 0 to 1, `curveStepCount` an integer from 1
-  to 1000, and `hachureAngle` within ±1,000,000.
+  to 1000, and `hachureAngle` within ±1,000,000. `strokeLineDash` must be a plain array of 1 to 16
+  lengths from 0 to 1,000,000, with no holes, adding up to at least 1.
 
 Valid input can still describe an enormous amount of work, such as a dashed fill with no dash
 length or path data with a million segments. Each `sketch` call therefore stops after 200,000
 units of drawing work and throws `Drawing too complex (more than 200000 operations)` instead of
-hanging or running out of memory. The budget is coarse, with two known limits:
+hanging or running out of memory. A call given a `Budget` (see below) stops at that budget's limit
+instead. The budget is coarse, with two known limits:
 
 - A drawing just under the budget can still take a few seconds and produce several megabytes of
   path data (for example a fine `zigzag-line` fill over a 3000 × 3000 shape). Set your own time
@@ -89,6 +92,23 @@ hanging or running out of memory. The budget is coarse, with two known limits:
 - A filled shape taller than about 66,000 units can exceed the budget even with a wide
   `hachureGap`, and whether it does depends on the seed. Keep filled shapes smaller, or scale the
   drawing down.
+
+To bound several drawings together, such as every shape of one chart, pass them one `Budget`:
+
+```js
+import { Budget, sketch } from '@borrowdale/core';
+
+const budget = new Budget(400_000);
+const bars = data.map((bar) => sketch(bar, { fill: 'teal' }, budget));
+```
+
+Every call then charges the same budget, and the call that takes the total past `maxOperations`
+throws. `budget.spent` reads the total so far. `maxOperations` is a whole number from 1 to
+`Number.MAX_SAFE_INTEGER`, and `budget.maxOperations` reads it back. A budget is never reset. Once
+a call has taken it past its limit, every later call given it throws too, so make a new one for
+each drawing. A budget's limit replaces the 200,000 of a single call, so the two known limits above
+grow with it: a budget in the millions lets one call run out of memory. `sketch` accepts only a
+budget made with `new Budget()`.
 
 ## Seeds and escaping
 
@@ -111,6 +131,22 @@ Only pass markup you built yourself, never text from users.
 
 `escapeAttribute(value)` escapes a single string for use inside a double-quoted attribute.
 
+## Portable sine and cosine
+
+`@borrowdale/core/math` exports the engine's own `sin` and `cos`, for coordinates that must be the
+same in every JavaScript engine (for example points on a circle placed next to a drawing):
+
+```js
+import { cos, sin } from '@borrowdale/core/math';
+
+const point = [cx + r * cos(angle), cy + r * sin(angle)];
+```
+
+They give the same result in every JavaScript engine. That result can differ from `Math.sin` and
+`Math.cos` in the last bits. They accept a finite number of radians within ±1,000,000 and throw a
+`RangeError` for anything else. Not far past that range the result would be wrong without any sign
+of it.
+
 ## Rendering
 
 | Function | Output | Needs |
@@ -119,6 +155,9 @@ Only pass markup you built yourself, never text from users.
 | `toSvgDocument({ width, height, defs?, body })` | complete `<svg>` string | nothing |
 | `appendSketch(parent, sketch)` | appends `<path>` elements to an SVG element | a DOM |
 | `drawSketch(context2d, sketch)` | draws into a canvas | `Path2D` |
+
+A dashed outline keeps its `strokeLineDash` in the sketch. `toSvgPaths` and `appendSketch` write
+it as `stroke-dasharray`, and `drawSketch` sets it with `setLineDash`.
 
 The type declarations refer to DOM types (`Element`, `CanvasRenderingContext2D`), so TypeScript
 projects need `"dom"` in `compilerOptions.lib`, even when they only render on the server.

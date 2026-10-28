@@ -35,6 +35,7 @@ export function toSvgPaths(sketch: Sketch): string {
         d: path.d,
         stroke: path.stroke,
         'stroke-width': path.strokeWidth,
+        ...(path.strokeLineDash ? { 'stroke-dasharray': path.strokeLineDash.join(' ') } : {}),
         fill: path.fill,
         ...(path.fillRule ? { 'fill-rule': path.fillRule } : {}),
       }),
@@ -59,6 +60,9 @@ export function appendSketch(parent: Element, sketch: Sketch): SVGPathElement[] 
     element.setAttribute('d', path.d);
     element.setAttribute('stroke', path.stroke);
     element.setAttribute('stroke-width', String(path.strokeWidth));
+    if (path.strokeLineDash) {
+      element.setAttribute('stroke-dasharray', path.strokeLineDash.join(' '));
+    }
     element.setAttribute('fill', path.fill);
     if (path.fillRule) {
       element.setAttribute('fill-rule', path.fillRule);
@@ -80,6 +84,9 @@ export function drawSketch(context: CanvasRenderingContext2D, sketch: Sketch): v
     if (path.stroke !== 'none') {
       context.strokeStyle = path.stroke;
       context.lineWidth = path.strokeWidth;
+      if (path.strokeLineDash) {
+        context.setLineDash(path.strokeLineDash);
+      }
       context.stroke(outline);
     }
     context.restore();

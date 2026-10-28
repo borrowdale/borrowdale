@@ -40,6 +40,12 @@ describe('toSvgPaths', () => {
     );
   });
 
+  it('writes the dash pattern when a path has one', () => {
+    expect(toSvgPaths({ paths: [{ d: 'M0 0', stroke: '#000', strokeWidth: 1, strokeLineDash: [4, 2.5], fill: 'none' }] })).toBe(
+      '<path d="M0 0" stroke="#000" stroke-width="1" stroke-dasharray="4 2.5" fill="none"/>',
+    );
+  });
+
   it('renders an empty sketch as nothing', () => {
     expect(toSvgPaths({ paths: [] })).toBe('');
   });
