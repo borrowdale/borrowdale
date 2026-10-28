@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { EXACT, UNPORTABLE } from './forbid-unportable-math.js';
+import { cosAtLoad } from './binds-math-at-load.js';
 
 type MathFunction = (...args: number[]) => number;
 
@@ -17,6 +18,10 @@ describe('the unportable-Math guard', () => {
 
   it.each(UNPORTABLE)('makes Math.%s throw', (name) => {
     expect(() => (Math[name] as MathFunction)(1, 1)).toThrow(`Math.${name}() called while drawing`);
+  });
+
+  it('reaches a reference to Math.cos taken by a module loaded after it', () => {
+    expect(() => cosAtLoad(1)).toThrow('Math.cos() called while drawing');
   });
 
   it.each<[string, number[], number]>([
