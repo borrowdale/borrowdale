@@ -14,6 +14,13 @@ export interface Font {
   descender: number;
   /** Advance width of every code point the font covers. */
   advances: Readonly<Record<number, number>>;
+  /**
+   * For a font split into files by Unicode range, the code points each file serves: its `FontFiles`
+   * files without their bytes. A browser draws a character and the combining marks after it from
+   * one file, so measuring needs to know when no one file serves them all. Leave it out for a font
+   * in one file. Read only as the font's own property: a font that inherits it counts as one file.
+   */
+  files?: readonly Pick<FontFile, 'ranges'>[] | undefined;
 }
 
 /** A font's woff2 files, for embedding in a document or loading into a page. */
@@ -66,7 +73,12 @@ export interface TextExtent {
   ascent: number;
   /** Depth below the baseline, as a positive number. */
   descent: number;
-  /** Characters the font does not cover, each once. Each was measured as 1 em wide. */
+  /**
+   * What the browser draws in a fallback font, each once: a character with the combining marks
+   * after it, and any zero-width joiner, when the font does not cover one of them or no one file of
+   * the font serves all of them. A character the font does not cover was measured as 1 em wide;
+   * the others at the font's own widths.
+   */
   missing: string[];
 }
 

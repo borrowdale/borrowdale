@@ -60,7 +60,7 @@ const svg = toSvgDocument({
   width,
   height,
   // Only the font files these labels use: Latin, Latin Extended, Greek and Cyrillic.
-  defs: [svgElement('style', {}, fontFaceCss(excalifontFiles, labels.map(({ text }) => text).join(' ')))],
+  defs: [svgElement('style', {}, fontFaceCss(excalifontFiles, labels.map(({ text }) => text)))],
   body: [
     svgElement('rect', { width, height, fill: '#fdf8ef' }),
     ...shapes.map(toSvgPaths),

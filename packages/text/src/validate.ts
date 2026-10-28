@@ -3,6 +3,7 @@ import {
   TEXT_ANCHORS,
   TEXT_BASELINES,
   type Font,
+  type FontFile,
   type FontFiles,
   type LayoutOptions,
   type MeasureOptions,
@@ -48,6 +49,12 @@ const FAMILY_RULE =
   'family must be letters, digits, spaces, hyphens and underscores, starting and ending with a letter or digit';
 const BASE64 = /^[A-Za-z0-9+/]*={0,2}$/;
 const LINE_BREAK = /[\n\r\u0085\u2028\u2029]/;
+// Characters browsers draw as nothing (soft hyphens, zero-width joiners, variation selectors), so
+// measured as nothing and served by no font file: Unicode's default-ignorable set, less the seven
+// Chromium draws with a width from a fallback font (measured over all 4,174 of them): U+180F,
+// U+3164, U+FFA0, U+1BCA0-1BCA3. Those count as uncovered. The whole set, without the exceptions,
+// measures them wrongly as nothing.
+export const IGNORABLE = /(?![\u180F\u3164\uFFA0\u{1BCA0}-\u{1BCA3}])\p{Default_Ignorable_Code_Point}/u;
 // Removed from the text, because they change how their neighbours are drawn in ways the measurement
 // cannot follow: variation selectors 15 and 16 switch a character between text and emoji
 // presentation, and bidirectional controls reorder the text and mirror brackets.
@@ -56,11 +63,18 @@ const PRESENTATION_CONTROLS = /[\uFE0E\uFE0F\u061C\u200E\u200F\u202A-\u202E\u206
 // other than tab and the line breaks above, U+FFFE, U+FFFF and unpaired surrogates. With the `u`
 // flag a surrogate pair is one character, so the surrogate range matches only unpaired halves.
 const NOT_XML = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF\uD800-\uDFFF]/u;
+// A font that leaves out its files is one file, serving every code point it covers.
+const ONE_FILE: CheckedFont['files'] = [{ ranges: [[0, 0x10ffff]] }];
+
+/** A checked font: always one or more files, each with its own copy of the ranges it serves. */
+export interface CheckedFont extends Font {
+  files: readonly Pick<FontFile, 'ranges'>[];
+}
 
 export interface CheckedMeasure {
   text: string;
   fontSize: number;
-  font: Font;
+  font: CheckedFont;
 }
 
 export interface CheckedLayout extends CheckedMeasure {
@@ -126,14 +140,14 @@ export function checkFontFiles(fontFiles: FontFiles): void {
     throw new Error('Invalid font files: expected { family, files }');
   }
   checkFamily(fontFiles.family, 'font files');
+  if (fontFiles.files.length === 0) {
+    throw new Error('Invalid font files: files must be a list of one or more files');
+  }
   for (const [index, file] of fontFiles.files.entries()) {
     if (typeof file?.woff2 !== 'string' || !BASE64.test(file.woff2) || file.woff2.length % 4 !== 0) {
       throw new Error(`Invalid font files: files[${index}].woff2 must be base64`);
     }
-    // An empty list would make the face claim every code point.
-    if (!Array.isArray(file.ranges) || file.ranges.length === 0 || !file.ranges.every(isRange)) {
-      throw new Error(`Invalid font files: files[${index}].ranges must be one or more [first, last] code point pairs`);
-    }
+    checkRanges('font files', index, file.ranges);
   }
 }
 
@@ -147,10 +161,8 @@ export function checkText(text: unknown): string {
     throw new Error('Text must be a single line');
   }
   checkXml('Text', text);
-  // Checked first, changed second: a line break must be rejected, not turned into a space. Then
-  // presentation controls removed; composed (NFC), because browsers draw "e" + U+0301 as "é",
-  // which can be a different width; and collapsed, because SVG draws a run of spaces as one.
-  const drawn = drawnForm(text).replace(/[ \t]+/g, ' ').replace(/^ | $/g, '');
+  // Checked first, changed second: a line break must be rejected, not turned into a space.
+  const drawn = drawnForm(text);
   // Composing can also lengthen text (U+FB2C becomes three characters), so the drawn text is checked
   // too: the limit holds for whatever measuring returns.
   checkLength(drawn);
@@ -165,11 +177,17 @@ function checkXml(name: string, value: string): void {
 }
 
 /**
- * The characters of a text as the browser draws them: presentation controls removed, then accents
- * composed. Measuring and choosing font files both use it, so they always see the same characters.
+ * A line of text as the browser draws it: presentation controls removed; accents composed (NFC),
+ * because browsers draw "e" + U+0301 as "é", which can be a different width; and runs of spaces and
+ * tabs collapsed and trimmed, because SVG draws a run of spaces as one. Measuring and choosing font
+ * files both use it, so they always see the same characters.
  */
-export function drawnForm(text: string): string {
-  return text.replace(PRESENTATION_CONTROLS, '').normalize('NFC');
+function drawnForm(text: string): string {
+  return text
+    .replace(PRESENTATION_CONTROLS, '')
+    .normalize('NFC')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/^ | $/g, '');
 }
 
 function checkLength(text: string): void {
@@ -186,12 +204,14 @@ function measureInput(text: unknown, options: MeasureOptions): CheckedMeasure {
   return { text: checkText(text), fontSize, font: checkFont(font) };
 }
 
-function checkFont(given: Font): Font {
+function checkFont(given: Font): CheckedFont {
   if (typeof given !== 'object' || given === null) {
     throw new Error(`Invalid font: expected an object, got ${show(given)}`);
   }
   // Each field read once: a getter cannot pass these checks and then return another value.
   const { family, unitsPerEm, ascender, descender, advances } = given;
+  // Own only: `files` is optional, so a font without it would otherwise read Object.prototype's.
+  const files: unknown = Object.hasOwn(given, 'files') ? given.files : undefined;
   const font: Font = { family, unitsPerEm, ascender, descender, advances };
   checkFamily(font.family, 'font');
   if (typeof font.advances !== 'object' || font.advances === null) {
@@ -200,7 +220,49 @@ function checkFont(given: Font): Font {
   for (const [name, min, max] of FONT_NUMBERS) {
     checkNumber(`Invalid font: ${name}`, font[name], min, max);
   }
-  return font;
+  return { ...font, files: checkFiles(files) };
+}
+
+function checkFiles(files: unknown): CheckedFont['files'] {
+  if (files === undefined) {
+    return ONE_FILE;
+  }
+  // A font with no file would draw nothing.
+  if (!Array.isArray(files) || files.length === 0) {
+    throw new Error(`Invalid font: files must be a list of one or more files, got ${show(files)}`);
+  }
+  // Array.from rather than map, which skips the holes of a sparse list: a hole is checked, and fails.
+  return Array.from(files, (file: { ranges?: unknown } | null | undefined, index) => ({
+    ranges: checkRanges('font', index, file?.ranges),
+  }));
+}
+
+// The same rule for a font's files and the woff2 files that hold them. Returns a copy of the
+// ranges, which is what measuring reads: the pairs a font was checked with are the pairs it is
+// measured with. Font files are trusted, and their callers read the ranges again.
+// Each entry is read once, by index, and checked as it is copied, stopping at the first that is not
+// a pair: a sparse list or pair can claim billions of entries, and copying it before checking it
+// would exhaust memory. An empty list would make the face claim every code point.
+function checkRanges(owner: string, index: number, ranges: unknown): [first: number, last: number][] {
+  const list: readonly unknown[] = Array.isArray(ranges) ? ranges : [];
+  const count = list.length;
+  const pairs: [first: number, last: number][] = [];
+  for (let at = 0; at < count; at += 1) {
+    const pair = pairOf(list[at]);
+    if (!isRange(pair)) {
+      break;
+    }
+    pairs.push(pair);
+  }
+  if (count === 0 || pairs.length < count) {
+    throw new Error(`Invalid ${owner}: files[${index}].ranges must be one or more [first, last] code point pairs`);
+  }
+  return pairs;
+}
+
+// A copy of a pair's two ends, each read once; anything but a two-element list is no pair.
+function pairOf(range: unknown): unknown {
+  return Array.isArray(range) && range.length === 2 ? [range[0], range[1]] : undefined;
 }
 
 function checkFamily(family: unknown, owner: string): void {
@@ -233,7 +295,7 @@ function checkNumber(name: string, value: unknown, min: number, max: number): nu
   return value;
 }
 
-function isRange(range: unknown): boolean {
+function isRange(range: unknown): range is [first: number, last: number] {
   return (
     Array.isArray(range) &&
     range.length === 2 &&

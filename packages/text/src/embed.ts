@@ -1,13 +1,16 @@
 import type { FontFile, FontFiles } from './types.js';
-import { checkFontFiles, codePointName, codePointOf, cssFamily, drawnForm, show } from './validate.js';
+import { checkFontFiles, checkText, codePointName, codePointOf, cssFamily, IGNORABLE } from './validate.js';
+
+// The file each face `loadFont` made came from, so a later call can tell which files a set has.
+const sources = new WeakMap<FontFace, { unicodeRange: string; woff2: string }>();
 
 /**
- * `@font-face` rules that embed a font, for a `<style>` element. With `text`, only the files that
- * serve its characters are included; pass every label of the document, joined with spaces.
- * The rules hold no caller text, so they are safe to insert as markup.
+ * `@font-face` rules that embed a font, for a `<style>` element. With `labels`, only the files that
+ * serve them are included; pass every label of the document. The rules hold no caller text, so they
+ * are safe to insert as markup.
  */
-export function fontFaceCss(fontFiles: FontFiles, text?: string): string {
-  return filesFor(fontFiles, text)
+export function fontFaceCss(fontFiles: FontFiles, labels?: readonly string[]): string {
+  return filesFor(fontFiles, labels)
     .map(
       (file) =>
         `@font-face{font-family:${cssFamily(fontFiles.family)};` +
@@ -18,39 +21,75 @@ export function fontFaceCss(fontFiles: FontFiles, text?: string): string {
 }
 
 /**
- * Adds every file of a font to a page's fonts (`document.fonts`) and waits until they have loaded.
- * Every file, not only those some text needs: `drawText` can only check faces that are in the set,
- * so a face left out would let text in its range draw in a fallback font. The faces are made from
- * the files' bytes, not fetched from a URL, so no Content-Security-Policy blocks them. Needs
- * `FontFace` and `atob`.
+ * Adds every file of a font to a page's fonts (`document.fonts`), except those an earlier call
+ * already added, and waits until every face of the font's family there has loaded or failed, or
+ * until a face it made fails. Every file, not only those some text needs: `drawText` can only check
+ * faces that are in the set, so a face left out would let text in its range draw in a fallback
+ * font. Every face of the family, not only these: `drawText` also counts faces from elsewhere, such
+ * as those of `fontFaceCss` rules, which stay unloaded until the page draws text with them. Those
+ * are fetched if they come from a URL, with no time limit, and one that fails does not fail this
+ * call; `drawText` then throws for any text in that face's range, even where this call's faces
+ * could draw it. This call fails only if a face that `loadFont` made for the family, in this call
+ * or an earlier one, cannot load. Its faces are made from the files' bytes, not fetched from a URL,
+ * so no Content-Security-Policy blocks them. Needs `FontFace` and `atob`.
  */
 export async function loadFont(fonts: FontFaceSet, fontFiles: FontFiles): Promise<void> {
   checkFontFiles(fontFiles);
-  const faces = fontFiles.files.map(
-    (file) =>
-      new FontFace(fontFiles.family, Uint8Array.from(atob(file.woff2), codePointOf), {
-        unicodeRange: unicodeRange(file),
-      }),
-  );
-  for (const face of faces) {
-    fonts.add(face);
+  const faces = facesOf(fonts, fontFiles.family);
+  for (const file of fontFiles.files) {
+    const source = { unicodeRange: unicodeRange(file), woff2: file.woff2 };
+    const added = faces.some((face) => {
+      const made = sources.get(face);
+      return made?.woff2 === source.woff2 && made.unicodeRange === source.unicodeRange;
+    });
+    if (!added) {
+      // From the bytes just recorded, so the face is made from exactly the file it is recorded as.
+      const face = new FontFace(fontFiles.family, Uint8Array.from(atob(source.woff2), codePointOf), {
+        unicodeRange: source.unicodeRange,
+      });
+      sources.set(face, source);
+      fonts.add(face);
+      faces.push(face);
+    }
   }
-  await Promise.all(faces.map((face) => face.load()));
+  await Promise.all(faces.map((face) => (sources.has(face) ? face.load() : face.load().catch(() => face))));
 }
 
-function filesFor(fontFiles: FontFiles, text: string | undefined): readonly FontFile[] {
+/**
+ * The faces of a family in a FontFaceSet, whose family the page may report in quotes. CSS matches
+ * family names without regard to ASCII case; this ignores all case, which differs only for a
+ * page's face with a non-ASCII family name, and checked families are ASCII.
+ */
+export function facesOf(fonts: FontFaceSet, family: string): FontFace[] {
+  const name = family.toLowerCase();
+  const faces: FontFace[] = [];
+  fonts.forEach((face) => {
+    if (face.family.replace(/^"(.*)"$/, '$1').toLowerCase() === name) {
+      faces.push(face);
+    }
+  });
+  return faces;
+}
+
+function filesFor(fontFiles: FontFiles, labels: readonly string[] | undefined): readonly FontFile[] {
   checkFontFiles(fontFiles);
-  if (text === undefined) {
+  if (labels === undefined) {
     return fontFiles.files;
   }
-  if (typeof text !== 'string') {
-    throw new Error(`Text must be a string, got ${show(text)}`);
+  if (!Array.isArray(labels)) {
+    // The type alone: a caller of the old form passes every label of a document as one string.
+    throw new Error(`Labels must be an array, got ${typeof labels}`);
   }
-  // The drawn form, so the files chosen serve the characters that are drawn. Each code point once:
-  // the text is every label of a document, and may be long.
+  // Each label checked as layoutText checks it, and in the form it is drawn, so the files chosen
+  // serve exactly the characters that are drawn: spaces at a label's ends and characters drawn as
+  // nothing select no file. Each code point once: the labels are every label of a document.
   const unique = new Set<number>();
-  for (const character of drawnForm(text)) {
-    unique.add(codePointOf(character));
+  for (const label of labels) {
+    for (const character of checkText(label)) {
+      if (!IGNORABLE.test(character)) {
+        unique.add(codePointOf(character));
+      }
+    }
   }
   const codePoints = [...unique];
   return fontFiles.files.filter((file) =>

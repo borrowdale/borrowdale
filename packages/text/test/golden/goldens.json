@@ -20,7 +20,7 @@
    40,
    200
   ],
-  "svg": "<text x=\"32.03\" y=\"203.07\" font-family=\"&quot;Excalifont&quot;\" font-size=\"12\" fill=\"#000\" direction=\"ltr\" style=\"font-kerning:none;font-variant-ligatures:none\">0</text>"
+  "svg": "<text x=\"32.03\" y=\"203.07\" font-family=\"&quot;Excalifont&quot;\" font-size=\"12\" fill=\"#000\" direction=\"ltr\" style=\"direction:ltr;font-kerning:none;font-variant-ligatures:none\">0</text>"
  },
  "tick-thousands": {
   "text": "2,500",
@@ -43,7 +43,7 @@
    40,
    150
   ],
-  "svg": "<text x=\"5.16\" y=\"153.07\" font-family=\"&quot;Excalifont&quot;\" font-size=\"12\" fill=\"#000\" direction=\"ltr\" style=\"font-kerning:none;font-variant-ligatures:none\">2,500</text>"
+  "svg": "<text x=\"5.16\" y=\"153.07\" font-family=\"&quot;Excalifont&quot;\" font-size=\"12\" fill=\"#000\" direction=\"ltr\" style=\"direction:ltr;font-kerning:none;font-variant-ligatures:none\">2,500</text>"
  },
  "tick-ten-thousands": {
   "text": "12,500",
@@ -66,7 +66,7 @@
    40,
    100
   ],
-  "svg": "<text x=\"0.04\" y=\"103.07\" font-family=\"&quot;Excalifont&quot;\" font-size=\"12\" fill=\"#000\" direction=\"ltr\" style=\"font-kerning:none;font-variant-ligatures:none\">12,500</text>"
+  "svg": "<text x=\"0.04\" y=\"103.07\" font-family=\"&quot;Excalifont&quot;\" font-size=\"12\" fill=\"#000\" direction=\"ltr\" style=\"direction:ltr;font-kerning:none;font-variant-ligatures:none\">12,500</text>"
  },
  "tick-decimal": {
   "text": "0.75",
@@ -89,7 +89,7 @@
    40,
    50
   ],
-  "svg": "<text x=\"14.63\" y=\"53.07\" font-family=\"&quot;Excalifont&quot;\" font-size=\"12\" fill=\"#000\" direction=\"ltr\" style=\"font-kerning:none;font-variant-ligatures:none\">0.75</text>"
+  "svg": "<text x=\"14.63\" y=\"53.07\" font-family=\"&quot;Excalifont&quot;\" font-size=\"12\" fill=\"#000\" direction=\"ltr\" style=\"direction:ltr;font-kerning:none;font-variant-ligatures:none\">0.75</text>"
  },
  "category-zurich": {
   "text": "Zürich",
@@ -112,7 +112,7 @@
    80,
    230
   ],
-  "svg": "<text x=\"43.2\" y=\"240.63\" font-family=\"&quot;Excalifont&quot;\" font-size=\"12\" fill=\"#000\" transform=\"rotate(-45 80 230)\" direction=\"ltr\" style=\"font-kerning:none;font-variant-ligatures:none\">Zürich</text>"
+  "svg": "<text x=\"43.2\" y=\"240.63\" font-family=\"&quot;Excalifont&quot;\" font-size=\"12\" fill=\"#000\" transform=\"rotate(-45 80 230)\" direction=\"ltr\" style=\"direction:ltr;font-kerning:none;font-variant-ligatures:none\">Zürich</text>"
  },
  "category-lodz": {
   "text": "Łódź",
@@ -135,7 +135,7 @@
    140,
    230
   ],
-  "svg": "<text x=\"111.58\" y=\"240.63\" font-family=\"&quot;Excalifont&quot;\" font-size=\"12\" fill=\"#000\" transform=\"rotate(-45 140 230)\" direction=\"ltr\" style=\"font-kerning:none;font-variant-ligatures:none\">Łódź</text>"
+  "svg": "<text x=\"111.58\" y=\"240.63\" font-family=\"&quot;Excalifont&quot;\" font-size=\"12\" fill=\"#000\" transform=\"rotate(-45 140 230)\" direction=\"ltr\" style=\"direction:ltr;font-kerning:none;font-variant-ligatures:none\">Łódź</text>"
  },
  "category-sao-paulo": {
   "text": "São Paulo",
@@ -158,7 +158,7 @@
    200,
    230
   ],
-  "svg": "<text x=\"142.27\" y=\"240.63\" font-family=\"&quot;Excalifont&quot;\" font-size=\"12\" fill=\"#000\" transform=\"rotate(-45 200 230)\" direction=\"ltr\" style=\"font-kerning:none;font-variant-ligatures:none\">São Paulo</text>"
+  "svg": "<text x=\"142.27\" y=\"240.63\" font-family=\"&quot;Excalifont&quot;\" font-size=\"12\" fill=\"#000\" transform=\"rotate(-45 200 230)\" direction=\"ltr\" style=\"direction:ltr;font-kerning:none;font-variant-ligatures:none\">São Paulo</text>"
  },
  "title": {
   "text": "Quarterly revenue",
@@ -181,7 +181,7 @@
    180,
    10
   ],
-  "svg": "<text x=\"94.17\" y=\"27.72\" font-family=\"&quot;Excalifont&quot;\" font-size=\"20\" fill=\"#000\" direction=\"ltr\" style=\"font-kerning:none;font-variant-ligatures:none\">Quarterly revenue</text>"
+  "svg": "<text x=\"94.17\" y=\"27.72\" font-family=\"&quot;Excalifont&quot;\" font-size=\"20\" fill=\"#000\" direction=\"ltr\" style=\"direction:ltr;font-kerning:none;font-variant-ligatures:none\">Quarterly revenue</text>"
  },
  "legend-entry": {
   "text": "Series A",
@@ -204,7 +204,7 @@
    300,
    40
   ],
-  "svg": "<text x=\"300\" y=\"44.1\" font-family=\"&quot;Excalifont&quot;\" font-size=\"16\" fill=\"#000\" direction=\"ltr\" style=\"font-kerning:none;font-variant-ligatures:none\">Series A</text>"
+  "svg": "<text x=\"300\" y=\"44.1\" font-family=\"&quot;Excalifont&quot;\" font-size=\"16\" fill=\"#000\" direction=\"ltr\" style=\"direction:ltr;font-kerning:none;font-variant-ligatures:none\">Series A</text>"
  },
  "axis-title-vertical": {
   "text": "Revenue (€)",
@@ -227,7 +227,7 @@
    12,
    125
   ],
-  "svg": "<text x=\"-35.22\" y=\"139.18\" font-family=\"&quot;Excalifont&quot;\" font-size=\"16\" fill=\"#000\" transform=\"rotate(-90 12 125)\" direction=\"ltr\" style=\"font-kerning:none;font-variant-ligatures:none\">Revenue (€)</text>"
+  "svg": "<text x=\"-35.22\" y=\"139.18\" font-family=\"&quot;Excalifont&quot;\" font-size=\"16\" fill=\"#000\" transform=\"rotate(-90 12 125)\" direction=\"ltr\" style=\"direction:ltr;font-kerning:none;font-variant-ligatures:none\">Revenue (€)</text>"
  },
  "kerning-pairs": {
   "text": "AV To Wa LT Yo",
@@ -250,7 +250,7 @@
    10,
    30
   ],
-  "svg": "<text x=\"10\" y=\"30\" font-family=\"&quot;Excalifont&quot;\" font-size=\"24\" fill=\"#000\" direction=\"ltr\" style=\"font-kerning:none;font-variant-ligatures:none\">AV To Wa LT Yo</text>"
+  "svg": "<text x=\"10\" y=\"30\" font-family=\"&quot;Excalifont&quot;\" font-size=\"24\" fill=\"#000\" direction=\"ltr\" style=\"direction:ltr;font-kerning:none;font-variant-ligatures:none\">AV To Wa LT Yo</text>"
  },
  "ligatures": {
   "text": "fifl office",
@@ -273,7 +273,7 @@
    10,
    60
   ],
-  "svg": "<text x=\"10\" y=\"60\" font-family=\"&quot;Excalifont&quot;\" font-size=\"24\" fill=\"#000\" direction=\"ltr\" style=\"font-kerning:none;font-variant-ligatures:none\">fifl office</text>"
+  "svg": "<text x=\"10\" y=\"60\" font-family=\"&quot;Excalifont&quot;\" font-size=\"24\" fill=\"#000\" direction=\"ltr\" style=\"direction:ltr;font-kerning:none;font-variant-ligatures:none\">fifl office</text>"
  },
  "greek": {
   "text": "Ελλάδα",
@@ -296,7 +296,7 @@
    10,
    90
   ],
-  "svg": "<text x=\"10\" y=\"90\" font-family=\"&quot;Excalifont&quot;\" font-size=\"16\" fill=\"#000\" direction=\"ltr\" style=\"font-kerning:none;font-variant-ligatures:none\">Ελλάδα</text>"
+  "svg": "<text x=\"10\" y=\"90\" font-family=\"&quot;Excalifont&quot;\" font-size=\"16\" fill=\"#000\" direction=\"ltr\" style=\"direction:ltr;font-kerning:none;font-variant-ligatures:none\">Ελλάδα</text>"
  },
  "cyrillic": {
   "text": "Привет",
@@ -319,7 +319,7 @@
    10,
    120
   ],
-  "svg": "<text x=\"10\" y=\"120\" font-family=\"&quot;Excalifont&quot;\" font-size=\"16\" fill=\"#000\" direction=\"ltr\" style=\"font-kerning:none;font-variant-ligatures:none\">Привет</text>"
+  "svg": "<text x=\"10\" y=\"120\" font-family=\"&quot;Excalifont&quot;\" font-size=\"16\" fill=\"#000\" direction=\"ltr\" style=\"direction:ltr;font-kerning:none;font-variant-ligatures:none\">Привет</text>"
  },
  "decomposed-accent": {
   "text": "Café",
@@ -342,7 +342,7 @@
    10,
    150
   ],
-  "svg": "<text x=\"10\" y=\"150\" font-family=\"&quot;Excalifont&quot;\" font-size=\"16\" fill=\"#000\" direction=\"ltr\" style=\"font-kerning:none;font-variant-ligatures:none\">Café</text>"
+  "svg": "<text x=\"10\" y=\"150\" font-family=\"&quot;Excalifont&quot;\" font-size=\"16\" fill=\"#000\" direction=\"ltr\" style=\"direction:ltr;font-kerning:none;font-variant-ligatures:none\">Café</text>"
  },
  "whitespace": {
   "text": "a b",
@@ -365,7 +365,7 @@
    10,
    180
   ],
-  "svg": "<text x=\"10\" y=\"180\" font-family=\"&quot;Excalifont&quot;\" font-size=\"16\" fill=\"#000\" direction=\"ltr\" style=\"font-kerning:none;font-variant-ligatures:none\">a b</text>"
+  "svg": "<text x=\"10\" y=\"180\" font-family=\"&quot;Excalifont&quot;\" font-size=\"16\" fill=\"#000\" direction=\"ltr\" style=\"direction:ltr;font-kerning:none;font-variant-ligatures:none\">a b</text>"
  },
  "markup-characters": {
   "text": "<a & \"b\">",
@@ -388,7 +388,7 @@
    10,
    210
   ],
-  "svg": "<text x=\"10\" y=\"210\" font-family=\"&quot;Excalifont&quot;\" font-size=\"16\" fill=\"#000\" direction=\"ltr\" style=\"font-kerning:none;font-variant-ligatures:none\">&lt;a &amp; &quot;b&quot;&gt;</text>"
+  "svg": "<text x=\"10\" y=\"210\" font-family=\"&quot;Excalifont&quot;\" font-size=\"16\" fill=\"#000\" direction=\"ltr\" style=\"direction:ltr;font-kerning:none;font-variant-ligatures:none\">&lt;a &amp; &quot;b&quot;&gt;</text>"
  },
  "small": {
   "text": "small print",
@@ -411,7 +411,7 @@
    10,
    240
   ],
-  "svg": "<text x=\"10\" y=\"240\" font-family=\"&quot;Excalifont&quot;\" font-size=\"10\" fill=\"#000\" direction=\"ltr\" style=\"font-kerning:none;font-variant-ligatures:none\">small print</text>"
+  "svg": "<text x=\"10\" y=\"240\" font-family=\"&quot;Excalifont&quot;\" font-size=\"10\" fill=\"#000\" direction=\"ltr\" style=\"direction:ltr;font-kerning:none;font-variant-ligatures:none\">small print</text>"
  },
  "large": {
   "text": "Big",
@@ -434,7 +434,7 @@
    10,
    300
   ],
-  "svg": "<text x=\"10\" y=\"282.05\" font-family=\"&quot;Excalifont&quot;\" font-size=\"48\" fill=\"#000\" direction=\"ltr\" style=\"font-kerning:none;font-variant-ligatures:none\">Big</text>"
+  "svg": "<text x=\"10\" y=\"282.05\" font-family=\"&quot;Excalifont&quot;\" font-size=\"48\" fill=\"#000\" direction=\"ltr\" style=\"direction:ltr;font-kerning:none;font-variant-ligatures:none\">Big</text>"
  },
  "fill": {
   "text": "Coloured",
@@ -457,7 +457,7 @@
    10,
    330
   ],
-  "svg": "<text x=\"10\" y=\"330\" font-family=\"&quot;Excalifont&quot;\" font-size=\"16\" fill=\"#e76f51\" direction=\"ltr\" style=\"font-kerning:none;font-variant-ligatures:none\">Coloured</text>"
+  "svg": "<text x=\"10\" y=\"330\" font-family=\"&quot;Excalifont&quot;\" font-size=\"16\" fill=\"#e76f51\" direction=\"ltr\" style=\"direction:ltr;font-kerning:none;font-variant-ligatures:none\">Coloured</text>"
  },
  "uncovered-characters": {
   "text": "東京 Tokyo",
@@ -483,7 +483,7 @@
    10,
    360
   ],
-  "svg": "<text x=\"10\" y=\"360\" font-family=\"&quot;Excalifont&quot;\" font-size=\"16\" fill=\"#000\" direction=\"ltr\" style=\"font-kerning:none;font-variant-ligatures:none\">東京 Tokyo</text>"
+  "svg": "<text x=\"10\" y=\"360\" font-family=\"&quot;Excalifont&quot;\" font-size=\"16\" fill=\"#000\" direction=\"ltr\" style=\"direction:ltr;font-kerning:none;font-variant-ligatures:none\">東京 Tokyo</text>"
  },
  "empty": {
   "text": "",
@@ -506,7 +506,7 @@
    10,
    390
   ],
-  "svg": "<text x=\"10\" y=\"390\" font-family=\"&quot;Excalifont&quot;\" font-size=\"16\" fill=\"#000\" direction=\"ltr\" style=\"font-kerning:none;font-variant-ligatures:none\"></text>"
+  "svg": "<text x=\"10\" y=\"390\" font-family=\"&quot;Excalifont&quot;\" font-size=\"16\" fill=\"#000\" direction=\"ltr\" style=\"direction:ltr;font-kerning:none;font-variant-ligatures:none\"></text>"
  },
  "soft-hyphen": {
   "text": "Ex­ample",
@@ -529,7 +529,7 @@
    10,
    420
   ],
-  "svg": "<text x=\"10\" y=\"420\" font-family=\"&quot;Excalifont&quot;\" font-size=\"16\" fill=\"#000\" direction=\"ltr\" style=\"font-kerning:none;font-variant-ligatures:none\">Ex­ample</text>"
+  "svg": "<text x=\"10\" y=\"420\" font-family=\"&quot;Excalifont&quot;\" font-size=\"16\" fill=\"#000\" direction=\"ltr\" style=\"direction:ltr;font-kerning:none;font-variant-ligatures:none\">Ex­ample</text>"
  },
  "every-character-latin": {
   "text": "!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~ ¡¢£¥¦¨©ª«­®¯°±´¶·¸º»¼½¾¿ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿıŒœʼˆ˚˜̄̈–—‘’‚“”„†•․‥…‰‹›€™−",
@@ -552,7 +552,7 @@
    10,
    120
   ],
-  "svg": "<text x=\"10\" y=\"120\" font-family=\"&quot;Excalifont&quot;\" font-size=\"100\" fill=\"#000\" direction=\"ltr\" style=\"font-kerning:none;font-variant-ligatures:none\">!&quot;#$%&amp;&#39;()*+,-./0123456789:;&lt;=&gt;?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~ ¡¢£¥¦¨©ª«­®¯°±´¶·¸º»¼½¾¿ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿıŒœʼˆ˚˜̄̈–—‘’‚“”„†•․‥…‰‹›€™−</text>"
+  "svg": "<text x=\"10\" y=\"120\" font-family=\"&quot;Excalifont&quot;\" font-size=\"100\" fill=\"#000\" direction=\"ltr\" style=\"direction:ltr;font-kerning:none;font-variant-ligatures:none\">!&quot;#$%&amp;&#39;()*+,-./0123456789:;&lt;=&gt;?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~ ¡¢£¥¦¨©ª«­®¯°±´¶·¸º»¼½¾¿ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿıŒœʼˆ˚˜̄̈–—‘’‚“”„†•․‥…‰‹›€™−</text>"
  },
  "every-character-latin-ext": {
   "text": "ĀāĂăĄąĆćĈĉĊċČčĎďĐđĒēĔĕĖėĘęĚěĜĝĞğĠġĢģĤĥĦħĨĩĪīĬĭĮįİĲĳĴĵĶķĹĺĻļĽľĿŀŁłŃńŅņŇňŉŌōŎŏŐőŔŕŖŗŘřŚśŜŝŞşŠšŢţŤťŦŧŨũŪūŬŭŮůŰűŲųŴŵŶŷŸŹźŻżŽžƒǼǽǾǿȘșȚțȷẀẁẂẃẄẅỲỳℓ",
@@ -575,7 +575,7 @@
    10,
    120
   ],
-  "svg": "<text x=\"10\" y=\"120\" font-family=\"&quot;Excalifont&quot;\" font-size=\"100\" fill=\"#000\" direction=\"ltr\" style=\"font-kerning:none;font-variant-ligatures:none\">ĀāĂăĄąĆćĈĉĊċČčĎďĐđĒēĔĕĖėĘęĚěĜĝĞğĠġĢģĤĥĦħĨĩĪīĬĭĮįİĲĳĴĵĶķĹĺĻļĽľĿŀŁłŃńŅņŇňŉŌōŎŏŐőŔŕŖŗŘřŚśŜŝŞşŠšŢţŤťŦŧŨũŪūŬŭŮůŰűŲųŴŵŶŷŸŹźŻżŽžƒǼǽǾǿȘșȚțȷẀẁẂẃẄẅỲỳℓ</text>"
+  "svg": "<text x=\"10\" y=\"120\" font-family=\"&quot;Excalifont&quot;\" font-size=\"100\" fill=\"#000\" direction=\"ltr\" style=\"direction:ltr;font-kerning:none;font-variant-ligatures:none\">ĀāĂăĄąĆćĈĉĊċČčĎďĐđĒēĔĕĖėĘęĚěĜĝĞğĠġĢģĤĥĦħĨĩĪīĬĭĮįİĲĳĴĵĶķĹĺĻļĽľĿŀŁłŃńŅņŇňŉŌōŎŏŐőŔŕŖŗŘřŚśŜŝŞşŠšŢţŤťŦŧŨũŪūŬŭŮůŰűŲųŴŵŶŷŸŹźŻżŽžƒǼǽǾǿȘșȚțȷẀẁẂẃẄẅỲỳℓ</text>"
  },
  "every-character-greek": {
   "text": ";΄΅Ά·ΈΉΊΌΎΏΐΑΒΓΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΪΫάέήίΰαβγδεζηθικλμνξοπρςστυφχψωϊϋόύώϏϗ",
@@ -598,7 +598,7 @@
    10,
    120
   ],
-  "svg": "<text x=\"10\" y=\"120\" font-family=\"&quot;Excalifont&quot;\" font-size=\"100\" fill=\"#000\" direction=\"ltr\" style=\"font-kerning:none;font-variant-ligatures:none\">;΄΅Ά·ΈΉΊΌΎΏΐΑΒΓΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΪΫάέήίΰαβγδεζηθικλμνξοπρςστυφχψωϊϋόύώϏϗ</text>"
+  "svg": "<text x=\"10\" y=\"120\" font-family=\"&quot;Excalifont&quot;\" font-size=\"100\" fill=\"#000\" direction=\"ltr\" style=\"direction:ltr;font-kerning:none;font-variant-ligatures:none\">;΄΅Ά·ΈΉΊΌΎΏΐΑΒΓΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΪΫάέήίΰαβγδεζηθικλμνξοπρςστυφχψωϊϋόύώϏϗ</text>"
  },
  "every-character-cyrillic": {
   "text": "ЀЁЂЃЄЅІЇЈЉЊЋЌЍЎЏАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдежзийклмнопрстуфхцчшщъыьэюяѐёђѓєѕіїјљњћќѝўџҐґ№",
@@ -621,7 +621,7 @@
    10,
    120
   ],
-  "svg": "<text x=\"10\" y=\"120\" font-family=\"&quot;Excalifont&quot;\" font-size=\"100\" fill=\"#000\" direction=\"ltr\" style=\"font-kerning:none;font-variant-ligatures:none\">ЀЁЂЃЄЅІЇЈЉЊЋЌЍЎЏАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдежзийклмнопрстуфхцчшщъыьэюяѐёђѓєѕіїјљњћќѝўџҐґ№</text>"
+  "svg": "<text x=\"10\" y=\"120\" font-family=\"&quot;Excalifont&quot;\" font-size=\"100\" fill=\"#000\" direction=\"ltr\" style=\"direction:ltr;font-kerning:none;font-variant-ligatures:none\">ЀЁЂЃЄЅІЇЈЉЊЋЌЍЎЏАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдежзийклмнопрстуфхцчшщъыьэюяѐёђѓєѕіїјљњћќѝўџҐґ№</text>"
  },
  "every-character-cyrillic-ext": {
   "text": "ѢѣѲѳѴѵӘәӢӣӦӧӨөӮӯ",
@@ -644,7 +644,7 @@
    10,
    120
   ],
-  "svg": "<text x=\"10\" y=\"120\" font-family=\"&quot;Excalifont&quot;\" font-size=\"100\" fill=\"#000\" direction=\"ltr\" style=\"font-kerning:none;font-variant-ligatures:none\">ѢѣѲѳѴѵӘәӢӣӦӧӨөӮӯ</text>"
+  "svg": "<text x=\"10\" y=\"120\" font-family=\"&quot;Excalifont&quot;\" font-size=\"100\" fill=\"#000\" direction=\"ltr\" style=\"direction:ltr;font-kerning:none;font-variant-ligatures:none\">ѢѣѲѳѴѵӘәӢӣӦӧӨөӮӯ</text>"
  },
  "every-character-marks": {
   "text": "ˇ˘˙˛˝̧̨̦̂̆̇̊̋̌℮∑ﬁﬂ",
@@ -667,7 +667,7 @@
    10,
    120
   ],
-  "svg": "<text x=\"10\" y=\"120\" font-family=\"&quot;Excalifont&quot;\" font-size=\"100\" fill=\"#000\" direction=\"ltr\" style=\"font-kerning:none;font-variant-ligatures:none\">ˇ˘˙˛˝̧̨̦̂̆̇̊̋̌℮∑ﬁﬂ</text>"
+  "svg": "<text x=\"10\" y=\"120\" font-family=\"&quot;Excalifont&quot;\" font-size=\"100\" fill=\"#000\" direction=\"ltr\" style=\"direction:ltr;font-kerning:none;font-variant-ligatures:none\">ˇ˘˙˛˝̧̨̦̂̆̇̊̋̌℮∑ﬁﬂ</text>"
  },
  "presentation-controls": {
   "text": "A(B) © 1",
@@ -690,6 +690,31 @@
    10,
    450
   ],
-  "svg": "<text x=\"10\" y=\"450\" font-family=\"&quot;Excalifont&quot;\" font-size=\"16\" fill=\"#000\" direction=\"ltr\" style=\"font-kerning:none;font-variant-ligatures:none\">A(B) © 1</text>"
+  "svg": "<text x=\"10\" y=\"450\" font-family=\"&quot;Excalifont&quot;\" font-size=\"16\" fill=\"#000\" direction=\"ltr\" style=\"direction:ltr;font-kerning:none;font-variant-ligatures:none\">A(B) © 1</text>"
+ },
+ "cyrillic-stress-mark": {
+  "text": "приве́т",
+  "missing": [
+   "е́"
+  ],
+  "width": 50.51,
+  "ascent": 14.18,
+  "descent": 5.98,
+  "family": "Excalifont",
+  "fontSize": 16,
+  "x": 10,
+  "y": 480,
+  "box": {
+   "x": 10,
+   "y": 465.82,
+   "width": 50.51,
+   "height": 20.16
+  },
+  "rotate": 0,
+  "pivot": [
+   10,
+   480
+  ],
+  "svg": "<text x=\"10\" y=\"480\" font-family=\"&quot;Excalifont&quot;\" font-size=\"16\" fill=\"#000\" direction=\"ltr\" style=\"direction:ltr;font-kerning:none;font-variant-ligatures:none\">приве́т</text>"
  }
 }
