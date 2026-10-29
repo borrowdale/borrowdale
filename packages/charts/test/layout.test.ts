@@ -149,7 +149,10 @@ const wrappedLine: ChartSpec = {
   series: [{ type: 'polarLine', name: 'L', data: [1, 2, null, 4, null, 3] }],
 };
 // The same gaps on half a turn, where f and a are at opposite ends.
-const halfLine: ChartSpec = { ...wrappedLine, axes: { angle: { ...wrappedLine.axes!.angle as object, startAngle: -90, endAngle: 90 } as never } };
+const halfLine: ChartSpec = {
+  ...wrappedLine,
+  axes: { angle: { type: 'band', categories: ['a', 'b', 'c', 'd', 'e', 'f'], startAngle: -90, endAngle: 90 } },
+};
 
 // Two rings sharing the name "a": one legend entry for it.
 const rings: ChartSpec = {
@@ -176,7 +179,8 @@ const speed: ChartSpec = {
 const twoNeedles: ChartSpec = { ...speed, series: [...speed.series, { type: 'gauge', name: 'Limit', value: 120 }] };
 
 // Eight city names on 300 units: flat, every other one is left out; slanted, each fits.
-const cityAxis = { type: 'band', categories: ['Zürich', 'Łódź', 'São Paulo', 'Reykjavík', 'Kraków', 'Montréal', 'Ho Chi Minh City', 'Kyiv'] } as const;
+const cities = ['Zürich', 'Łódź', 'São Paulo', 'Reykjavík', 'Kraków', 'Montréal', 'Ho Chi Minh City', 'Kyiv'];
+const cityAxis = { type: 'band', categories: cities } as const;
 const flatCities: ChartSpec = {
   width: 300,
   height: 260,
@@ -429,6 +433,6 @@ describe('layoutChart', () => {
   });
 
   it('fits every label once they are slanted', () => {
-    expect(texts(layoutChart(slantedCities))).toEqual(expect.arrayContaining(cityAxis.categories));
+    expect(texts(layoutChart(slantedCities))).toEqual(expect.arrayContaining(cities));
   });
 });
