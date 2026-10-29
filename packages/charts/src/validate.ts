@@ -111,8 +111,10 @@ const readStack = (r: Fields) => r.optional('stack', text());
 const readCurve = (r: Fields) => r.optional('curve', curve) ?? 'linear';
 const readDash = (r: Fields) => r.optional('dash', checkDash);
 const readValues = (r: Fields) => r.required('data', categoryValues);
-const readPoints = <const N extends readonly [string, string]>(names: N) => (r: Fields) =>
-  r.required('data', list(0, MAX_POINTS, tuple(names)));
+const readPoints =
+  <const N extends readonly [string, string]>(names: N) =>
+  (r: Fields) =>
+    r.required('data', list(0, MAX_POINTS, tuple(names)));
 
 /** What a series type needs of a polar chart. */
 interface PolarNeeds {
@@ -517,9 +519,15 @@ function checkPolarChart(r: Fields, base: CheckedChartBase, series: SeriesOf<'po
     axes.optional('radius', checkRadiusAxis) ?? checkRadiusAxis('axes.radius', { type: 'linear' });
   for (const entry of series) {
     const needs = SERIES_RULES[entry.type].polar;
-    for (const [key, axis] of [['angle', angle], ['radius', radiusAxis]] as const) {
+    for (const [key, axis] of [
+      ['angle', angle],
+      ['radius', radiusAxis],
+    ] as const) {
       if (axis.type !== needs[key]) {
-        fail(entry.path, `is a ${entry.type} series, which needs a ${needs[key]} ${key} axis, but axes.${key} is ${axis.type}`);
+        fail(
+          entry.path,
+          `is a ${entry.type} series, which needs a ${needs[key]} ${key} axis, but axes.${key} is ${axis.type}`,
+        );
       }
     }
   }
@@ -532,14 +540,20 @@ function checkPolarChart(r: Fields, base: CheckedChartBase, series: SeriesOf<'po
   }
   const spokes = angle.type === 'band' ? angle.categories.length : 0;
   if (spokes < 3 && radius.shape === 'polygon') {
-    fail('axes.angle.categories', `must have at least 3 categories for the polygon gridlines of axes.radius, got ${spokes}`);
+    fail(
+      'axes.angle.categories',
+      `must have at least 3 categories for the polygon gridlines of axes.radius, got ${spokes}`,
+    );
   }
   const band = angle.type === 'band' ? angle : radius.type === 'band' ? radius : undefined;
   for (const entry of series) {
     const rule = SERIES_RULES[entry.type];
     if (band && rule.band && entry.data.length !== band.categories.length) {
       const which = band === angle ? 'angle' : 'radius';
-      fail(`${entry.path}.data`, `has ${entry.data.length} values, but axes.${which}.categories has ${band.categories.length}`);
+      fail(
+        `${entry.path}.data`,
+        `has ${entry.data.length} values, but axes.${which}.categories has ${band.categories.length}`,
+      );
     }
     if (radius.type !== 'linear') {
       continue;
@@ -581,20 +595,28 @@ const GAUGE_KEYS = ['type', 'min', 'max', 'hidden', 'format', 'startAngle', 'end
 function checkGaugeChart(r: Fields, base: CheckedChartBase, series: SeriesOf<'gauge'>[]): CheckedGaugeChart {
   const axes = r.optional('axes', fields);
   axes?.allow(['angle']);
-  const angle = axes ? axes.required('angle', checkDial) : checkDial('axes.angle', { type: 'linear', min: 0, max: 100 });
+  const angle = axes
+    ? axes.required('angle', checkDial)
+    : checkDial('axes.angle', { type: 'linear', min: 0, max: 100 });
   return { ...base, system: 'gauge', angle, series };
 }
 
 const checkDial = checkLinearAxis(GAUGE_KEYS, false, (r, path) => ({
   ...checkSweep(r, path, GAUGE_SWEEP),
-  bands: checkGaugeBands(r.optional(
-    'bands',
-    list(0, MAX_BANDS, (path, value) => {
-      const band = fields(path, value);
-      band.allow(['from', 'to', 'color']);
-      return { from: band.required('from', anyValue), to: band.required('to', anyValue), color: band.required('color', color) };
-    }),
-  ) ?? []),
+  bands: checkGaugeBands(
+    r.optional(
+      'bands',
+      list(0, MAX_BANDS, (path, value) => {
+        const band = fields(path, value);
+        band.allow(['from', 'to', 'color']);
+        return {
+          from: band.required('from', anyValue),
+          to: band.required('to', anyValue),
+          color: band.required('color', color),
+        };
+      }),
+    ) ?? [],
+  ),
 }));
 
 /** Gauge bands, each ending after it starts and none starting before the one before it ends. */
@@ -605,7 +627,7 @@ function checkGaugeBands(bands: CheckedGaugeBand[]): CheckedGaugeBand[] {
     }
     const before = bands[i - 1];
     if (before && band.from < before.to) {
-      fail(`axes.angle.bands[${i}].from`, `is ${band.from}, before the end of bands[${i - 1}] (${before.to})`);
+      fail(`axes.angle.bands[${i}].from`, `is ${band.from}, before the end of axes.angle.bands[${i - 1}] (${before.to})`);
     }
   });
   return bands;
@@ -629,7 +651,10 @@ function checkPieChart(r: Fields, base: CheckedChartBase, series: SeriesOf<'pie'
   const rings = series.map((pie, k) => {
     for (const key of ['startAngle', 'endAngle'] as const) {
       if (pie[key] !== first[key]) {
-        fail(`${pie.path}.${key}`, `is ${pie[key]}, but series[0].${key} is ${first[key]}: nested rings share their sweep`);
+        fail(
+          `${pie.path}.${key}`,
+          `is ${pie[key]}, but series[0].${key} is ${first[key]}: nested rings share their sweep`,
+        );
       }
     }
     // Nested rings split the radius equally, the first outermost.
@@ -647,7 +672,10 @@ function checkPieChart(r: Fields, base: CheckedChartBase, series: SeriesOf<'pie'
       const seen = colors.get(slice.name);
       if (seen && slice.color !== undefined && slice.color !== seen.color) {
         const given = seen.color === undefined ? 'none' : show(seen.color);
-        fail(`${pie.path}.data[${i}].color`, `is ${show(slice.color)}, but ${seen.path}, of the same name, gives ${given}`);
+        fail(
+          `${pie.path}.data[${i}].color`,
+          `is ${show(slice.color)}, but ${seen.path}, of the same name, gives ${given}`,
+        );
       }
       if (!seen) {
         colors.set(slice.name, { color: slice.color, path: `${pie.path}.data[${i}].color` });
@@ -714,13 +742,18 @@ function checkAxis<X extends object = object>(
     const type = fields(path, raw).required('type', (typePath, given) =>
       given === 'band' || given === 'linear' ? given : fail(typePath, `must be "band" or "linear", got ${show(given)}`),
     );
-    return type === 'band' ? checkBandAxis(keys.band, extra)(path, raw) : checkLinearAxis(keys.linear, grid, extra)(path, raw);
+    return type === 'band'
+      ? checkBandAxis(keys.band, extra)(path, raw)
+      : checkLinearAxis(keys.linear, grid, extra)(path, raw);
   };
 }
 
 const CARTESIAN_KEYS = { band: ['type', 'categories', 'title', 'hidden', 'labelAngle'], linear: LINEAR_KEYS };
 
-function checkBandAxis<X extends object = object>(keys: readonly string[], extra: Extra<X> = noExtra as Extra<X>): Check<CheckedBandAxis & X> {
+function checkBandAxis<X extends object = object>(
+  keys: readonly string[],
+  extra: Extra<X> = noExtra as Extra<X>,
+): Check<CheckedBandAxis & X> {
   return (path, raw) => {
     const r = fields(path, raw);
     r.allow(keys);
@@ -731,7 +764,15 @@ function checkBandAxis<X extends object = object>(keys: readonly string[], extra
     unique(categories, (i) => `${path}.categories[${i}]`);
     const title = r.optional('title', text());
     const hidden = r.optional('hidden', boolean) ?? false;
-    return { type: 'band', path, categories, title, hidden, labelAngle: r.optional('labelAngle', labelAngle) ?? 0, ...extra(r, path, 'band') };
+    return {
+      type: 'band',
+      path,
+      categories,
+      title,
+      hidden,
+      labelAngle: r.optional('labelAngle', labelAngle) ?? 0,
+      ...extra(r, path, 'band'),
+    };
   };
 }
 

@@ -103,7 +103,8 @@ export interface GaugeAxes {
 
 /**
  * A gauge's dial: values from the start of the sweep to its end, with ticks and labels inside the
- * rim. Without `min` and `max` it reaches from 0 to the values, rounded out to ticks. A whole turn
+ * rim. Without `min` and `max` it reaches from 0 to the values, rounded out to ticks; it shows 0
+ * unless `min` or `max` leaves it out. A whole turn
  * (`startAngle` 0, `endAngle` 360) makes a clock or a compass.
  */
 export interface GaugeAxis extends Omit<LinearAxis, 'title' | 'percent' | 'grid' | 'labelAngle'>, Sweep {
@@ -271,7 +272,10 @@ export interface PieSlice {
    * same name in another ring must not give a different one.
    */
   color?: string | undefined;
-  /** Pulls the slice out from the centre by this share of the radius: from 0 to 0.5. Defaults to 0. */
+  /**
+   * Pulls the slice out from the centre by this share of the outermost ring's radius: from 0 to 0.5.
+   * A slice that is the whole of its pie stays put. Defaults to 0.
+   */
   offset?: number | undefined;
   /**
    * Draws the slice out to a radius in proportion to this value, the largest to the full radius: a
@@ -289,9 +293,10 @@ export interface PieSeries extends SeriesBase {
   /** 1 to 1,000 slices. */
   data: readonly PieSlice[];
   /**
-   * Where the ring starts and ends, as shares of the chart's radius: `innerRadius` 0 for a pie and 0.5
-   * for a donut, from 0 to 0.95; `outerRadius` from 0.05 to 1, greater than `innerRadius`. One pie
-   * defaults to 0 and 1; nested rings split the radius equally, outermost first.
+   * Where the ring starts and ends, as shares of the outermost ring's radius, which fills the chart:
+   * `innerRadius` 0 for a pie and 0.5 for a donut, from 0 to 0.95; `outerRadius` from 0.05 to 1,
+   * greater than `innerRadius`. One pie defaults to 0 and 1; nested rings split the radius equally,
+   * outermost first.
    */
   innerRadius?: number | undefined;
   outerRadius?: number | undefined;

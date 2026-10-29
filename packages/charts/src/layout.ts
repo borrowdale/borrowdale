@@ -82,12 +82,23 @@ function legendEntries(chart: CheckedChart): LegendEntry[] {
     for (const pie of chart.series) {
       pie.data.forEach((slice, i) => {
         if (!first.has(slice.name)) {
-          first.set(slice.name, { name: slice.name, color: slice.color, path: `${pie.path}.data[${i}]`, style: pie.style });
+          first.set(slice.name, {
+            name: slice.name,
+            color: slice.color,
+            path: `${pie.path}.data[${i}]`,
+            style: pie.style,
+          });
         }
       });
     }
     const slices = [...first.values()];
-    return paints(slices).map((paint, i) => ({ name: slices[i]!.name, paint, line: false, dash: undefined, style: slices[i]!.style }));
+    return paints(slices).map((paint, i) => ({
+      name: slices[i]!.name,
+      paint,
+      line: false,
+      dash: undefined,
+      style: slices[i]!.style,
+    }));
   }
   const lines =
     chart.system === 'cartesian'
@@ -174,4 +185,3 @@ function drawEntry(drawing: Drawing, entry: LegendEntry, left: number, middle: n
   const label = { x: left + SWATCH + SWATCH_GAP, y: middle, anchor: 'start' as const, baseline: 'middle' as const };
   drawing.push(swatch, drawing.text(entry.name, label));
 }
-

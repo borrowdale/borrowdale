@@ -8,10 +8,11 @@ import type { Rect } from './frame.js';
 import type { Scale } from './scale.js';
 import { TURN_ROUNDING } from './validate.js';
 
+/** Degrees to radians. */
 export const RADIANS = Math.PI / 180;
 // Beyond this share of a unit vector's length off an axis, a label is placed to that side.
 const SIDE = 0.01;
-// The share of the rim's length that ticks around it are spaced along.
+/** The share of the rim's length that ticks around it are spaced along. */
 export const RIM_SHARE = 0.5;
 
 /** The point `degrees` clockwise from the top of a circle of radius 1 around the origin. */
@@ -49,6 +50,7 @@ export interface PolarFrame {
   point: (degrees: number, distance: number) => Point;
 }
 
+/** A polar frame around `[cx, cy]`, `radius` out to the rim, with a hole of radius `hole`. */
 export function polarFrame([cx, cy]: Point, radius: number, hole: number): PolarFrame {
   return {
     center: [cx, cy],
@@ -61,13 +63,17 @@ export function polarFrame([cx, cy]: Point, radius: number, hole: number): Polar
   };
 }
 
-
 /**
  * The centre and radius of the largest part of a circle from `startAngle` to `endAngle` that fits in
  * `rect`, with a hole of `innerRadius` times the radius: its extent is that of its ends, the quarter
  * turns between them, and the centre or the ends of the hole.
  */
-export function fitSweep(rect: Rect, startAngle: number, endAngle: number, innerRadius: number): { center: Point; radius: number } {
+export function fitSweep(
+  rect: Rect,
+  startAngle: number,
+  endAngle: number,
+  innerRadius: number,
+): { center: Point; radius: number } {
   const quarters = Array.from({ length: 16 }, (_, i) => (Math.floor(startAngle / 90) + i) * 90).filter(
     (angle) => angle > startAngle && angle < endAngle,
   );
@@ -83,6 +89,10 @@ export function fitSweep(rect: Rect, startAngle: number, endAngle: number, inner
     (rect.top + rect.bottom) / 2 - (radius * (minY + maxY)) / 2,
   ];
   return { center, radius };
+}
+
+function scaled([px, py]: Point, factor: number): Point {
+  return [px * factor, py * factor];
 }
 
 /**
@@ -140,23 +150,22 @@ function roundedSlice(
   const outer = Math.min(corner, (radius - hole) / 2, radius * half);
   // The cut along the arc, in degrees.
   const outerTurn = outer / radius / RADIANS;
-  const rim = `Q${at(radius, from)} ${at(radius, from + outerTurn)}${edge(radius, to - outerTurn, true)} Q${at(radius, to)} ${at(radius - outer, to)}`;
+  const rimStart = `Q${at(radius, from)} ${at(radius, from + outerTurn)}`;
+  const rim = `${rimStart}${edge(radius, to - outerTurn, true)} Q${at(radius, to)} ${at(radius - outer, to)}`;
   if (hole === 0) {
     return `M${coordinate(cx)} ${coordinate(cy)} L${at(radius - outer, from)} ${rim} Z`;
   }
   const inner = Math.min(corner, (radius - hole) / 2, hole * half);
   const innerTurn = inner / hole / RADIANS;
-  const back = `Q${at(hole, to)} ${at(hole, to - innerTurn)}${edge(hole, from + innerTurn, false)} Q${at(hole, from)} ${at(hole + inner, from)}`;
+  const backStart = `Q${at(hole, to)} ${at(hole, to - innerTurn)}`;
+  const back = `${backStart}${edge(hole, from + innerTurn, false)} Q${at(hole, from)} ${at(hole + inner, from)}`;
   return `M${at(radius - outer, from)} ${rim} L${at(hole + inner, to)} ${back} Z`;
-}
-
-function scaled([px, py]: Point, factor: number): Point {
-  return [px * factor, py * factor];
 }
 
 /** The ticks of a linear angle axis that get a spoke and a label: on a whole turn the end is the start. */
 export function rimTicks(scale: Scale, whole: boolean): { ticks: number[]; labels: string[] } {
   const last = scale.ticks.length - 1;
-  const repeats = whole && last > 0 && scale.fraction(scale.ticks[last]!) === 1 && scale.fraction(scale.ticks[0]!) === 0;
+  const repeats =
+    whole && last > 0 && scale.fraction(scale.ticks[last]!) === 1 && scale.fraction(scale.ticks[0]!) === 0;
   return repeats ? { ticks: scale.ticks.slice(0, last), labels: scale.labels.slice(0, last) } : scale;
 }

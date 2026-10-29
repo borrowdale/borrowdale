@@ -10,7 +10,12 @@ import type { CheckedPieChart } from './validate.js';
  * Lays out a pie or donut, or nested rings of them, into `rect`, as large as fits with every slice
  * pulled out by its offset. `paintOf` gives each slice name its legend entry's paint.
  */
-export function layoutPie(drawing: Drawing, chart: CheckedPieChart, rect: Rect, paintOf: ReadonlyMap<string, Paint>): void {
+export function layoutPie(
+  drawing: Drawing,
+  chart: CheckedPieChart,
+  rect: Rect,
+  paintOf: ReadonlyMap<string, Paint>,
+): void {
   assertRoom(rect, chart.width, chart.height);
   const { series } = chart;
   const { startAngle, endAngle } = series[0]!;
@@ -50,9 +55,9 @@ export function layoutPie(drawing: Drawing, chart: CheckedPieChart, rect: Rect, 
       const [dx, dy] = onCircle((from + angle) / 2);
       const pulled: Point =
         pull === 0 || isWholeTurn(from + pad, angle - pad) ? center : [center[0] + pull * dx, center[1] + pull * dy];
-      const share = formatNumber((slice.value / sum) * 100, 1, PLAIN_FORMAT);
+      const percent = formatNumber((slice.value / sum) * 100, 1, PLAIN_FORMAT);
       const ring = series.length === 1 ? '' : `${pie.name}, `;
-      drawing.mark(`${ring}${slice.name}: ${formatValue(slice.value)} (${share}%)`, [
+      drawing.mark(`${ring}${slice.name}: ${formatValue(slice.value)} (${percent}%)`, [
         drawing.shape(
           sliceShape(pulled, reach, hole, from + pad, angle - pad, pie.cornerRadius),
           hatched(paintOf.get(slice.name)!),

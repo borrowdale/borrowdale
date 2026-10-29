@@ -1,9 +1,18 @@
 import type { Point, Shape } from '@borrowdale/core';
 import type { Drawing } from './drawing.js';
 import { assertRoom, GAP, TICK, type Rect } from './frame.js';
-import { GRID, GRID_WIDTH, hatched, INK, type Paint } from './palette.js';
-import { alignTowards, fitSweep, isWholeTurn, polarFrame, RADIANS, RIM_SHARE, rimTicks, sliceShape } from './geometry.js';
+import {
+  alignTowards,
+  fitSweep,
+  isWholeTurn,
+  polarFrame,
+  RADIANS,
+  RIM_SHARE,
+  rimTicks,
+  sliceShape,
+} from './geometry.js';
 import { solid } from './marks.js';
+import { GRID, GRID_WIDTH, hatched, INK, type Paint } from './palette.js';
 import { fail } from './read.js';
 import { formatValue, linearScale, place } from './scale.js';
 import type { CheckedGaugeChart, SeriesOf } from './validate.js';
@@ -53,7 +62,11 @@ export function layoutGauge(drawing: Drawing, chart: CheckedGaugeChart, rect: Re
   // The dial shows 0 unless its fixed ends leave it out.
   const zero = (axis.min ?? 0) <= 0 && 0 <= (axis.max ?? 0) ? [0] : [];
   let [low, high] = [Infinity, -Infinity];
-  for (const value of [...zero, ...series.map((entry) => entry.value), ...bands.flatMap((band) => [band.from, band.to])]) {
+  for (const value of [
+    ...zero,
+    ...series.map((entry) => entry.value),
+    ...bands.flatMap((band) => [band.from, band.to]),
+  ]) {
     [low, high] = [Math.min(low, value), Math.max(high, value)];
   }
   const rimLength = radius * (endAngle - startAngle) * RADIANS * RIM_SHARE;
@@ -104,7 +117,14 @@ export function layoutGauge(drawing: Drawing, chart: CheckedGaugeChart, rect: Re
       }
       return;
     }
-    drawing.mark(title, [drawing.shape(needle(point, scale.at(entry.value), entry.length * radius), solid(paint.color), `${entry.name}|gauge`, entry.style)]);
+    drawing.mark(title, [
+      drawing.shape(
+        needle(point, scale.at(entry.value), entry.length * radius),
+        solid(paint.color),
+        `${entry.name}|gauge`,
+        entry.style,
+      ),
+    ]);
   });
   if (series.some((entry) => entry.display === 'needle')) {
     drawing.push(drawing.shape({ kind: 'circle', cx, cy, diameter: 2 * HUB }, solid(INK), 'hub'));
@@ -112,7 +132,9 @@ export function layoutGauge(drawing: Drawing, chart: CheckedGaugeChart, rect: Re
   if (lone) {
     const [only] = series as [GaugeSeries];
     const text = formatValue(only.value, axis.format);
-    drawing.push(drawing.text(text, { x: cx, y: cy + HUB + GAP, anchor: 'middle', baseline: 'top', fontSize: valueSize }));
+    drawing.push(
+      drawing.text(text, { x: cx, y: cy + HUB + GAP, anchor: 'middle', baseline: 'top', fontSize: valueSize }),
+    );
   }
 }
 
@@ -123,4 +145,3 @@ function needle(point: (degrees: number, distance: number) => Point, degrees: nu
     points: [point(degrees, length), point(degrees + 90, NEEDLE_HALF), point(degrees - 90, NEEDLE_HALF)],
   };
 }
-

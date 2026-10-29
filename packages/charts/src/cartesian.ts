@@ -9,7 +9,13 @@ import { GRID, GRID_WIDTH, hatched, INK, LINE_WIDTH, type Paint } from './palett
 import { stackGroup, stackSpans, type Span } from './stack.js';
 import { bandScale, formatValue, linearScale, place, type BandScale, type PlacedScale, type Scale } from './scale.js';
 import type { ChartNode, Curve } from './types.js';
-import { isStacking, type CheckedAxis, type CheckedCartesianChart, type CheckedLinearAxis, type SeriesOf } from './validate.js';
+import {
+  isStacking,
+  type CheckedAxis,
+  type CheckedCartesianChart,
+  type CheckedLinearAxis,
+  type SeriesOf,
+} from './validate.js';
 
 type CartesianSeries = SeriesOf<'cartesian'>;
 type MarkType = CartesianSeries['type'];
@@ -206,9 +212,15 @@ function spansOf(
   );
   for (const entry of series) {
     if (entry.type === 'line') {
-      spans.set(entry, entry.data.map((value) => (value === null ? null : [value, value])));
+      spans.set(
+        entry,
+        entry.data.map((value) => (value === null ? null : [value, value])),
+      );
     } else if (entry.type === 'rangeArea') {
-      spans.set(entry, entry.data.map((pair) => pair && [pair[0], pair[1]]));
+      spans.set(
+        entry,
+        entry.data.map((pair) => pair && [pair[0], pair[1]]),
+      );
     }
   }
   return spans;
@@ -376,8 +388,7 @@ function drawPoints(
     if (diameter === 0) {
       return;
     }
-    const style: SketchStyle =
-      size === undefined ? solid(paint.color) : hatched(paint);
+    const style: SketchStyle = size === undefined ? solid(paint.color) : hatched(paint);
     const sizeText = size === undefined ? '' : `, size ${formatValue(size)}`;
     drawing.mark(`${entry.name}: ${valueText(px, xAxis)}, ${valueText(py, context.axisOf(entry))}${sizeText}`, [
       drawing.shape({ kind: 'circle', cx: x.at(px), cy: y.at(py), diameter }, style, `${entry.name}|${i}`, entry.style),
@@ -400,7 +411,6 @@ function lineOrDot(
   }
   return drawing.shape({ kind: 'path', d: frame.line(run, curve) }, style, key, own);
 }
-
 
 /** A value in a tooltip, in its axis format; on a percent axis it is the value, not its share. */
 function valueText(value: number, axis: CheckedLinearAxis): string {
@@ -489,8 +499,15 @@ function guide(
   const radians = (angle * Math.PI) / 180;
   const room =
     side === 'bottom'
-      ? Math.min(most((extent) => extent.left + extent.right), line / Math.abs(sin(radians))) + GAP
-      : Math.min(most((extent) => extent.up + extent.down), line / Math.abs(cos(radians))) + GAP / 2;
+      ? Math.min(
+          most((extent) => extent.left + extent.right),
+          line / Math.abs(sin(radians)),
+        ) + GAP
+      : Math.min(
+          most((extent) => extent.up + extent.down),
+          line / Math.abs(cos(radians)),
+        ) +
+        GAP / 2;
   // The first category is at the top, the first tick at the bottom.
   const [top, bottom] = axis.type === 'band' ? [first, last] : [last, first];
   const ends =

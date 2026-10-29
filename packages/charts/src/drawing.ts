@@ -49,8 +49,13 @@ export class Drawing {
     return ascent + descent;
   }
 
+  /** How wide `text` is drawn. */
   width(text: string, fontSize = this.#chart.fontSize): number {
-    return remembered(this.#widths, `${fontSize}|${text}`, () => measureText(text, { font: this.#chart.font, fontSize }).width);
+    return remembered(
+      this.#widths,
+      `${fontSize}|${text}`,
+      () => measureText(text, { font: this.#chart.font, fontSize }).width,
+    );
   }
 
   /**
@@ -71,7 +76,9 @@ export class Drawing {
     const fontSize = options.fontSize ?? this.#chart.fontSize;
     const { anchor, baseline, rotate } = options;
     return remembered(this.#extents, `${fontSize}|${anchor}|${baseline}|${rotate}|${text}`, () => {
-      const { x, y, width, height } = textBounds(layoutText(text, { ...options, x: 0, y: 0, font: this.#chart.font, fontSize }));
+      const { x, y, width, height } = textBounds(
+        layoutText(text, { ...options, x: 0, y: 0, font: this.#chart.font, fontSize }),
+      );
       return { left: -x, right: x + width, up: -y, down: y + height };
     });
   }

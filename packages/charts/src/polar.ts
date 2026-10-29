@@ -2,17 +2,20 @@ import type { Point, Shape, SketchStyle } from '@borrowdale/core';
 import { coordinate } from './curves.js';
 import type { Drawing } from './drawing.js';
 import { assertRoom, BAND_PADDING, GAP, type Rect } from './frame.js';
-import { alignTowards, fitSweep, isWholeTurn, polarFrame, RADIANS, RIM_SHARE, rimTicks, sliceShape, type PolarFrame } from './geometry.js';
+import {
+  alignTowards,
+  fitSweep,
+  isWholeTurn,
+  polarFrame,
+  RADIANS,
+  RIM_SHARE,
+  rimTicks,
+  sliceShape,
+  type PolarFrame,
+} from './geometry.js';
 import { loneDot, POINT_SIZE, runsOf, solid } from './marks.js';
 import { GRID, GRID_WIDTH, hatched, LINE_WIDTH, type Paint } from './palette.js';
-import {
-  bandScale,
-  formatValue,
-  linearScale,
-  place,
-  PLAIN_FORMAT,
-  type PlacedScale,
-} from './scale.js';
+import { bandScale, formatValue, linearScale, place, PLAIN_FORMAT, type PlacedScale } from './scale.js';
 import { stackGroup, stackSpans, type Span } from './stack.js';
 import type { ChartNode } from './types.js';
 import {
@@ -32,8 +35,8 @@ type PolarScale =
   | {
       type: 'band';
       path: string;
-      /** The middle of category `index`, and the half width of its share. */
-      share: (index: number) => { middle: number; half: number };
+      /** The middle of category `index`'s slot, and half its width. */
+      slot: (index: number) => { middle: number; half: number };
     };
 
 // Each series type declares the axis types it needs (SERIES_RULES), and validation holds every
@@ -49,7 +52,7 @@ function bandOf(axis: PolarScale): (index: number) => { middle: number; half: nu
   if (axis.type !== 'band') {
     throw new Error(`${axis.path} is a linear axis where a series needs a band one`);
   }
-  return axis.share;
+  return axis.slot;
 }
 
 /** A line from the centre out to the rim: its angle, its gridline's key, and its label. */
@@ -91,14 +94,22 @@ interface PolarMark<S extends PolarSeries> {
   draw: (context: PolarContext, entry: S, paint: Paint) => void;
 }
 
-const spanValues = (_entry: unknown, spans: Span[] | undefined): number[] => (spans ?? []).flatMap((span) => span ?? []);
+const spanValues = (_entry: unknown, spans: Span[] | undefined): number[] =>
+  (spans ?? []).flatMap((span) => span ?? []);
 const plainValues = (entry: { data: readonly (number | null)[] }): number[] =>
   entry.data.filter((value): value is number => value !== null);
 
 const none = (): number[] => [];
 
 const POLAR_MARKS: { [K in PolarType]: PolarMark<Extract<PolarSeries, { type: K }>> } = {
-  radar: { angle: none, radius: (entry) => entry.data.flat(), zero: false, slot: false, legend: 'box', draw: drawRadar },
+  radar: {
+    angle: none,
+    radius: (entry) => entry.data.flat(),
+    zero: false,
+    slot: false,
+    legend: 'box',
+    draw: drawRadar,
+  },
   rose: { angle: none, radius: spanValues, zero: true, slot: true, legend: 'box', draw: drawWedges },
   radialBar: { angle: spanValues, radius: none, zero: true, slot: true, legend: 'box', draw: drawWedges },
   polarLine: { angle: none, radius: plainValues, zero: false, slot: false, legend: 'line', draw: drawPolarLine },
@@ -134,7 +145,11 @@ export function layoutPolar(drawing: Drawing, chart: CheckedPolarChart, rect: Re
   const whole = isWholeTurn(startAngle, endAngle);
   const line = drawing.lineHeight();
   const stacking = series.filter(isStacking);
-  const spans: Map<PolarSeries, Span[]> = stackSpans(stacking, (entry) => stackGroup(entry, 'polar'), () => false);
+  const spans: Map<PolarSeries, Span[]> = stackSpans(
+    stacking,
+    (entry) => stackGroup(entry, 'polar'),
+    () => false,
+  );
   const extentOf = (axis: 'angle' | 'radius'): [number, number] | undefined => {
     let [low, high] = [Infinity, -Infinity];
     for (const entry of series) {
@@ -147,13 +162,14 @@ export function layoutPolar(drawing: Drawing, chart: CheckedPolarChart, rect: Re
     return low > high ? undefined : [low, high];
   };
 
-  // The labels around the rim decide how much room the circle leaves.
   // Ticks around the rim, spaced as along a straight axis of the arc's length less its labels: about
   // half of the arc, measured before the labels decide the radius.
   const rimLength = (Math.min(rect.right - rect.left, rect.bottom - rect.top) / 2) * sweep * RADIANS * RIM_SHARE;
-  const angleScale = angleAxis.type === 'linear' ? linearScale(angleAxis, endsOf(angleAxis, extentOf('angle')), rimLength) : undefined;
+  const angleScale =
+    angleAxis.type === 'linear' ? linearScale(angleAxis, endsOf(angleAxis, extentOf('angle')), rimLength) : undefined;
   const rim = angleScale && rimTicks(angleScale, whole);
   const rimLabels = angleAxis.hidden ? [] : angleAxis.type === 'band' ? angleAxis.categories : rim!.labels;
+  // The labels around the rim decide how much room the circle leaves.
   const widest = Math.max(0, ...rimLabels.map((label) => drawing.width(label)));
   const room = angleAxis.hidden ? 0 : GAP;
   const depth = angleAxis.hidden ? 0 : line;
@@ -161,9 +177,18 @@ export function layoutPolar(drawing: Drawing, chart: CheckedPolarChart, rect: Re
   if (whole) {
     const radius = Math.min((rect.right - rect.left) / 2 - widest - room, (rect.bottom - rect.top) / 2 - depth - room);
     assertRoom({ left: 0, top: 0, right: radius, bottom: radius }, chart.width, chart.height);
-    frame = polarFrame([(rect.left + rect.right) / 2, (rect.top + rect.bottom) / 2], radius, radius * radiusAxis.innerRadius);
+    frame = polarFrame(
+      [(rect.left + rect.right) / 2, (rect.top + rect.bottom) / 2],
+      radius,
+      radius * radiusAxis.innerRadius,
+    );
   } else {
-    const inner = { left: rect.left + widest + room, top: rect.top + depth + room, right: rect.right - widest - room, bottom: rect.bottom - depth - room };
+    const inner = {
+      left: rect.left + widest + room,
+      top: rect.top + depth + room,
+      right: rect.right - widest - room,
+      bottom: rect.bottom - depth - room,
+    };
     assertRoom(inner, chart.width, chart.height);
     const { center, radius } = fitSweep(inner, startAngle, endAngle, radiusAxis.innerRadius);
     frame = polarFrame(center, radius, radius * radiusAxis.innerRadius);
@@ -173,15 +198,22 @@ export function layoutPolar(drawing: Drawing, chart: CheckedPolarChart, rect: Re
   const angle: PolarScale =
     angleAxis.type === 'linear'
       ? { type: 'linear', path: angleAxis.path, scale: place(angleScale!, [startAngle, endAngle]) }
-      : { type: 'band', path: angleAxis.path, share: bandAround(angleAxis.categories.length, startAngle, sweep, whole) };
+      : {
+          type: 'band',
+          path: angleAxis.path,
+          slot: bandAround(angleAxis.categories.length, startAngle, sweep, whole),
+        };
   const radiusPlace: PolarScale =
     radiusAxis.type === 'linear'
       ? {
           type: 'linear',
           path: radiusAxis.path,
-          scale: place(linearScale(radiusAxis, endsOf(radiusAxis, extentOf('radius'), true), radius - hole), [hole, radius]),
+          scale: place(linearScale(radiusAxis, endsOf(radiusAxis, extentOf('radius'), true), radius - hole), [
+            hole,
+            radius,
+          ]),
         }
-      : { type: 'band', path: radiusAxis.path, share: ringsOf(radiusAxis.categories.length, hole, radius) };
+      : { type: 'band', path: radiusAxis.path, slot: ringsOf(radiusAxis.categories.length, hole, radius) };
   const spokes: Spoke[] =
     angleAxis.type === 'band'
       ? angleAxis.categories.map((label, k) => ({ angle: bandOf(angle)(k).middle, key: k, label }))
@@ -219,7 +251,10 @@ export function layoutPolar(drawing: Drawing, chart: CheckedPolarChart, rect: Re
       radius: radiusAxis.type === 'linear' ? radiusAxis.format : PLAIN_FORMAT,
     },
     spansOf: (entry) => spans.get(entry)!,
-    slots: slotsOf(series.filter((entry) => polarMarkOf(entry).slot), (entry) => ('stack' in entry ? stackGroup(entry, 'polar') : `#${entry.index}`)),
+    slots: slotsOf(
+      series.filter((entry) => polarMarkOf(entry).slot),
+      (entry) => ('stack' in entry ? stackGroup(entry, 'polar') : `#${entry.index}`),
+    ),
     whole,
   };
   series.forEach((entry, i) => polarMarkOf(entry).draw(context, entry, paints[i]!));
@@ -235,7 +270,7 @@ export function layoutPolar(drawing: Drawing, chart: CheckedPolarChart, rect: Re
   }
   if (radiusPlace.type === 'band' && radiusAxis.type === 'band' && !radiusAxis.hidden) {
     radiusAxis.categories.forEach((category, k) => {
-      const [px, py] = frame.point(startAngle, radiusPlace.share(k).middle);
+      const [px, py] = frame.point(startAngle, radiusPlace.slot(k).middle);
       drawing.push(drawing.text(category, { x: px - GAP / 2, y: py, anchor: 'end', baseline: 'middle' }));
     });
   }
@@ -257,14 +292,22 @@ function endsOf(axis: CheckedLinearAxis, extent: [number, number] | undefined, f
 }
 
 /** Categories around the circle: on a whole turn the first at the start, else each centred in its share. */
-function bandAround(count: number, start: number, sweep: number, whole: boolean): (index: number) => { middle: number; half: number } {
+function bandAround(
+  count: number,
+  start: number,
+  sweep: number,
+  whole: boolean,
+): (index: number) => { middle: number; half: number } {
   return (index) => ({
     middle: whole ? start + (index * sweep) / count : start + ((index + 0.5) * sweep) / count,
     half: sweep / count / 2,
   });
 }
 
-/** Rings out from the centre between `hole` and `radius`, the first category outermost, as the first is topmost on a horizontal bar chart. */
+/**
+ * Rings out from the centre between `hole` and `radius`, the first category outermost, as the first
+ * is topmost on a horizontal bar chart.
+ */
 function ringsOf(count: number, hole: number, radius: number): (index: number) => { middle: number; half: number } {
   const rings = bandScale(count, [hole, radius], BAND_PADDING);
   return (index) => {
@@ -309,7 +352,9 @@ function drawRadar(context: PolarContext, entry: Extract<PolarSeries, { type: 'r
   drawing.mark(entry.name, [drawing.shape({ kind: 'polygon', points: around(entry.data) }, style, key, entry.style)]);
 }
 
-function isRanges(data: readonly number[] | readonly (readonly [number, number])[]): data is readonly (readonly [number, number])[] {
+function isRanges(
+  data: readonly number[] | readonly (readonly [number, number])[],
+): data is readonly (readonly [number, number])[] {
   return Array.isArray(data[0]);
 }
 
@@ -318,7 +363,11 @@ function isRanges(data: readonly number[] | readonly (readonly [number, number])
  * ring per category: each from where its value starts to where it ends, in its share of the
  * category beside the other series.
  */
-function drawWedges(context: PolarContext, entry: Extract<PolarSeries, { type: 'rose' | 'radialBar' }>, paint: Paint): void {
+function drawWedges(
+  context: PolarContext,
+  entry: Extract<PolarSeries, { type: 'rose' | 'radialBar' }>,
+  paint: Paint,
+): void {
   const { drawing, frame, slots } = context;
   const [across, along, format] =
     entry.type === 'rose'
@@ -348,21 +397,23 @@ function drawWedges(context: PolarContext, entry: Extract<PolarSeries, { type: '
 
 function drawPolarLine(context: PolarContext, entry: Extract<PolarSeries, { type: 'polarLine' }>, paint: Paint): void {
   const { drawing, frame, angle, radius } = context;
-  const [share, at] = [bandOf(angle), linearOf(radius).at];
-  const points = entry.data.map((value, k) => (value === null ? null : frame.point(share(k).middle, at(value))));
+  const [slot, at] = [bandOf(angle), linearOf(radius).at];
+  const points = entry.data.map((value, k) => (value === null ? null : frame.point(slot(k).middle, at(value))));
   const style = { stroke: paint.color, strokeWidth: LINE_WIDTH, ...(entry.dash ? { strokeLineDash: entry.dash } : {}) };
   drawing.mark(
     entry.name,
-    polarRuns(points, context.whole).map((run, r) => polyline(drawing, run, style, `${entry.name}|polarLine|${r}`, entry.style)),
+    polarRuns(points, context.whole).map((run, r) =>
+      polyline(drawing, run, style, `${entry.name}|polarLine|${r}`, entry.style),
+    ),
   );
 }
 
 function drawPolarArea(context: PolarContext, entry: Extract<PolarSeries, { type: 'polarArea' }>, paint: Paint): void {
   const { drawing, frame, angle, radius } = context;
   const outline = { stroke: paint.color, strokeWidth: LINE_WIDTH };
-  const [share, at] = [bandOf(angle), linearOf(radius).at];
+  const [slot, at] = [bandOf(angle), linearOf(radius).at];
   const edges = context.spansOf(entry).map((span, k) => {
-    const a = share(k).middle;
+    const a = slot(k).middle;
     return span && { from: frame.point(a, at(span[0])), to: frame.point(a, at(span[1])) };
   });
   const nodes = polarRuns(edges, context.whole).flatMap((run, r) => {
@@ -383,13 +434,21 @@ function drawPolarArea(context: PolarContext, entry: Extract<PolarSeries, { type
   drawing.mark(entry.name, nodes);
 }
 
-function drawPolarPoints(context: PolarContext, entry: Extract<PolarSeries, { type: 'polarScatter' }>, paint: Paint): void {
-  const { drawing, frame, angle, radius } = context;
-  const { formats } = context;
+function drawPolarPoints(
+  context: PolarContext,
+  entry: Extract<PolarSeries, { type: 'polarScatter' }>,
+  paint: Paint,
+): void {
+  const { drawing, frame, angle, radius, formats } = context;
   entry.data.forEach(([a, r], i) => {
     const [cx, cy] = frame.point(linearOf(angle).at(a), linearOf(radius).at(r));
     drawing.mark(`${entry.name}: ${formatValue(a, formats.angle)}, ${formatValue(r, formats.radius)}`, [
-      drawing.shape({ kind: 'circle', cx, cy, diameter: POINT_SIZE }, solid(paint.color), `${entry.name}|${i}`, entry.style),
+      drawing.shape(
+        { kind: 'circle', cx, cy, diameter: POINT_SIZE },
+        solid(paint.color),
+        `${entry.name}|${i}`,
+        entry.style,
+      ),
     ]);
   });
 }
@@ -428,4 +487,3 @@ function polyline(
 function pathThrough(points: readonly Point[]): string {
   return points.map(([px, py], i) => `${i === 0 ? 'M' : 'L'}${coordinate(px)} ${coordinate(py)}`).join(' ');
 }
-
