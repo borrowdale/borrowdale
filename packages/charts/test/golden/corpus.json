@@ -2773,5 +2773,164 @@
     }
    ]
   }
+ },
+ {
+  "name": "gauge-needle-bands",
+  "spec": {
+   "width": 300,
+   "height": 260,
+   "title": "Load",
+   "axes": {
+    "angle": {
+     "type": "linear",
+     "min": 0,
+     "max": 100,
+     "bands": [
+      {
+       "from": 0,
+       "to": 60,
+       "color": "#009e73"
+      },
+      {
+       "from": 60,
+       "to": 85,
+       "color": "#e69f00"
+      },
+      {
+       "from": 85,
+       "to": 100,
+       "color": "#d55e00"
+      }
+     ],
+     "format": {
+      "suffix": "%"
+     }
+    }
+   },
+   "series": [
+    {
+     "type": "gauge",
+     "name": "CPU",
+     "value": 72
+    }
+   ]
+  }
+ },
+ {
+  "name": "gauge-semicircle-bar",
+  "spec": {
+   "width": 300,
+   "height": 200,
+   "axes": {
+    "angle": {
+     "type": "linear",
+     "min": 0,
+     "max": 100,
+     "startAngle": -90,
+     "endAngle": 90
+    }
+   },
+   "series": [
+    {
+     "type": "gauge",
+     "name": "Done",
+     "display": "bar",
+     "value": 64
+    }
+   ]
+  }
+ },
+ {
+  "name": "gauge-default-dial",
+  "spec": {
+   "width": 260,
+   "height": 240,
+   "series": [
+    {
+     "type": "gauge",
+     "name": "Score",
+     "value": 38.5
+    }
+   ]
+  }
+ },
+ {
+  "name": "gauge-clock",
+  "spec": {
+   "width": 260,
+   "height": 260,
+   "legend": "none",
+   "axes": {
+    "angle": {
+     "type": "linear",
+     "min": 0,
+     "max": 12,
+     "startAngle": 0,
+     "endAngle": 360
+    }
+   },
+   "series": [
+    {
+     "type": "gauge",
+     "name": "Hour",
+     "value": 10.2,
+     "length": 0.5
+    },
+    {
+     "type": "gauge",
+     "name": "Minute",
+     "value": 2,
+     "length": 0.85
+    }
+   ]
+  }
+ },
+ {
+  "name": "gauge-bars-in-rings",
+  "spec": {
+   "width": 320,
+   "height": 300,
+   "axes": {
+    "angle": {
+     "type": "linear",
+     "bands": [
+      {
+       "from": 0,
+       "to": 60,
+       "color": "#009e73"
+      },
+      {
+       "from": 60,
+       "to": 85,
+       "color": "#e69f00"
+      },
+      {
+       "from": 85,
+       "to": 100,
+       "color": "#d55e00"
+      }
+     ]
+    }
+   },
+   "series": [
+    {
+     "type": "gauge",
+     "name": "Mon",
+     "display": "bar",
+     "value": 40
+    },
+    {
+     "type": "gauge",
+     "name": "Tue",
+     "display": "bar",
+     "value": 75
+    },
+    {
+     "type": "gauge",
+     "name": "Goal",
+     "value": 90
+    }
+   ]
+  }
  }
 ]

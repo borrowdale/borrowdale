@@ -1,0 +1,127 @@
+import type { Point, Shape } from '@borrowdale/core';
+import type { TextAnchor, TextBaseline } from '@borrowdale/text';
+import type { Drawing } from './drawing.js';
+import { assertRoom, GAP, TICK, type Rect } from './frame.js';
+import { GRID, GRID_WIDTH, hatched, INK, type Paint } from './palette.js';
+import { fitSweep, onCircle, rimTicks, sliceShape } from './polar.js';
+import { formatValue, linearScale, place } from './scale.js';
+import { TURN_ROUNDING, type CheckedGaugeChart, type SeriesOf } from './validate.js';
+
+type GaugeSeries = SeriesOf<'gauge'>;
+
+// The width of the dial's track, and of each bar's ring, as a share of the radius.
+const TRACK_SHARE = 0.1;
+// The space between rings, in units.
+const RING_GAP = 3;
+// Half the width of a needle at its base, and the radius of the hub it turns on.
+const NEEDLE_HALF = 3;
+const HUB = 5;
+// How much larger than the labels a lone gauge writes its value.
+const VALUE_GROWTH = 4;
+const RADIANS = Math.PI / 180;
+// Beyond this share of a unit vector's length off an axis, a label is placed to that side.
+const SIDE = 0.01;
+
+/**
+ * Lays out a gauge into `rect`: its dial, as large as fits, with coloured bands along the rim, ticks
+ * and labels inside it, bars in rings from the rim inwards, and needles from the centre. A lone gauge
+ * also writes its value under the centre.
+ */
+export function layoutGauge(drawing: Drawing, chart: CheckedGaugeChart, rect: Rect, paints: Paint[]): void {
+  const { angle: axis, series } = chart;
+  const { startAngle, endAngle, bands } = axis;
+  const whole = endAngle - startAngle >= 360 - TURN_ROUNDING;
+  const lone = series.length === 1;
+  const valueSize = chart.fontSize + VALUE_GROWTH;
+  // Room under the centre for the hub and a lone gauge's value, which the dial may not leave.
+  const below = HUB + (lone ? GAP + drawing.lineHeight(valueSize) : 0);
+  assertRoom(rect, chart.width, chart.height);
+  let { center, radius } = fitSweep(rect, startAngle, endAngle, 0);
+  const overflow = center[1] + below - rect.bottom;
+  if (overflow > 0) {
+    const room = { ...rect, bottom: rect.bottom - overflow };
+    assertRoom(room, chart.width, chart.height);
+    ({ center, radius } = fitSweep(room, startAngle, endAngle, 0));
+  }
+  assertRoom({ left: 0, top: 0, right: radius, bottom: radius }, chart.width, chart.height);
+  const [cx, cy] = center;
+  const point = (degrees: number, distance: number): Point => {
+    const [dx, dy] = onCircle(degrees);
+    return [cx + distance * dx, cy + distance * dy];
+  };
+
+  let [low, high] = [0, 0];
+  for (const value of [...series.map((entry) => entry.value), ...bands.flatMap((band) => [band.from, band.to])]) {
+    [low, high] = [Math.min(low, value), Math.max(high, value)];
+  }
+  const rimLength = radius * (endAngle - startAngle) * RADIANS * 0.5;
+  const scale = place(linearScale(axis, [low, high], rimLength), [startAngle, endAngle]);
+  const [first, last] = scale.domain;
+  const origin = Math.min(Math.max(0, first), last);
+
+  // The track along the rim holds the bands; bars take rings inside it, or the track itself when
+  // there are no bands.
+  const width = radius * TRACK_SHARE;
+  const bars = series.filter((entry) => entry.display === 'bar');
+  const shift = bands.length > 0 ? 1 : 0;
+  const ringOuter = (j: number): number => radius - j * (width + RING_GAP);
+  const inner = ringOuter(Math.max(1, bars.length + shift)) + RING_GAP;
+  const grid = { stroke: GRID, strokeWidth: GRID_WIDTH };
+  const arc = (outer: number, from: number, to: number): Shape =>
+    sliceShape(center, outer, outer - width, scale.at(from), scale.at(to));
+
+  drawing.push(drawing.shape(arc(radius, first, last), grid, 'track'));
+  bands.forEach((band, i) => {
+    drawing.push(drawing.shape(arc(radius, band.from, band.to), solid(band.color), `band|${i}`));
+  });
+
+  if (!axis.hidden) {
+    const ink = { stroke: INK, strokeWidth: 1 };
+    const { ticks, labels } = rimTicks(scale, whole);
+    ticks.forEach((tick, i) => {
+      const at = scale.at(tick);
+      const [[x1, y1], [x2, y2]] = [point(at, inner), point(at, inner - TICK)];
+      drawing.push(drawing.shape({ kind: 'line', x1, y1, x2, y2 }, ink, `tick|${tick}`));
+      // Inside the rim, so each label is placed towards the centre.
+      const [px, py] = point(at, inner - TICK - GAP);
+      const [dx, dy] = onCircle(at);
+      const anchor: TextAnchor = dx > SIDE ? 'end' : dx < -SIDE ? 'start' : 'middle';
+      const baseline: TextBaseline = dy < -SIDE ? 'top' : dy > SIDE ? 'bottom' : 'middle';
+      drawing.push(drawing.text(labels[i]!, { x: px, y: py, anchor, baseline }));
+    });
+  }
+
+  series.forEach((entry, i) => {
+    const paint = paints[i]!;
+    const title = `${entry.name}: ${formatValue(entry.value, axis.format)}`;
+    if (entry.display === 'bar') {
+      const [from, to] = [Math.min(origin, entry.value), Math.max(origin, entry.value)];
+      if (to > from) {
+        const ring = ringOuter(bars.indexOf(entry) + shift);
+        drawing.mark(title, [drawing.shape(arc(ring, from, to), hatched(paint), `${entry.name}|gauge`, entry.style)]);
+      }
+      return;
+    }
+    drawing.mark(title, [drawing.shape(needle(point, scale.at(entry.value), entry.length * radius), solid(paint.color), `${entry.name}|gauge`, entry.style)]);
+  });
+  if (series.some((entry) => entry.display === 'needle')) {
+    drawing.push(drawing.shape({ kind: 'circle', cx, cy, diameter: 2 * HUB }, solid(INK), 'hub'));
+  }
+  if (lone) {
+    const [only] = series as [GaugeSeries];
+    const text = formatValue(only.value, axis.format);
+    drawing.push(drawing.text(text, { x: cx, y: cy + HUB + GAP, anchor: 'middle', baseline: 'top', fontSize: valueSize }));
+  }
+}
+
+/** A needle from the centre to `length` at `degrees`: a thin triangle on the hub. */
+function needle(point: (degrees: number, distance: number) => Point, degrees: number, length: number): Shape {
+  return {
+    kind: 'polygon',
+    points: [point(degrees, length), point(degrees + 90, NEEDLE_HALF), point(degrees - 90, NEEDLE_HALF)],
+  };
+}
+
+function solid(color: string): { stroke: string; fill: string; fillStyle: 'solid' } {
+  return { stroke: color, fill: color, fillStyle: 'solid' };
+}

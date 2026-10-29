@@ -3,6 +3,7 @@ import { layoutCartesian, legendOf } from './cartesian.js';
 import { Drawing } from './drawing.js';
 import { GAP, PAD, type Rect } from './frame.js';
 import { hatched, LINE_WIDTH, paints, type Paint } from './palette.js';
+import { layoutGauge } from './gauge.js';
 import { layoutPie, layoutPolar, polarLegendOf } from './polar.js';
 import { fail } from './read.js';
 import type { ChartLayout, ChartOptions, ChartSpec, LegendPosition } from './types.js';
@@ -53,6 +54,9 @@ export function layoutChart(spec: ChartSpec, options: ChartOptions = {}): ChartL
     case 'pie':
       layoutPie(drawing, chart, rect, new Map(entries.map((entry) => [entry.name, entry.paint])));
       break;
+    case 'gauge':
+      layoutGauge(drawing, chart, rect, entryPaints);
+      break;
     default:
       unknownSystem(chart);
   }
@@ -87,7 +91,9 @@ function legendEntries(chart: CheckedChart): LegendEntry[] {
   const lines =
     chart.system === 'cartesian'
       ? chart.series.map((entry) => legendOf(entry) === 'line')
-      : chart.series.map((entry) => polarLegendOf(entry) === 'line');
+      : chart.system === 'polar'
+        ? chart.series.map((entry) => polarLegendOf(entry) === 'line')
+        : chart.series.map(() => false);
   const series: readonly CheckedChart['series'][number][] = chart.series;
   return paints(series).map((paint, i) => {
     const entry = series[i]!;

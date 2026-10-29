@@ -5,7 +5,7 @@ import type { Font, TextLayout } from '@borrowdale/text';
  * A chart, as plain data that can come from JSON. Its series' type picks its coordinate system, and
  * every series must draw in the same one, with that system's axes: `x` and `y` for cartesian
  * series, `angle` (and optionally `radius`) for polar series (radar, rose, radial bar, polar line,
- * area and scatter), none for a pie.
+ * area and scatter), optionally `angle` for a gauge, none for a pie.
  */
 export interface ChartSpec {
   width: number;
@@ -28,7 +28,7 @@ export interface ChartSpec {
    * `fillWeight` 0 to 100.
    */
   style?: SketchStyle | undefined;
-  axes?: CartesianAxes | PolarAxes | undefined;
+  axes?: CartesianAxes | PolarAxes | GaugeAxes | undefined;
   series: readonly Series[];
 }
 
@@ -95,6 +95,31 @@ export interface RadiusLinearAxis extends Omit<LinearAxis, 'title' | 'percent'>,
 
 /** Categories out from the centre, as rings, the first outermost. */
 export interface RadiusBandAxis extends Omit<BandAxis, 'title'>, Hole {}
+
+/** The dial of a gauge. Defaults to 0 to 100 over -120 to 120 degrees. */
+export interface GaugeAxes {
+  angle: GaugeAxis;
+}
+
+/**
+ * A gauge's dial: values from the start of the sweep to its end, with ticks and labels inside the
+ * rim. Without `min` and `max` it reaches from 0 to the values, rounded out to ticks. A whole turn
+ * (`startAngle` 0, `endAngle` 360) makes a clock or a compass.
+ */
+export interface GaugeAxis extends Omit<LinearAxis, 'title' | 'percent' | 'grid'>, Sweep {
+  /**
+   * Coloured stretches of the dial, such as green, amber and red, in order and not overlapping: each
+   * `from` below its `to`, and at or above the previous band's `to`. At most 100.
+   */
+  bands?: readonly GaugeBand[] | undefined;
+}
+
+export interface GaugeBand {
+  from: number;
+  to: number;
+  /** As a series' `color`. */
+  color: string;
+}
 
 export type Axis = BandAxis | LinearAxis;
 
@@ -332,6 +357,19 @@ export interface PolarScatterSeries extends SeriesBase {
   data: readonly (readonly [angle: number, radius: number])[];
 }
 
+/**
+ * One value on a gauge's dial. Several gauge series share the dial: as needles of different lengths,
+ * such as the hands of a clock, or as bars in rings from the rim inwards.
+ */
+export interface GaugeSeries extends SeriesBase {
+  type: 'gauge';
+  value: number;
+  /** A needle from the centre, or a bar along the dial from its start. Defaults to `needle`. */
+  display?: 'needle' | 'bar' | undefined;
+  /** A needle's length, as a share of the radius: from 0.1 to 1. Defaults to 0.8. */
+  length?: number | undefined;
+}
+
 export type Series =
   | BarSeries
   | LineSeries
@@ -345,7 +383,8 @@ export type Series =
   | RadialBarSeries
   | PolarLineSeries
   | PolarAreaSeries
-  | PolarScatterSeries;
+  | PolarScatterSeries
+  | GaugeSeries;
 
 export type SeriesType = Series['type'];
 

@@ -167,6 +167,14 @@ const spaced: ChartSpec = {
   series: [{ type: 'pie', name: 'P', padAngle: 4, data: [{ name: 'big', value: 99 }, { name: 'sliver', value: 1 }] }],
 };
 
+const speed: ChartSpec = {
+  width: 300,
+  height: 260,
+  axes: { angle: { type: 'linear', min: 0, max: 200, format: { suffix: ' km/h' } } },
+  series: [{ type: 'gauge', name: 'Speed', value: 88 }],
+};
+const twoNeedles: ChartSpec = { ...speed, series: [...speed.series, { type: 'gauge', name: 'Limit', value: 120 }] };
+
 /** The mark whose tooltip is `title`. */
 function mark(layout: ChartLayout, title: string): ChartNode {
   const found = layout.nodes.find((node) => node.kind === 'mark' && node.title === title);
@@ -395,5 +403,14 @@ describe('layoutChart', () => {
   it('leaves out a slice narrower than the space between slices, keeping its legend entry', () => {
     expect(titles(layoutChart(spaced))).toEqual(['big: 99 (99.0%)']);
     expect(texts(layoutChart(spaced))).toEqual(['big', 'sliver']);
+  });
+
+  it('writes a gauge value in the dial format, in its tooltip and under a lone gauge', () => {
+    expect(titles(layoutChart(speed))).toEqual(['Speed: 88 km/h']);
+    expect(texts(layoutChart(speed))).toContain('88 km/h');
+  });
+
+  it('writes no value under a gauge of several needles', () => {
+    expect(texts(layoutChart(twoNeedles))).not.toContain('88 km/h');
   });
 });

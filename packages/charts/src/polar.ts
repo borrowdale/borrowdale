@@ -34,7 +34,7 @@ const SIDE = 0.01;
 const RIM_SHARE = 0.5;
 
 /** The point `degrees` clockwise from the top of a circle of radius 1 around the origin. */
-function onCircle(degrees: number): Point {
+export function onCircle(degrees: number): Point {
   const radians = degrees * RADIANS;
   return [sin(radians), -cos(radians)];
 }
@@ -91,7 +91,7 @@ export function layoutPie(drawing: Drawing, chart: CheckedPieChart, rect: Rect, 
  * `rect`, with a hole of `innerRadius` times the radius: its extent is that of its ends, the quarter
  * turns between them, and the centre or the ends of the hole.
  */
-function fitSweep(rect: Rect, startAngle: number, endAngle: number, innerRadius: number): { center: Point; radius: number } {
+export function fitSweep(rect: Rect, startAngle: number, endAngle: number, innerRadius: number): { center: Point; radius: number } {
   const quarters = Array.from({ length: 16 }, (_, i) => (Math.floor(startAngle / 90) + i) * 90).filter(
     (angle) => angle > startAngle && angle < endAngle,
   );
@@ -113,7 +113,7 @@ function fitSweep(rect: Rect, startAngle: number, endAngle: number, innerRadius:
  * A slice from `from` to `to` degrees between `hole` and `radius`, a ring when it is a whole turn,
  * with its corners rounded to `corner` where there is room for them.
  */
-function sliceShape([cx, cy]: Point, radius: number, hole: number, from: number, to: number, corner = 0): Shape {
+export function sliceShape([cx, cy]: Point, radius: number, hole: number, from: number, to: number, corner = 0): Shape {
   const whole = to - from >= 360 - TURN_ROUNDING;
   if (hole === 0 && whole) {
     return { kind: 'circle', cx, cy, diameter: 2 * radius };
@@ -415,7 +415,7 @@ function bandAround(count: number, start: number, sweep: number, whole: boolean)
 }
 
 /** The ticks of a linear angle axis that get a spoke and a label: on a whole turn the end is the start. */
-function rimTicks(scale: Scale, whole: boolean): { ticks: number[]; labels: string[] } {
+export function rimTicks(scale: Scale, whole: boolean): { ticks: number[]; labels: string[] } {
   const last = scale.ticks.length - 1;
   const repeats = whole && last > 0 && scale.fraction(scale.ticks[last]!) === 1 && scale.fraction(scale.ticks[0]!) === 0;
   return repeats ? { ticks: scale.ticks.slice(0, last), labels: scale.labels.slice(0, last) } : scale;

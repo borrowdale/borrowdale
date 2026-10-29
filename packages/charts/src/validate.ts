@@ -40,6 +40,10 @@ const COLOR = /^(?:#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})|[a-z]+|(?:rgba?|hs
 const MAX_SEED = 100;
 // A browser's work to paint a stroke grows with its width, and the budget does not see it.
 const MAX_STROKE_WIDTH = 100;
+// A needle's length, as a share of the radius.
+const MIN_NEEDLE = 0.1;
+const DEFAULT_NEEDLE = 0.8;
+const MAX_BANDS = 100;
 const LINEAR_KEYS = ['type', 'title', 'min', 'max', 'percent', 'grid', 'hidden', 'format'];
 
 /**
@@ -48,7 +52,7 @@ const LINEAR_KEYS = ['type', 'title', 'min', 'max', 'percent', 'grid', 'hidden',
  */
 export const TURN_ROUNDING = 1e-9;
 
-export type System = 'cartesian' | 'polar' | 'pie';
+export type System = 'cartesian' | 'polar' | 'pie' | 'gauge';
 
 export interface CheckedFormat {
   /** Undefined means "from the tick step". */
@@ -220,6 +224,17 @@ const SERIES_RULES = {
     keys: ['data'],
     read: (r: Fields) => ({ data: readPoints(['angle', 'radius'])(r) }),
   },
+  gauge: {
+    system: 'gauge',
+    band: false,
+    stacks: false,
+    keys: ['value', 'display', 'length'],
+    read: (r: Fields) => ({
+      value: r.required('value', anyValue),
+      display: r.optional('display', oneOf(['needle', 'bar'] as const)) ?? 'needle',
+      length: r.optional('length', number(MIN_NEEDLE, 1)) ?? DEFAULT_NEEDLE,
+    }),
+  },
 } as const satisfies Record<
   SeriesType,
   {
@@ -309,8 +324,21 @@ export interface CheckedPieChart extends CheckedChartBase {
   series: CheckedPie[];
 }
 
+export interface CheckedGaugeBand {
+  from: number;
+  to: number;
+  color: string;
+}
+
+export interface CheckedGaugeChart extends CheckedChartBase {
+  system: 'gauge';
+  /** The dial. */
+  angle: CheckedLinearAxis & CheckedSweep & { bands: CheckedGaugeBand[] };
+  series: SeriesOf<'gauge'>[];
+}
+
 /** A chart, checked: one shape per coordinate system, each with only its own axes and series. */
-export type CheckedChart = CheckedCartesianChart | CheckedPolarChart | CheckedPieChart;
+export type CheckedChart = CheckedCartesianChart | CheckedPolarChart | CheckedPieChart | CheckedGaugeChart;
 
 /**
  * Throws a named error, starting "Invalid chart:" and naming the place in the spec, for anything that
@@ -336,7 +364,7 @@ export function checkChart(spec: ChartSpec, font: Font = excalifont): CheckedCha
   };
   const series = r.required('series', list(1, MAX_SERIES, checkSeries));
   unique(series.map((entry) => entry.name), (i) => `series[${i}].name`);
-  const points = series.reduce((sum, entry) => sum + entry.data.length, 0);
+  const points = series.reduce((sum, entry) => sum + ('data' in entry ? entry.data.length : 1), 0);
   if (points > MAX_POINTS) {
     fail('series', `hold ${points} data points in all, more than ${MAX_POINTS}`);
   }
@@ -349,6 +377,8 @@ export function checkChart(spec: ChartSpec, font: Font = excalifont): CheckedCha
       return checkPolarChart(r, base, seriesOf(series, 'polar'));
     case 'pie':
       return checkPieChart(r, base, seriesOf(series, 'pie'));
+    case 'gauge':
+      return checkGaugeChart(r, base, seriesOf(series, 'gauge'));
   }
 }
 
@@ -531,15 +561,48 @@ function checkPolarChart(r: Fields, base: CheckedChartBase, series: SeriesOf<'po
   return { ...base, system: 'polar', angle, radius, series };
 }
 
-/** `startAngle` and `endAngle` at `path`: `endAngle` greater, and at most a whole turn past it. */
-function checkSweep(r: Fields, path: string): CheckedSweep {
-  const startAngle = r.optional('startAngle', number(-360, 360)) ?? 0;
-  const endAngle = r.optional('endAngle', number(-360, 720)) ?? 360;
+/**
+ * `startAngle` and `endAngle` at `path`, by default `start` and `end`: `endAngle` greater, and at
+ * most a whole turn past it.
+ */
+function checkSweep(r: Fields, path: string, [start, end]: [number, number] = [0, 360]): CheckedSweep {
+  const startAngle = r.optional('startAngle', number(-360, 360)) ?? start;
+  const endAngle = r.optional('endAngle', number(-360, 720)) ?? end;
   if (!(endAngle > startAngle && endAngle - startAngle <= 360 + TURN_ROUNDING)) {
     const after = `greater than startAngle (${startAngle}) and at most 360 past it`;
     fail(`${path}.endAngle`, `must be ${after}, got ${endAngle}`);
   }
   return { startAngle, endAngle };
+}
+
+const GAUGE_SWEEP: [number, number] = [-120, 120];
+const GAUGE_KEYS = ['type', 'min', 'max', 'hidden', 'format', 'startAngle', 'endAngle', 'bands'];
+
+function checkGaugeChart(r: Fields, base: CheckedChartBase, series: SeriesOf<'gauge'>[]): CheckedGaugeChart {
+  const axes = r.optional('axes', fields);
+  axes?.allow(['angle']);
+  const raw = axes ? axes.required('angle', (_path, value): unknown => value) : { type: 'linear', min: 0, max: 100 };
+  const angleFields = fields('axes.angle', raw);
+  const axis = checkLinearAxis(GAUGE_KEYS, false)('axes.angle', raw);
+  const sweep = checkSweep(angleFields, 'axes.angle', GAUGE_SWEEP);
+  const bands = angleFields.optional(
+    'bands',
+    list(0, MAX_BANDS, (path, value) => {
+      const band = fields(path, value);
+      band.allow(['from', 'to', 'color']);
+      return { from: band.required('from', anyValue), to: band.required('to', anyValue), color: band.required('color', color) };
+    }),
+  ) ?? [];
+  bands.forEach((band, i) => {
+    if (!(band.to > band.from)) {
+      fail(`axes.angle.bands[${i}].to`, `must be greater than from (${band.from}), got ${band.to}`);
+    }
+    const before = bands[i - 1];
+    if (before && band.from < before.to) {
+      fail(`axes.angle.bands[${i}].from`, `is ${band.from}, before the end of bands[${i - 1}] (${before.to})`);
+    }
+  });
+  return { ...base, system: 'gauge', angle: { ...axis, ...sweep, bands }, series };
 }
 
 const MAX_RINGS = 10;
