@@ -43,8 +43,11 @@ cannot share a chart:
 |---|---|
 | `bar`, `line`, `area`, `rangeArea`, in any mix | `x` and `y`, one of them `band` |
 | `scatter`, `bubble` | `x` and `y`, both `linear` |
-| `radar` | `angle`, and optionally `radius` |
-| one `pie` | none |
+| `radar`, `rose`, `polarLine`, `polarArea`, in any mix | `angle` (`band`), and optionally `radius` (`linear`) |
+| `radialBar` | `angle` (`linear`) and `radius` (`band`) |
+| `polarScatter` | `angle` and `radius`, both `linear` |
+| `pie`, up to 10 as nested rings | none |
+| `gauge`, any number sharing the dial | optionally `angle` (`linear`) |
 
 | `type` | `data` | Options |
 |---|---|---|
@@ -54,8 +57,39 @@ cannot share a chart:
 | `rangeArea` | a `[low, high]` pair or `null` per category, high not below low | `curve`, `axis: 'y2'` |
 | `scatter` | `[x, y]` points | |
 | `bubble` | `[x, y, size]` points: the size sets the area, and is not negative | |
-| `pie` | `{ name, value, color? }` slices | `innerRadius` (0 to 0.95: 0.5 is a donut), `startAngle` (default 0) and `endAngle` (default 360): degrees clockwise from the top, the end greater than the start and at most 360 past it. −90 and 90 make a half donut. Values must not be negative, and one must be above 0 |
-| `radar` | a value per spoke, none negative | |
+| `pie` | `{ name, value, color?, offset?, radius? }` slices | `innerRadius` (0 to 0.95: 0.5 is a donut) and `outerRadius` (0.05 to 1), `startAngle` and `endAngle`, `padAngle` (0 to 10 degrees between slices), `cornerRadius` (0 to 1,000 units). Values must not be negative, and one must be above 0 |
+| `radar` | a value per spoke, none negative; or a `[low, high]` pair per spoke, for a range radar | |
+| `rose` | a value or `null` per category of the angle axis, none negative | `stack`: wedges with the same stack name stack outwards (a wind rose); others share each category's wedge side by side |
+| `radialBar` | a value or `null` per ring of the radius axis | `stack`: bars with the same stack name stack clockwise; others share each ring side by side |
+| `polarLine` | a value or `null` (a gap) per category of the angle axis | `dash`. Values below 0 need the radius axis' `min` |
+| `polarArea` | a value or `null` per category of the angle axis | `stack`. Stacked values must not be negative |
+| `polarScatter` | `[angle, radius]` points | |
+| `gauge` | `value`, a number on the dial | `display`: `needle` (default) or `bar`; `length`: a needle's length as a share of the radius, 0.1 to 1 (default 0.8) |
+
+A slice's `offset` (0 to 0.5 of the radius) pulls it out from the centre. Give every slice of a pie
+a `radius`, or none: each slice then reaches out in proportion to it, the largest to the full
+radius. Nested rings split the radius equally, outermost first, unless they set `innerRadius` and
+`outerRadius`; they share `startAngle` and `endAngle`, and a slice name in two rings is one legend
+entry, with one colour. A slice narrower than `padAngle`, or that reaches no further than the hole,
+is not drawn, and keeps its legend entry. With per-slice radii, at least one slice needs both a value
+and a radius above 0.
+
+`innerRadius` and `outerRadius` are shares of the outermost ring's radius, and the outermost ring
+fills the chart: a lone pie's `outerRadius` changes nothing. `startAngle` (default 0) and `endAngle`
+(default 360) are degrees clockwise from the top, the end greater than the start and at most 360
+past it; −90 and 90 make a half donut. A slice's `offset` is a share of the outermost ring's radius,
+and the pie shrinks to leave room for it; a slice that is the whole of its pie is not pulled out.
+With several pies, each slice's tooltip starts with its ring's name.
+
+The polar types share the rules of their cartesian twins: a `rose` is a `bar` wrapped around a band
+angle axis, a `radialBar` a bar bent along a ring, and `polarLine`, `polarArea` and `polarScatter`
+a `line`, `area` and `scatter`. They take no `curve` and no `axis`. On a whole turn a polar line or
+area through every category closes, as a radar does; with gaps, the run that ends the data goes on
+into the run that starts it.
+
+A pyramid pie is a pie with a rotated `startAngle`. A radial histogram is a `rose` over categories
+binned beforehand. A polar clock is a `radialBar` of shares, and a clock a `gauge` dial of a whole
+turn with two needles of different lengths.
 
 `curve` is `linear` (the default), `monotone` (smooth, and never beyond the data between points),
 or `step`, `step-before` or `step-after` (the value changes halfway, at the point, or at the next
@@ -77,13 +111,40 @@ With `y` as the band axis, bars and lines run horizontally. A sparkline is a sma
 | `title`, `hidden` | |
 | `format` | `decimals` (0 to 20; by default tick labels get the fewest that tell the ticks apart, and tooltips every decimal a value has), `thousands` (default `,`), `decimal` (default `.`), `prefix`, `suffix` (default `%` on a percent axis), each text at most 10 characters |
 
-On a radar chart, `angle` is a band axis of at least 3 categories (its spokes, clockwise from the
-top) and `radius` a linear axis starting at 0 unless its `min` is set; neither takes a `title`, and
-`radius` takes no `percent`.
-
 Numbers are never formatted with the locale data of the JavaScript engine, which differs between
 engines; set `thousands` and `decimal` to write them for another language. Bars and areas always
 stand on zero; range areas, lines and points do not have to.
+
+`labelAngle` (−90 to 90 degrees, clockwise) slants the tick labels of an `x`, `y` or `y2` axis; the
+axis makes room for the slanted labels, and keeps more of them than it could flat. At −45 the x
+labels read up to the right and end at their ticks. The axis reserves room past each of its ends for
+the furthest any label reaches, so a chart too small for its slanted labels throws an error rather
+than drawing them off the chart.
+
+On a polar chart, `angle` goes clockwise from the top, and `radius` out from the centre, linear by
+default:
+
+| Polar axis option | |
+|---|---|
+| `angle`: `type: 'band'`, `categories` | spokes or wedges. On a whole turn the first is at `startAngle`; on part of one each takes an equal share, centred in it |
+| `angle`: `type: 'linear'` | values from `startAngle` to `endAngle`; on a whole turn the end is labelled once, as the start |
+| `angle`: `startAngle`, `endAngle` | default 0 and 360 degrees; the end greater than the start and at most 360 past it |
+| `radius`: `type: 'linear'` | from 0 unless `min` is set |
+| `radius`: `type: 'band'`, `categories` | rings, the first outermost, labelled beside the start of the angle axis |
+| `radius`: `innerRadius` | a hole in the middle, 0 to 0.95 of the radius |
+| `radius`: `shape` | `polygon` gridlines through the spokes (the default when every series is a radar; needs a band angle axis of at least 3 categories), or `circle` |
+| `min`, `max`, `grid`, `hidden`, `format` | as on a cartesian axis |
+
+Polar axes take no `title`, `percent` or `labelAngle`. The radius axis' labels run along the start of
+the sweep, wherever it points, and the circle shrinks to keep them on the chart; a chart too small for
+them throws an error naming `axes.radius`.
+
+A gauge's dial is its `angle` axis: by default 0 to 100 over −120 to 120 degrees. It takes `min`,
+`max`, `hidden`, `format`, `startAngle`, `endAngle`, and `bands`: up to 100 `{ from, to, color }`
+stretches, in order and not overlapping. Without `min` and `max` it reaches from 0 to the values
+and bands; it shows 0 unless `min` or `max` leaves it out. Ticks and labels are inside the rim; bars
+take rings inside the track, or the track itself when there are no bands, and a dial holds as many
+rings as fit outside its hub; a lone gauge writes its value under the centre.
 
 ## Chart options
 
@@ -150,7 +211,8 @@ Unknown keys are errors too, so a misspelled option never goes unnoticed. Errors
 passed on with the same prefix.
 
 A chart holds at most 100 series, 1,000 categories and 100,000 data points in all, and values
-within ±10¹⁵. A pie holds at most 1,000 slices. Titles and stack names hold at most 1,000
+within ±10¹⁵. A pie holds at most 1,000 slices, and a chart at most 10 nested pies. A gauge's dial
+holds as many bar rings as fit outside its hub. Titles and stack names hold at most 1,000
 characters, and names, categories and colours at most 100. All of a chart's strokes share one
 budget of 400,000 units of drawing work, about a second at most, and a chart that needs more throws
 `Drawing too complex (more than 400000 operations)`. On a 600 × 400 chart that is about 5,000

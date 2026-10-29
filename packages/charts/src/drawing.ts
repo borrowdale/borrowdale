@@ -1,5 +1,5 @@
 import { Budget, sketch, type Shape, type SketchStyle } from '@borrowdale/core';
-import { layoutText, measureText, type LayoutOptions } from '@borrowdale/text';
+import { layoutText, measureText, textBounds, type LayoutOptions } from '@borrowdale/text';
 import { INK } from './palette.js';
 import type { ChartNode } from './types.js';
 import type { CheckedChart } from './validate.js';
@@ -8,6 +8,14 @@ import type { CheckedChart } from './validate.js';
 // a work unit takes 0.4 to 2.3 µs depending on the fill, so this stays under about a second; 200
 // hachure-filled bars use about 130,000 units and 1,000 scatter points about 76,000.
 const MAX_OPERATIONS = 400_000;
+
+/** Distances from a point, in each direction. */
+export interface Extent {
+  left: number;
+  right: number;
+  up: number;
+  down: number;
+}
 
 type TextOptions = Omit<LayoutOptions, 'font' | 'fontSize'> & { fontSize?: number | undefined };
 
@@ -18,6 +26,10 @@ export class Drawing {
   readonly #budget = new Budget(MAX_OPERATIONS);
   readonly #labels = new Set<string>();
   readonly #missing = new Set<string>();
+  // Measurements by their text and options: layout measures an axis' labels more than once as it
+  // fits the plot.
+  readonly #widths = new Map<string, number>();
+  readonly #extents = new Map<string, Extent>();
 
   constructor(chart: CheckedChart) {
     this.#chart = chart;
@@ -37,8 +49,13 @@ export class Drawing {
     return ascent + descent;
   }
 
+  /** How wide `text` is drawn. */
   width(text: string, fontSize = this.#chart.fontSize): number {
-    return measureText(text, { font: this.#chart.font, fontSize }).width;
+    return remembered(
+      this.#widths,
+      `${fontSize}|${text}`,
+      () => measureText(text, { font: this.#chart.font, fontSize }).width,
+    );
   }
 
   /**
@@ -49,6 +66,20 @@ export class Drawing {
     const seed = `${this.#chart.seed}|${key}`;
     const style = { ...defaults, ...this.#chart.style, ...own, seed };
     return { kind: 'sketch', sketch: sketch(shape, style, this.#budget) };
+  }
+
+  /**
+   * How far `text` reaches from the point it is placed at, laid out with `options` and rotated: to
+   * the left and right, and up and down. Measures without keeping the label.
+   */
+  extent(text: string, options: Omit<TextOptions, 'x' | 'y'>): Extent {
+    const fontSize = options.fontSize ?? this.#chart.fontSize;
+    return remembered(this.#extents, JSON.stringify([{ ...options, fontSize }, text]), () => {
+      const { x, y, width, height } = textBounds(
+        layoutText(text, { ...options, x: 0, y: 0, font: this.#chart.font, fontSize }),
+      );
+      return { left: -x, right: x + width, up: -y, down: y + height };
+    });
   }
 
   text(text: string, options: TextOptions): ChartNode {
@@ -69,4 +100,15 @@ export class Drawing {
   mark(title: string, nodes: ChartNode[]): void {
     this.nodes.push({ kind: 'mark', title, nodes });
   }
+}
+
+/** The value `known` holds for `key`, measured and kept the first time it is asked for. */
+function remembered<T>(known: Map<string, T>, key: string, measure: () => T): T {
+  const kept = known.get(key);
+  if (kept !== undefined) {
+    return kept;
+  }
+  const value = measure();
+  known.set(key, value);
+  return value;
 }

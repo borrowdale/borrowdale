@@ -14,6 +14,7 @@ const axis: CheckedLinearAxis = {
   percent: false,
   grid: true,
   hidden: false,
+  labelAngle: 0,
   format: plain,
 };
 

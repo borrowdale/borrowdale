@@ -57,6 +57,9 @@ Both return the text exactly as it will be drawn, which is the text that was mea
   have a different width;
 - runs of spaces and tabs collapsed to one space, and spaces at either end removed, as SVG does.
 
+`textBounds(layout)` returns the upright box that holds a rotated layout: its `box` turned by
+`rotate` around the `pivot`, for keeping rotated labels clear of each other and of the edges.
+
 A character the font does not cover is measured as 1 em wide and listed in `missing`, with any
 combining marks after it (below); `missing` lists each such piece of text once. The browser still
 draws it, usually in a fallback font at that font's width (an accented letter may

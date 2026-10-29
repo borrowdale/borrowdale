@@ -1,24 +1,28 @@
 import type { Point, Shape, SketchStyle } from '@borrowdale/core';
+import { cos, sin } from '@borrowdale/core/math';
 import type { TextAnchor, TextBaseline } from '@borrowdale/text';
 import { areaPath, linePath } from './curves.js';
-import type { Drawing } from './drawing.js';
-import { assertRoom, GAP, TICK, type Rect } from './frame.js';
+import type { Drawing, Extent } from './drawing.js';
+import { assertRoom, BAND_PADDING, GAP, TICK, type Rect } from './frame.js';
+import { loneDot, POINT_SIZE, runsOf, solid } from './marks.js';
 import { GRID, GRID_WIDTH, hatched, INK, LINE_WIDTH, type Paint } from './palette.js';
+import { stackGroup, stackSpans, type Span } from './stack.js';
 import { bandScale, formatValue, linearScale, place, type BandScale, type PlacedScale, type Scale } from './scale.js';
 import type { ChartNode, Curve } from './types.js';
-import type { CheckedAxis, CheckedCartesianChart, CheckedLinearAxis, SeriesOf } from './validate.js';
+import {
+  isStacking,
+  type CheckedAxis,
+  type CheckedCartesianChart,
+  type CheckedLinearAxis,
+  type SeriesOf,
+} from './validate.js';
 
 type CartesianSeries = SeriesOf<'cartesian'>;
 type MarkType = CartesianSeries['type'];
 type AxisKey = 'x' | 'y' | 'y2';
-/** From a series' value at the start of its bar or band to the value at its end, per category. */
-type Span = [from: number, to: number] | null;
 
-// The share of each band's step left as a gap between bands.
-const BAND_PADDING = 0.2;
 // The share of a bar's slot left as a gap between bars side by side.
 const BAR_GAP = 0.1;
-const POINT_SIZE = 6;
 const MAX_BUBBLE = 60;
 
 /** What a series type is on a cartesian chart. A new type fails to compile until it has an entry. */
@@ -70,37 +74,53 @@ export function layoutCartesian(drawing: Drawing, chart: CheckedCartesianChart, 
     return extent(key, series, spans, valueAxisOf) ?? [end, end];
   };
 
-  // Vertical room first: the bottom axis takes a fixed depth, and a value axis at the side centres
-  // its labels on the ticks, so the end ones stick out by half a line.
   const line = drawing.lineHeight();
-  const bottomDepth = x.hidden ? 0 : depthOf('bottom', 0, x, line);
-  const half = (y.type === 'linear' && !y.hidden) || (y2 && !y2.hidden) ? line / 2 : 0;
-  const top = rect.top + half;
-  const bottom = rect.bottom - Math.max(bottomDepth, half);
-  assertRoom({ left: rect.left, top, right: rect.right, bottom }, chart.width, chart.height);
-  const yScale = linear.y && linearScale(linear.y, extentOf('y'), bottom - top);
-  const y2Scale = y2 && linearScale(y2, extentOf('y2'), bottom - top);
-
-  // Then horizontal room, from the widest label at each side.
-  const left = guide('left', 'y', y, yScale, drawing, line);
-  const right = y2 && guide('right', 'y2', y2, y2Scale, drawing, line);
-  let plotLeft = rect.left + (y.hidden ? 0 : left.depth);
-  let plotRight = rect.right - (!right || right.axis.hidden ? 0 : right.depth);
-  const xScale = linear.x && linearScale(linear.x, extentOf('x'), plotRight - plotLeft);
-  if (xScale && !x.hidden) {
-    // The first and last labels are centred on the ends of the axis, so they need room outside it.
-    plotLeft = Math.max(plotLeft, rect.left + drawing.width(xScale.labels[0] ?? '') / 2);
-    plotRight = Math.min(plotRight, rect.right - drawing.width(xScale.labels.at(-1) ?? '') / 2);
+  // The plot is what is left once the axes have their room: below it the x axis' labels and title,
+  // above and below its ends the y axes' end labels, and beside it the y axes' labels and titles.
+  const fitPlot = (reserve: Reserve) => {
+    const top = rect.top + reserve.up;
+    const bottom = rect.bottom - Math.max(reserve.bottom, reserve.down);
+    assertRoom({ left: rect.left, top, right: rect.right, bottom }, chart.width, chart.height);
+    const yScale = linear.y && linearScale(linear.y, extentOf('y'), bottom - top);
+    const y2Scale = y2 && linearScale(y2, extentOf('y2'), bottom - top);
+    const left = guide('left', 'y', y, yScale, drawing, line);
+    const right = y2 && guide('right', 'y2', y2, y2Scale, drawing, line);
+    let plotLeft = rect.left + (y.hidden ? 0 : left.depth);
+    let plotRight = rect.right - (!right || right.axis.hidden ? 0 : right.depth);
+    const xScale = linear.x && linearScale(linear.x, extentOf('x'), plotRight - plotLeft);
+    const below = guide('bottom', 'x', x, xScale, drawing, line);
+    // The first and last x labels reach past the ends of the axis.
+    plotLeft = Math.max(plotLeft, rect.left + below.ends.left);
+    plotRight = Math.min(plotRight, rect.right - below.ends.right);
+    const plot: Rect = { left: plotLeft, top, right: plotRight, bottom };
+    assertRoom(plot, chart.width, chart.height);
+    return { plot, scales: { x: xScale, y: yScale, y2: y2Scale }, guides: [below, left, ...(right ? [right] : [])] };
+  };
+  // A linear axis' labels are its ticks', and those depend on the plot's size. So room is reserved
+  // for ticks over the whole chart first, then again, once, for the plot's own ticks should they
+  // reach further, which only rotated labels can.
+  const first = reserveFor([
+    guide('bottom', 'x', x, linear.x && linearScale(linear.x, extentOf('x'), rect.right - rect.left), drawing, line),
+    guide('left', 'y', y, linear.y && linearScale(linear.y, extentOf('y'), rect.bottom - rect.top), drawing, line),
+    ...(y2 ? [guide('right', 'y2', y2, linearScale(y2, extentOf('y2'), rect.bottom - rect.top), drawing, line)] : []),
+  ]);
+  let fitted = fitPlot(first);
+  const needed = reserveFor(fitted.guides);
+  if (needed.bottom > first.bottom || needed.up > first.up || needed.down > first.down) {
+    fitted = fitPlot({
+      bottom: Math.max(first.bottom, needed.bottom),
+      up: Math.max(first.up, needed.up),
+      down: Math.max(first.down, needed.down),
+    });
   }
-  const plot: Rect = { left: plotLeft, top, right: plotRight, bottom };
-  assertRoom(plot, chart.width, chart.height);
+  const { plot, guides } = fitted;
+  const [xScale, yScale, y2Scale] = [fitted.scales.x, fitted.scales.y, fitted.scales.y2];
 
   const scales: Record<AxisKey, PlacedScale | undefined> = {
     x: xScale && place(xScale, [plot.left, plot.right]),
     y: yScale && place(yScale, [plot.bottom, plot.top]),
     y2: y2Scale && place(y2Scale, [plot.bottom, plot.top]),
   };
-  const guides = [guide('bottom', 'x', x, xScale, drawing, line), left, ...(right ? [right] : [])];
   const across: [number, number] = horizontal ? [plot.top, plot.bottom] : [plot.left, plot.right];
   const bands = band && bandScale(band.categories.length, across, BAND_PADDING);
   const frame = makeFrame(plot, horizontal, bands);
@@ -175,61 +195,32 @@ function makeFrame(plot: Rect, horizontal: boolean, bands: BandScale | undefined
 }
 
 /**
- * Where each bar and area of each category starts and ends on its value axis. Series with a stack
- * name stack positive values up and negative values down (as ECharts does; stacked areas have no
- * negative values). On a percent axis each stack's values become shares of its total. Lines span
- * one value and range areas their pair.
+ * Where each bar and area of each category starts and ends on its value axis: stacked by stack name
+ * (stacked areas have no negative values), as shares of each stack's total on a percent axis. Lines
+ * span one value and range areas their pair.
  */
 function spansOf(
   series: readonly CartesianSeries[],
   valueAxisOf: (entry: CartesianSeries) => AxisKey,
   linear: Record<AxisKey, CheckedLinearAxis | undefined>,
 ): Map<CartesianSeries, Span[]> {
-  const spans = new Map<CartesianSeries, Span[]>();
-  const totals = new Map<string, number[]>();
-  const sums = new Map<string, number[][]>();
+  const stacking = series.filter(isStacking);
+  const spans: Map<CartesianSeries, Span[]> = stackSpans(
+    stacking,
+    (entry) => stackOf(entry, valueAxisOf),
+    (entry) => linear[valueAxisOf(entry)]?.percent ?? false,
+  );
   for (const entry of series) {
-    if (entry.type === 'bar' || entry.type === 'area') {
-      const total = totals.get(stackOf(entry, valueAxisOf)) ?? entry.data.map(() => 0);
-      entry.data.forEach((value, i) => {
-        total[i]! += Math.abs(value ?? 0);
-      });
-      totals.set(stackOf(entry, valueAxisOf), total);
-    }
-  }
-  for (const entry of series) {
-    switch (entry.type) {
-      case 'line':
-        spans.set(entry, entry.data.map((value) => (value === null ? null : [value, value])));
-        break;
-      case 'rangeArea':
-        spans.set(entry, entry.data.map((pair) => pair && [pair[0], pair[1]]));
-        break;
-      case 'bar':
-      case 'area': {
-        const stack = stackOf(entry, valueAxisOf);
-        const total = totals.get(stack)!;
-        const percent = linear[valueAxisOf(entry)]?.percent ?? false;
-        const [up, down] = sums.get(stack) ?? [entry.data.map(() => 0), entry.data.map(() => 0)];
-        sums.set(stack, [up!, down!]);
-        const share = (part: number, i: number): number => (total[i]! === 0 ? 0 : (part / total[i]!) * 100);
-        spans.set(
-          entry,
-          entry.data.map((value, i) => {
-            if (value === null) {
-              return null;
-            }
-            const side = value < 0 ? down! : up!;
-            const from = side[i]!;
-            side[i] = from + value;
-            return percent ? [share(from, i), share(from + value, i)] : [from, from + value];
-          }),
-        );
-        break;
-      }
-      case 'scatter':
-      case 'bubble':
-        break;
+    if (entry.type === 'line') {
+      spans.set(
+        entry,
+        entry.data.map((value) => (value === null ? null : [value, value])),
+      );
+    } else if (entry.type === 'rangeArea') {
+      spans.set(
+        entry,
+        entry.data.map((pair) => pair && [pair[0], pair[1]]),
+      );
     }
   }
   return spans;
@@ -240,7 +231,7 @@ function stackOf(
   entry: Extract<CartesianSeries, { stack: unknown }>,
   valueAxisOf: (entry: CartesianSeries) => AxisKey,
 ): string {
-  return `${entry.type}|${valueAxisOf(entry)}|${entry.stack === undefined ? `#${entry.index}` : `@${entry.stack}`}`;
+  return stackGroup(entry, valueAxisOf(entry));
 }
 
 /** The lowest and highest value drawn on the axis, counting zero where a series stands on it. */
@@ -397,8 +388,7 @@ function drawPoints(
     if (diameter === 0) {
       return;
     }
-    const style: SketchStyle =
-      size === undefined ? { stroke: paint.color, fill: paint.color, fillStyle: 'solid' } : hatched(paint);
+    const style: SketchStyle = size === undefined ? solid(paint.color) : hatched(paint);
     const sizeText = size === undefined ? '' : `, size ${formatValue(size)}`;
     drawing.mark(`${entry.name}: ${valueText(px, xAxis)}, ${valueText(py, context.axisOf(entry))}${sizeText}`, [
       drawing.shape({ kind: 'circle', cx: x.at(px), cy: y.at(py), diameter }, style, `${entry.name}|${i}`, entry.style),
@@ -417,28 +407,9 @@ function lineOrDot(
   own: SketchStyle,
 ): ChartNode {
   if (run.length === 1) {
-    const [cx, cy] = frame.point(run[0]!);
-    const dot = { stroke: style.stroke, fill: style.stroke, fillStyle: 'solid' as const };
-    return drawing.shape({ kind: 'circle', cx, cy, diameter: POINT_SIZE * 0.7 }, dot, key, own);
+    return loneDot(drawing, frame.point(run[0]!), style.stroke, key, own);
   }
   return drawing.shape({ kind: 'path', d: frame.line(run, curve) }, style, key, own);
-}
-
-/** The values between nulls, each run in order. */
-function runsOf<T>(entries: readonly (T | null)[]): T[][] {
-  const runs: T[][] = [];
-  let current: T[] = [];
-  for (const entry of entries) {
-    if (entry === null) {
-      if (current.length > 0) {
-        runs.push(current);
-      }
-      current = [];
-    } else {
-      current.push(entry);
-    }
-  }
-  return current.length > 0 ? [...runs, current] : runs;
 }
 
 /** A value in a tooltip, in its axis format; on a percent axis it is the value, not its share. */
@@ -457,12 +428,45 @@ interface Guide {
   axis: CheckedAxis;
   /** Tick labels of a linear axis, or the categories of a band axis. */
   labels: readonly string[];
-  /** The width of the widest label. */
-  widest: number;
+  /** How far its labels reach out from the axis, beyond the tick and the gap. */
+  reach: number;
+  /** How much room a label needs along the axis, to thin out labels that would overlap. */
+  room: number;
+  /** How far its end labels reach past the ends of the axis: left and right, or up and down. */
+  ends: Extent;
+  /** How a label sits at its tick, over the side's own placing: rotated labels' anchor and turn. */
+  style: Partial<ReturnType<typeof labelStyle>>;
   /** How far the axis reaches out from the plot: tick, gap, labels and title. */
   depth: number;
 }
 
+/** The room an axis' labels need below the plot and above and below its ends. */
+interface Reserve {
+  bottom: number;
+  up: number;
+  down: number;
+}
+
+function reserveFor(guides: readonly Guide[]): Reserve {
+  const [below, ...sides] = guides;
+  const shown = sides.filter((side) => !side.axis.hidden);
+  return {
+    bottom: below!.axis.hidden ? 0 : below!.depth,
+    up: Math.max(0, ...shown.map((side) => side.ends.up)),
+    down: Math.max(0, ...shown.map((side) => side.ends.down)),
+  };
+}
+
+const NO_ENDS: Extent = { left: 0, right: 0, up: 0, down: 0 };
+
+/**
+ * An axis at one side of the plot with its labels measured. Flat labels take one line below the plot
+ * and the widest label's width beside it; a linear axis' end labels, centred on its end ticks, reach
+ * half their width past the ends below the plot, and half a line beside it, while a band axis' sit
+ * inside. Rotated labels take their rotated bounds. Every label's tick is within the plot, so the
+ * plot leaves room past its ends for the furthest any label reaches either way: the most a label may
+ * need, which leaves room to spare for all but the end ones.
+ */
 function guide(
   side: Side,
   key: AxisKey,
@@ -472,14 +476,61 @@ function guide(
   line: number,
 ): Guide {
   const labels = axis.type === 'band' ? axis.categories : scale!.labels;
-  const widest = Math.max(0, ...labels.map((label) => drawing.width(label)));
-  return { side, key, axis, labels, widest, depth: depthOf(side, widest, axis, line) };
+  const angle = axis.labelAngle;
+  const [first, last] = [labels[0] ?? '', labels.at(-1) ?? ''];
+  const shown = (ends: Extent): Extent => (axis.hidden ? NO_ENDS : ends);
+  if (angle === 0) {
+    const widest = Math.max(0, ...labels.map((label) => drawing.width(label)));
+    const reach = side === 'bottom' ? line : widest;
+    const ends =
+      axis.type === 'band'
+        ? NO_ENDS
+        : side === 'bottom'
+          ? { ...NO_ENDS, left: drawing.width(first) / 2, right: drawing.width(last) / 2 }
+          : { ...NO_ENDS, up: line / 2, down: line / 2 };
+    const room = SIDES[side].room(widest, line);
+    return { side, key, axis, labels, reach, room, ends: shown(ends), style: {}, depth: depthOf(reach, axis, line) };
+  }
+  const style = labelStyle(side, angle);
+  const extents = labels.map((label) => drawing.extent(label, style));
+  const most = (of: (extent: Extent) => number): number => Math.max(0, ...extents.map(of));
+  const reach = most((extent) => (side === 'bottom' ? extent.down : side === 'left' ? extent.left : extent.right));
+  // Along the axis, a slanted label needs its line height divided by the sine of its slant to clear
+  // the next one, or its whole extent, whichever is less.
+  const radians = (angle * Math.PI) / 180;
+  const room =
+    side === 'bottom'
+      ? Math.min(
+          most((extent) => extent.left + extent.right),
+          line / Math.abs(sin(radians)),
+        ) + GAP
+      : Math.min(
+          most((extent) => extent.up + extent.down),
+          line / Math.abs(cos(radians)),
+        ) +
+        GAP / 2;
+  const ends =
+    side === 'bottom'
+      ? { ...NO_ENDS, left: most((extent) => extent.left), right: most((extent) => extent.right) }
+      : { ...NO_ENDS, up: most((extent) => extent.up), down: most((extent) => extent.down) };
+  return { side, key, axis, labels, reach, room, ends: shown(ends), style, depth: depthOf(reach, axis, line) };
 }
 
-// How far an axis reaches out from the plot: tick, gap, its labels (one line deep below the plot, as
-// wide as the widest beside it) and its title.
-function depthOf(side: Side, widest: number, axis: CheckedAxis, line: number): number {
-  return TICK + GAP + (side === 'bottom' ? line : widest) + titleDepth(axis, line);
+/** How a rotated label is anchored at its tick: ending there on the left of it, starting there on the right. */
+function labelStyle(side: Side, angle: number): { anchor: TextAnchor; baseline: TextBaseline; rotate: number } {
+  switch (side) {
+    case 'bottom':
+      return { anchor: angle < 0 ? 'end' : 'start', baseline: 'top', rotate: angle };
+    case 'left':
+      return { anchor: 'end', baseline: 'middle', rotate: angle };
+    case 'right':
+      return { anchor: 'start', baseline: 'middle', rotate: angle };
+  }
+}
+
+// How far an axis reaches out from the plot: tick, gap, its labels' `reach` and its title.
+function depthOf(reach: number, axis: CheckedAxis, line: number): number {
+  return TICK + GAP + reach + titleDepth(axis, line);
 }
 
 function titleDepth(axis: CheckedAxis, line: number): number {
@@ -498,7 +549,7 @@ interface SideRules {
   /** How much room a label needs along the axis, to thin out labels that would overlap. */
   room: (widest: number, line: number) => number;
   /** Where the title goes, beyond the labels; side titles are rotated to read along the axis. */
-  title: (plot: Rect, widest: number, line: number) => { x: number; y: number; rotate: number };
+  title: (plot: Rect, reach: number, line: number) => { x: number; y: number; rotate: number };
 }
 
 const SIDES: Record<Side, SideRules> = {
@@ -508,7 +559,7 @@ const SIDES: Record<Side, SideRules> = {
     grid: (p, at) => [at, p.bottom, at, p.top],
     label: (p, at) => ({ x: at, y: p.bottom + TICK + GAP, anchor: 'middle', baseline: 'top' }),
     room: (widest) => widest + GAP,
-    title: (p, _widest, line) => ({ x: (p.left + p.right) / 2, y: p.bottom + TICK + GAP + line + GAP, rotate: 0 }),
+    title: (p, reach) => ({ x: (p.left + p.right) / 2, y: p.bottom + TICK + GAP + reach + GAP, rotate: 0 }),
   },
   left: {
     edge: (p) => [p.left, p.top, p.left, p.bottom],
@@ -517,8 +568,8 @@ const SIDES: Record<Side, SideRules> = {
     label: (p, at) => ({ x: p.left - TICK - GAP, y: at, anchor: 'end', baseline: 'middle' }),
     room: (_widest, line) => line + GAP / 2,
     // Read from bottom to top; once rotated its line height is its width.
-    title: (p, widest, line) => ({
-      x: p.left - TICK - GAP - widest - GAP - line,
+    title: (p, reach, line) => ({
+      x: p.left - TICK - GAP - reach - GAP - line,
       y: (p.top + p.bottom) / 2,
       rotate: -90,
     }),
@@ -529,8 +580,8 @@ const SIDES: Record<Side, SideRules> = {
     grid: (p, at) => [p.left, at, p.right, at],
     label: (p, at) => ({ x: p.right + TICK + GAP, y: at, anchor: 'start', baseline: 'middle' }),
     room: (_widest, line) => line + GAP / 2,
-    title: (p, widest, line) => ({
-      x: p.right + TICK + GAP + widest + GAP + line,
+    title: (p, reach, line) => ({
+      x: p.right + TICK + GAP + reach + GAP + line,
       y: (p.top + p.bottom) / 2,
       rotate: 90,
     }),
@@ -559,14 +610,15 @@ function drawGuide(
   bands: BandScale | undefined,
   line: number,
 ): void {
-  const { side, key, axis, labels, widest } = guide;
+  const { side, key, axis, labels, reach, room } = guide;
   if (axis.hidden) {
     return;
   }
   const rules = SIDES[side];
   const ink = { stroke: INK, strokeWidth: 1 };
   // How many labels `spacing` apart to step over, to keep one that does not overlap the last.
-  const every = (spacing: number): number => Math.max(1, Math.ceil(rules.room(widest, line) / spacing));
+  const every = (spacing: number): number => Math.max(1, Math.ceil(room / spacing));
+  const label = (at: number) => ({ ...rules.label(plot, at), ...guide.style });
   drawing.push(drawing.shape(lineShape(rules.edge(plot)), ink, `axis|${key}`));
   if (axis.type === 'linear') {
     // Ticks are evenly spaced, and a lone tick has nothing to overlap.
@@ -576,18 +628,18 @@ function drawGuide(
       const at = scale!.at(tick);
       drawing.push(drawing.shape(lineShape(rules.tick(plot, at)), ink, `tick|${key}|${tick}`));
       if (i % nth === 0) {
-        drawing.push(drawing.text(labels[i]!, rules.label(plot, at)));
+        drawing.push(drawing.text(labels[i]!, label(at)));
       }
     });
   } else {
     const nth = every(bands!.step);
-    labels.forEach((label, i) => {
+    labels.forEach((name, i) => {
       if (i % nth === 0) {
-        drawing.push(drawing.text(label, rules.label(plot, bands!.start(i) + bands!.bandwidth / 2)));
+        drawing.push(drawing.text(name, label(bands!.start(i) + bands!.bandwidth / 2)));
       }
     });
   }
   if (axis.title !== undefined) {
-    drawing.push(drawing.text(axis.title, { ...rules.title(plot, widest, line), anchor: 'middle', baseline: 'top' }));
+    drawing.push(drawing.text(axis.title, { ...rules.title(plot, reach, line), anchor: 'middle', baseline: 'top' }));
   }
 }

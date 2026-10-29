@@ -82,6 +82,14 @@ export interface TextExtent {
   missing: string[];
 }
 
+/** An upright box, from its top-left corner. */
+export interface Box {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 export interface TextLayout extends TextExtent {
   /** The family of the font the text was measured with, which the renderers draw it in. */
   family: string;
@@ -89,8 +97,8 @@ export interface TextLayout extends TextExtent {
   /** Where the baseline starts. */
   x: number;
   y: number;
-  /** The space the text takes up, before rotation. */
-  box: { x: number; y: number; width: number; height: number };
+  /** The space the text takes up, before rotation; `textBounds` gives it after rotation. */
+  box: Box;
   rotate: number;
   /** The point the text rotates around: the `x` and `y` it was laid out at. */
   pivot: Point;

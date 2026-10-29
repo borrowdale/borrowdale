@@ -1951,5 +1951,1562 @@
     }
    ]
   }
+ },
+ {
+  "name": "rose-stacked",
+  "spec": {
+   "width": 360,
+   "height": 340,
+   "title": "Wind",
+   "axes": {
+    "angle": {
+     "type": "band",
+     "categories": [
+      "N",
+      "NE",
+      "E",
+      "SE",
+      "S",
+      "SW",
+      "W",
+      "NW"
+     ]
+    }
+   },
+   "series": [
+    {
+     "type": "rose",
+     "name": "Calm",
+     "stack": "w",
+     "data": [
+      4,
+      3,
+      2,
+      2,
+      3,
+      5,
+      6,
+      5
+     ]
+    },
+    {
+     "type": "rose",
+     "name": "Gale",
+     "stack": "w",
+     "data": [
+      1,
+      1,
+      0,
+      1,
+      null,
+      2,
+      3,
+      2
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "rose-grouped-hole",
+  "spec": {
+   "width": 320,
+   "height": 320,
+   "axes": {
+    "angle": {
+     "type": "band",
+     "categories": [
+      "N",
+      "E",
+      "S",
+      "W"
+     ]
+    },
+    "radius": {
+     "type": "linear",
+     "innerRadius": 0.2
+    }
+   },
+   "series": [
+    {
+     "type": "rose",
+     "name": "2024",
+     "data": [
+      3,
+      5,
+      2,
+      4
+     ]
+    },
+    {
+     "type": "rose",
+     "name": "2025",
+     "data": [
+      4,
+      4,
+      3,
+      1
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "rose-half",
+  "spec": {
+   "width": 360,
+   "height": 220,
+   "legend": "none",
+   "axes": {
+    "angle": {
+     "type": "band",
+     "categories": [
+      "a",
+      "b",
+      "c",
+      "d",
+      "e"
+     ],
+     "startAngle": -90,
+     "endAngle": 90
+    }
+   },
+   "series": [
+    {
+     "type": "rose",
+     "name": "R",
+     "data": [
+      1,
+      4,
+      2,
+      5,
+      3
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "radial-bar-three-quarters",
+  "spec": {
+   "width": 340,
+   "height": 320,
+   "axes": {
+    "angle": {
+     "type": "linear",
+     "max": 100,
+     "endAngle": 270,
+     "format": {
+      "suffix": "%"
+     }
+    },
+    "radius": {
+     "type": "band",
+     "categories": [
+      "Move",
+      "Exercise",
+      "Stand"
+     ],
+     "innerRadius": 0.3
+    }
+   },
+   "series": [
+    {
+     "type": "radialBar",
+     "name": "Today",
+     "data": [
+      82,
+      45,
+      67
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "radial-bar-stacked",
+  "spec": {
+   "width": 320,
+   "height": 320,
+   "axes": {
+    "angle": {
+     "type": "linear"
+    },
+    "radius": {
+     "type": "band",
+     "categories": [
+      "a",
+      "b"
+     ]
+    }
+   },
+   "series": [
+    {
+     "type": "radialBar",
+     "name": "X",
+     "stack": "s",
+     "data": [
+      3,
+      2
+     ]
+    },
+    {
+     "type": "radialBar",
+     "name": "Y",
+     "stack": "s",
+     "data": [
+      1,
+      4
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "radial-bar-grouped-negative",
+  "spec": {
+   "width": 320,
+   "height": 320,
+   "axes": {
+    "angle": {
+     "type": "linear"
+    },
+    "radius": {
+     "type": "band",
+     "categories": [
+      "a",
+      "b"
+     ],
+     "hidden": true
+    }
+   },
+   "series": [
+    {
+     "type": "radialBar",
+     "name": "X",
+     "data": [
+      3,
+      -2
+     ]
+    },
+    {
+     "type": "radialBar",
+     "name": "Y",
+     "data": [
+      1,
+      null
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "polar-line-area-closed",
+  "spec": {
+   "width": 340,
+   "height": 340,
+   "axes": {
+    "angle": {
+     "type": "band",
+     "categories": [
+      "a",
+      "b",
+      "c",
+      "d",
+      "e",
+      "f"
+     ]
+    },
+    "radius": {
+     "type": "linear",
+     "format": {
+      "suffix": "°"
+     }
+    }
+   },
+   "series": [
+    {
+     "type": "polarArea",
+     "name": "High",
+     "data": [
+      6,
+      9,
+      12,
+      10,
+      8,
+      7
+     ]
+    },
+    {
+     "type": "polarLine",
+     "name": "Low",
+     "dash": [
+      5,
+      3
+     ],
+     "data": [
+      1,
+      3,
+      5,
+      4,
+      2,
+      1
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "polar-line-gaps",
+  "spec": {
+   "width": 300,
+   "height": 300,
+   "axes": {
+    "angle": {
+     "type": "band",
+     "categories": [
+      "a",
+      "b",
+      "c",
+      "d",
+      "e",
+      "f"
+     ]
+    }
+   },
+   "series": [
+    {
+     "type": "polarLine",
+     "name": "L",
+     "data": [
+      1,
+      2,
+      null,
+      4,
+      null,
+      3
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "polar-area-stacked",
+  "spec": {
+   "width": 320,
+   "height": 320,
+   "axes": {
+    "angle": {
+     "type": "band",
+     "categories": [
+      "a",
+      "b",
+      "c",
+      "d",
+      "e"
+     ]
+    }
+   },
+   "series": [
+    {
+     "type": "polarArea",
+     "name": "A",
+     "stack": "s",
+     "data": [
+      2,
+      3,
+      2,
+      4,
+      3
+     ]
+    },
+    {
+     "type": "polarArea",
+     "name": "B",
+     "stack": "s",
+     "data": [
+      1,
+      1,
+      2,
+      1,
+      2
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "polar-area-half",
+  "spec": {
+   "width": 340,
+   "height": 220,
+   "axes": {
+    "angle": {
+     "type": "band",
+     "categories": [
+      "a",
+      "b",
+      "c",
+      "d"
+     ],
+     "startAngle": -90,
+     "endAngle": 90
+    },
+    "radius": {
+     "type": "linear",
+     "min": -2
+    }
+   },
+   "series": [
+    {
+     "type": "polarArea",
+     "name": "A",
+     "data": [
+      2,
+      -1,
+      3,
+      1
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "polar-scatter",
+  "spec": {
+   "width": 320,
+   "height": 320,
+   "axes": {
+    "angle": {
+     "type": "linear",
+     "min": 0,
+     "max": 360
+    },
+    "radius": {
+     "type": "linear"
+    }
+   },
+   "series": [
+    {
+     "type": "polarScatter",
+     "name": "Owls",
+     "data": [
+      [
+       20,
+       3
+      ],
+      [
+       75,
+       5
+      ],
+      [
+       140,
+       2
+      ],
+      [
+       210,
+       6
+      ],
+      [
+       300,
+       4
+      ]
+     ]
+    },
+    {
+     "type": "polarScatter",
+     "name": "Bats",
+     "data": [
+      [
+       45,
+       1
+      ],
+      [
+       190,
+       3
+      ]
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "polar-scatter-quarter",
+  "spec": {
+   "width": 300,
+   "height": 300,
+   "axes": {
+    "angle": {
+     "type": "linear",
+     "startAngle": 0,
+     "endAngle": 90,
+     "grid": false
+    },
+    "radius": {
+     "type": "linear",
+     "shape": "circle"
+    }
+   },
+   "series": [
+    {
+     "type": "polarScatter",
+     "name": "S",
+     "data": [
+      [
+       1,
+       1
+      ],
+      [
+       2,
+       3
+      ],
+      [
+       4,
+       2
+      ]
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "donut-spaced-rounded",
+  "spec": {
+   "width": 300,
+   "height": 260,
+   "series": [
+    {
+     "type": "pie",
+     "name": "Energy",
+     "innerRadius": 0.55,
+     "padAngle": 3,
+     "cornerRadius": 6,
+     "data": [
+      {
+       "name": "Wind",
+       "value": 5
+      },
+      {
+       "name": "Sun",
+       "value": 3
+      },
+      {
+       "name": "Hydro",
+       "value": 2
+      },
+      {
+       "name": "Coal",
+       "value": 1
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "pie-exploded",
+  "spec": {
+   "width": 300,
+   "height": 260,
+   "legend": "none",
+   "series": [
+    {
+     "type": "pie",
+     "name": "P",
+     "data": [
+      {
+       "name": "a",
+       "value": 4,
+       "offset": 0.15
+      },
+      {
+       "name": "b",
+       "value": 3
+      },
+      {
+       "name": "c",
+       "value": 2
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "pie-rings",
+  "spec": {
+   "width": 320,
+   "height": 300,
+   "series": [
+    {
+     "type": "pie",
+     "name": "2025",
+     "data": [
+      {
+       "name": "North",
+       "value": 5
+      },
+      {
+       "name": "South",
+       "value": 3
+      },
+      {
+       "name": "East",
+       "value": 2
+      }
+     ]
+    },
+    {
+     "type": "pie",
+     "name": "2024",
+     "data": [
+      {
+       "name": "North",
+       "value": 3
+      },
+      {
+       "name": "South",
+       "value": 4
+      },
+      {
+       "name": "West",
+       "value": 1
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "pie-variable-radius",
+  "spec": {
+   "width": 300,
+   "height": 260,
+   "series": [
+    {
+     "type": "pie",
+     "name": "Area",
+     "data": [
+      {
+       "name": "a",
+       "value": 3,
+       "radius": 10
+      },
+      {
+       "name": "b",
+       "value": 2,
+       "radius": 5
+      },
+      {
+       "name": "c",
+       "value": 2,
+       "radius": 7.5
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "donut-half-rounded",
+  "spec": {
+   "width": 300,
+   "height": 180,
+   "series": [
+    {
+     "type": "pie",
+     "name": "Seats",
+     "innerRadius": 0.5,
+     "startAngle": -90,
+     "endAngle": 90,
+     "cornerRadius": 40,
+     "padAngle": 2,
+     "data": [
+      {
+       "name": "Left",
+       "value": 7
+      },
+      {
+       "name": "Centre",
+       "value": 3
+      },
+      {
+       "name": "Right",
+       "value": 5
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "pie-rotated",
+  "spec": {
+   "width": 260,
+   "height": 240,
+   "legend": "none",
+   "series": [
+    {
+     "type": "pie",
+     "name": "P",
+     "startAngle": -135,
+     "endAngle": 225,
+     "data": [
+      {
+       "name": "Sky",
+       "value": 7
+      },
+      {
+       "name": "Shady side",
+       "value": 2
+      },
+      {
+       "name": "Sunny side",
+       "value": 1
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "radar-circle-grid",
+  "spec": {
+   "width": 320,
+   "height": 300,
+   "axes": {
+    "angle": {
+     "type": "band",
+     "categories": [
+      "Speed",
+      "Power",
+      "Range",
+      "Control",
+      "Stamina"
+     ]
+    },
+    "radius": {
+     "type": "linear",
+     "shape": "circle"
+    }
+   },
+   "series": [
+    {
+     "type": "radar",
+     "name": "Ada",
+     "data": [
+      8,
+      6,
+      7,
+      9,
+      5
+     ]
+    },
+    {
+     "type": "radar",
+     "name": "Bo",
+     "data": [
+      5,
+      9,
+      6,
+      4,
+      8
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "radar-range",
+  "spec": {
+   "width": 320,
+   "height": 300,
+   "axes": {
+    "angle": {
+     "type": "band",
+     "categories": [
+      "Speed",
+      "Power",
+      "Range",
+      "Control",
+      "Stamina"
+     ]
+    }
+   },
+   "series": [
+    {
+     "type": "radar",
+     "name": "Usual",
+     "data": [
+      [
+       4,
+       8
+      ],
+      [
+       3,
+       6
+      ],
+      [
+       5,
+       7
+      ],
+      [
+       6,
+       9
+      ],
+      [
+       2,
+       5
+      ]
+     ]
+    },
+    {
+     "type": "radar",
+     "name": "Today",
+     "data": [
+      7,
+      5,
+      6,
+      8,
+      4
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "gauge-needle-bands",
+  "spec": {
+   "width": 300,
+   "height": 260,
+   "title": "Load",
+   "axes": {
+    "angle": {
+     "type": "linear",
+     "min": 0,
+     "max": 100,
+     "bands": [
+      {
+       "from": 0,
+       "to": 60,
+       "color": "#009e73"
+      },
+      {
+       "from": 60,
+       "to": 85,
+       "color": "#e69f00"
+      },
+      {
+       "from": 85,
+       "to": 100,
+       "color": "#d55e00"
+      }
+     ],
+     "format": {
+      "suffix": "%"
+     }
+    }
+   },
+   "series": [
+    {
+     "type": "gauge",
+     "name": "CPU",
+     "value": 72
+    }
+   ]
+  }
+ },
+ {
+  "name": "gauge-semicircle-bar",
+  "spec": {
+   "width": 300,
+   "height": 200,
+   "axes": {
+    "angle": {
+     "type": "linear",
+     "min": 0,
+     "max": 100,
+     "startAngle": -90,
+     "endAngle": 90
+    }
+   },
+   "series": [
+    {
+     "type": "gauge",
+     "name": "Done",
+     "display": "bar",
+     "value": 64
+    }
+   ]
+  }
+ },
+ {
+  "name": "gauge-default-dial",
+  "spec": {
+   "width": 260,
+   "height": 240,
+   "series": [
+    {
+     "type": "gauge",
+     "name": "Score",
+     "value": 38.5
+    }
+   ]
+  }
+ },
+ {
+  "name": "gauge-clock",
+  "spec": {
+   "width": 260,
+   "height": 260,
+   "legend": "none",
+   "axes": {
+    "angle": {
+     "type": "linear",
+     "min": 0,
+     "max": 12,
+     "startAngle": 0,
+     "endAngle": 360
+    }
+   },
+   "series": [
+    {
+     "type": "gauge",
+     "name": "Hour",
+     "value": 10.2,
+     "length": 0.5
+    },
+    {
+     "type": "gauge",
+     "name": "Minute",
+     "value": 2,
+     "length": 0.85
+    }
+   ]
+  }
+ },
+ {
+  "name": "gauge-bars-in-rings",
+  "spec": {
+   "width": 320,
+   "height": 300,
+   "axes": {
+    "angle": {
+     "type": "linear",
+     "bands": [
+      {
+       "from": 0,
+       "to": 60,
+       "color": "#009e73"
+      },
+      {
+       "from": 60,
+       "to": 85,
+       "color": "#e69f00"
+      },
+      {
+       "from": 85,
+       "to": 100,
+       "color": "#d55e00"
+      }
+     ]
+    }
+   },
+   "series": [
+    {
+     "type": "gauge",
+     "name": "Mon",
+     "display": "bar",
+     "value": 40
+    },
+    {
+     "type": "gauge",
+     "name": "Tue",
+     "display": "bar",
+     "value": 75
+    },
+    {
+     "type": "gauge",
+     "name": "Goal",
+     "value": 90
+    }
+   ]
+  }
+ },
+ {
+  "name": "labels-rotated-band",
+  "spec": {
+   "width": 360,
+   "height": 260,
+   "axes": {
+    "x": {
+     "type": "band",
+     "categories": [
+      "Zürich",
+      "Łódź",
+      "São Paulo",
+      "Reykjavík",
+      "Kraków",
+      "Montréal",
+      "Ho Chi Minh City",
+      "Kyiv"
+     ],
+     "labelAngle": -45,
+     "title": "City"
+    },
+    "y": {
+     "type": "linear"
+    }
+   },
+   "series": [
+    {
+     "type": "bar",
+     "name": "Visits",
+     "data": [
+      5,
+      3,
+      8,
+      4,
+      6,
+      7,
+      9,
+      2
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "labels-rotated-vertical",
+  "spec": {
+   "width": 300,
+   "height": 260,
+   "axes": {
+    "x": {
+     "type": "band",
+     "categories": [
+      "Zürich",
+      "Łódź",
+      "São Paulo",
+      "Reykjavík",
+      "Kraków",
+      "Montréal",
+      "Ho Chi Minh City",
+      "Kyiv"
+     ],
+     "labelAngle": -90
+    },
+    "y": {
+     "type": "linear"
+    }
+   },
+   "series": [
+    {
+     "type": "line",
+     "name": "Visits",
+     "data": [
+      5,
+      3,
+      8,
+      4,
+      6,
+      7,
+      9,
+      2
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "labels-rotated-linear",
+  "spec": {
+   "width": 360,
+   "height": 240,
+   "axes": {
+    "x": {
+     "type": "linear",
+     "labelAngle": 30,
+     "format": {
+      "prefix": "$"
+     }
+    },
+    "y": {
+     "type": "linear"
+    }
+   },
+   "series": [
+    {
+     "type": "scatter",
+     "name": "Price",
+     "data": [
+      [
+       1200000,
+       3
+      ],
+      [
+       2500000,
+       5
+      ],
+      [
+       4100000,
+       2
+      ]
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "labels-rotated-left",
+  "spec": {
+   "width": 360,
+   "height": 260,
+   "axes": {
+    "x": {
+     "type": "linear"
+    },
+    "y": {
+     "type": "band",
+     "categories": [
+      "Zürich",
+      "Łódź",
+      "São Paulo",
+      "Reykjavík",
+      "Kraków"
+     ],
+     "labelAngle": -30,
+     "title": "City"
+    }
+   },
+   "series": [
+    {
+     "type": "bar",
+     "name": "Visits",
+     "data": [
+      5,
+      3,
+      8,
+      4,
+      6
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "labels-rotated-left-linear",
+  "spec": {
+   "width": 300,
+   "height": 200,
+   "legend": "none",
+   "axes": {
+    "x": {
+     "type": "band",
+     "categories": [
+      "Alpha",
+      "Beta"
+     ]
+    },
+    "y": {
+     "type": "linear",
+     "labelAngle": -45,
+     "format": {
+      "prefix": "$"
+     },
+     "min": 1000000,
+     "max": 2000000
+    }
+   },
+   "series": [
+    {
+     "type": "line",
+     "name": "S",
+     "data": [
+      1500000,
+      1800000
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "gauge-offset-dial",
+  "spec": {
+   "width": 300,
+   "height": 260,
+   "axes": {
+    "angle": {
+     "type": "linear",
+     "min": 50,
+     "max": 150,
+     "bands": [
+      {
+       "from": 120,
+       "to": 150,
+       "color": "#d55e00"
+      }
+     ]
+    }
+   },
+   "series": [
+    {
+     "type": "gauge",
+     "name": "Pressure",
+     "value": 100
+    }
+   ]
+  }
+ },
+ {
+  "name": "pie-outer-radius-offset",
+  "spec": {
+   "width": 300,
+   "height": 260,
+   "series": [
+    {
+     "type": "pie",
+     "name": "Outer",
+     "innerRadius": 0.6,
+     "outerRadius": 0.9,
+     "data": [
+      {
+       "name": "a",
+       "value": 1,
+       "offset": 0.1
+      },
+      {
+       "name": "b",
+       "value": 3
+      }
+     ]
+    },
+    {
+     "type": "pie",
+     "name": "Inner",
+     "outerRadius": 0.5,
+     "data": [
+      {
+       "name": "a",
+       "value": 2
+      },
+      {
+       "name": "b",
+       "value": 1
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "pie-rings-pulled-inner",
+  "spec": {
+   "width": 300,
+   "height": 260,
+   "series": [
+    {
+     "type": "pie",
+     "name": "Outer",
+     "data": [
+      {
+       "name": "a",
+       "value": 2
+      },
+      {
+       "name": "b",
+       "value": 3
+      }
+     ]
+    },
+    {
+     "type": "pie",
+     "name": "Inner",
+     "data": [
+      {
+       "name": "a",
+       "value": 1,
+       "offset": 0.2
+      },
+      {
+       "name": "b",
+       "value": 2
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "donut-variable-radius",
+  "spec": {
+   "width": 300,
+   "height": 260,
+   "series": [
+    {
+     "type": "pie",
+     "name": "P",
+     "innerRadius": 0.4,
+     "data": [
+      {
+       "name": "a",
+       "value": 3,
+       "radius": 10
+      },
+      {
+       "name": "b",
+       "value": 2,
+       "radius": 5
+      },
+      {
+       "name": "c",
+       "value": 2,
+       "radius": 7.5
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "donut-narrow",
+  "spec": {
+   "width": 300,
+   "height": 200,
+   "legend": "none",
+   "series": [
+    {
+     "type": "pie",
+     "name": "P",
+     "innerRadius": 0.6,
+     "startAngle": 20,
+     "endAngle": 80,
+     "data": [
+      {
+       "name": "a",
+       "value": 2
+      },
+      {
+       "name": "b",
+       "value": 1
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "gauge-bars-negative",
+  "spec": {
+   "width": 300,
+   "height": 260,
+   "axes": {
+    "angle": {
+     "type": "linear",
+     "min": -50,
+     "max": 50
+    }
+   },
+   "series": [
+    {
+     "type": "gauge",
+     "name": "Up",
+     "display": "bar",
+     "value": 30
+    },
+    {
+     "type": "gauge",
+     "name": "Down",
+     "display": "bar",
+     "value": -20
+    }
+   ]
+  }
+ },
+ {
+  "name": "pie-thin-rounded",
+  "spec": {
+   "width": 300,
+   "height": 260,
+   "legend": "none",
+   "series": [
+    {
+     "type": "pie",
+     "name": "P",
+     "innerRadius": 0.3,
+     "cornerRadius": 60,
+     "data": [
+      {
+       "name": "thin",
+       "value": 1
+      },
+      {
+       "name": "wide",
+       "value": 40
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "polar-line-one-gap",
+  "spec": {
+   "width": 300,
+   "height": 300,
+   "axes": {
+    "angle": {
+     "type": "band",
+     "categories": [
+      "a",
+      "b",
+      "c",
+      "d",
+      "e"
+     ]
+    }
+   },
+   "series": [
+    {
+     "type": "polarLine",
+     "name": "L",
+     "data": [
+      1,
+      2,
+      null,
+      4,
+      3
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "labels-refitted",
+  "spec": {
+   "width": 300,
+   "height": 200,
+   "fontSize": 20,
+   "legend": "none",
+   "axes": {
+    "x": {
+     "type": "linear",
+     "labelAngle": -45
+    },
+    "y": {
+     "type": "linear"
+    }
+   },
+   "series": [
+    {
+     "type": "scatter",
+     "name": "S",
+     "data": [
+      [
+       0,
+       0
+      ],
+      [
+       155,
+       1
+      ]
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "labels-rotated-y2",
+  "spec": {
+   "width": 360,
+   "height": 260,
+   "axes": {
+    "x": {
+     "type": "band",
+     "categories": [
+      "a",
+      "b",
+      "c"
+     ]
+    },
+    "y": {
+     "type": "linear",
+     "labelAngle": -30
+    },
+    "y2": {
+     "type": "linear",
+     "labelAngle": 30
+    }
+   },
+   "series": [
+    {
+     "type": "bar",
+     "name": "Left",
+     "data": [
+      1,
+      5,
+      3
+     ]
+    },
+    {
+     "type": "line",
+     "name": "Right",
+     "axis": "y2",
+     "data": [
+      200,
+      100,
+      300
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "gauge-needle-then-bars",
+  "spec": {
+   "width": 300,
+   "height": 260,
+   "series": [
+    {
+     "type": "gauge",
+     "name": "Goal",
+     "value": 80
+    },
+    {
+     "type": "gauge",
+     "name": "Mon",
+     "display": "bar",
+     "value": 40
+    },
+    {
+     "type": "gauge",
+     "name": "Tue",
+     "display": "bar",
+     "value": 65
+    }
+   ]
+  }
+ },
+ {
+  "name": "gauge-offset-dial-bar",
+  "spec": {
+   "width": 300,
+   "height": 260,
+   "axes": {
+    "angle": {
+     "type": "linear",
+     "min": 50,
+     "max": 150
+    }
+   },
+   "series": [
+    {
+     "type": "gauge",
+     "name": "Load",
+     "display": "bar",
+     "value": 120
+    }
+   ]
+  }
  }
 ]

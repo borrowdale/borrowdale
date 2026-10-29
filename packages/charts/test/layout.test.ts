@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { SketchPath } from '@borrowdale/core';
 import { layoutChart, type ChartLayout, type ChartNode, type ChartSpec } from '@borrowdale/charts';
+import { textBounds } from '@borrowdale/text';
+import { PAD } from '../src/frame.js';
 import { handFont } from '../../text/test/support/hand-font.js';
 
 const months = { type: 'band', categories: ['Jan', 'Feb'] } as const;
@@ -116,6 +118,229 @@ const halfDonut: ChartSpec = {
   series: [{ type: 'pie', name: 'Mix', innerRadius: 0.5, startAngle: -90, endAngle: 90, data: [{ name: 'Wind', value: 3 }, { name: 'Sun', value: 1 }] }],
 };
 
+const compass = { type: 'band', categories: ['N', 'E', 'S', 'W'] } as const;
+const windRose: ChartSpec = {
+  width: 300,
+  height: 300,
+  legend: 'none',
+  axes: { angle: compass, radius: { type: 'linear', max: 6 } },
+  series: [
+    { type: 'rose', name: 'Calm', stack: 'w', data: [4, 3, null, 2] },
+    { type: 'rose', name: 'Gale', stack: 'w', data: [1, 1, 2, 1] },
+  ],
+};
+// The same Calm wedges on the same axis, with Gale left out.
+const calmOnly: ChartSpec = { ...windRose, series: [windRose.series[0]!] };
+const goals: ChartSpec = {
+  width: 300,
+  height: 300,
+  axes: { angle: { type: 'linear', max: 100, format: { suffix: '%' } }, radius: { type: 'band', categories: ['Move', 'Stand'] } },
+  series: [{ type: 'radialBar', name: 'Today', data: [82, null] }],
+};
+const sightings: ChartSpec = {
+  width: 300,
+  height: 300,
+  axes: { angle: { type: 'linear', min: 0, max: 360 }, radius: { type: 'linear', format: { suffix: ' km' } } },
+  series: [{ type: 'polarScatter', name: 'Owls', data: [[20, 3]] }],
+};
+// Ticks every 50 from 0 to 400, so the end of the turn is a tick, at the start.
+const fullTurn: ChartSpec = { ...sightings, axes: { angle: { type: 'linear', min: 0, max: 400 }, radius: { type: 'linear' } } };
+// Gaps at c and e: around the circle f runs on into a and b, and d stands alone.
+const wrappedLine: ChartSpec = {
+  width: 300,
+  height: 300,
+  axes: { angle: { type: 'band', categories: ['a', 'b', 'c', 'd', 'e', 'f'] } },
+  series: [{ type: 'polarLine', name: 'L', data: [1, 2, null, 4, null, 3] }],
+};
+// The same gaps on half a turn, where f and a are at opposite ends.
+const halfLine: ChartSpec = {
+  ...wrappedLine,
+  axes: { angle: { type: 'band', categories: ['a', 'b', 'c', 'd', 'e', 'f'], startAngle: -90, endAngle: 90 } },
+};
+
+// Two rings sharing the name "a": one legend entry for it.
+const rings: ChartSpec = {
+  width: 300,
+  height: 300,
+  series: [
+    { type: 'pie', name: '2025', data: [{ name: 'a', value: 3 }, { name: 'b', value: 1 }] },
+    { type: 'pie', name: '2024', data: [{ name: 'a', value: 1 }, { name: 'c', value: 1 }] },
+  ],
+};
+// A slice of 3.6 degrees, less than the 4 degrees of space between slices.
+const spaced: ChartSpec = {
+  width: 300,
+  height: 300,
+  series: [{ type: 'pie', name: 'P', padAngle: 4, data: [{ name: 'big', value: 99 }, { name: 'sliver', value: 1 }] }],
+};
+
+const speed: ChartSpec = {
+  width: 300,
+  height: 260,
+  axes: { angle: { type: 'linear', min: 0, max: 200, format: { suffix: ' km/h' } } },
+  series: [{ type: 'gauge', name: 'Speed', value: 88 }],
+};
+const twoNeedles: ChartSpec = { ...speed, series: [...speed.series, { type: 'gauge', name: 'Limit', value: 120 }] };
+
+// Eight city names on 300 units: flat, every other one is left out; slanted, each fits.
+const cities = ['Zürich', 'Łódź', 'São Paulo', 'Reykjavík', 'Kraków', 'Montréal', 'Ho Chi Minh City', 'Kyiv'];
+const cityAxis = { type: 'band', categories: cities } as const;
+const flatCities: ChartSpec = {
+  width: 300,
+  height: 260,
+  axes: { x: cityAxis, y: { type: 'linear' } },
+  series: [{ type: 'bar', name: 'Visits', data: [5, 3, 8, 4, 6, 7, 9, 2] }],
+};
+const slantedCities: ChartSpec = { ...flatCities, axes: { x: { ...cityAxis, labelAngle: -60 }, y: { type: 'linear' } } };
+
+// Long money labels slanted on the side: the lowest must stay on the 200-unit-high chart.
+const slantedMoney: ChartSpec = {
+  width: 300,
+  height: 200,
+  legend: 'none',
+  axes: {
+    x: { type: 'band', categories: ['Alpha', 'Beta'] },
+    y: { type: 'linear', labelAngle: -45, format: { prefix: '$' }, min: 1_000_000, max: 2_000_000 },
+  },
+  series: [{ type: 'line', name: 'S', data: [1_500_000, 1_800_000] }],
+};
+
+// A dial from 50 to 150: 0 is not on it.
+const offsetDial: ChartSpec = {
+  width: 300,
+  height: 260,
+  axes: { angle: { type: 'linear', min: 50, max: 150 } },
+  series: [{ type: 'gauge', name: 'a', value: 100 }],
+};
+// Ten bars need ten rings, more than a 260 × 240 dial has room for.
+const tooManyBars: ChartSpec = {
+  width: 260,
+  height: 240,
+  legend: 'none',
+  series: Array.from({ length: 10 }, (_, i) => ({ type: 'gauge' as const, name: `g${i}`, display: 'bar' as const, value: i * 10 })),
+};
+// A half dial whose width limits it, with little room under its centre for its value.
+const lowValue: ChartSpec = {
+  width: 216,
+  height: 136,
+  axes: { angle: { type: 'linear', min: 0, max: 100, startAngle: -90, endAngle: 90 } },
+  series: [{ type: 'gauge', name: 'G', value: 37 }],
+};
+// Slice a reaches out to radius 0: nothing to draw, even with rounded corners.
+const flatSlice: ChartSpec = {
+  width: 300,
+  height: 260,
+  series: [{ type: 'pie', name: 'P', cornerRadius: 5, data: [{ name: 'a', value: 1, radius: 0 }, { name: 'b', value: 1, radius: 1 }] }],
+};
+// A ring half the chart's radius, its slice pulled out by half that radius.
+const pulledHalf: ChartSpec = {
+  width: 300,
+  height: 260,
+  legend: 'none',
+  series: [{ type: 'pie', name: 'P', outerRadius: 0.5, data: [{ name: 'a', value: 1, offset: 0.5 }, { name: 'b', value: 3 }] }],
+};
+// One slice takes the whole turn: pulling it out would only move the pie off centre.
+const loneSlice: ChartSpec = { width: 300, height: 260, legend: 'none', series: [{ type: 'pie', name: 'P', data: [{ name: 'a', value: 1 }, { name: 'b', value: 0 }] }] };
+const halfSlice: ChartSpec = { ...loneSlice, series: [{ type: 'pie', name: 'P', startAngle: -90, endAngle: 90, data: [{ name: 'a', value: 1 }] }] };
+const pulledHalfSlice: ChartSpec = {
+  ...loneSlice,
+  series: [{ type: 'pie', name: 'P', startAngle: -90, endAngle: 90, data: [{ name: 'a', value: 1, offset: 0.5 }] }],
+};
+const paddedLoneSlice: ChartSpec = {
+  ...loneSlice,
+  series: [{ type: 'pie', name: 'P', padAngle: 10, data: [{ name: 'a', value: 1 }, { name: 'b', value: 0 }] }],
+};
+// Two long categories among short ones: slanted, they reach past the ends of the axis.
+const longMiddleLabels: ChartSpec = {
+  width: 259,
+  height: 270,
+  axes: {
+    x: { type: 'band', categories: ['c0', 'c1', 'c2', 'c3', 'Quite a long category label4', 'Quite a long category label5', 'c6'], labelAngle: 45 },
+    y: { type: 'linear' },
+  },
+  series: [{ type: 'bar', name: 'S', data: [1, 2, 3, 4, 5, 6, 7] }],
+};
+const longMiddleSideLabels: ChartSpec = {
+  width: 500,
+  height: 300,
+  axes: {
+    x: { type: 'linear' },
+    y: { type: 'band', categories: ['c0', 'A very long category label 1', 'c2', 'c3'], labelAngle: 45 },
+  },
+  series: [{ type: 'bar', name: 'S', data: [1, 2, 3, 4] }],
+};
+// Seven bar rings fit on this dial; an eighth does not.
+const barsOf = (count: number): ChartSpec => ({
+  width: 260,
+  height: 240,
+  legend: 'none',
+  series: Array.from({ length: count }, (_, i) => ({ type: 'gauge' as const, name: `g${i}`, display: 'bar' as const, value: 10 + i })),
+});
+const sevenBars = barsOf(7);
+const eightBars = barsOf(8);
+const tinyDial: ChartSpec = { width: 60, height: 60, series: [{ type: 'gauge', name: 'g', value: 5 }] };
+const tinyHiddenDial: ChartSpec = { ...tinyDial, axes: { angle: { type: 'linear', min: 0, max: 100, hidden: true } } };
+// The final x ticks over the plot reach further than the first ones over the chart: a second fit.
+const refitted: ChartSpec = {
+  width: 300,
+  height: 200,
+  fontSize: 20,
+  legend: 'none',
+  axes: { x: { type: 'linear', labelAngle: -45 }, y: { type: 'linear' } },
+  series: [{ type: 'scatter', name: 'S', data: [[0, 0], [155, 1]] }],
+};
+// Named a in both rings, coloured only in the first: one legend entry, no conflict.
+const colourThenNone: ChartSpec = {
+  width: 300,
+  height: 260,
+  series: [
+    { type: 'pie', name: 'Outer', data: [{ name: 'a', value: 1, color: '#123456' }, { name: 'b', value: 1 }] },
+    { type: 'pie', name: 'Inner', data: [{ name: 'a', value: 1 }] },
+  ],
+};
+// Ring names run left of the start spoke, which here is the quarter's left edge.
+const ringsOnAQuarter: ChartSpec = {
+  width: 300,
+  height: 300,
+  axes: {
+    angle: { type: 'linear', startAngle: 0, endAngle: 90 },
+    radius: { type: 'band', categories: ['Alpha', 'Beta', 'Gamma'] },
+  },
+  series: [{ type: 'radialBar', name: 'B', data: [10, 20, 30] }],
+};
+// Tick labels run right of the start spoke, which here points down at the quarter's right edge.
+const ticksDownwards: ChartSpec = {
+  width: 300,
+  height: 300,
+  axes: { angle: { type: 'linear', startAngle: 180, endAngle: 270 }, radius: { type: 'linear' } },
+  series: [{ type: 'polarScatter', name: 'S', data: [[0, 1_000_000], [50, 2_000_000]] }],
+};
+// Tick labels run right from a start spoke that points right, on a whole turn whose height limits
+// it: each fit moves them in by half of what they overflow.
+const ticksRightward: ChartSpec = {
+  width: 400,
+  height: 400,
+  axes: {
+    angle: { type: 'band', categories: ['a', 'b', 'c', 'd'], startAngle: 90, endAngle: 450 },
+    radius: { type: 'linear', format: { prefix: 'USD ', suffix: ' thousand' } },
+  },
+  series: [{ type: 'rose', name: 'R', data: [1, 2, 3, 4] }],
+};
+// Long tick labels on a small half turn, run right from a start spoke that points left: no room.
+const crampedTicks: ChartSpec = {
+  width: 160,
+  height: 160,
+  axes: {
+    angle: { type: 'band', categories: ['n', 'e', 's', 'w'], startAngle: 270, endAngle: 450 },
+    radius: { type: 'linear', format: { suffix: ' thousand' } },
+  },
+  series: [{ type: 'rose', name: 'R', data: [100_000, 200_000, 300_000, 400_000] }],
+};
+const pulledLoneSlice: ChartSpec = {
+  ...loneSlice,
+  series: [{ type: 'pie', name: 'P', data: [{ name: 'a', value: 1, offset: 0.3 }, { name: 'b', value: 0 }] }],
+};
+
 /** The mark whose tooltip is `title`. */
 function mark(layout: ChartLayout, title: string): ChartNode {
   const found = layout.nodes.find((node) => node.kind === 'mark' && node.title === title);
@@ -139,6 +364,45 @@ function outline(layout: ChartLayout, title: string): SketchPath {
 function width(layout: ChartLayout, title: string): number {
   const xs = [...outline(layout, title).d.matchAll(/(-?[\d.]+)[ ,](-?[\d.]+)/g)].map((match) => Number(match[1]));
   return Math.round(Math.max(...xs) - Math.min(...xs));
+}
+
+/** How far down the chart the label `text` reaches, once rotated. */
+function lowestEdge(layout: ChartLayout, text: string): number {
+  const found = layout.nodes.find((node) => node.kind === 'text' && node.text.text === text);
+  if (found?.kind !== 'text') {
+    throw new Error(`No label ${text}`);
+  }
+  const { y, height } = textBounds(found.text);
+  return y + height;
+}
+
+/**
+ * How many points the drawn shapes pass through lie outside the chart: each path's starting points,
+ * line ends and the end of each curve, not a curve's control points, which lie off the curve.
+ */
+function pointsOutside(layout: ChartLayout): number {
+  const ds = layout.nodes.flatMap((node) => (node.kind === 'mark' ? node.nodes : [node]));
+  const paths = ds.flatMap((node) => (node.kind === 'sketch' ? node.sketch.paths.map((path) => path.d) : []));
+  const onCurve = /(?:[ML]|C[^,]*,[^,]*,)\s*(-?[\d.]+)[ ,](-?[\d.]+)/g;
+  const points = paths.flatMap((d) => [...d.matchAll(onCurve)].map((match) => [Number(match[1]), Number(match[2])]));
+  return points.filter(([px, py]) => px! < 0 || py! < 0 || px! > layout.width || py! > layout.height).length;
+}
+
+/** Where the label `text` is drawn, down the chart. */
+function labelY(layout: ChartLayout, text: string): number {
+  const found = layout.nodes.find((node) => node.kind === 'text' && node.text.text === text);
+  if (found?.kind !== 'text') {
+    throw new Error(`No label ${text}`);
+  }
+  return found.text.y;
+}
+
+/** How many labels reach outside the chart's padding. */
+function labelsOutside(layout: ChartLayout): number {
+  const labels = layout.nodes.flatMap((node) => (node.kind === 'text' ? [textBounds(node.text)] : []));
+  const [low, right, bottom] = [PAD - 0.01, layout.width - PAD + 0.01, layout.height - PAD + 0.01];
+  return labels.filter((box) => box.x < low || box.y < low || box.x + box.width > right || box.y + box.height > bottom)
+    .length;
 }
 
 function titles(layout: ChartLayout): string[] {
@@ -290,5 +554,157 @@ describe('layoutChart', () => {
     const layout = layoutChart(bubbles);
 
     expect(width(layout, 'A: 1, 1, size 10')).toBe(width(layout, 'B: 2, 2, size 10'));
+  });
+
+  it('gives each wedge of a rose a tooltip with its value, and none to a null', () => {
+    expect(titles(layoutChart(windRose))).toEqual([
+      'Calm, N: 4',
+      'Calm, E: 3',
+      'Calm, W: 2',
+      'Gale, N: 1',
+      'Gale, E: 1',
+      'Gale, S: 2',
+      'Gale, W: 1',
+    ]);
+  });
+
+  it('keeps the strokes of a wedge when a series stacked on it changes', () => {
+    expect(mark(layoutChart(windRose), 'Calm, E: 3')).toEqual(mark(layoutChart(calmOnly), 'Calm, E: 3'));
+  });
+
+  it('writes a radial bar value in the angle axis format', () => {
+    expect(titles(layoutChart(goals))).toEqual(['Today, Move: 82%']);
+  });
+
+  it('labels the rings of a radial bar chart, the first outermost', () => {
+    expect(labelY(layoutChart(goals), 'Move')).toBeLessThan(labelY(layoutChart(goals), 'Stand'));
+  });
+
+  it('labels a whole turn of a linear angle axis once where it starts and ends', () => {
+    expect(texts(layoutChart(fullTurn))).toEqual(expect.arrayContaining(['0', '350']));
+    expect(texts(layoutChart(fullTurn))).not.toContain('400');
+  });
+
+  it('writes a polar point as its angle and radius, each in its axis format', () => {
+    expect(titles(layoutChart(sightings))).toEqual(['Owls: 20, 3 km']);
+  });
+
+  it('joins a polar line across the start of a whole turn', () => {
+    expect(mark(layoutChart(wrappedLine), 'L')).toMatchObject({ nodes: [{ kind: 'sketch' }, { kind: 'sketch' }] });
+  });
+
+  it('keeps the ends of part of a turn apart', () => {
+    expect(mark(layoutChart(halfLine), 'L')).toMatchObject({ nodes: [{}, {}, {}] });
+  });
+
+  it('names the ring in the tooltip of each slice of nested rings', () => {
+    expect(titles(layoutChart(rings))).toEqual(['2025, a: 3 (75.0%)', '2025, b: 1 (25.0%)', '2024, a: 1 (50.0%)', '2024, c: 1 (50.0%)']);
+  });
+
+  it('gives a slice name shared by two rings one legend entry', () => {
+    expect(texts(layoutChart(rings))).toEqual(['a', 'b', 'c']);
+  });
+
+  it('leaves out a slice narrower than the space between slices, keeping its legend entry', () => {
+    expect(titles(layoutChart(spaced))).toEqual(['big: 99 (99.0%)']);
+    expect(texts(layoutChart(spaced))).toEqual(['big', 'sliver']);
+  });
+
+  it('writes a gauge value in the dial format, in its tooltip and under a lone gauge', () => {
+    expect(titles(layoutChart(speed))).toEqual(['Speed: 88 km/h']);
+    expect(texts(layoutChart(speed))).toContain('88 km/h');
+  });
+
+  it('writes no value under a gauge of several needles', () => {
+    expect(texts(layoutChart(twoNeedles))).not.toContain('88 km/h');
+  });
+
+  it('leaves out every other flat label that would overlap', () => {
+    expect(texts(layoutChart(flatCities))).not.toContain('Łódź');
+  });
+
+  it('fits every label once they are slanted', () => {
+    expect(texts(layoutChart(slantedCities))).toEqual(expect.arrayContaining(cities));
+  });
+
+  it('keeps the lowest slanted label of a side axis on the chart, inside its padding', () => {
+    expect(lowestEdge(layoutChart(slantedMoney), '$1,000,000')).toBeLessThanOrEqual(200 - PAD);
+  });
+
+  it('draws a gauge whose dial does not reach 0', () => {
+    expect(titles(layoutChart(offsetDial))).toEqual(['a: 100']);
+  });
+
+  it('rejects more gauge bars than the dial has rings for, by name', () => {
+    expect(() => layoutChart(tooManyBars)).toThrow('Invalid chart: series holds 10 gauge bars, more rings than the dial has room for');
+  });
+
+  it("keeps a lone gauge's value on the chart, inside its padding", () => {
+    expect(lowestEdge(layoutChart(lowValue), '37')).toBeLessThanOrEqual(136 - PAD);
+  });
+
+  it('leaves out a slice that reaches no further than the hole, rounded or not', () => {
+    expect(titles(layoutChart(flatSlice))).toEqual(['b: 1 (50.0%)']);
+  });
+
+  it('keeps a slice pulled out of a ring smaller than the chart on the chart', () => {
+    expect(pointsOutside(layoutChart(pulledHalf))).toBe(0);
+  });
+
+  it('does not pull out a slice that takes the whole turn', () => {
+    expect(mark(layoutChart(pulledLoneSlice), 'a: 1 (100.0%)')).toEqual(mark(layoutChart(loneSlice), 'a: 1 (100.0%)'));
+  });
+
+  it('does not pull out a slice that is the whole of a half pie', () => {
+    expect(mark(layoutChart(pulledHalfSlice), 'a: 1 (100.0%)')).toEqual(mark(layoutChart(halfSlice), 'a: 1 (100.0%)'));
+  });
+
+  it('leaves no space around a lone slice', () => {
+    expect(mark(layoutChart(paddedLoneSlice), 'a: 1 (100.0%)')).toEqual(mark(layoutChart(loneSlice), 'a: 1 (100.0%)'));
+  });
+
+  it('keeps long slanted labels in the middle of an axis on the chart', () => {
+    expect(texts(layoutChart(longMiddleLabels))).toContain('Quite a long category label4');
+    expect(labelsOutside(layoutChart(longMiddleLabels))).toBe(0);
+    expect(texts(layoutChart(longMiddleSideLabels))).toContain('A very long category label 1');
+    expect(labelsOutside(layoutChart(longMiddleSideLabels))).toBe(0);
+  });
+
+  it('fits the plot again when its own slanted ticks reach further, keeping them on the chart', () => {
+    expect(labelsOutside(layoutChart(refitted))).toBe(0);
+  });
+
+  it('accepts a slice name coloured in one ring and not in another, painting both in its colour', () => {
+    expect(texts(layoutChart(colourThenNone))).toEqual(['a', 'b']);
+    expect(outline(layoutChart(colourThenNone), 'Inner, a: 1 (100.0%)').stroke).toBe('#123456');
+  });
+
+  it('keeps the labels of a band radius axis on the chart when the sweep starts at the top', () => {
+    expect(labelsOutside(layoutChart(ringsOnAQuarter))).toBe(0);
+  });
+
+  it('keeps the labels of a linear radius axis on the chart when the sweep starts at the bottom', () => {
+    expect(labelsOutside(layoutChart(ticksDownwards))).toBe(0);
+  });
+
+  it('fits the circle as many times as its radius labels need to stay on the chart', () => {
+    expect(labelsOutside(layoutChart(ticksRightward))).toBe(0);
+  });
+
+  it('names a chart too small for the labels of its radius axis', () => {
+    expect(() => layoutChart(crampedTicks)).toThrow('Invalid chart: a 160 × 160 chart leaves no room for the labels of axes.radius');
+  });
+
+  it('draws as many gauge bars as fit, and names one more as too many', () => {
+    expect(titles(layoutChart(sevenBars))).toHaveLength(7);
+    expect(() => layoutChart(eightBars)).toThrow('Invalid chart: series holds 8 gauge bars, more rings than the dial has room for');
+  });
+
+  it('names a dial too small for its ticks, with no bars', () => {
+    expect(() => layoutChart(tinyDial)).toThrow("Invalid chart: a 60 × 60 chart leaves no room for the dial's ticks around its hub");
+  });
+
+  it('draws a dial too small for ticks when it hides them', () => {
+    expect(titles(layoutChart(tinyHiddenDial))).toEqual(['g: 5']);
   });
 });

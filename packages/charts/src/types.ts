@@ -4,7 +4,8 @@ import type { Font, TextLayout } from '@borrowdale/text';
 /**
  * A chart, as plain data that can come from JSON. Its series' type picks its coordinate system, and
  * every series must draw in the same one, with that system's axes: `x` and `y` for cartesian
- * series, `angle` (and optionally `radius`) for radar series, none for a pie.
+ * series, `angle` (and optionally `radius`) for polar series (radar, rose, radial bar, polar line,
+ * area and scatter), optionally `angle` for a gauge, none for a pie.
  */
 export interface ChartSpec {
   width: number;
@@ -27,7 +28,7 @@ export interface ChartSpec {
    * `fillWeight` 0 to 100.
    */
   style?: SketchStyle | undefined;
-  axes?: CartesianAxes | PolarAxes | undefined;
+  axes?: CartesianAxes | PolarAxes | GaugeAxes | undefined;
   series: readonly Series[];
 }
 
@@ -49,11 +50,76 @@ export interface CartesianAxes {
   y2?: LinearAxis | undefined;
 }
 
+/**
+ * The axes of a polar chart: `angle` around the circle and `radius` out from the centre. Each series
+ * type says which of them holds its categories.
+ */
 export interface PolarAxes {
-  /** The spokes of a radar chart, clockwise from the top: at least 3. */
-  angle: Omit<BandAxis, 'title'>;
-  /** Starts at 0 unless `min` is set. */
-  radius?: Omit<LinearAxis, 'title' | 'percent'> | undefined;
+  angle: AngleBandAxis | AngleLinearAxis;
+  /** Defaults to a linear axis. */
+  radius?: RadiusLinearAxis | RadiusBandAxis | undefined;
+}
+
+/** The part of the circle an angle axis takes up. */
+export interface Sweep {
+  /**
+   * Degrees clockwise from the top. Defaults to 0 and 360. `endAngle` must be greater than
+   * `startAngle` and at most 360 past it.
+   */
+  startAngle?: number | undefined;
+  endAngle?: number | undefined;
+}
+
+/**
+ * Categories around the circle: the spokes of a radar chart, the wedges of a rose. On a whole turn
+ * the first is at `startAngle`; on part of one each takes an equal share, centred in it.
+ */
+export interface AngleBandAxis extends Omit<BandAxis, 'title' | 'labelAngle'>, Sweep {}
+
+/** Values around the circle, from the start of the sweep to its end. */
+export interface AngleLinearAxis extends Omit<LinearAxis, 'title' | 'percent' | 'labelAngle'>, Sweep {}
+
+/** The hole in the middle, as a share of the radius, from 0 to 0.95. Defaults to 0. */
+interface Hole {
+  innerRadius?: number | undefined;
+}
+
+/** Values out from the centre, from 0 unless `min` is set. */
+export interface RadiusLinearAxis extends Omit<LinearAxis, 'title' | 'percent' | 'labelAngle'>, Hole {
+  /**
+   * Gridlines as polygons through the spokes, or as circles. Defaults to `polygon` when every series
+   * is a radar, else `circle`. A polygon needs a band angle axis.
+   */
+  shape?: 'polygon' | 'circle' | undefined;
+}
+
+/** Categories out from the centre, as rings, the first outermost. */
+export interface RadiusBandAxis extends Omit<BandAxis, 'title' | 'labelAngle'>, Hole {}
+
+/** The dial of a gauge. Defaults to 0 to 100 over -120 to 120 degrees. */
+export interface GaugeAxes {
+  angle: GaugeAxis;
+}
+
+/**
+ * A gauge's dial: values from the start of the sweep to its end, with ticks and labels inside the
+ * rim. Without `min` and `max` it reaches from 0 to the values, rounded out to ticks; it shows 0
+ * unless `min` or `max` leaves it out. A whole turn
+ * (`startAngle` 0, `endAngle` 360) makes a clock or a compass.
+ */
+export interface GaugeAxis extends Omit<LinearAxis, 'title' | 'percent' | 'grid' | 'labelAngle'>, Sweep {
+  /**
+   * Coloured stretches of the dial, such as green, amber and red, in order and not overlapping: each
+   * `from` below its `to`, and at or above the previous band's `to`. At most 100.
+   */
+  bands?: readonly GaugeBand[] | undefined;
+}
+
+export interface GaugeBand {
+  from: number;
+  to: number;
+  /** As a series' `color`. */
+  color: string;
 }
 
 export type Axis = BandAxis | LinearAxis;
@@ -65,6 +131,11 @@ export interface BandAxis {
   title?: string | undefined;
   /** Draws neither the axis nor its labels, as in a sparkline. */
   hidden?: boolean | undefined;
+  /**
+   * Rotates the tick labels, clockwise in degrees from -90 to 90: -45 slants x labels up to the
+   * right, ending at their ticks. The axis makes room for the rotated labels. Defaults to 0.
+   */
+  labelAngle?: number | undefined;
 }
 
 export interface LinearAxis {
@@ -84,6 +155,11 @@ export interface LinearAxis {
   /** Gridlines across the plot at each tick. Defaults to true, except on `y2`. */
   grid?: boolean | undefined;
   hidden?: boolean | undefined;
+  /**
+   * Rotates the tick labels, clockwise in degrees from -90 to 90: -45 slants x labels up to the
+   * right, ending at their ticks. The axis makes room for the rotated labels. Defaults to 0.
+   */
+  labelAngle?: number | undefined;
   format?: NumberFormat | undefined;
 }
 
@@ -187,35 +263,127 @@ export interface BubbleSeries extends SeriesBase {
 }
 
 export interface PieSlice {
-  /** Unique in the pie. */
+  /** Unique in the pie. A name repeated in another ring of the chart shares its colour and legend entry. */
   name: string;
   /** Not negative; at least one slice is above 0. */
   value: number;
-  /** As a series' `color`; a `fill` in the pie's or the chart's `style` replaces it. */
+  /**
+   * As a series' `color`; a `fill` in the pie's or the chart's `style` replaces it. A slice of the
+   * same name in another ring must not give a different one.
+   */
   color?: string | undefined;
+  /**
+   * Pulls the slice out from the centre by this share of the outermost ring's radius: from 0 to 0.5.
+   * A slice that is the whole of its pie stays put. Defaults to 0.
+   */
+  offset?: number | undefined;
+  /**
+   * Draws the slice out to a radius in proportion to this value, the largest to the full radius: a
+   * variable-radius pie. Not negative. Every slice of the pie has one, or none does, and at least one
+   * slice with a value above 0 has a radius above 0.
+   */
+  radius?: number | undefined;
 }
 
+/**
+ * A pie or donut. Up to 10 pie series in one chart make nested rings, the first outermost; they must
+ * share `startAngle` and `endAngle`.
+ */
 export interface PieSeries extends SeriesBase {
   type: 'pie';
   /** 1 to 1,000 slices. */
   data: readonly PieSlice[];
   /**
-   * The hole, as a share of the radius: 0 for a pie, 0.5 for a donut. From 0 to 0.95.
-   * Defaults to 0.
+   * Where the ring starts and ends, as shares of the outermost ring's radius, which fills the chart:
+   * `innerRadius` 0 for a pie and 0.5 for a donut, from 0 to 0.95; `outerRadius` from 0.05 to 1,
+   * greater than `innerRadius`. One pie defaults to 0 and 1; nested rings split the radius equally,
+   * outermost first.
    */
   innerRadius?: number | undefined;
+  outerRadius?: number | undefined;
   /**
    * Degrees clockwise from the top. Defaults to 0 and 360; -90 and 90 make a half donut. `endAngle`
    * must be greater than `startAngle` and at most 360 past it.
    */
   startAngle?: number | undefined;
   endAngle?: number | undefined;
+  /**
+   * Degrees of space between slices, from 0 to 10. A slice narrower than the space is not drawn but
+   * keeps its legend entry. Defaults to 0.
+   */
+  padAngle?: number | undefined;
+  /** Rounds each slice's corners to this radius, in user units, from 0 to 1,000. Defaults to 0. */
+  cornerRadius?: number | undefined;
 }
 
 export interface RadarSeries extends SeriesBase {
   type: 'radar';
-  /** One value per spoke, none negative. */
-  data: readonly number[];
+  /**
+   * One value per spoke, none negative; or one `[low, high]` pair per spoke, high not below low, for
+   * a range radar that fills the band between them.
+   */
+  data: readonly number[] | readonly (readonly [low: number, high: number])[];
+}
+
+/**
+ * A Nightingale rose: a bar chart wrapped around a band angle axis, one wedge per category, with
+ * the value on the radius. Stacked roses make a wind rose.
+ */
+export interface RoseSeries extends SeriesBase {
+  type: 'rose';
+  /** One value per category, none negative; `null` draws no wedge. */
+  data: readonly (number | null)[];
+  /** As a bar's: wedges of series with the same stack name stack outwards. */
+  stack?: string | undefined;
+}
+
+/** A bar chart wrapped around: one ring per category of a band radius axis, the value on the angle. */
+export interface RadialBarSeries extends SeriesBase {
+  type: 'radialBar';
+  /** One value per category; `null` draws no bar. */
+  data: readonly (number | null)[];
+  /** As a bar's: bars of series with the same stack name stack clockwise. */
+  stack?: string | undefined;
+}
+
+/**
+ * A line through one point per category of a band angle axis, the value on the radius, joined
+ * straight. On a whole turn with no gap it closes, as a radar does; with gaps, the run that ends the
+ * data joins the run that starts it.
+ */
+export interface PolarLineSeries extends SeriesBase {
+  type: 'polarLine';
+  /** One value per category, none negative unless the radius axis sets `min`; `null` leaves a gap. */
+  data: readonly (number | null)[];
+  /** As a line's. */
+  dash?: readonly number[] | undefined;
+}
+
+/** A polar line filled to the centre, or to the area below it in its stack. */
+export interface PolarAreaSeries extends SeriesBase {
+  type: 'polarArea';
+  /** As a polar line's; stacked values must not be negative. */
+  data: readonly (number | null)[];
+  stack?: string | undefined;
+}
+
+/** Points by angle and radius. Needs both axes to be linear. */
+export interface PolarScatterSeries extends SeriesBase {
+  type: 'polarScatter';
+  data: readonly (readonly [angle: number, radius: number])[];
+}
+
+/**
+ * One value on a gauge's dial. Several gauge series share the dial: as needles of different lengths,
+ * such as the hands of a clock, or as bars in rings from the rim inwards.
+ */
+export interface GaugeSeries extends SeriesBase {
+  type: 'gauge';
+  value: number;
+  /** A needle from the centre, or a bar along the dial from its start. Defaults to `needle`. */
+  display?: 'needle' | 'bar' | undefined;
+  /** A needle's length, as a share of the radius: from 0.1 to 1. Defaults to 0.8. */
+  length?: number | undefined;
 }
 
 export type Series =
@@ -226,7 +394,13 @@ export type Series =
   | ScatterSeries
   | BubbleSeries
   | PieSeries
-  | RadarSeries;
+  | RadarSeries
+  | RoseSeries
+  | RadialBarSeries
+  | PolarLineSeries
+  | PolarAreaSeries
+  | PolarScatterSeries
+  | GaugeSeries;
 
 export type SeriesType = Series['type'];
 

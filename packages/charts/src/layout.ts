@@ -3,7 +3,9 @@ import { layoutCartesian, legendOf } from './cartesian.js';
 import { Drawing } from './drawing.js';
 import { GAP, PAD, type Rect } from './frame.js';
 import { hatched, LINE_WIDTH, paints, type Paint } from './palette.js';
-import { layoutPie, layoutRadar } from './polar.js';
+import { layoutGauge } from './gauge.js';
+import { layoutPie } from './pie.js';
+import { layoutPolar, polarLegendOf } from './polar.js';
 import { fail } from './read.js';
 import type { ChartLayout, ChartOptions, ChartSpec, LegendPosition } from './types.js';
 import { checkChart, type CheckedChart } from './validate.js';
@@ -48,10 +50,13 @@ export function layoutChart(spec: ChartSpec, options: ChartOptions = {}): ChartL
       layoutCartesian(drawing, chart, rect, entryPaints);
       break;
     case 'polar':
-      layoutRadar(drawing, chart, rect, entryPaints);
+      layoutPolar(drawing, chart, rect, entryPaints);
       break;
     case 'pie':
-      layoutPie(drawing, chart, rect, entryPaints);
+      layoutPie(drawing, chart, rect, new Map(entries.map((entry) => [entry.name, entry.paint])));
+      break;
+    case 'gauge':
+      layoutGauge(drawing, chart, rect, entryPaints);
       break;
     default:
       unknownSystem(chart);
@@ -67,27 +72,44 @@ export function layoutChart(spec: ChartSpec, options: ChartOptions = {}): ChartL
   };
 }
 
-/** One entry per slice of a pie, else one per series, each with its colour and hatching. */
+/**
+ * One entry per slice name of a pie's rings, in the order they first appear, else one per series,
+ * each with its colour and hatching.
+ */
 function legendEntries(chart: CheckedChart): LegendEntry[] {
   if (chart.system === 'pie') {
-    const [pie] = chart.series;
-    const slices = pie.data.map((slice, i) => ({ color: slice.color, path: `${pie.path}.data[${i}]` }));
+    const first = new Map<string, { name: string; color: string | undefined; path: string; style: SketchStyle }>();
+    for (const pie of chart.series) {
+      pie.data.forEach((slice, i) => {
+        if (!first.has(slice.name)) {
+          first.set(slice.name, {
+            name: slice.name,
+            color: slice.color,
+            path: `${pie.path}.data[${i}]`,
+            style: pie.style,
+          });
+        }
+      });
+    }
+    const slices = [...first.values()];
     return paints(slices).map((paint, i) => ({
-      name: pie.data[i]!.name,
+      name: slices[i]!.name,
       paint,
       line: false,
       dash: undefined,
-      style: pie.style,
+      style: slices[i]!.style,
     }));
   }
   const lines =
     chart.system === 'cartesian'
       ? chart.series.map((entry) => legendOf(entry) === 'line')
-      : chart.series.map(() => false);
+      : chart.system === 'polar'
+        ? chart.series.map((entry) => polarLegendOf(entry) === 'line')
+        : chart.series.map(() => false);
   const series: readonly CheckedChart['series'][number][] = chart.series;
   return paints(series).map((paint, i) => {
     const entry = series[i]!;
-    const dash = entry.type === 'line' ? entry.dash : undefined;
+    const dash = 'dash' in entry ? entry.dash : undefined;
     return { name: entry.name, paint, line: lines[i]!, dash, style: entry.style };
   });
 }
@@ -163,4 +185,3 @@ function drawEntry(drawing: Drawing, entry: LegendEntry, left: number, middle: n
   const label = { x: left + SWATCH + SWATCH_GAP, y: middle, anchor: 'start' as const, baseline: 'middle' as const };
   drawing.push(swatch, drawing.text(entry.name, label));
 }
-

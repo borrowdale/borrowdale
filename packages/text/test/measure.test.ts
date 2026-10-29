@@ -3,6 +3,7 @@ import {
   excalifont,
   layoutText,
   measureText,
+  textBounds,
   type Font,
   type FontFile,
   type TextAnchor,
@@ -314,6 +315,23 @@ describe('layoutText', () => {
       width: 24,
       height: 20,
     });
+  });
+
+  it('bounds unrotated text by its box', () => {
+    expect(textBounds(layoutText('AB', { ...at, anchor: 'end', baseline: 'top' }))).toEqual({
+      x: 76,
+      y: 50,
+      width: 24,
+      height: 20,
+    });
+  });
+
+  it.each([
+    [90, { x: 80, y: 26, width: 20, height: 24 }],
+    [-90, { x: 100, y: 50, width: 20, height: 24 }],
+    [45, { x: 68.89, y: 33.03, width: 31.11, height: 31.11 }],
+  ])('bounds text rotated %s degrees around its pivot', (rotate, bounds) => {
+    expect(textBounds(layoutText('AB', { ...at, anchor: 'end', baseline: 'top', rotate }))).toEqual(bounds);
   });
 
   it('rotates around the point it was laid out at, not where the text starts', () => {
