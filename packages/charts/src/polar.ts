@@ -1,4 +1,5 @@
 import type { Point, Shape, SketchStyle } from '@borrowdale/core';
+import type { TextAnchor, TextBaseline } from '@borrowdale/text';
 import { coordinate } from './curves.js';
 import type { Drawing } from './drawing.js';
 import { assertRoom, BAND_PADDING, GAP, type Rect } from './frame.js';
@@ -15,6 +16,7 @@ import {
 } from './geometry.js';
 import { loneDot, POINT_SIZE, runsOf, solid } from './marks.js';
 import { GRID, GRID_WIDTH, hatched, LINE_WIDTH, type Paint } from './palette.js';
+import { fail } from './read.js';
 import { bandScale, formatValue, linearScale, place, PLAIN_FORMAT, type PlacedScale } from './scale.js';
 import { stackGroup, stackSpans, type Span } from './stack.js';
 import type { ChartNode } from './types.js';
@@ -25,6 +27,11 @@ import {
   type CheckedPolarChart,
   type SeriesOf,
 } from './validate.js';
+
+// How far past the chart's box a label may reach and still count as inside: rounding.
+const FIT_TOLERANCE = 0.01;
+// How many times the circle is fitted again to keep the radius axis' labels on the chart.
+const MAX_REFITS = 20;
 
 type PolarSeries = SeriesOf<'polar'>;
 type PolarType = PolarSeries['type'];
@@ -173,26 +180,67 @@ export function layoutPolar(drawing: Drawing, chart: CheckedPolarChart, rect: Re
   const widest = Math.max(0, ...rimLabels.map((label) => drawing.width(label)));
   const room = angleAxis.hidden ? 0 : GAP;
   const depth = angleAxis.hidden ? 0 : line;
-  let frame: PolarFrame;
-  if (whole) {
-    const radius = Math.min((rect.right - rect.left) / 2 - widest - room, (rect.bottom - rect.top) / 2 - depth - room);
-    assertRoom({ left: 0, top: 0, right: radius, bottom: radius }, chart.width, chart.height);
-    frame = polarFrame(
-      [(rect.left + rect.right) / 2, (rect.top + rect.bottom) / 2],
-      radius,
-      radius * radiusAxis.innerRadius,
-    );
-  } else {
-    const inner = {
-      left: rect.left + widest + room,
-      top: rect.top + depth + room,
-      right: rect.right - widest - room,
-      bottom: rect.bottom - depth - room,
+  // The circle as large as fits in `box` with the rim's labels around it, and its radius axis placed.
+  const fitIn = (box: Rect): { frame: PolarFrame; radiusPlace: PolarScale } => {
+    let frame: PolarFrame;
+    if (whole) {
+      const radius = Math.min((box.right - box.left) / 2 - widest - room, (box.bottom - box.top) / 2 - depth - room);
+      assertRoom({ left: 0, top: 0, right: radius, bottom: radius }, chart.width, chart.height);
+      frame = polarFrame(
+        [(box.left + box.right) / 2, (box.top + box.bottom) / 2],
+        radius,
+        radius * radiusAxis.innerRadius,
+      );
+    } else {
+      const inner = {
+        left: box.left + widest + room,
+        top: box.top + depth + room,
+        right: box.right - widest - room,
+        bottom: box.bottom - depth - room,
+      };
+      assertRoom(inner, chart.width, chart.height);
+      const { center, radius } = fitSweep(inner, startAngle, endAngle, radiusAxis.innerRadius);
+      frame = polarFrame(center, radius, radius * radiusAxis.innerRadius);
+    }
+    const { radius, hole } = frame;
+    const radiusPlace: PolarScale =
+      radiusAxis.type === 'linear'
+        ? {
+            type: 'linear',
+            path: radiusAxis.path,
+            scale: place(linearScale(radiusAxis, endsOf(radiusAxis, extentOf('radius'), true), radius - hole), [
+              hole,
+              radius,
+            ]),
+          }
+        : { type: 'band', path: radiusAxis.path, slot: ringsOf(radiusAxis.categories.length, hole, radius) };
+    return { frame, radiusPlace };
+  };
+  // The radius axis' labels lie along the start of the sweep, wherever it points, so they can reach
+  // past the box the rim's labels were fitted in. When they do, the box gives up what they overflow on
+  // each side and the circle is fitted again: each round moves them in by at least half of what is
+  // left, so a few rounds settle it. Labels that still do not fit are an error, never drawn off the
+  // chart.
+  let fitted = fitIn(rect);
+  let box = rect;
+  for (let round = 0; ; round++) {
+    const over = overflowOf(drawing, startLabels(fitted.frame, fitted.radiusPlace, radiusAxis, startAngle), rect);
+    if (!Object.values(over).some((by) => by > FIT_TOLERANCE)) {
+      break;
+    }
+    if (round === MAX_REFITS) {
+      fail(`a ${chart.width} × ${chart.height} chart`, 'leaves no room for the labels of axes.radius');
+    }
+    box = {
+      left: box.left + over.left,
+      top: box.top + over.top,
+      right: box.right - over.right,
+      bottom: box.bottom - over.bottom,
     };
-    assertRoom(inner, chart.width, chart.height);
-    const { center, radius } = fitSweep(inner, startAngle, endAngle, radiusAxis.innerRadius);
-    frame = polarFrame(center, radius, radius * radiusAxis.innerRadius);
+    assertRoom(box, chart.width, chart.height);
+    fitted = fitIn(box);
   }
+  const { frame, radiusPlace } = fitted;
   const { radius, hole } = frame;
 
   const angle: PolarScale =
@@ -203,17 +251,6 @@ export function layoutPolar(drawing: Drawing, chart: CheckedPolarChart, rect: Re
           path: angleAxis.path,
           slot: bandAround(angleAxis.categories.length, startAngle, sweep, whole),
         };
-  const radiusPlace: PolarScale =
-    radiusAxis.type === 'linear'
-      ? {
-          type: 'linear',
-          path: radiusAxis.path,
-          scale: place(linearScale(radiusAxis, endsOf(radiusAxis, extentOf('radius'), true), radius - hole), [
-            hole,
-            radius,
-          ]),
-        }
-      : { type: 'band', path: radiusAxis.path, slot: ringsOf(radiusAxis.categories.length, hole, radius) };
   const spokes: Spoke[] =
     angleAxis.type === 'band'
       ? angleAxis.categories.map((label, k) => ({ angle: bandOf(angle)(k).middle, key: k, label }))
@@ -259,20 +296,8 @@ export function layoutPolar(drawing: Drawing, chart: CheckedPolarChart, rect: Re
   };
   series.forEach((entry, i) => polarMarkOf(entry).draw(context, entry, paints[i]!));
 
-  if (radiusPlace.type === 'linear' && !radiusAxis.hidden) {
-    const { scale } = radiusPlace;
-    scale.ticks.forEach((tick, i) => {
-      if (tick > scale.domain[0]) {
-        const [px, py] = frame.point(startAngle, scale.at(tick));
-        drawing.push(drawing.text(scale.labels[i]!, { x: px + GAP / 2, y: py, anchor: 'start', baseline: 'middle' }));
-      }
-    });
-  }
-  if (radiusPlace.type === 'band' && radiusAxis.type === 'band' && !radiusAxis.hidden) {
-    radiusAxis.categories.forEach((category, k) => {
-      const [px, py] = frame.point(startAngle, radiusPlace.slot(k).middle);
-      drawing.push(drawing.text(category, { x: px - GAP / 2, y: py, anchor: 'end', baseline: 'middle' }));
-    });
+  for (const { text, ...position } of startLabels(frame, radiusPlace, radiusAxis, startAngle)) {
+    drawing.push(drawing.text(text, position));
   }
   if (!angleAxis.hidden) {
     for (const spoke of spokes) {
@@ -280,6 +305,64 @@ export function layoutPolar(drawing: Drawing, chart: CheckedPolarChart, rect: Re
       drawing.push(drawing.text(spoke.label, { x: px, y: py, ...alignTowards(spoke.angle, true) }));
     }
   }
+}
+
+interface StartLabel {
+  text: string;
+  x: number;
+  y: number;
+  anchor: TextAnchor;
+  baseline: TextBaseline;
+}
+
+/**
+ * The radius axis' labels along the start of the sweep: a linear axis' ticks beside the spoke, past
+ * the hole, or a band axis' categories before it, at their rings.
+ */
+function startLabels(
+  frame: PolarFrame,
+  radius: PolarScale,
+  axis: CheckedPolarChart['radius'],
+  startAngle: number,
+): StartLabel[] {
+  if (axis.hidden) {
+    return [];
+  }
+  if (radius.type === 'linear') {
+    const { scale } = radius;
+    return scale.ticks.flatMap((tick, i) => {
+      const [px, py] = frame.point(startAngle, scale.at(tick));
+      const label = {
+        text: scale.labels[i]!,
+        x: px + GAP / 2,
+        y: py,
+        anchor: 'start' as const,
+        baseline: 'middle' as const,
+      };
+      return tick > scale.domain[0] ? [label] : [];
+    });
+  }
+  const names = axis.type === 'band' ? axis.categories : [];
+  return names.map((name, k) => {
+    const [px, py] = frame.point(startAngle, radius.slot(k).middle);
+    return { text: name, x: px - GAP / 2, y: py, anchor: 'end', baseline: 'middle' };
+  });
+}
+
+/** How far `labels` reach past `box` on each side, or 0. */
+function overflowOf(drawing: Drawing, labels: readonly StartLabel[], box: Rect): Record<keyof Rect, number> {
+  return labels.reduce(
+    (most, { text, x, y, anchor, baseline }) => {
+      const reach = drawing.extent(text, { anchor, baseline });
+      return {
+        left: Math.max(most.left, box.left - (x - reach.left)),
+        top: Math.max(most.top, box.top - (y - reach.up)),
+        right: Math.max(most.right, x + reach.right - box.right),
+        bottom: Math.max(most.bottom, y + reach.down - box.bottom),
+      };
+    },
+    { left: 0, top: 0, right: 0, bottom: 0 },
+  );
 }
 
 /** The data's extent on a value axis, from 0 on a radius axis that sets no `min`. */

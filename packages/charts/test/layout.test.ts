@@ -298,6 +298,44 @@ const colourThenNone: ChartSpec = {
     { type: 'pie', name: 'Inner', data: [{ name: 'a', value: 1 }] },
   ],
 };
+// Ring names run left of the start spoke, which here is the quarter's left edge.
+const ringsOnAQuarter: ChartSpec = {
+  width: 300,
+  height: 300,
+  axes: {
+    angle: { type: 'linear', startAngle: 0, endAngle: 90 },
+    radius: { type: 'band', categories: ['Alpha', 'Beta', 'Gamma'] },
+  },
+  series: [{ type: 'radialBar', name: 'B', data: [10, 20, 30] }],
+};
+// Tick labels run right of the start spoke, which here points down at the quarter's right edge.
+const ticksDownwards: ChartSpec = {
+  width: 300,
+  height: 300,
+  axes: { angle: { type: 'linear', startAngle: 180, endAngle: 270 }, radius: { type: 'linear' } },
+  series: [{ type: 'polarScatter', name: 'S', data: [[0, 1_000_000], [50, 2_000_000]] }],
+};
+// Tick labels run right from a start spoke that points right, on a whole turn whose height limits
+// it: each fit moves them in by half of what they overflow.
+const ticksRightward: ChartSpec = {
+  width: 400,
+  height: 400,
+  axes: {
+    angle: { type: 'band', categories: ['a', 'b', 'c', 'd'], startAngle: 90, endAngle: 450 },
+    radius: { type: 'linear', format: { prefix: 'USD ', suffix: ' thousand' } },
+  },
+  series: [{ type: 'rose', name: 'R', data: [1, 2, 3, 4] }],
+};
+// Long tick labels on a small half turn, run right from a start spoke that points left: no room.
+const crampedTicks: ChartSpec = {
+  width: 160,
+  height: 160,
+  axes: {
+    angle: { type: 'band', categories: ['n', 'e', 's', 'w'], startAngle: 270, endAngle: 450 },
+    radius: { type: 'linear', format: { suffix: ' thousand' } },
+  },
+  series: [{ type: 'rose', name: 'R', data: [100_000, 200_000, 300_000, 400_000] }],
+};
 const pulledLoneSlice: ChartSpec = {
   ...loneSlice,
   series: [{ type: 'pie', name: 'P', data: [{ name: 'a', value: 1, offset: 0.3 }, { name: 'b', value: 0 }] }],
@@ -339,13 +377,13 @@ function lowestEdge(layout: ChartLayout, text: string): number {
 }
 
 /**
- * How many points the drawn shapes pass through lie outside the chart: each path's starting points
- * and the end of each curve, not a curve's control points, which lie off the curve.
+ * How many points the drawn shapes pass through lie outside the chart: each path's starting points,
+ * line ends and the end of each curve, not a curve's control points, which lie off the curve.
  */
 function pointsOutside(layout: ChartLayout): number {
   const ds = layout.nodes.flatMap((node) => (node.kind === 'mark' ? node.nodes : [node]));
   const paths = ds.flatMap((node) => (node.kind === 'sketch' ? node.sketch.paths.map((path) => path.d) : []));
-  const onCurve = /(?:M|C[^,]*,[^,]*,)\s*(-?[\d.]+)[ ,](-?[\d.]+)/g;
+  const onCurve = /(?:[ML]|C[^,]*,[^,]*,)\s*(-?[\d.]+)[ ,](-?[\d.]+)/g;
   const points = paths.flatMap((d) => [...d.matchAll(onCurve)].map((match) => [Number(match[1]), Number(match[2])]));
   return points.filter(([px, py]) => px! < 0 || py! < 0 || px! > layout.width || py! > layout.height).length;
 }
@@ -636,8 +674,25 @@ describe('layoutChart', () => {
     expect(labelsOutside(layoutChart(refitted))).toBe(0);
   });
 
-  it('accepts a slice name coloured in one ring and not in another', () => {
+  it('accepts a slice name coloured in one ring and not in another, painting both in its colour', () => {
     expect(texts(layoutChart(colourThenNone))).toEqual(['a', 'b']);
+    expect(outline(layoutChart(colourThenNone), 'Inner, a: 1 (100.0%)').stroke).toBe('#123456');
+  });
+
+  it('keeps the labels of a band radius axis on the chart when the sweep starts at the top', () => {
+    expect(labelsOutside(layoutChart(ringsOnAQuarter))).toBe(0);
+  });
+
+  it('keeps the labels of a linear radius axis on the chart when the sweep starts at the bottom', () => {
+    expect(labelsOutside(layoutChart(ticksDownwards))).toBe(0);
+  });
+
+  it('fits the circle as many times as its radius labels need to stay on the chart', () => {
+    expect(labelsOutside(layoutChart(ticksRightward))).toBe(0);
+  });
+
+  it('names a chart too small for the labels of its radius axis', () => {
+    expect(() => layoutChart(crampedTicks)).toThrow('Invalid chart: a 160 × 160 chart leaves no room for the labels of axes.radius');
   });
 
   it('draws as many gauge bars as fit, and names one more as too many', () => {

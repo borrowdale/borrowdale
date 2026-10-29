@@ -726,8 +726,9 @@ function checkPieSeries(r: Fields, path: string) {
     const i = data.findIndex((slice) => slice.radius === undefined);
     fail(`${path}.data[${i}].radius`, 'is missing: every slice has a radius, or none does');
   }
-  if (sized > 0 && !data.some((slice) => (slice.radius ?? 0) > 0)) {
-    fail(`${path}.data`, 'has no radius above 0, so there is nothing to draw');
+  // A slice is drawn only with a share of the pie and a reach beyond the hole.
+  if (sized > 0 && !data.some((slice) => slice.value > 0 && (slice.radius ?? 0) > 0)) {
+    fail(`${path}.data`, 'has no slice with both a value and a radius above 0, so there is nothing to draw');
   }
   const { startAngle, endAngle } = checkSweep(r, path);
   return {
