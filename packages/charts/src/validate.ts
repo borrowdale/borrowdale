@@ -114,10 +114,18 @@ const readValues = (r: Fields) => r.required('data', categoryValues);
 const readPoints = <const N extends readonly [string, string]>(names: N) => (r: Fields) =>
   r.required('data', list(0, MAX_POINTS, tuple(names)));
 
-/** The kinds of a polar chart's two axes a series type needs. */
+/** What a series type needs of a polar chart. */
 interface PolarNeeds {
+  /** The kinds of the two axes. */
   angle: 'band' | 'linear';
   radius: 'band' | 'linear';
+  /**
+   * Whether its values on a linear radius grow out from 0, so none may be negative: `always`,
+   * `stacked` (only once stacked), or `never` (below 0 only on a radius whose `min` is below it).
+   */
+  outward: 'always' | 'stacked' | 'never';
+  /** Gridlines default to polygons through the spokes when every series wants them. */
+  polygon: boolean;
 }
 
 /**
@@ -130,28 +138,24 @@ const SERIES_RULES = {
   bar: {
     system: 'cartesian',
     band: true,
-    stacks: true,
     keys: ['axis', 'data', 'stack'],
     read: (r: Fields) => ({ axis: readAxis(r), stack: readStack(r), data: readValues(r) }),
   },
   line: {
     system: 'cartesian',
     band: true,
-    stacks: false,
     keys: ['axis', 'data', 'curve', 'dash'],
     read: (r: Fields) => ({ axis: readAxis(r), curve: readCurve(r), dash: readDash(r), data: readValues(r) }),
   },
   area: {
     system: 'cartesian',
     band: true,
-    stacks: true,
     keys: ['axis', 'data', 'stack', 'curve'],
     read: (r: Fields) => ({ axis: readAxis(r), stack: readStack(r), curve: readCurve(r), data: readValues(r) }),
   },
   rangeArea: {
     system: 'cartesian',
     band: true,
-    stacks: false,
     keys: ['axis', 'data', 'curve'],
     read: (r: Fields) => ({
       axis: readAxis(r),
@@ -162,29 +166,25 @@ const SERIES_RULES = {
   scatter: {
     system: 'cartesian',
     band: false,
-    stacks: false,
     keys: ['data'],
     read: (r: Fields) => ({ data: readPoints(['x', 'y'])(r) }),
   },
   bubble: {
     system: 'cartesian',
     band: false,
-    stacks: false,
     keys: ['data'],
     read: (r: Fields) => ({ data: r.required('data', list(0, MAX_POINTS, checkBubble)) }),
   },
   pie: {
     system: 'pie',
     band: false,
-    stacks: false,
     keys: ['data', 'innerRadius', 'outerRadius', 'startAngle', 'endAngle', 'padAngle', 'cornerRadius'],
     read: checkPieSeries,
   },
   radar: {
     system: 'polar',
-    band: false,
-    stacks: false,
-    polar: { angle: 'band', radius: 'linear' },
+    band: true,
+    polar: { angle: 'band', radius: 'linear', outward: 'always', polygon: true },
     keys: ['data'],
     read: (r: Fields, path: string) => checkRadarData(r, path),
   },
@@ -192,48 +192,42 @@ const SERIES_RULES = {
   // what a polar chart has no use for (a second value axis, curves).
   rose: {
     system: 'polar',
-    band: false,
-    stacks: true,
-    polar: { angle: 'band', radius: 'linear' },
+    band: true,
+    polar: { angle: 'band', radius: 'linear', outward: 'always', polygon: false },
     keys: ['data', 'stack'],
     read: (r: Fields) => ({ stack: readStack(r), data: readValues(r) }),
   },
   radialBar: {
     system: 'polar',
-    band: false,
-    stacks: true,
-    polar: { angle: 'linear', radius: 'band' },
+    band: true,
+    polar: { angle: 'linear', radius: 'band', outward: 'never', polygon: false },
     keys: ['data', 'stack'],
     read: (r: Fields) => ({ stack: readStack(r), data: readValues(r) }),
   },
   polarLine: {
     system: 'polar',
-    band: false,
-    stacks: false,
-    polar: { angle: 'band', radius: 'linear' },
+    band: true,
+    polar: { angle: 'band', radius: 'linear', outward: 'never', polygon: false },
     keys: ['data', 'dash'],
     read: (r: Fields) => ({ dash: readDash(r), data: readValues(r) }),
   },
   polarArea: {
     system: 'polar',
-    band: false,
-    stacks: true,
-    polar: { angle: 'band', radius: 'linear' },
+    band: true,
+    polar: { angle: 'band', radius: 'linear', outward: 'stacked', polygon: false },
     keys: ['data', 'stack'],
     read: (r: Fields) => ({ stack: readStack(r), data: readValues(r) }),
   },
   polarScatter: {
     system: 'polar',
     band: false,
-    stacks: false,
-    polar: { angle: 'linear', radius: 'linear' },
+    polar: { angle: 'linear', radius: 'linear', outward: 'never', polygon: false },
     keys: ['data'],
     read: (r: Fields) => ({ data: readPoints(['angle', 'radius'])(r) }),
   },
   gauge: {
     system: 'gauge',
     band: false,
-    stacks: false,
     keys: ['value', 'display', 'length'],
     read: (r: Fields) => ({
       value: r.required('value', anyValue),
@@ -246,7 +240,6 @@ const SERIES_RULES = {
   {
     system: System;
     band: boolean;
-    stacks: boolean;
     polar?: PolarNeeds;
     keys: readonly string[];
     read: (r: Fields, path: string) => object;
@@ -255,17 +248,14 @@ const SERIES_RULES = {
 
 type Rules = typeof SERIES_RULES;
 
-/**
- * Whether a series stacks, as its type's rule says. Every stacking type has a `stack` field; one
- * cast, since TypeScript cannot follow that through a lookup by a union key.
- */
+/** Whether a series stacks: every type that stacks reads a `stack` field, set or not. */
 export function isStacking<S extends CheckedSeries>(entry: S): entry is Extract<S, { stack: string | undefined }> {
-  return SERIES_RULES[entry.type].stacks;
+  return 'stack' in entry;
 }
 
 // The types whose series stack, which are the ones a percent axis can show.
 const STACKING = (Object.keys(SERIES_RULES) as SeriesType[])
-  .filter((type) => SERIES_RULES[type].stacks && SERIES_RULES[type].system === 'cartesian')
+  .filter((type) => SERIES_RULES[type].system === 'cartesian' && SERIES_RULES[type].keys.some((key) => key === 'stack'))
   .join(', ');
 
 /** The fields every series has, checked. */
@@ -476,7 +466,7 @@ function checkCartesianChart(
       fail(`${entry.path}.data`, `has ${entry.data.length} values, but ${categories}`);
     }
     const onAxis = entry.axis === 'y2' ? y2! : band === x ? y : x;
-    if (onAxis.type === 'linear' && onAxis.percent && !rule.stacks) {
+    if (onAxis.type === 'linear' && onAxis.percent && !isStacking(entry)) {
       const which = `a percent axis, which only stacking series (${STACKING}) can use`;
       fail(entry.path, `is a ${entry.type} series on ${onAxis.path}, ${which}`);
     }
@@ -540,7 +530,7 @@ function checkPolarChart(r: Fields, base: CheckedChartBase, series: SeriesOf<'po
   const radius: CheckedRadiusAxis = {
     ...radiusAxis,
     innerRadius,
-    shape: shape ?? (series.every((entry) => entry.type === 'radar') ? 'polygon' : 'circle'),
+    shape: shape ?? (series.every((entry) => SERIES_RULES[entry.type].polar.polygon) ? 'polygon' : 'circle'),
   };
   if (radius.shape === 'polygon' && angle.type !== 'band') {
     fail('axes.radius.shape', 'is polygon, which needs a band angle axis for its corners');
@@ -551,26 +541,27 @@ function checkPolarChart(r: Fields, base: CheckedChartBase, series: SeriesOf<'po
   }
   const band = angle.type === 'band' ? angle : radius.type === 'band' ? radius : undefined;
   for (const entry of series) {
-    if (entry.type === 'polarScatter') {
-      continue;
-    }
-    if (band && entry.data.length !== band.categories.length) {
+    const rule = SERIES_RULES[entry.type];
+    if (band && rule.band && entry.data.length !== band.categories.length) {
       const which = band === angle ? 'angle' : 'radius';
       fail(`${entry.path}.data`, `has ${entry.data.length} values, but axes.${which}.categories has ${band.categories.length}`);
     }
-    // A radar's values are read as not negative.
-    if (radius.type === 'linear' && entry.type !== 'radar') {
-      // Wedges and stacks grow out from 0; a line may go below it only on an axis that starts below.
-      const outward = entry.type === 'rose' || ('stack' in entry && entry.stack !== undefined);
-      entry.data.forEach((value, i) => {
-        if (value !== null && value < 0 && (outward || radius.min === undefined)) {
-          const reason = outward
-            ? `which ${entry.type === 'rose' ? 'a rose' : 'a stacked polarArea'} series cannot show`
-            : 'but axes.radius starts at 0 unless its min is set';
-          fail(`${entry.path}.data[${i}]`, `is negative, ${value}, ${reason}`);
-        }
-      });
+    if (radius.type !== 'linear') {
+      continue;
     }
+    const stacked = isStacking(entry) && entry.stack !== undefined;
+    const outward = rule.polar.outward === 'always' || (rule.polar.outward === 'stacked' && stacked);
+    entry.data.forEach((item, i) => {
+      // A point's radius, or a range's high value: a range's low is checked by its reader.
+      const value = Array.isArray(item) ? item.at(-1) : item;
+      if (typeof value === 'number' && value < 0 && (outward || radius.min === undefined)) {
+        const at = Array.isArray(item) ? `${entry.path}.data[${i}][${item.length - 1}]` : `${entry.path}.data[${i}]`;
+        const reason = outward
+          ? `which a ${stacked ? 'stacked ' : ''}${entry.type} series cannot show`
+          : 'but axes.radius starts at 0 unless its min is set';
+        fail(at, `is negative, ${value}, ${reason}`);
+      }
+    });
   }
   return { ...base, system: 'polar', angle, radius, series };
 }
