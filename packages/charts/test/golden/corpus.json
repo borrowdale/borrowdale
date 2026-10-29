@@ -3129,5 +3129,74 @@
     }
    ]
   }
+ },
+ {
+  "name": "gauge-offset-dial",
+  "spec": {
+   "width": 300,
+   "height": 260,
+   "axes": {
+    "angle": {
+     "type": "linear",
+     "min": 50,
+     "max": 150,
+     "bands": [
+      {
+       "from": 120,
+       "to": 150,
+       "color": "#d55e00"
+      }
+     ]
+    }
+   },
+   "series": [
+    {
+     "type": "gauge",
+     "name": "Pressure",
+     "value": 100
+    }
+   ]
+  }
+ },
+ {
+  "name": "pie-outer-radius-offset",
+  "spec": {
+   "width": 300,
+   "height": 260,
+   "series": [
+    {
+     "type": "pie",
+     "name": "Outer",
+     "innerRadius": 0.6,
+     "outerRadius": 0.9,
+     "data": [
+      {
+       "name": "a",
+       "value": 1,
+       "offset": 0.1
+      },
+      {
+       "name": "b",
+       "value": 3
+      }
+     ]
+    },
+    {
+     "type": "pie",
+     "name": "Inner",
+     "outerRadius": 0.5,
+     "data": [
+      {
+       "name": "a",
+       "value": 2
+      },
+      {
+       "name": "b",
+       "value": 1
+      }
+     ]
+    }
+   ]
+  }
  }
 ]

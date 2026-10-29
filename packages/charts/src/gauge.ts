@@ -4,6 +4,7 @@ import { assertRoom, GAP, TICK, type Rect } from './frame.js';
 import { GRID, GRID_WIDTH, hatched, INK, type Paint } from './palette.js';
 import { alignTowards, fitSweep, isWholeTurn, polarFrame, RADIANS, RIM_SHARE, rimTicks, sliceShape } from './geometry.js';
 import { solid } from './marks.js';
+import { fail } from './read.js';
 import { formatValue, linearScale, place } from './scale.js';
 import type { CheckedGaugeChart, SeriesOf } from './validate.js';
 
@@ -18,6 +19,9 @@ const NEEDLE_HALF = 3;
 const HUB = 5;
 // How much larger than the labels a lone gauge writes its value.
 const VALUE_GROWTH = 4;
+// Fitting the dial above a lone gauge's value: how many times, and how close is close enough.
+const MAX_REFITS = 20;
+const FIT_TOLERANCE = 0.01;
 
 /**
  * Lays out a gauge into `rect`: its dial, as large as fits, with coloured bands along the rim, ticks
@@ -33,10 +37,12 @@ export function layoutGauge(drawing: Drawing, chart: CheckedGaugeChart, rect: Re
   // Room under the centre for the hub and a lone gauge's value, which the dial may not leave.
   const below = HUB + (lone ? GAP + drawing.lineHeight(valueSize) : 0);
   assertRoom(rect, chart.width, chart.height);
-  let { center, radius } = fitSweep(rect, startAngle, endAngle, 0);
-  const overflow = center[1] + below - rect.bottom;
-  if (overflow > 0) {
-    const room = { ...rect, bottom: rect.bottom - overflow };
+  // Raising the bottom of the room by what the value overflows raises the centre by as much when the
+  // height limits the dial, and by half of it when the width does, so this ends within a few rounds.
+  let room = rect;
+  let { center, radius } = fitSweep(room, startAngle, endAngle, 0);
+  for (let round = 0; round < MAX_REFITS && center[1] + below > rect.bottom + FIT_TOLERANCE; round++) {
+    room = { ...room, bottom: room.bottom - (center[1] + below - rect.bottom) };
     assertRoom(room, chart.width, chart.height);
     ({ center, radius } = fitSweep(room, startAngle, endAngle, 0));
   }
@@ -44,8 +50,10 @@ export function layoutGauge(drawing: Drawing, chart: CheckedGaugeChart, rect: Re
   const [cx, cy] = center;
   const { point } = polarFrame(center, radius, 0);
 
-  let [low, high] = [0, 0];
-  for (const value of [...series.map((entry) => entry.value), ...bands.flatMap((band) => [band.from, band.to])]) {
+  // The dial shows 0 unless its fixed ends leave it out.
+  const zero = (axis.min ?? 0) <= 0 && 0 <= (axis.max ?? 0) ? [0] : [];
+  let [low, high] = [Infinity, -Infinity];
+  for (const value of [...zero, ...series.map((entry) => entry.value), ...bands.flatMap((band) => [band.from, band.to])]) {
     [low, high] = [Math.min(low, value), Math.max(high, value)];
   }
   const rimLength = radius * (endAngle - startAngle) * RADIANS * RIM_SHARE;
@@ -60,6 +68,9 @@ export function layoutGauge(drawing: Drawing, chart: CheckedGaugeChart, rect: Re
   const shift = bands.length > 0 ? 1 : 0;
   const ringOuter = (j: number): number => radius - j * (width + RING_GAP);
   const inner = ringOuter(Math.max(1, bars.length + shift)) + RING_GAP;
+  if (inner - TICK - GAP <= HUB) {
+    fail('series', `holds ${bars.length} gauge bars, more rings than the dial has room for`);
+  }
   const grid = { stroke: GRID, strokeWidth: GRID_WIDTH };
   const arc = (outer: number, from: number, to: number): Shape =>
     sliceShape(center, outer, outer - width, scale.at(from), scale.at(to));

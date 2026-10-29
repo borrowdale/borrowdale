@@ -202,6 +202,47 @@ const slantedMoney: ChartSpec = {
   series: [{ type: 'line', name: 'S', data: [1_500_000, 1_800_000] }],
 };
 
+// A dial from 50 to 150: 0 is not on it.
+const offsetDial: ChartSpec = {
+  width: 300,
+  height: 260,
+  axes: { angle: { type: 'linear', min: 50, max: 150 } },
+  series: [{ type: 'gauge', name: 'a', value: 100 }],
+};
+// Ten bars need ten rings, more than a 260 × 240 dial has room for.
+const tooManyBars: ChartSpec = {
+  width: 260,
+  height: 240,
+  legend: 'none',
+  series: Array.from({ length: 10 }, (_, i) => ({ type: 'gauge' as const, name: `g${i}`, display: 'bar' as const, value: i * 10 })),
+};
+// A half dial whose width limits it, with little room under its centre for its value.
+const lowValue: ChartSpec = {
+  width: 216,
+  height: 136,
+  axes: { angle: { type: 'linear', min: 0, max: 100, startAngle: -90, endAngle: 90 } },
+  series: [{ type: 'gauge', name: 'G', value: 37 }],
+};
+// Slice a reaches out to radius 0: nothing to draw, even with rounded corners.
+const flatSlice: ChartSpec = {
+  width: 300,
+  height: 260,
+  series: [{ type: 'pie', name: 'P', cornerRadius: 5, data: [{ name: 'a', value: 1, radius: 0 }, { name: 'b', value: 1, radius: 1 }] }],
+};
+// A ring half the chart's radius, its slice pulled out by half that radius.
+const pulledHalf: ChartSpec = {
+  width: 300,
+  height: 260,
+  legend: 'none',
+  series: [{ type: 'pie', name: 'P', outerRadius: 0.5, data: [{ name: 'a', value: 1, offset: 0.5 }, { name: 'b', value: 3 }] }],
+};
+// One slice takes the whole turn: pulling it out would only move the pie off centre.
+const loneSlice: ChartSpec = { width: 300, height: 260, legend: 'none', series: [{ type: 'pie', name: 'P', data: [{ name: 'a', value: 1 }, { name: 'b', value: 0 }] }] };
+const pulledLoneSlice: ChartSpec = {
+  ...loneSlice,
+  series: [{ type: 'pie', name: 'P', data: [{ name: 'a', value: 1, offset: 0.3 }, { name: 'b', value: 0 }] }],
+};
+
 /** The mark whose tooltip is `title`. */
 function mark(layout: ChartLayout, title: string): ChartNode {
   const found = layout.nodes.find((node) => node.kind === 'mark' && node.title === title);
@@ -235,6 +276,14 @@ function lowestEdge(layout: ChartLayout, text: string): number {
   }
   const { y, height } = textBounds(found.text);
   return y + height;
+}
+
+/** How many points of the drawn shapes lie outside the chart. */
+function pointsOutside(layout: ChartLayout): number {
+  const ds = layout.nodes.flatMap((node) => (node.kind === 'mark' ? node.nodes : [node]));
+  const paths = ds.flatMap((node) => (node.kind === 'sketch' ? node.sketch.paths.map((path) => path.d) : []));
+  const points = paths.flatMap((d) => [...d.matchAll(/(-?[\d.]+)[ ,](-?[\d.]+)/g)].map((match) => [Number(match[1]), Number(match[2])]));
+  return points.filter(([px, py]) => px! < 0 || py! < 0 || px! > layout.width || py! > layout.height).length;
 }
 
 function titles(layout: ChartLayout): string[] {
@@ -461,5 +510,29 @@ describe('layoutChart', () => {
 
   it('keeps the lowest slanted label of a side axis on the chart, inside its padding', () => {
     expect(lowestEdge(layoutChart(slantedMoney), '$1,000,000')).toBeLessThanOrEqual(192);
+  });
+
+  it('draws a gauge whose dial does not reach 0', () => {
+    expect(titles(layoutChart(offsetDial))).toEqual(['a: 100']);
+  });
+
+  it('rejects more gauge bars than the dial has rings for, by name', () => {
+    expect(() => layoutChart(tooManyBars)).toThrow('Invalid chart: series holds 10 gauge bars, more rings than the dial has room for');
+  });
+
+  it("keeps a lone gauge's value on the chart, inside its padding", () => {
+    expect(lowestEdge(layoutChart(lowValue), '37')).toBeLessThanOrEqual(128);
+  });
+
+  it('leaves out a slice that reaches no further than the hole, rounded or not', () => {
+    expect(titles(layoutChart(flatSlice))).toEqual(['b: 1 (50.0%)']);
+  });
+
+  it('pulls a slice out in proportion to its own ring, keeping it on the chart', () => {
+    expect(pointsOutside(layoutChart(pulledHalf))).toBe(0);
+  });
+
+  it('does not pull out a slice that takes the whole turn', () => {
+    expect(mark(layoutChart(pulledLoneSlice), 'a: 1 (100.0%)')).toEqual(mark(layoutChart(loneSlice), 'a: 1 (100.0%)'));
   });
 });
