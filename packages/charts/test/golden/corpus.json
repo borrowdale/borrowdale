@@ -3380,5 +3380,133 @@
     }
    ]
   }
+ },
+ {
+  "name": "labels-refitted",
+  "spec": {
+   "width": 300,
+   "height": 200,
+   "fontSize": 20,
+   "legend": "none",
+   "axes": {
+    "x": {
+     "type": "linear",
+     "labelAngle": -45
+    },
+    "y": {
+     "type": "linear"
+    }
+   },
+   "series": [
+    {
+     "type": "scatter",
+     "name": "S",
+     "data": [
+      [
+       0,
+       0
+      ],
+      [
+       155,
+       1
+      ]
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "labels-rotated-y2",
+  "spec": {
+   "width": 360,
+   "height": 260,
+   "axes": {
+    "x": {
+     "type": "band",
+     "categories": [
+      "a",
+      "b",
+      "c"
+     ]
+    },
+    "y": {
+     "type": "linear",
+     "labelAngle": -30
+    },
+    "y2": {
+     "type": "linear",
+     "labelAngle": 30
+    }
+   },
+   "series": [
+    {
+     "type": "bar",
+     "name": "Left",
+     "data": [
+      1,
+      5,
+      3
+     ]
+    },
+    {
+     "type": "line",
+     "name": "Right",
+     "axis": "y2",
+     "data": [
+      200,
+      100,
+      300
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "gauge-needle-then-bars",
+  "spec": {
+   "width": 300,
+   "height": 260,
+   "series": [
+    {
+     "type": "gauge",
+     "name": "Goal",
+     "value": 80
+    },
+    {
+     "type": "gauge",
+     "name": "Mon",
+     "display": "bar",
+     "value": 40
+    },
+    {
+     "type": "gauge",
+     "name": "Tue",
+     "display": "bar",
+     "value": 65
+    }
+   ]
+  }
+ },
+ {
+  "name": "gauge-offset-dial-bar",
+  "spec": {
+   "width": 300,
+   "height": 260,
+   "axes": {
+    "angle": {
+     "type": "linear",
+     "min": 50,
+     "max": 150
+    }
+   },
+   "series": [
+    {
+     "type": "gauge",
+     "name": "Load",
+     "display": "bar",
+     "value": 120
+    }
+   ]
+  }
  }
 ]

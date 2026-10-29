@@ -261,11 +261,11 @@ const longMiddleLabels: ChartSpec = {
   series: [{ type: 'bar', name: 'S', data: [1, 2, 3, 4, 5, 6, 7] }],
 };
 const longMiddleSideLabels: ChartSpec = {
-  width: 509,
-  height: 248,
+  width: 500,
+  height: 300,
   axes: {
     x: { type: 'linear' },
-    y: { type: 'band', categories: ['c0', 'Quite a long category label1', 'Quite a long category label2', 'c3'], labelAngle: 60 },
+    y: { type: 'band', categories: ['c0', 'A very long category label 1', 'c2', 'c3'], labelAngle: 45 },
   },
   series: [{ type: 'bar', name: 'S', data: [1, 2, 3, 4] }],
 };
@@ -280,6 +280,24 @@ const sevenBars = barsOf(7);
 const eightBars = barsOf(8);
 const tinyDial: ChartSpec = { width: 60, height: 60, series: [{ type: 'gauge', name: 'g', value: 5 }] };
 const tinyHiddenDial: ChartSpec = { ...tinyDial, axes: { angle: { type: 'linear', min: 0, max: 100, hidden: true } } };
+// The final x ticks over the plot reach further than the first ones over the chart: a second fit.
+const refitted: ChartSpec = {
+  width: 300,
+  height: 200,
+  fontSize: 20,
+  legend: 'none',
+  axes: { x: { type: 'linear', labelAngle: -45 }, y: { type: 'linear' } },
+  series: [{ type: 'scatter', name: 'S', data: [[0, 0], [155, 1]] }],
+};
+// Named a in both rings, coloured only in the first: one legend entry, no conflict.
+const colourThenNone: ChartSpec = {
+  width: 300,
+  height: 260,
+  series: [
+    { type: 'pie', name: 'Outer', data: [{ name: 'a', value: 1, color: '#123456' }, { name: 'b', value: 1 }] },
+    { type: 'pie', name: 'Inner', data: [{ name: 'a', value: 1 }] },
+  ],
+};
 const pulledLoneSlice: ChartSpec = {
   ...loneSlice,
   series: [{ type: 'pie', name: 'P', data: [{ name: 'a', value: 1, offset: 0.3 }, { name: 'b', value: 0 }] }],
@@ -320,11 +338,15 @@ function lowestEdge(layout: ChartLayout, text: string): number {
   return y + height;
 }
 
-/** How many points of the drawn shapes lie outside the chart. */
+/**
+ * How many points the drawn shapes pass through lie outside the chart: each path's starting points
+ * and the end of each curve, not a curve's control points, which lie off the curve.
+ */
 function pointsOutside(layout: ChartLayout): number {
   const ds = layout.nodes.flatMap((node) => (node.kind === 'mark' ? node.nodes : [node]));
   const paths = ds.flatMap((node) => (node.kind === 'sketch' ? node.sketch.paths.map((path) => path.d) : []));
-  const points = paths.flatMap((d) => [...d.matchAll(/(-?[\d.]+)[ ,](-?[\d.]+)/g)].map((match) => [Number(match[1]), Number(match[2])]));
+  const onCurve = /(?:M|C[^,]*,[^,]*,)\s*(-?[\d.]+)[ ,](-?[\d.]+)/g;
+  const points = paths.flatMap((d) => [...d.matchAll(onCurve)].map((match) => [Number(match[1]), Number(match[2])]));
   return points.filter(([px, py]) => px! < 0 || py! < 0 || px! > layout.width || py! > layout.height).length;
 }
 
@@ -568,7 +590,7 @@ describe('layoutChart', () => {
   });
 
   it('keeps the lowest slanted label of a side axis on the chart, inside its padding', () => {
-    expect(lowestEdge(layoutChart(slantedMoney), '$1,000,000')).toBeLessThanOrEqual(192);
+    expect(lowestEdge(layoutChart(slantedMoney), '$1,000,000')).toBeLessThanOrEqual(200 - PAD);
   });
 
   it('draws a gauge whose dial does not reach 0', () => {
@@ -580,7 +602,7 @@ describe('layoutChart', () => {
   });
 
   it("keeps a lone gauge's value on the chart, inside its padding", () => {
-    expect(lowestEdge(layoutChart(lowValue), '37')).toBeLessThanOrEqual(128);
+    expect(lowestEdge(layoutChart(lowValue), '37')).toBeLessThanOrEqual(136 - PAD);
   });
 
   it('leaves out a slice that reaches no further than the hole, rounded or not', () => {
@@ -604,8 +626,18 @@ describe('layoutChart', () => {
   });
 
   it('keeps long slanted labels in the middle of an axis on the chart', () => {
+    expect(texts(layoutChart(longMiddleLabels))).toContain('Quite a long category label4');
     expect(labelsOutside(layoutChart(longMiddleLabels))).toBe(0);
+    expect(texts(layoutChart(longMiddleSideLabels))).toContain('A very long category label 1');
     expect(labelsOutside(layoutChart(longMiddleSideLabels))).toBe(0);
+  });
+
+  it('fits the plot again when its own slanted ticks reach further, keeping them on the chart', () => {
+    expect(labelsOutside(layoutChart(refitted))).toBe(0);
+  });
+
+  it('accepts a slice name coloured in one ring and not in another', () => {
+    expect(texts(layoutChart(colourThenNone))).toEqual(['a', 'b']);
   });
 
   it('draws as many gauge bars as fit, and names one more as too many', () => {

@@ -673,6 +673,11 @@ function checkPieChart(r: Fields, base: CheckedChartBase, series: SeriesOf<'pie'
     const outerRadius = pie.outerRadius ?? 1 - k / count;
     const innerRadius = pie.innerRadius ?? (count === 1 ? 0 : 1 - (k + 1) / count);
     if (!(outerRadius > innerRadius)) {
+      // Name the key the spec gave: a defaulted outerRadius is not the one to change.
+      if (pie.outerRadius === undefined) {
+        const limit = `must be less than the ring's default outerRadius (${outerRadius})`;
+        fail(`${pie.path}.innerRadius`, `${limit}, got ${innerRadius}`);
+      }
       fail(`${pie.path}.outerRadius`, `must be greater than innerRadius (${innerRadius}), got ${outerRadius}`);
     }
     return { ...pie, innerRadius, outerRadius };
