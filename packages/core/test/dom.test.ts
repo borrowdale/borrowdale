@@ -141,13 +141,31 @@ describe('drawSketch', () => {
     expect(context.restore.mock.invocationCallOrder[0]).toBeGreaterThan(context.setLineDash.mock.invocationCallOrder[0]!);
   });
 
-  it('sets no dash pattern for a solid path', () => {
+  it('clears the dash pattern for a solid path', () => {
     vi.stubGlobal('Path2D', RecordingPath2D);
     const context = fakeContext();
 
     drawSketch(context as unknown as CanvasRenderingContext2D, outlined);
 
-    expect(context.setLineDash).not.toHaveBeenCalled();
+    expect(context.setLineDash).toHaveBeenCalledWith([]);
+  });
+
+  it('draws with its own dash and phase, then restores the caller state', () => {
+    vi.stubGlobal('Path2D', RecordingPath2D);
+    let dash = [5, 5];
+    let saved: { dash: number[]; offset: number };
+    const drawn: { dash: number[]; offset: number }[] = [];
+    const context = {
+      ...fakeContext(), lineDashOffset: 3,
+      setLineDash: (value: number[]) => { dash = [...value]; },
+      save: () => { saved = { dash: [...dash], offset: context.lineDashOffset }; },
+      restore: () => { dash = saved.dash; context.lineDashOffset = saved.offset; },
+      stroke: () => { drawn.push({ dash: [...dash], offset: context.lineDashOffset }); },
+    };
+    drawSketch(context as unknown as CanvasRenderingContext2D, { paths: [...dashed.paths, ...outlined.paths] });
+    expect(drawn).toEqual([{ dash: [4, 2], offset: 0 }, { dash: [], offset: 0 }]);
+    expect(dash).toEqual([5, 5]);
+    expect(context.lineDashOffset).toBe(3);
   });
 
   it('fills with the even-odd rule when the path asks for it', () => {

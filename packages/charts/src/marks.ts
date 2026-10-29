@@ -18,11 +18,11 @@ export function loneDot(drawing: Drawing, [cx, cy]: Point, stroke: string, key: 
   return drawing.shape({ kind: 'circle', cx, cy, diameter: LONE_DOT }, solid(stroke), key, own);
 }
 
-/** The values between nulls, each run in order. */
-export function runsOf<T>(entries: readonly (T | null)[]): T[][] {
+/** The values between nulls, each run in order. Interior cuts repeat their vertex in both runs. */
+export function runsOf<T>(entries: readonly (T | null)[], cuts?: ReadonlySet<number>): T[][] {
   const runs: T[][] = [];
   let current: T[] = [];
-  for (const entry of entries) {
+  for (const [index, entry] of entries.entries()) {
     if (entry === null) {
       if (current.length > 0) {
         runs.push(current);
@@ -30,6 +30,10 @@ export function runsOf<T>(entries: readonly (T | null)[]): T[][] {
       current = [];
     } else {
       current.push(entry);
+      if (cuts?.has(index) && current.length > 1 && index + 1 < entries.length && entries[index + 1] !== null) {
+        runs.push(current);
+        current = [entry];
+      }
     }
   }
   return current.length > 0 ? [...runs, current] : runs;
