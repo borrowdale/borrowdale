@@ -5,9 +5,7 @@ no DOM, so a chart can size its axes from the labels it is about to draw, on the
 browser, and get the same numbers in both. The default font is
 [Excalifont](https://plus.excalidraw.com/excalifont), bundled with the package.
 
-```sh
-npm install @borrowdale/text
-```
+> **Unpublished:** use the [local workspace setup](../../docs/getting-started.md). Package installation instructions will be added when releases are available.
 
 ```js
 import { svgElement, toSvgDocument } from '@borrowdale/core';

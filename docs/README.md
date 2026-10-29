@@ -1,0 +1,20 @@
+# BorrowdaleJS documentation
+
+BorrowdaleJS is a TypeScript toolkit for hand-drawn charts, shapes, text and patterns. The public name is BorrowdaleJS; package imports use the `@borrowdale` scope.
+
+The packages are in early development and are not yet published. Start with the local workspace, then explore the same APIs used by the playground and examples.
+
+## Start here
+
+- [Getting started](getting-started.md): Node 24, workspace setup and your first chart.
+- [Rendering and fonts](rendering.md): SVG, Canvas, font loading and deterministic seeds.
+- [Accessibility and limitations](accessibility.md): descriptions, alternatives and supported behavior.
+
+## Package reference
+
+- [Charts](../packages/charts/README.md): chart families, data contracts, axes, legends and renderers.
+- [Shapes](../packages/core/README.md): geometry, styles, SVG and Canvas drawing.
+- [Text](../packages/text/README.md): measuring, layout, fallback glyphs and Excalifont.
+- [Fills](../packages/fills/README.md): repeatable background patterns.
+
+These are the same Markdown files rendered on the website. Changes to an API and its documentation belong in the same pull request.

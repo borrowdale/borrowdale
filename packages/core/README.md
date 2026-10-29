@@ -5,9 +5,7 @@ of [rough.js](https://roughjs.com) 4.6.6 and has no runtime dependencies. It dra
 seeded random generator and its own trigonometry, so its output does not depend on the JavaScript
 engine.
 
-```sh
-npm install @borrowdale/core
-```
+> **Unpublished:** use the [local workspace setup](../../docs/getting-started.md). Package installation instructions will be added when releases are available.
 
 ```js
 import { sketch, toSvgDocument, toSvgPaths } from '@borrowdale/core';

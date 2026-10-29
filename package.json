@@ -14,7 +14,9 @@
     "example:text": "node apps/examples/text.mjs",
     "example:charts": "node apps/examples/charts.mjs",
     "goldens": "npm run build && node scripts/record-goldens.mjs",
-    "fonts": "node scripts/generate-font.mjs"
+    "fonts": "node scripts/generate-font.mjs",
+    "demo": "npm run dev --workspace @borrowdale/demo",
+    "demo:build": "npm run build --workspace @borrowdale/demo"
   },
   "devDependencies": {
     "@changesets/cli": "^3.0.3",
