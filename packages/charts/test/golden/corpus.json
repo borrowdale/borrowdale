@@ -3198,5 +3198,187 @@
     }
    ]
   }
+ },
+ {
+  "name": "pie-rings-pulled-inner",
+  "spec": {
+   "width": 300,
+   "height": 260,
+   "series": [
+    {
+     "type": "pie",
+     "name": "Outer",
+     "data": [
+      {
+       "name": "a",
+       "value": 2
+      },
+      {
+       "name": "b",
+       "value": 3
+      }
+     ]
+    },
+    {
+     "type": "pie",
+     "name": "Inner",
+     "data": [
+      {
+       "name": "a",
+       "value": 1,
+       "offset": 0.2
+      },
+      {
+       "name": "b",
+       "value": 2
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "donut-variable-radius",
+  "spec": {
+   "width": 300,
+   "height": 260,
+   "series": [
+    {
+     "type": "pie",
+     "name": "P",
+     "innerRadius": 0.4,
+     "data": [
+      {
+       "name": "a",
+       "value": 3,
+       "radius": 10
+      },
+      {
+       "name": "b",
+       "value": 2,
+       "radius": 5
+      },
+      {
+       "name": "c",
+       "value": 2,
+       "radius": 7.5
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "donut-narrow",
+  "spec": {
+   "width": 300,
+   "height": 200,
+   "legend": "none",
+   "series": [
+    {
+     "type": "pie",
+     "name": "P",
+     "innerRadius": 0.6,
+     "startAngle": 20,
+     "endAngle": 80,
+     "data": [
+      {
+       "name": "a",
+       "value": 2
+      },
+      {
+       "name": "b",
+       "value": 1
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "gauge-bars-negative",
+  "spec": {
+   "width": 300,
+   "height": 260,
+   "axes": {
+    "angle": {
+     "type": "linear",
+     "min": -50,
+     "max": 50
+    }
+   },
+   "series": [
+    {
+     "type": "gauge",
+     "name": "Up",
+     "display": "bar",
+     "value": 30
+    },
+    {
+     "type": "gauge",
+     "name": "Down",
+     "display": "bar",
+     "value": -20
+    }
+   ]
+  }
+ },
+ {
+  "name": "pie-thin-rounded",
+  "spec": {
+   "width": 300,
+   "height": 260,
+   "legend": "none",
+   "series": [
+    {
+     "type": "pie",
+     "name": "P",
+     "innerRadius": 0.3,
+     "cornerRadius": 60,
+     "data": [
+      {
+       "name": "thin",
+       "value": 1
+      },
+      {
+       "name": "wide",
+       "value": 40
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "polar-line-one-gap",
+  "spec": {
+   "width": 300,
+   "height": 300,
+   "axes": {
+    "angle": {
+     "type": "band",
+     "categories": [
+      "a",
+      "b",
+      "c",
+      "d",
+      "e"
+     ]
+    }
+   },
+   "series": [
+    {
+     "type": "polarLine",
+     "name": "L",
+     "data": [
+      1,
+      2,
+      null,
+      4,
+      3
+     ]
+    }
+   ]
+  }
  }
 ]

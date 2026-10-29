@@ -463,8 +463,9 @@ const NO_ENDS: Extent = { left: 0, right: 0, up: 0, down: 0 };
  * An axis at one side of the plot with its labels measured. Flat labels take one line below the plot
  * and the widest label's width beside it; a linear axis' end labels, centred on its end ticks, reach
  * half their width past the ends below the plot, and half a line beside it, while a band axis' sit
- * inside. Rotated labels take their rotated bounds, the end ones counted whole: a band axis' are
- * inside the plot by part of a band, so that leaves room to spare.
+ * inside. Rotated labels take their rotated bounds. Every label's tick is within the plot, so the
+ * plot leaves room past its ends for the furthest any label reaches either way: the most a label may
+ * need, which leaves room to spare for all but the end ones.
  */
 function guide(
   side: Side,
@@ -508,12 +509,10 @@ function guide(
           line / Math.abs(cos(radians)),
         ) +
         GAP / 2;
-  // The first category is at the top, the first tick at the bottom.
-  const [top, bottom] = axis.type === 'band' ? [first, last] : [last, first];
   const ends =
     side === 'bottom'
-      ? { ...NO_ENDS, left: drawing.extent(first, style).left, right: drawing.extent(last, style).right }
-      : { ...NO_ENDS, up: drawing.extent(top, style).up, down: drawing.extent(bottom, style).down };
+      ? { ...NO_ENDS, left: most((extent) => extent.left), right: most((extent) => extent.right) }
+      : { ...NO_ENDS, up: most((extent) => extent.up), down: most((extent) => extent.down) };
   return { side, key, axis, labels, reach, room, ends: shown(ends), style, depth: depthOf(reach, axis, line) };
 }
 

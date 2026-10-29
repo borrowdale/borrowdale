@@ -74,8 +74,7 @@ export class Drawing {
    */
   extent(text: string, options: Omit<TextOptions, 'x' | 'y'>): Extent {
     const fontSize = options.fontSize ?? this.#chart.fontSize;
-    const { anchor, baseline, rotate } = options;
-    return remembered(this.#extents, `${fontSize}|${anchor}|${baseline}|${rotate}|${text}`, () => {
+    return remembered(this.#extents, JSON.stringify([{ ...options, fontSize }, text]), () => {
       const { x, y, width, height } = textBounds(
         layoutText(text, { ...options, x: 0, y: 0, font: this.#chart.font, fontSize }),
       );

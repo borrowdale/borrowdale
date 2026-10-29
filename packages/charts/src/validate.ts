@@ -126,7 +126,10 @@ interface PolarNeeds {
    * `stacked` (only once stacked), or `never` (below 0 only on a radius whose `min` is below it).
    */
   outward: 'always' | 'stacked' | 'never';
-  /** Gridlines default to polygons through the spokes when every series wants them. */
+  /**
+   * Draws a polygon through the spokes, so needs at least 3 categories; gridlines default to
+   * polygons when every series does.
+   */
   polygon: boolean;
 }
 
@@ -539,11 +542,10 @@ function checkPolarChart(r: Fields, base: CheckedChartBase, series: SeriesOf<'po
     fail('axes.radius.shape', 'is polygon, which needs a band angle axis for its corners');
   }
   const spokes = angle.type === 'band' ? angle.categories.length : 0;
-  if (spokes < 3 && radius.shape === 'polygon') {
-    fail(
-      'axes.angle.categories',
-      `must have at least 3 categories for the polygon gridlines of axes.radius, got ${spokes}`,
-    );
+  const polygonal = series.find((entry) => SERIES_RULES[entry.type].polar.polygon);
+  if (spokes < 3 && (polygonal || radius.shape === 'polygon')) {
+    const what = polygonal ? `${polygonal.path}, a ${polygonal.type} series` : 'the polygon gridlines of axes.radius';
+    fail('axes.angle.categories', `must have at least 3 categories for ${what}, got ${spokes}`);
   }
   const band = angle.type === 'band' ? angle : radius.type === 'band' ? radius : undefined;
   for (const entry of series) {
@@ -590,6 +592,7 @@ function checkSweep(r: Fields, path: string, [start, end]: [number, number] = [0
 }
 
 const GAUGE_SWEEP: [number, number] = [-120, 120];
+const DEFAULT_DIAL: [number, number] = [0, 100];
 const GAUGE_KEYS = ['type', 'min', 'max', 'hidden', 'format', 'startAngle', 'endAngle', 'bands'];
 
 function checkGaugeChart(r: Fields, base: CheckedChartBase, series: SeriesOf<'gauge'>[]): CheckedGaugeChart {
@@ -597,7 +600,13 @@ function checkGaugeChart(r: Fields, base: CheckedChartBase, series: SeriesOf<'ga
   axes?.allow(['angle']);
   const angle = axes
     ? axes.required('angle', checkDial)
-    : checkDial('axes.angle', { type: 'linear', min: 0, max: 100 });
+    : checkDial('axes.angle', { type: 'linear', min: DEFAULT_DIAL[0], max: DEFAULT_DIAL[1] });
+  for (const entry of axes ? [] : series) {
+    if (!(entry.value >= DEFAULT_DIAL[0] && entry.value <= DEFAULT_DIAL[1])) {
+      const dial = `the default dial, ${DEFAULT_DIAL[0]} to ${DEFAULT_DIAL[1]}; set axes.angle for another`;
+      fail(`${entry.path}.value`, `is ${entry.value}, beyond ${dial}`);
+    }
+  }
   return { ...base, system: 'gauge', angle, series };
 }
 
@@ -627,7 +636,10 @@ function checkGaugeBands(bands: CheckedGaugeBand[]): CheckedGaugeBand[] {
     }
     const before = bands[i - 1];
     if (before && band.from < before.to) {
-      fail(`axes.angle.bands[${i}].from`, `is ${band.from}, before the end of axes.angle.bands[${i - 1}] (${before.to})`);
+      fail(
+        `axes.angle.bands[${i}].from`,
+        `is ${band.from}, before the end of axes.angle.bands[${i - 1}] (${before.to})`,
+      );
     }
   });
   return bands;

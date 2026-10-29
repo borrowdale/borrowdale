@@ -81,8 +81,13 @@ export function layoutGauge(drawing: Drawing, chart: CheckedGaugeChart, rect: Re
   const shift = bands.length > 0 ? 1 : 0;
   const ringOuter = (j: number): number => radius - j * (width + RING_GAP);
   const inner = ringOuter(Math.max(1, bars.length + shift)) + RING_GAP;
-  if (inner - TICK - GAP <= HUB) {
-    fail('series', `holds ${bars.length} gauge bars, more rings than the dial has room for`);
+  // Ticks and labels go inside the innermost ring, outside the hub.
+  if (inner - (axis.hidden ? 0 : TICK + GAP) <= HUB) {
+    const [where, problem] =
+      bars.length > 0
+        ? ['series', `holds ${bars.length} gauge bars, more rings than the dial has room for`]
+        : [`a ${chart.width} × ${chart.height} chart`, "leaves no room for the dial's ticks around its hub"];
+    fail(where, problem);
   }
   const grid = { stroke: GRID, strokeWidth: GRID_WIDTH };
   const arc = (outer: number, from: number, to: number): Shape =>
