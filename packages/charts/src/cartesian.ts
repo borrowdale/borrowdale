@@ -157,6 +157,7 @@ interface MarkContext {
   /** The axis of a series' values. */
   axisOf: (entry: CartesianSeries) => CheckedLinearAxis;
   spansOf: (entry: CartesianSeries) => Span[];
+  /** Where a stacked monotone area splits its runs (`areaCutsOf`); undefined for every other series. */
   areaCutsOf: (entry: CartesianSeries) => ReadonlySet<number> | undefined;
   slots: { slotOf: (entry: CartesianSeries) => number; count: number };
   /** The x scale and axis of a chart with two linear axes. */
@@ -230,24 +231,42 @@ function spansOf(
 }
 
 /**
- * Shared interpolation endpoints for a monotone stack. A peer's gap must not make the same edge
- * acquire a new tangent in only one series. Cuts keep the boundary vertex in both adjacent runs.
+ * The categories where each monotone area stack splits its runs, by stack: where a layer's run starts
+ * or ends, and where a layer's gap starts or ends between layers drawn below and above it. Two layers
+ * then curve every edge they share over the same run, so a gap cannot give that edge a different
+ * tangent in each; and where the layer under another changes to a different layer from one category
+ * to the next, both sides of that step are straight, so the layers cannot cross there. `runsOf`
+ * repeats the point at a cut in the runs on both sides of it, and ignores a cut at a run's first or
+ * last point.
  */
 function areaCutsOf(
   series: readonly CartesianSeries[],
   valueAxisOf: (entry: CartesianSeries) => AxisKey,
 ): Map<string, Set<number>> {
-  const groups = new Map<string, Set<number>>();
+  // Each stack's layers, in the order they stack.
+  const stacks = new Map<string, (readonly (number | null)[])[]>();
   for (const entry of series) {
     if (entry.type !== 'area' || entry.stack === undefined || entry.curve !== 'monotone') {
       continue;
     }
     const key = stackOf(entry, valueAxisOf);
-    const cuts = groups.get(key) ?? new Set<number>();
-    entry.data.forEach((value, i) => {
-      if (value !== null && (entry.data[i - 1] === null || entry.data[i + 1] === null)) {
-        cuts.add(i);
-      }
+    stacks.set(key, [...(stacks.get(key) ?? []), entry.data]);
+  }
+  const groups = new Map<string, Set<number>>();
+  for (const [key, layers] of stacks) {
+    const cuts = new Set<number>();
+    layers.forEach((data, k) => {
+      const below = (i: number): boolean => layers.slice(0, k).some((layer) => layer[i] !== null);
+      const above = (i: number): boolean => layers.slice(k + 1).some((layer) => layer[i] !== null);
+      data.forEach((value, i) => {
+        // Past either end, `data[i - 1]` and `data[i + 1]` are undefined: neither a gap nor a value.
+        const bordersValue = (i > 0 && data[i - 1] !== null) || (i + 1 < data.length && data[i + 1] !== null);
+        if (value !== null && (data[i - 1] === null || data[i + 1] === null)) {
+          cuts.add(i);
+        } else if (value === null && bordersValue && below(i) && above(i)) {
+          cuts.add(i);
+        }
+      });
     });
     groups.set(key, cuts);
   }
