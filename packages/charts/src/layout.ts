@@ -3,7 +3,7 @@ import { layoutCartesian, legendOf } from './cartesian.js';
 import { Drawing } from './drawing.js';
 import { GAP, PAD, type Rect } from './frame.js';
 import { hatched, LINE_WIDTH, paints, type Paint } from './palette.js';
-import { layoutPie, layoutRadar } from './polar.js';
+import { layoutPie, layoutPolar } from './polar.js';
 import { fail } from './read.js';
 import type { ChartLayout, ChartOptions, ChartSpec, LegendPosition } from './types.js';
 import { checkChart, type CheckedChart } from './validate.js';
@@ -48,7 +48,7 @@ export function layoutChart(spec: ChartSpec, options: ChartOptions = {}): ChartL
       layoutCartesian(drawing, chart, rect, entryPaints);
       break;
     case 'polar':
-      layoutRadar(drawing, chart, rect, entryPaints);
+      layoutPolar(drawing, chart, rect, entryPaints);
       break;
     case 'pie':
       layoutPie(drawing, chart, rect, entryPaints);
