@@ -57,7 +57,7 @@ cannot share a chart:
 | `rangeArea` | a `[low, high]` pair or `null` per category, high not below low | `curve`, `axis: 'y2'` |
 | `scatter` | `[x, y]` points | |
 | `bubble` | `[x, y, size]` points: the size sets the area, and is not negative | |
-| `pie` | `{ name, value, color?, offset?, radius? }` slices | `innerRadius` (0 to 0.95: 0.5 is a donut) and `outerRadius` (0.05 to 1), as shares of the chart's radius; `startAngle` (default 0) and `endAngle` (default 360): degrees clockwise from the top, the end greater than the start and at most 360 past it. −90 and 90 make a half donut. `padAngle` (0 to 10 degrees between slices), `cornerRadius` (0 to 1,000 units). Values must not be negative, and one must be above 0 |
+| `pie` | `{ name, value, color?, offset?, radius? }` slices | `innerRadius` (0 to 0.95: 0.5 is a donut) and `outerRadius` (0.05 to 1), `startAngle` and `endAngle`, `padAngle` (0 to 10 degrees between slices), `cornerRadius` (0 to 1,000 units). Values must not be negative, and one must be above 0 |
 | `radar` | a value per spoke, none negative; or a `[low, high]` pair per spoke, for a range radar | |
 | `rose` | a value or `null` per category of the angle axis, none negative | `stack`: wedges with the same stack name stack outwards (a wind rose); others share each category's wedge side by side |
 | `radialBar` | a value or `null` per ring of the radius axis | `stack`: bars with the same stack name stack clockwise; others share each ring side by side |
@@ -70,7 +70,14 @@ A slice's `offset` (0 to 0.5 of the radius) pulls it out from the centre. Give e
 a `radius`, or none: each slice then reaches out in proportion to it, the largest to the full
 radius. Nested rings split the radius equally, outermost first, unless they set `innerRadius` and
 `outerRadius`; they share `startAngle` and `endAngle`, and a slice name in two rings is one legend
-entry, with one colour. A slice narrower than `padAngle` is not drawn, and keeps its legend entry.
+entry, with one colour. A slice narrower than `padAngle`, or that reaches no further than the hole,
+is not drawn, and keeps its legend entry.
+
+`innerRadius` and `outerRadius` are shares of the outermost ring's radius, and the outermost ring
+fills the chart: a lone pie's `outerRadius` changes nothing. `startAngle` (default 0) and `endAngle`
+(default 360) are degrees clockwise from the top, the end greater than the start and at most 360
+past it; −90 and 90 make a half donut. A slice's `offset` is a share of the outermost ring's radius,
+and the pie shrinks to leave room for it; a slice that is the whole of its pie is not pulled out.
 With several pies, each slice's tooltip starts with its ring's name.
 
 The polar types share the rules of their cartesian twins: a `rose` is a `bar` wrapped around a band
@@ -103,6 +110,10 @@ With `y` as the band axis, bars and lines run horizontally. A sparkline is a sma
 | `title`, `hidden` | |
 | `format` | `decimals` (0 to 20; by default tick labels get the fewest that tell the ticks apart, and tooltips every decimal a value has), `thousands` (default `,`), `decimal` (default `.`), `prefix`, `suffix` (default `%` on a percent axis), each text at most 10 characters |
 
+Numbers are never formatted with the locale data of the JavaScript engine, which differs between
+engines; set `thousands` and `decimal` to write them for another language. Bars and areas always
+stand on zero; range areas, lines and points do not have to.
+
 `labelAngle` (−90 to 90 degrees, clockwise) slants the tick labels of an `x`, `y` or `y2` axis; the
 axis makes room for the slanted labels, and keeps more of them than it could flat. At −45 the x
 labels read up to the right and end at their ticks.
@@ -126,12 +137,9 @@ Polar axes take no `title`, `percent` or `labelAngle`.
 A gauge's dial is its `angle` axis: by default 0 to 100 over −120 to 120 degrees. It takes `min`,
 `max`, `hidden`, `format`, `startAngle`, `endAngle`, and `bands`: up to 100 `{ from, to, color }`
 stretches, in order and not overlapping. Without `min` and `max` it reaches from 0 to the values
-and bands. Ticks and labels are inside the rim; bars take rings inside the track, or the track
-itself when there are no bands; a lone gauge writes its value under the centre.
-
-Numbers are never formatted with the locale data of the JavaScript engine, which differs between
-engines; set `thousands` and `decimal` to write them for another language. Bars and areas always
-stand on zero; range areas, lines and points do not have to.
+and bands; it shows 0 unless `min` or `max` leaves it out. Ticks and labels are inside the rim; bars
+take rings inside the track, or the track itself when there are no bands, and a dial holds as many
+rings as fit outside its hub; a lone gauge writes its value under the centre.
 
 ## Chart options
 
