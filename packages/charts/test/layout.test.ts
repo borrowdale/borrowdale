@@ -151,6 +151,22 @@ const wrappedLine: ChartSpec = {
 // The same gaps on half a turn, where f and a are at opposite ends.
 const halfLine: ChartSpec = { ...wrappedLine, axes: { angle: { ...wrappedLine.axes!.angle as object, startAngle: -90, endAngle: 90 } as never } };
 
+// Two rings sharing the name "a": one legend entry for it.
+const rings: ChartSpec = {
+  width: 300,
+  height: 300,
+  series: [
+    { type: 'pie', name: '2025', data: [{ name: 'a', value: 3 }, { name: 'b', value: 1 }] },
+    { type: 'pie', name: '2024', data: [{ name: 'a', value: 1 }, { name: 'c', value: 1 }] },
+  ],
+};
+// A slice of 3.6 degrees, less than the 4 degrees of space between slices.
+const spaced: ChartSpec = {
+  width: 300,
+  height: 300,
+  series: [{ type: 'pie', name: 'P', padAngle: 4, data: [{ name: 'big', value: 99 }, { name: 'sliver', value: 1 }] }],
+};
+
 /** The mark whose tooltip is `title`. */
 function mark(layout: ChartLayout, title: string): ChartNode {
   const found = layout.nodes.find((node) => node.kind === 'mark' && node.title === title);
@@ -366,5 +382,18 @@ describe('layoutChart', () => {
 
   it('keeps the ends of part of a turn apart', () => {
     expect(mark(layoutChart(halfLine), 'L')).toMatchObject({ nodes: [{}, {}, {}] });
+  });
+
+  it('names the ring in the tooltip of each slice of nested rings', () => {
+    expect(titles(layoutChart(rings))).toEqual(['2025, a: 3 (75.0%)', '2025, b: 1 (25.0%)', '2024, a: 1 (50.0%)', '2024, c: 1 (50.0%)']);
+  });
+
+  it('gives a slice name shared by two rings one legend entry', () => {
+    expect(texts(layoutChart(rings))).toEqual(['a', 'b', 'c']);
+  });
+
+  it('leaves out a slice narrower than the space between slices, keeping its legend entry', () => {
+    expect(titles(layoutChart(spaced))).toEqual(['big: 99 (99.0%)']);
+    expect(texts(layoutChart(spaced))).toEqual(['big', 'sliver']);
   });
 });

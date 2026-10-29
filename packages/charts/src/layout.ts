@@ -51,7 +51,7 @@ export function layoutChart(spec: ChartSpec, options: ChartOptions = {}): ChartL
       layoutPolar(drawing, chart, rect, entryPaints);
       break;
     case 'pie':
-      layoutPie(drawing, chart, rect, entryPaints);
+      layoutPie(drawing, chart, rect, new Map(entries.map((entry) => [entry.name, entry.paint])));
       break;
     default:
       unknownSystem(chart);
@@ -67,18 +67,22 @@ export function layoutChart(spec: ChartSpec, options: ChartOptions = {}): ChartL
   };
 }
 
-/** One entry per slice of a pie, else one per series, each with its colour and hatching. */
+/**
+ * One entry per slice name of a pie's rings, in the order they first appear, else one per series,
+ * each with its colour and hatching.
+ */
 function legendEntries(chart: CheckedChart): LegendEntry[] {
   if (chart.system === 'pie') {
-    const [pie] = chart.series;
-    const slices = pie.data.map((slice, i) => ({ color: slice.color, path: `${pie.path}.data[${i}]` }));
-    return paints(slices).map((paint, i) => ({
-      name: pie.data[i]!.name,
-      paint,
-      line: false,
-      dash: undefined,
-      style: pie.style,
-    }));
+    const first = new Map<string, { name: string; color: string | undefined; path: string; style: SketchStyle }>();
+    for (const pie of chart.series) {
+      pie.data.forEach((slice, i) => {
+        if (!first.has(slice.name)) {
+          first.set(slice.name, { name: slice.name, color: slice.color, path: `${pie.path}.data[${i}]`, style: pie.style });
+        }
+      });
+    }
+    const slices = [...first.values()];
+    return paints(slices).map((paint, i) => ({ name: slices[i]!.name, paint, line: false, dash: undefined, style: slices[i]!.style }));
   }
   const lines =
     chart.system === 'cartesian'

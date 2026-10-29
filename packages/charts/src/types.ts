@@ -227,29 +227,52 @@ export interface BubbleSeries extends SeriesBase {
 }
 
 export interface PieSlice {
-  /** Unique in the pie. */
+  /** Unique in the pie. A name repeated in another ring of the chart shares its colour and legend entry. */
   name: string;
   /** Not negative; at least one slice is above 0. */
   value: number;
-  /** As a series' `color`; a `fill` in the pie's or the chart's `style` replaces it. */
+  /**
+   * As a series' `color`; a `fill` in the pie's or the chart's `style` replaces it. A slice of the
+   * same name in another ring must not give a different one.
+   */
   color?: string | undefined;
+  /** Pulls the slice out from the centre by this share of the radius: from 0 to 0.5. Defaults to 0. */
+  offset?: number | undefined;
+  /**
+   * Draws the slice out to a radius in proportion to this value, the largest to the full radius: a
+   * variable-radius pie. Not negative. Every slice of the pie has one, or none does.
+   */
+  radius?: number | undefined;
 }
 
+/**
+ * A pie or donut. Up to 10 pie series in one chart make nested rings, the first outermost; they must
+ * share `startAngle` and `endAngle`.
+ */
 export interface PieSeries extends SeriesBase {
   type: 'pie';
   /** 1 to 1,000 slices. */
   data: readonly PieSlice[];
   /**
-   * The hole, as a share of the radius: 0 for a pie, 0.5 for a donut. From 0 to 0.95.
-   * Defaults to 0.
+   * Where the ring starts and ends, as shares of the chart's radius: `innerRadius` 0 for a pie and 0.5
+   * for a donut, from 0 to 0.95; `outerRadius` from 0.05 to 1, greater than `innerRadius`. One pie
+   * defaults to 0 and 1; nested rings split the radius equally, outermost first.
    */
   innerRadius?: number | undefined;
+  outerRadius?: number | undefined;
   /**
    * Degrees clockwise from the top. Defaults to 0 and 360; -90 and 90 make a half donut. `endAngle`
    * must be greater than `startAngle` and at most 360 past it.
    */
   startAngle?: number | undefined;
   endAngle?: number | undefined;
+  /**
+   * Degrees of space between slices, from 0 to 10. A slice narrower than the space is not drawn but
+   * keeps its legend entry. Defaults to 0.
+   */
+  padAngle?: number | undefined;
+  /** Rounds each slice's corners to this radius, in user units, from 0 to 1,000. Defaults to 0. */
+  cornerRadius?: number | undefined;
 }
 
 export interface RadarSeries extends SeriesBase {

@@ -2468,5 +2468,205 @@
     }
    ]
   }
+ },
+ {
+  "name": "donut-spaced-rounded",
+  "spec": {
+   "width": 300,
+   "height": 260,
+   "series": [
+    {
+     "type": "pie",
+     "name": "Energy",
+     "innerRadius": 0.55,
+     "padAngle": 3,
+     "cornerRadius": 6,
+     "data": [
+      {
+       "name": "Wind",
+       "value": 5
+      },
+      {
+       "name": "Sun",
+       "value": 3
+      },
+      {
+       "name": "Hydro",
+       "value": 2
+      },
+      {
+       "name": "Coal",
+       "value": 1
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "pie-exploded",
+  "spec": {
+   "width": 300,
+   "height": 260,
+   "legend": "none",
+   "series": [
+    {
+     "type": "pie",
+     "name": "P",
+     "data": [
+      {
+       "name": "a",
+       "value": 4,
+       "offset": 0.15
+      },
+      {
+       "name": "b",
+       "value": 3
+      },
+      {
+       "name": "c",
+       "value": 2
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "pie-rings",
+  "spec": {
+   "width": 320,
+   "height": 300,
+   "series": [
+    {
+     "type": "pie",
+     "name": "2025",
+     "data": [
+      {
+       "name": "North",
+       "value": 5
+      },
+      {
+       "name": "South",
+       "value": 3
+      },
+      {
+       "name": "East",
+       "value": 2
+      }
+     ]
+    },
+    {
+     "type": "pie",
+     "name": "2024",
+     "data": [
+      {
+       "name": "North",
+       "value": 3
+      },
+      {
+       "name": "South",
+       "value": 4
+      },
+      {
+       "name": "West",
+       "value": 1
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "pie-variable-radius",
+  "spec": {
+   "width": 300,
+   "height": 260,
+   "series": [
+    {
+     "type": "pie",
+     "name": "Area",
+     "data": [
+      {
+       "name": "a",
+       "value": 3,
+       "radius": 10
+      },
+      {
+       "name": "b",
+       "value": 2,
+       "radius": 5
+      },
+      {
+       "name": "c",
+       "value": 2,
+       "radius": 7.5
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "donut-half-rounded",
+  "spec": {
+   "width": 300,
+   "height": 180,
+   "series": [
+    {
+     "type": "pie",
+     "name": "Seats",
+     "innerRadius": 0.5,
+     "startAngle": -90,
+     "endAngle": 90,
+     "cornerRadius": 40,
+     "padAngle": 2,
+     "data": [
+      {
+       "name": "Left",
+       "value": 7
+      },
+      {
+       "name": "Centre",
+       "value": 3
+      },
+      {
+       "name": "Right",
+       "value": 5
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "pie-rotated",
+  "spec": {
+   "width": 260,
+   "height": 240,
+   "legend": "none",
+   "series": [
+    {
+     "type": "pie",
+     "name": "P",
+     "startAngle": -135,
+     "endAngle": 225,
+     "data": [
+      {
+       "name": "Sky",
+       "value": 7
+      },
+      {
+       "name": "Shady side",
+       "value": 2
+      },
+      {
+       "name": "Sunny side",
+       "value": 1
+      }
+     ]
+    }
+   ]
+  }
  }
 ]

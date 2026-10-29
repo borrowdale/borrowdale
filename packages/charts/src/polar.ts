@@ -39,32 +39,51 @@ function onCircle(degrees: number): Point {
   return [sin(radians), -cos(radians)];
 }
 
-/** Lays out a pie or donut into `rect`, as large as fits. */
-export function layoutPie(drawing: Drawing, chart: CheckedPieChart, rect: Rect, paints: Paint[]): void {
+/**
+ * Lays out a pie or donut, or nested rings of them, into `rect`, as large as fits with every slice
+ * pulled out by its offset. `paintOf` gives each slice name its legend entry's paint.
+ */
+export function layoutPie(drawing: Drawing, chart: CheckedPieChart, rect: Rect, paintOf: ReadonlyMap<string, Paint>): void {
   assertRoom(rect, chart.width, chart.height);
-  const [pie] = chart.series;
-  const { startAngle, endAngle, innerRadius } = pie;
-  const { center, radius } = fitSweep(rect, startAngle, endAngle, innerRadius);
+  const { series } = chart;
+  const { startAngle, endAngle } = series[0]!;
+  const outermost = Math.max(...series.map((pie) => pie.outerRadius));
+  const innermost = Math.min(...series.map((pie) => pie.innerRadius));
+  const offset = Math.max(...series.flatMap((pie) => pie.data.map((slice) => slice.offset)));
+  const fitted = fitSweep(rect, startAngle, endAngle, innermost / outermost);
+  const { center } = fitted;
+  const radius = (offset === 0 ? fitted.radius : fitted.radius / (1 + offset)) / outermost;
 
-  const total = pie.data.reduce((sum, slice) => sum + slice.value, 0);
-  let angle = startAngle;
-  pie.data.forEach((slice, i) => {
-    const from = angle;
-    angle += (slice.value / total) * (endAngle - startAngle);
-    // A slice whose sweep rounds to nothing has nothing to draw.
-    if (!(angle > from)) {
-      return;
-    }
-    const share = formatNumber((slice.value / total) * 100, 1, PLAIN_FORMAT);
-    drawing.mark(`${slice.name}: ${formatValue(slice.value)} (${share}%)`, [
-      drawing.shape(
-        sliceShape(center, radius, radius * innerRadius, from, angle),
-        hatched(paints[i]!),
-        `${pie.name}|${slice.name}|slice`,
-        pie.style,
-      ),
-    ]);
-  });
+  for (const pie of series) {
+    const total = pie.data.reduce((sum, slice) => sum + slice.value, 0);
+    const largest = Math.max(...pie.data.map((slice) => slice.radius ?? 0));
+    const [outer, hole] = [radius * pie.outerRadius, radius * pie.innerRadius];
+    // Space between slices only where there is more than one slice to part.
+    const pad = pie.data.filter((slice) => slice.value > 0).length > 1 ? pie.padAngle / 2 : 0;
+    let angle = startAngle;
+    pie.data.forEach((slice) => {
+      const from = angle;
+      angle += (slice.value / total) * (endAngle - startAngle);
+      // A slice whose sweep rounds to nothing, or that the space between slices takes up, has nothing
+      // to draw.
+      if (!(angle - pad > from + pad)) {
+        return;
+      }
+      const reach = slice.radius === undefined ? outer : hole + ((outer - hole) * slice.radius) / largest;
+      const [dx, dy] = onCircle((from + angle) / 2);
+      const pulled: Point = slice.offset === 0 ? center : [center[0] + slice.offset * radius * dx, center[1] + slice.offset * radius * dy];
+      const share = formatNumber((slice.value / total) * 100, 1, PLAIN_FORMAT);
+      const ring = series.length === 1 ? '' : `${pie.name}, `;
+      drawing.mark(`${ring}${slice.name}: ${formatValue(slice.value)} (${share}%)`, [
+        drawing.shape(
+          sliceShape(pulled, reach, hole, from + pad, angle - pad, pie.cornerRadius),
+          hatched(paintOf.get(slice.name)!),
+          `${pie.name}|${slice.name}|slice`,
+          pie.style,
+        ),
+      ]);
+    });
+  }
 }
 
 /**
@@ -90,7 +109,11 @@ function fitSweep(rect: Rect, startAngle: number, endAngle: number, innerRadius:
   return { center, radius };
 }
 
-function sliceShape([cx, cy]: Point, radius: number, hole: number, from: number, to: number): Shape {
+/**
+ * A slice from `from` to `to` degrees between `hole` and `radius`, a ring when it is a whole turn,
+ * with its corners rounded to `corner` where there is room for them.
+ */
+function sliceShape([cx, cy]: Point, radius: number, hole: number, from: number, to: number, corner = 0): Shape {
   const whole = to - from >= 360 - TURN_ROUNDING;
   if (hole === 0 && whole) {
     return { kind: 'circle', cx, cy, diameter: 2 * radius };
@@ -113,10 +136,42 @@ function sliceShape([cx, cy]: Point, radius: number, hole: number, from: number,
     const outer = `M${at(radius, from)}${edge(radius, from, true)} Z`;
     return { kind: 'path', d: `${outer} M${at(hole, from)}${edge(hole, from, false)} Z` };
   }
+  if (corner > 0) {
+    return { kind: 'path', d: roundedSlice(at, edge, [cx, cy], radius, hole, from, to, corner) };
+  }
   // A path, not core's arc shape, whose sampling makes a thin slice cost more the thinner it is.
   const start = hole === 0 ? `M${coordinate(cx)} ${coordinate(cy)} L${at(radius, from)}` : `M${at(radius, from)}`;
   const back = hole === 0 ? '' : ` L${at(hole, to)}${edge(hole, from, false)}`;
   return { kind: 'path', d: `${start}${edge(radius, to, true)}${back} Z` };
+}
+
+/**
+ * A slice's path with its corners rounded: each corner is cut where the edges are `corner` from it,
+ * and a quadratic curve through the corner joins the cuts. A corner shrinks to fit half its edges.
+ * The tip of a pie slice, at the centre, stays sharp.
+ */
+function roundedSlice(
+  at: (r: number, angle: number) => string,
+  edge: (r: number, end: number, clockwise: boolean) => string,
+  [cx, cy]: Point,
+  radius: number,
+  hole: number,
+  from: number,
+  to: number,
+  corner: number,
+): string {
+  const half = ((to - from) * RADIANS) / 2;
+  const outer = Math.min(corner, (radius - hole) / 2, radius * half);
+  // The cut along the arc, in degrees.
+  const outerTurn = outer / radius / RADIANS;
+  const rim = `Q${at(radius, from)} ${at(radius, from + outerTurn)}${edge(radius, to - outerTurn, true)} Q${at(radius, to)} ${at(radius - outer, to)}`;
+  if (hole === 0) {
+    return `M${coordinate(cx)} ${coordinate(cy)} L${at(radius - outer, from)} ${rim} Z`;
+  }
+  const inner = Math.min(corner, (radius - hole) / 2, hole * half);
+  const innerTurn = inner / hole / RADIANS;
+  const back = `Q${at(hole, to)} ${at(hole, to - innerTurn)}${edge(hole, from + innerTurn, false)} Q${at(hole, from)} ${at(hole + inner, from)}`;
+  return `M${at(radius - outer, from)} ${rim} L${at(hole + inner, to)} ${back} Z`;
 }
 
 type PolarSeries = SeriesOf<'polar'>;

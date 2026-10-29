@@ -167,7 +167,7 @@ const SERIES_RULES = {
     system: 'pie',
     band: false,
     stacks: false,
-    keys: ['data', 'innerRadius', 'startAngle', 'endAngle'],
+    keys: ['data', 'innerRadius', 'outerRadius', 'startAngle', 'endAngle', 'padAngle', 'cornerRadius'],
     read: checkPieSeries,
   },
   radar: {
@@ -300,9 +300,13 @@ export interface CheckedPolarChart extends CheckedChartBase {
   series: SeriesOf<'polar'>[];
 }
 
+/** A pie series with its ring resolved: where it starts and ends, as shares of the radius. */
+export type CheckedPie = SeriesOf<'pie'> & { innerRadius: number; outerRadius: number };
+
 export interface CheckedPieChart extends CheckedChartBase {
   system: 'pie';
-  series: [SeriesOf<'pie'>];
+  /** Nested rings, the first outermost by default. */
+  series: CheckedPie[];
 }
 
 /** A chart, checked: one shape per coordinate system, each with only its own axes and series. */
@@ -537,15 +541,50 @@ function checkSweep(r: Fields, path: string): CheckedSweep {
   return { startAngle, endAngle };
 }
 
+const MAX_RINGS = 10;
+const MAX_PAD_ANGLE = 10;
+const MAX_CORNER_RADIUS = 1_000;
+const MAX_OFFSET = 0.5;
+const MIN_OUTER = 0.05;
+
 function checkPieChart(r: Fields, base: CheckedChartBase, series: SeriesOf<'pie'>[]): CheckedPieChart {
   if (r.has('axes')) {
     fail('axes', 'must be left out: a pie chart has no axes');
   }
-  const [pie, ...others] = series;
-  if (others.length > 0) {
-    fail('series', `of a pie chart must be one pie series, got ${series.length} series`);
+  if (series.length > MAX_RINGS) {
+    fail('series', `of a pie chart must be 1 to ${MAX_RINGS} pie series, got ${series.length}`);
   }
-  return { ...base, system: 'pie', series: [pie!] };
+  const [first] = series;
+  const count = series.length;
+  const rings = series.map((pie, k) => {
+    for (const key of ['startAngle', 'endAngle'] as const) {
+      if (pie[key] !== first![key]) {
+        fail(`${pie.path}.${key}`, `is ${pie[key]}, but series[0].${key} is ${first![key]}: nested rings share their sweep`);
+      }
+    }
+    // Nested rings split the radius equally, the first outermost.
+    const outerRadius = pie.outerRadius ?? 1 - k / count;
+    const innerRadius = pie.innerRadius ?? (count === 1 ? 0 : 1 - (k + 1) / count);
+    if (!(outerRadius > innerRadius)) {
+      fail(`${pie.path}.outerRadius`, `must be greater than innerRadius (${innerRadius}), got ${outerRadius}`);
+    }
+    return { ...pie, innerRadius, outerRadius };
+  });
+  // A name in two rings is one legend entry with one colour.
+  const colors = new Map<string, { color: string | undefined; path: string }>();
+  for (const pie of rings) {
+    pie.data.forEach((slice, i) => {
+      const seen = colors.get(slice.name);
+      if (seen && slice.color !== undefined && slice.color !== seen.color) {
+        const given = seen.color === undefined ? 'none' : show(seen.color);
+        fail(`${pie.path}.data[${i}].color`, `is ${show(slice.color)}, but ${seen.path}, of the same name, gives ${given}`);
+      }
+      if (!seen) {
+        colors.set(slice.name, { color: slice.color, path: `${pie.path}.data[${i}].color` });
+      }
+    });
+  }
+  return { ...base, system: 'pie', series: rings };
 }
 
 function checkPieSeries(r: Fields, path: string) {
@@ -553,11 +592,13 @@ function checkPieSeries(r: Fields, path: string) {
     'data',
     list(1, MAX_CATEGORIES, (slicePath, raw) => {
       const slice = fields(slicePath, raw);
-      slice.allow(['name', 'value', 'color']);
+      slice.allow(['name', 'value', 'color', 'offset', 'radius']);
       return {
         name: slice.required('name', text(MAX_NAME)),
         value: slice.required('value', number(0, MAX_VALUE)),
         color: slice.optional('color', color),
+        offset: slice.optional('offset', number(0, MAX_OFFSET)) ?? 0,
+        radius: slice.optional('radius', number(0, MAX_VALUE)),
       };
     }),
   );
@@ -565,10 +606,25 @@ function checkPieSeries(r: Fields, path: string) {
   if (!data.some((slice) => slice.value > 0)) {
     fail(`${path}.data`, 'has no value above 0, so there is nothing to draw');
   }
+  const sized = data.filter((slice) => slice.radius !== undefined).length;
+  if (sized > 0 && sized < data.length) {
+    const i = data.findIndex((slice) => slice.radius === undefined);
+    fail(`${path}.data[${i}].radius`, 'is missing: every slice has a radius, or none does');
+  }
+  if (sized > 0 && !data.some((slice) => slice.radius! > 0)) {
+    fail(`${path}.data`, 'has no radius above 0, so there is nothing to draw');
+  }
   const { startAngle, endAngle } = checkSweep(r, path);
-  return { data, innerRadius: r.optional('innerRadius', number(0, MAX_HOLE)) ?? 0, startAngle, endAngle };
+  return {
+    data,
+    innerRadius: r.optional('innerRadius', number(0, MAX_HOLE)),
+    outerRadius: r.optional('outerRadius', number(MIN_OUTER, 1)),
+    startAngle,
+    endAngle,
+    padAngle: r.optional('padAngle', number(0, MAX_PAD_ANGLE)) ?? 0,
+    cornerRadius: r.optional('cornerRadius', number(0, MAX_CORNER_RADIUS)) ?? 0,
+  };
 }
-
 
 /** An x or y axis, band or linear by its `type`. Gridlines of a linear one default to `grid`. */
 function checkAxis(grid: boolean): Check<CheckedAxis> {
