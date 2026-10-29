@@ -279,7 +279,8 @@ export interface PieSlice {
   offset?: number | undefined;
   /**
    * Draws the slice out to a radius in proportion to this value, the largest to the full radius: a
-   * variable-radius pie. Not negative. Every slice of the pie has one, or none does.
+   * variable-radius pie. Not negative. Every slice of the pie has one, or none does, and at least one
+   * slice with a value above 0 has a radius above 0.
    */
   radius?: number | undefined;
 }

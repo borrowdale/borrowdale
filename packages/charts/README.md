@@ -71,7 +71,8 @@ a `radius`, or none: each slice then reaches out in proportion to it, the larges
 radius. Nested rings split the radius equally, outermost first, unless they set `innerRadius` and
 `outerRadius`; they share `startAngle` and `endAngle`, and a slice name in two rings is one legend
 entry, with one colour. A slice narrower than `padAngle`, or that reaches no further than the hole,
-is not drawn, and keeps its legend entry.
+is not drawn, and keeps its legend entry. With per-slice radii, at least one slice needs both a value
+and a radius above 0.
 
 `innerRadius` and `outerRadius` are shares of the outermost ring's radius, and the outermost ring
 fills the chart: a lone pie's `outerRadius` changes nothing. `startAngle` (default 0) and `endAngle`
@@ -116,7 +117,9 @@ stand on zero; range areas, lines and points do not have to.
 
 `labelAngle` (−90 to 90 degrees, clockwise) slants the tick labels of an `x`, `y` or `y2` axis; the
 axis makes room for the slanted labels, and keeps more of them than it could flat. At −45 the x
-labels read up to the right and end at their ticks.
+labels read up to the right and end at their ticks. The axis reserves room past each of its ends for
+the furthest any label reaches, so a chart too small for its slanted labels throws an error rather
+than drawing them off the chart.
 
 On a polar chart, `angle` goes clockwise from the top, and `radius` out from the centre, linear by
 default:
@@ -132,7 +135,9 @@ default:
 | `radius`: `shape` | `polygon` gridlines through the spokes (the default when every series is a radar; needs a band angle axis of at least 3 categories), or `circle` |
 | `min`, `max`, `grid`, `hidden`, `format` | as on a cartesian axis |
 
-Polar axes take no `title`, `percent` or `labelAngle`.
+Polar axes take no `title`, `percent` or `labelAngle`. The radius axis' labels run along the start of
+the sweep, wherever it points, and the circle shrinks to keep them on the chart; a chart too small for
+them throws an error naming `axes.radius`.
 
 A gauge's dial is its `angle` axis: by default 0 to 100 over −120 to 120 degrees. It takes `min`,
 `max`, `hidden`, `format`, `startAngle`, `endAngle`, and `bands`: up to 100 `{ from, to, color }`
@@ -206,7 +211,8 @@ Unknown keys are errors too, so a misspelled option never goes unnoticed. Errors
 passed on with the same prefix.
 
 A chart holds at most 100 series, 1,000 categories and 100,000 data points in all, and values
-within ±10¹⁵. A pie holds at most 1,000 slices. Titles and stack names hold at most 1,000
+within ±10¹⁵. A pie holds at most 1,000 slices, and a chart at most 10 nested pies. A gauge's dial
+holds as many bar rings as fit outside its hub. Titles and stack names hold at most 1,000
 characters, and names, categories and colours at most 100. All of a chart's strokes share one
 budget of 400,000 units of drawing work, about a second at most, and a chart that needs more throws
 `Drawing too complex (more than 400000 operations)`. On a 600 × 400 chart that is about 5,000
