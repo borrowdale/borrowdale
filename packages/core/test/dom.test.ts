@@ -12,6 +12,10 @@ const twoStrokes: Sketch = {
     { d: 'M2 2 L3 3', stroke: '#222', strokeWidth: 1, fill: 'none' },
   ],
 };
+// A sketch built by hand rather than by `sketch()`, whose dash is falsy but not left out.
+const falsyDash: Sketch = {
+  paths: [{ d: 'M0 0 L1 1', stroke: '#000', strokeWidth: 1, strokeLineDash: 0 as unknown as number[], fill: 'none' }],
+};
 
 class RecordingPath2D {
   constructor(readonly d: string) {}
@@ -28,6 +32,38 @@ function fakeContext() {
     strokeStyle: '',
     lineWidth: 0,
   };
+}
+
+/**
+ * A context that keeps its dash pattern and phase as a canvas does: `save()` pushes both on a stack,
+ * `restore()` brings back the last saved, or does nothing when none is, and each `stroke()` records
+ * them in `drawn`. The caller has set [5, 5] at 3.
+ */
+function dashContext() {
+  const drawn: { dash: number[]; offset: number }[] = [];
+  const saved: { dash: number[]; offset: number }[] = [];
+  const context = {
+    ...fakeContext(),
+    dash: [5, 5],
+    lineDashOffset: 3,
+    setLineDash(value: number[]) {
+      context.dash = [...value];
+    },
+    save() {
+      saved.push({ dash: [...context.dash], offset: context.lineDashOffset });
+    },
+    restore() {
+      const last = saved.pop();
+      if (last) {
+        context.dash = last.dash;
+        context.lineDashOffset = last.offset;
+      }
+    },
+    stroke() {
+      drawn.push({ dash: [...context.dash], offset: context.lineDashOffset });
+    },
+  };
+  return { context, drawn };
 }
 
 afterEach(() => {
@@ -150,21 +186,23 @@ describe('drawSketch', () => {
     expect(context.setLineDash).toHaveBeenCalledWith([]);
   });
 
+  it('clears the dash pattern for a falsy dash, as the SVG renderers leave it off', () => {
+    vi.stubGlobal('Path2D', RecordingPath2D);
+    const context = fakeContext();
+
+    drawSketch(context as unknown as CanvasRenderingContext2D, falsyDash);
+
+    expect(context.setLineDash).toHaveBeenCalledWith([]);
+  });
+
   it('draws with its own dash and phase, then restores the caller state', () => {
     vi.stubGlobal('Path2D', RecordingPath2D);
-    let dash = [5, 5];
-    let saved: { dash: number[]; offset: number };
-    const drawn: { dash: number[]; offset: number }[] = [];
-    const context = {
-      ...fakeContext(), lineDashOffset: 3,
-      setLineDash: (value: number[]) => { dash = [...value]; },
-      save: () => { saved = { dash: [...dash], offset: context.lineDashOffset }; },
-      restore: () => { dash = saved.dash; context.lineDashOffset = saved.offset; },
-      stroke: () => { drawn.push({ dash: [...dash], offset: context.lineDashOffset }); },
-    };
+    const { context, drawn } = dashContext();
+
     drawSketch(context as unknown as CanvasRenderingContext2D, { paths: [...dashed.paths, ...outlined.paths] });
+
     expect(drawn).toEqual([{ dash: [4, 2], offset: 0 }, { dash: [], offset: 0 }]);
-    expect(dash).toEqual([5, 5]);
+    expect(context.dash).toEqual([5, 5]);
     expect(context.lineDashOffset).toBe(3);
   });
 

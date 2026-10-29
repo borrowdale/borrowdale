@@ -84,7 +84,8 @@ export function drawSketch(context: CanvasRenderingContext2D, sketch: Sketch): v
     if (path.stroke !== 'none') {
       context.strokeStyle = path.stroke;
       context.lineWidth = path.strokeWidth;
-      context.setLineDash(path.strokeLineDash ?? []);
+      // `||`, not `??`: a falsy dash on a hand-built sketch draws solid, as the SVG renderers draw it.
+      context.setLineDash(path.strokeLineDash || []);
       context.lineDashOffset = 0;
       context.stroke(outline);
     }
