@@ -1,7 +1,8 @@
 import type { Point, Shape, SketchStyle } from '@borrowdale/core';
+import { cos, sin } from '@borrowdale/core/math';
 import type { TextAnchor, TextBaseline } from '@borrowdale/text';
 import { areaPath, linePath } from './curves.js';
-import type { Drawing } from './drawing.js';
+import type { Drawing, Extent } from './drawing.js';
 import { assertRoom, GAP, TICK, type Rect } from './frame.js';
 import { GRID, GRID_WIDTH, hatched, INK, LINE_WIDTH, type Paint } from './palette.js';
 import { stackGroup, stackSpans, type Span } from './stack.js';
@@ -72,7 +73,13 @@ export function layoutCartesian(drawing: Drawing, chart: CheckedCartesianChart, 
   // Vertical room first: the bottom axis takes a fixed depth, and a value axis at the side centres
   // its labels on the ticks, so the end ones stick out by half a line.
   const line = drawing.lineHeight();
-  const bottomDepth = x.hidden ? 0 : depthOf('bottom', 0, x, line);
+  // Rotated labels of a linear x axis are measured from ticks for the chart's whole width: its plot's
+  // width depends on this depth, through the labels of the y axes.
+  const bottomDepth = x.hidden
+    ? 0
+    : x.labelAngle === 0
+      ? depthOf('bottom', line, x, line)
+      : guide('bottom', 'x', x, linear.x && linearScale(linear.x, extentOf('x'), rect.right - rect.left), drawing, line).depth;
   const half = (y.type === 'linear' && !y.hidden) || (y2 && !y2.hidden) ? line / 2 : 0;
   const top = rect.top + half;
   const bottom = rect.bottom - Math.max(bottomDepth, half);
@@ -86,10 +93,17 @@ export function layoutCartesian(drawing: Drawing, chart: CheckedCartesianChart, 
   let plotLeft = rect.left + (y.hidden ? 0 : left.depth);
   let plotRight = rect.right - (!right || right.axis.hidden ? 0 : right.depth);
   const xScale = linear.x && linearScale(linear.x, extentOf('x'), plotRight - plotLeft);
-  if (xScale && !x.hidden) {
+  if (xScale && !x.hidden && x.labelAngle === 0) {
     // The first and last labels are centred on the ends of the axis, so they need room outside it.
     plotLeft = Math.max(plotLeft, rect.left + drawing.width(xScale.labels[0] ?? '') / 2);
     plotRight = Math.min(plotRight, rect.right - drawing.width(xScale.labels.at(-1) ?? '') / 2);
+  } else if (!x.hidden && x.labelAngle !== 0) {
+    // Rotated, the first label reaches left from its tick and the last right, as far as the whole of
+    // each may: the ticks of a band axis are inside the plot, so this leaves room to spare there.
+    const labels = x.type === 'band' ? x.categories : xScale!.labels;
+    const style = labelStyle('bottom', x.labelAngle);
+    plotLeft = Math.max(plotLeft, rect.left + drawing.extent(labels[0] ?? '', style).left);
+    plotRight = Math.min(plotRight, rect.right - drawing.extent(labels.at(-1) ?? '', style).right);
   }
   const plot: Rect = { left: plotLeft, top, right: plotRight, bottom };
   assertRoom(plot, chart.width, chart.height);
@@ -421,8 +435,10 @@ interface Guide {
   axis: CheckedAxis;
   /** Tick labels of a linear axis, or the categories of a band axis. */
   labels: readonly string[];
-  /** The width of the widest label. */
-  widest: number;
+  /** How far its labels reach out from the axis, beyond the tick and the gap. */
+  reach: number;
+  /** How much room a label needs along the axis, to thin out labels that would overlap. */
+  room: number;
   /** How far the axis reaches out from the plot: tick, gap, labels and title. */
   depth: number;
 }
@@ -436,14 +452,41 @@ function guide(
   line: number,
 ): Guide {
   const labels = axis.type === 'band' ? axis.categories : scale!.labels;
-  const widest = Math.max(0, ...labels.map((label) => drawing.width(label)));
-  return { side, key, axis, labels, widest, depth: depthOf(side, widest, axis, line) };
+  const angle = axis.labelAngle;
+  if (angle === 0) {
+    // One line deep below the plot, as wide as the widest beside it.
+    const widest = Math.max(0, ...labels.map((label) => drawing.width(label)));
+    const reach = side === 'bottom' ? line : widest;
+    return { side, key, axis, labels, reach, room: SIDES[side].room(widest, line), depth: depthOf(side, reach, axis, line) };
+  }
+  const extents = labels.map((label) => drawing.extent(label, labelStyle(side, angle)));
+  const most = (of: (extent: Extent) => number): number => Math.max(0, ...extents.map(of));
+  const reach = most((extent) => (side === 'bottom' ? extent.down : side === 'left' ? extent.left : extent.right));
+  // Along the axis, a slanted label needs its line height divided by the sine of its slant to clear
+  // the next one, or its whole extent, whichever is less.
+  const radians = (angle * Math.PI) / 180;
+  const room =
+    side === 'bottom'
+      ? Math.min(most((extent) => extent.left + extent.right), line / Math.abs(sin(radians))) + GAP
+      : Math.min(most((extent) => extent.up + extent.down), line / Math.abs(cos(radians))) + GAP / 2;
+  return { side, key, axis, labels, reach, room, depth: depthOf(side, reach, axis, line) };
 }
 
-// How far an axis reaches out from the plot: tick, gap, its labels (one line deep below the plot, as
-// wide as the widest beside it) and its title.
-function depthOf(side: Side, widest: number, axis: CheckedAxis, line: number): number {
-  return TICK + GAP + (side === 'bottom' ? line : widest) + titleDepth(axis, line);
+/** How a rotated label is anchored at its tick: ending there on the left of it, starting there on the right. */
+function labelStyle(side: Side, angle: number): { anchor: TextAnchor; baseline: TextBaseline; rotate: number } {
+  switch (side) {
+    case 'bottom':
+      return { anchor: angle < 0 ? 'end' : 'start', baseline: 'top', rotate: angle };
+    case 'left':
+      return { anchor: 'end', baseline: 'middle', rotate: angle };
+    case 'right':
+      return { anchor: 'start', baseline: 'middle', rotate: angle };
+  }
+}
+
+// How far an axis reaches out from the plot: tick, gap, its labels' `reach` and its title.
+function depthOf(side: Side, reach: number, axis: CheckedAxis, line: number): number {
+  return TICK + GAP + reach + titleDepth(axis, line);
 }
 
 function titleDepth(axis: CheckedAxis, line: number): number {
@@ -462,7 +505,7 @@ interface SideRules {
   /** How much room a label needs along the axis, to thin out labels that would overlap. */
   room: (widest: number, line: number) => number;
   /** Where the title goes, beyond the labels; side titles are rotated to read along the axis. */
-  title: (plot: Rect, widest: number, line: number) => { x: number; y: number; rotate: number };
+  title: (plot: Rect, reach: number, line: number) => { x: number; y: number; rotate: number };
 }
 
 const SIDES: Record<Side, SideRules> = {
@@ -472,7 +515,7 @@ const SIDES: Record<Side, SideRules> = {
     grid: (p, at) => [at, p.bottom, at, p.top],
     label: (p, at) => ({ x: at, y: p.bottom + TICK + GAP, anchor: 'middle', baseline: 'top' }),
     room: (widest) => widest + GAP,
-    title: (p, _widest, line) => ({ x: (p.left + p.right) / 2, y: p.bottom + TICK + GAP + line + GAP, rotate: 0 }),
+    title: (p, reach) => ({ x: (p.left + p.right) / 2, y: p.bottom + TICK + GAP + reach + GAP, rotate: 0 }),
   },
   left: {
     edge: (p) => [p.left, p.top, p.left, p.bottom],
@@ -481,8 +524,8 @@ const SIDES: Record<Side, SideRules> = {
     label: (p, at) => ({ x: p.left - TICK - GAP, y: at, anchor: 'end', baseline: 'middle' }),
     room: (_widest, line) => line + GAP / 2,
     // Read from bottom to top; once rotated its line height is its width.
-    title: (p, widest, line) => ({
-      x: p.left - TICK - GAP - widest - GAP - line,
+    title: (p, reach, line) => ({
+      x: p.left - TICK - GAP - reach - GAP - line,
       y: (p.top + p.bottom) / 2,
       rotate: -90,
     }),
@@ -493,8 +536,8 @@ const SIDES: Record<Side, SideRules> = {
     grid: (p, at) => [p.left, at, p.right, at],
     label: (p, at) => ({ x: p.right + TICK + GAP, y: at, anchor: 'start', baseline: 'middle' }),
     room: (_widest, line) => line + GAP / 2,
-    title: (p, widest, line) => ({
-      x: p.right + TICK + GAP + widest + GAP + line,
+    title: (p, reach, line) => ({
+      x: p.right + TICK + GAP + reach + GAP + line,
       y: (p.top + p.bottom) / 2,
       rotate: 90,
     }),
@@ -523,14 +566,16 @@ function drawGuide(
   bands: BandScale | undefined,
   line: number,
 ): void {
-  const { side, key, axis, labels, widest } = guide;
+  const { side, key, axis, labels, reach, room } = guide;
   if (axis.hidden) {
     return;
   }
   const rules = SIDES[side];
   const ink = { stroke: INK, strokeWidth: 1 };
   // How many labels `spacing` apart to step over, to keep one that does not overlap the last.
-  const every = (spacing: number): number => Math.max(1, Math.ceil(rules.room(widest, line) / spacing));
+  const every = (spacing: number): number => Math.max(1, Math.ceil(room / spacing));
+  const label = (at: number) =>
+    axis.labelAngle === 0 ? rules.label(plot, at) : { ...rules.label(plot, at), ...labelStyle(side, axis.labelAngle) };
   drawing.push(drawing.shape(lineShape(rules.edge(plot)), ink, `axis|${key}`));
   if (axis.type === 'linear') {
     // Ticks are evenly spaced, and a lone tick has nothing to overlap.
@@ -540,18 +585,18 @@ function drawGuide(
       const at = scale!.at(tick);
       drawing.push(drawing.shape(lineShape(rules.tick(plot, at)), ink, `tick|${key}|${tick}`));
       if (i % nth === 0) {
-        drawing.push(drawing.text(labels[i]!, rules.label(plot, at)));
+        drawing.push(drawing.text(labels[i]!, label(at)));
       }
     });
   } else {
     const nth = every(bands!.step);
-    labels.forEach((label, i) => {
+    labels.forEach((name, i) => {
       if (i % nth === 0) {
-        drawing.push(drawing.text(label, rules.label(plot, bands!.start(i) + bands!.bandwidth / 2)));
+        drawing.push(drawing.text(name, label(bands!.start(i) + bands!.bandwidth / 2)));
       }
     });
   }
   if (axis.title !== undefined) {
-    drawing.push(drawing.text(axis.title, { ...rules.title(plot, widest, line), anchor: 'middle', baseline: 'top' }));
+    drawing.push(drawing.text(axis.title, { ...rules.title(plot, reach, line), anchor: 'middle', baseline: 'top' }));
   }
 }

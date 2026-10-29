@@ -2932,5 +2932,166 @@
     }
    ]
   }
+ },
+ {
+  "name": "labels-rotated-band",
+  "spec": {
+   "width": 360,
+   "height": 260,
+   "axes": {
+    "x": {
+     "type": "band",
+     "categories": [
+      "Zürich",
+      "Łódź",
+      "São Paulo",
+      "Reykjavík",
+      "Kraków",
+      "Montréal",
+      "Ho Chi Minh City",
+      "Kyiv"
+     ],
+     "labelAngle": -45,
+     "title": "City"
+    },
+    "y": {
+     "type": "linear"
+    }
+   },
+   "series": [
+    {
+     "type": "bar",
+     "name": "Visits",
+     "data": [
+      5,
+      3,
+      8,
+      4,
+      6,
+      7,
+      9,
+      2
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "labels-rotated-vertical",
+  "spec": {
+   "width": 300,
+   "height": 260,
+   "axes": {
+    "x": {
+     "type": "band",
+     "categories": [
+      "Zürich",
+      "Łódź",
+      "São Paulo",
+      "Reykjavík",
+      "Kraków",
+      "Montréal",
+      "Ho Chi Minh City",
+      "Kyiv"
+     ],
+     "labelAngle": -90
+    },
+    "y": {
+     "type": "linear"
+    }
+   },
+   "series": [
+    {
+     "type": "line",
+     "name": "Visits",
+     "data": [
+      5,
+      3,
+      8,
+      4,
+      6,
+      7,
+      9,
+      2
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "labels-rotated-linear",
+  "spec": {
+   "width": 360,
+   "height": 240,
+   "axes": {
+    "x": {
+     "type": "linear",
+     "labelAngle": 30,
+     "format": {
+      "prefix": "$"
+     }
+    },
+    "y": {
+     "type": "linear"
+    }
+   },
+   "series": [
+    {
+     "type": "scatter",
+     "name": "Price",
+     "data": [
+      [
+       1200000,
+       3
+      ],
+      [
+       2500000,
+       5
+      ],
+      [
+       4100000,
+       2
+      ]
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "labels-rotated-left",
+  "spec": {
+   "width": 360,
+   "height": 260,
+   "axes": {
+    "x": {
+     "type": "linear"
+    },
+    "y": {
+     "type": "band",
+     "categories": [
+      "Zürich",
+      "Łódź",
+      "São Paulo",
+      "Reykjavík",
+      "Kraków"
+     ],
+     "labelAngle": -30,
+     "title": "City"
+    }
+   },
+   "series": [
+    {
+     "type": "bar",
+     "name": "Visits",
+     "data": [
+      5,
+      3,
+      8,
+      4,
+      6
+     ]
+    }
+   ]
+  }
  }
 ]

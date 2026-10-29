@@ -1,5 +1,5 @@
 import { Budget, sketch, type Shape, type SketchStyle } from '@borrowdale/core';
-import { layoutText, measureText, type LayoutOptions } from '@borrowdale/text';
+import { layoutText, measureText, textBounds, type LayoutOptions } from '@borrowdale/text';
 import { INK } from './palette.js';
 import type { ChartNode } from './types.js';
 import type { CheckedChart } from './validate.js';
@@ -8,6 +8,14 @@ import type { CheckedChart } from './validate.js';
 // a work unit takes 0.4 to 2.3 µs depending on the fill, so this stays under about a second; 200
 // hachure-filled bars use about 130,000 units and 1,000 scatter points about 76,000.
 const MAX_OPERATIONS = 400_000;
+
+/** Distances from a point, in each direction. */
+export interface Extent {
+  left: number;
+  right: number;
+  up: number;
+  down: number;
+}
 
 type TextOptions = Omit<LayoutOptions, 'font' | 'fontSize'> & { fontSize?: number | undefined };
 
@@ -49,6 +57,16 @@ export class Drawing {
     const seed = `${this.#chart.seed}|${key}`;
     const style = { ...defaults, ...this.#chart.style, ...own, seed };
     return { kind: 'sketch', sketch: sketch(shape, style, this.#budget) };
+  }
+
+  /**
+   * How far `text` reaches from the point it is placed at, laid out with `options` and rotated: to
+   * the left and right, and up and down. Measures without keeping the label.
+   */
+  extent(text: string, options: Omit<TextOptions, 'x' | 'y'>): Extent {
+    const fontSize = options.fontSize ?? this.#chart.fontSize;
+    const { x, y, width, height } = textBounds(layoutText(text, { ...options, x: 0, y: 0, font: this.#chart.font, fontSize }));
+    return { left: -x, right: x + width, up: -y, down: y + height };
   }
 
   text(text: string, options: TextOptions): ChartNode {

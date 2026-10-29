@@ -74,10 +74,10 @@ export interface Sweep {
  * Categories around the circle: the spokes of a radar chart, the wedges of a rose. On a whole turn
  * the first is at `startAngle`; on part of one each takes an equal share, centred in it.
  */
-export interface AngleBandAxis extends Omit<BandAxis, 'title'>, Sweep {}
+export interface AngleBandAxis extends Omit<BandAxis, 'title' | 'labelAngle'>, Sweep {}
 
 /** Values around the circle, from the start of the sweep to its end. */
-export interface AngleLinearAxis extends Omit<LinearAxis, 'title' | 'percent'>, Sweep {}
+export interface AngleLinearAxis extends Omit<LinearAxis, 'title' | 'percent' | 'labelAngle'>, Sweep {}
 
 /** The hole in the middle, as a share of the radius, from 0 to 0.95. Defaults to 0. */
 interface Hole {
@@ -85,7 +85,7 @@ interface Hole {
 }
 
 /** Values out from the centre, from 0 unless `min` is set. */
-export interface RadiusLinearAxis extends Omit<LinearAxis, 'title' | 'percent'>, Hole {
+export interface RadiusLinearAxis extends Omit<LinearAxis, 'title' | 'percent' | 'labelAngle'>, Hole {
   /**
    * Gridlines as polygons through the spokes, or as circles. Defaults to `polygon` when every series
    * is a radar, else `circle`. A polygon needs a band angle axis.
@@ -94,7 +94,7 @@ export interface RadiusLinearAxis extends Omit<LinearAxis, 'title' | 'percent'>,
 }
 
 /** Categories out from the centre, as rings, the first outermost. */
-export interface RadiusBandAxis extends Omit<BandAxis, 'title'>, Hole {}
+export interface RadiusBandAxis extends Omit<BandAxis, 'title' | 'labelAngle'>, Hole {}
 
 /** The dial of a gauge. Defaults to 0 to 100 over -120 to 120 degrees. */
 export interface GaugeAxes {
@@ -106,7 +106,7 @@ export interface GaugeAxes {
  * rim. Without `min` and `max` it reaches from 0 to the values, rounded out to ticks. A whole turn
  * (`startAngle` 0, `endAngle` 360) makes a clock or a compass.
  */
-export interface GaugeAxis extends Omit<LinearAxis, 'title' | 'percent' | 'grid'>, Sweep {
+export interface GaugeAxis extends Omit<LinearAxis, 'title' | 'percent' | 'grid' | 'labelAngle'>, Sweep {
   /**
    * Coloured stretches of the dial, such as green, amber and red, in order and not overlapping: each
    * `from` below its `to`, and at or above the previous band's `to`. At most 100.
@@ -130,6 +130,11 @@ export interface BandAxis {
   title?: string | undefined;
   /** Draws neither the axis nor its labels, as in a sparkline. */
   hidden?: boolean | undefined;
+  /**
+   * Rotates the tick labels, clockwise in degrees from -90 to 90: -45 slants x labels up to the
+   * right, ending at their ticks. The axis makes room for the rotated labels. Defaults to 0.
+   */
+  labelAngle?: number | undefined;
 }
 
 export interface LinearAxis {
@@ -149,6 +154,11 @@ export interface LinearAxis {
   /** Gridlines across the plot at each tick. Defaults to true, except on `y2`. */
   grid?: boolean | undefined;
   hidden?: boolean | undefined;
+  /**
+   * Rotates the tick labels, clockwise in degrees from -90 to 90: -45 slants x labels up to the
+   * right, ending at their ticks. The axis makes room for the rotated labels. Defaults to 0.
+   */
+  labelAngle?: number | undefined;
   format?: NumberFormat | undefined;
 }
 

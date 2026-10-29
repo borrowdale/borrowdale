@@ -186,6 +186,8 @@ describe('chart validation', () => {
     ['a needle longer than the radius', { ...gauge, series: [{ type: 'gauge', name: 'G', value: 1, length: 1.5 }] }, 'Invalid chart: series[0].length must be a number from 0.1 to 1, got 1.5'],
     ['a gauge with gridlines', { ...gauge, axes: { angle: { type: 'linear', grid: true } } }, 'Invalid chart: axes.angle has an unknown key, "grid"'],
     ['a gauge beside a rose', { ...gauge, series: [...gauge.series, { type: 'rose', name: 'R', data: [1] }] }, 'Invalid chart: series[1] is a rose series, which cannot share a chart with series[0], a gauge series'],
+    ['labels rotated beyond upright', { ...bars, axes: { ...bands, x: { ...bands.x, labelAngle: 91 } } }, 'Invalid chart: axes.x.labelAngle must be a number from -90 to 90, got 91'],
+    ['rotated labels on a polar axis', { ...radar, axes: { angle: { ...spokes.angle, labelAngle: 45 } } }, 'Invalid chart: axes.angle has an unknown key, "labelAngle"'],
     ['a radar mixing values and pairs', { ...radar, series: [{ type: 'radar', name: 'R', data: [[1, 2], 3, [1, 4]] }] }, 'Invalid chart: series[0].data[1] is 3: every value is a [low, high] pair, or none is'],
     ['a range radar with a negative low', { ...radar, series: [{ type: 'radar', name: 'R', data: [[-1, 2], [0, 3], [1, 4]] }] }, 'Invalid chart: series[0].data[0] has a negative low value, -1'],
     ['a range radar with its high below its low', { ...radar, series: [{ type: 'radar', name: 'R', data: [[3, 2], [0, 3], [1, 4]] }] }, 'Invalid chart: series[0].data[0] has its high value below its low value, [3, 2]'],

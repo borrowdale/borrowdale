@@ -175,6 +175,16 @@ const speed: ChartSpec = {
 };
 const twoNeedles: ChartSpec = { ...speed, series: [...speed.series, { type: 'gauge', name: 'Limit', value: 120 }] };
 
+// Eight city names on 300 units: flat, every other one is left out; slanted, each fits.
+const cityAxis = { type: 'band', categories: ['Zürich', 'Łódź', 'São Paulo', 'Reykjavík', 'Kraków', 'Montréal', 'Ho Chi Minh City', 'Kyiv'] } as const;
+const flatCities: ChartSpec = {
+  width: 300,
+  height: 260,
+  axes: { x: cityAxis, y: { type: 'linear' } },
+  series: [{ type: 'bar', name: 'Visits', data: [5, 3, 8, 4, 6, 7, 9, 2] }],
+};
+const slantedCities: ChartSpec = { ...flatCities, axes: { x: { ...cityAxis, labelAngle: -60 }, y: { type: 'linear' } } };
+
 /** The mark whose tooltip is `title`. */
 function mark(layout: ChartLayout, title: string): ChartNode {
   const found = layout.nodes.find((node) => node.kind === 'mark' && node.title === title);
@@ -412,5 +422,13 @@ describe('layoutChart', () => {
 
   it('writes no value under a gauge of several needles', () => {
     expect(texts(layoutChart(twoNeedles))).not.toContain('88 km/h');
+  });
+
+  it('leaves out every other flat label that would overlap', () => {
+    expect(texts(layoutChart(flatCities))).not.toContain('Łódź');
+  });
+
+  it('fits every label once they are slanted', () => {
+    expect(texts(layoutChart(slantedCities))).toEqual(expect.arrayContaining(cityAxis.categories));
   });
 });

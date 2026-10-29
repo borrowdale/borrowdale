@@ -44,7 +44,8 @@ const MAX_STROKE_WIDTH = 100;
 const MIN_NEEDLE = 0.1;
 const DEFAULT_NEEDLE = 0.8;
 const MAX_BANDS = 100;
-const LINEAR_KEYS = ['type', 'title', 'min', 'max', 'percent', 'grid', 'hidden', 'format'];
+const LINEAR_KEYS = ['type', 'title', 'min', 'max', 'percent', 'grid', 'hidden', 'format', 'labelAngle'];
+const MAX_LABEL_ANGLE = 90;
 
 /**
  * Degrees by which a sweep may pass a whole turn, or fall short of it, through rounding and still be
@@ -69,6 +70,8 @@ export interface CheckedBandAxis {
   categories: string[];
   title: string | undefined;
   hidden: boolean;
+  /** 0 on an axis that cannot rotate its labels. */
+  labelAngle: number;
 }
 
 export interface CheckedLinearAxis {
@@ -80,6 +83,8 @@ export interface CheckedLinearAxis {
   percent: boolean;
   grid: boolean;
   hidden: boolean;
+  /** 0 on an axis that cannot rotate its labels. */
+  labelAngle: number;
   format: CheckedFormat;
 }
 
@@ -89,6 +94,7 @@ const anyValue = number(-MAX_VALUE, MAX_VALUE);
 const categoryValues = list(0, MAX_POINTS, nullable(number(-MAX_VALUE, MAX_VALUE, 'or null')));
 const valueAxis = oneOf(['y', 'y2'] as const);
 const curve = oneOf(CURVES);
+const labelAngle = number(-MAX_LABEL_ANGLE, MAX_LABEL_ANGLE);
 
 const color: Check<string> = (path, value) => {
   const given = text(MAX_COLOR)(path, value);
@@ -697,7 +703,7 @@ function checkAxis(grid: boolean): Check<CheckedAxis> {
       given === 'band' || given === 'linear' ? given : fail(typePath, `must be "band" or "linear", got ${show(given)}`),
     );
     return type === 'band'
-      ? checkBandAxis(['type', 'categories', 'title', 'hidden'])(path, raw)
+      ? checkBandAxis(['type', 'categories', 'title', 'hidden', 'labelAngle'])(path, raw)
       : checkLinearAxis(LINEAR_KEYS, grid)(path, raw);
   };
 }
@@ -712,7 +718,8 @@ function checkBandAxis(keys: readonly string[]): Check<CheckedBandAxis> {
     const categories = r.required('categories', list(1, MAX_CATEGORIES, text(MAX_NAME)));
     unique(categories, (i) => `${path}.categories[${i}]`);
     const title = r.optional('title', text());
-    return { type: 'band', path, categories, title, hidden: r.optional('hidden', boolean) ?? false };
+    const hidden = r.optional('hidden', boolean) ?? false;
+    return { type: 'band', path, categories, title, hidden, labelAngle: r.optional('labelAngle', labelAngle) ?? 0 };
   };
 }
 
@@ -742,6 +749,7 @@ function checkLinearAxis(keys: readonly string[], grid: boolean): Check<CheckedL
       percent,
       grid: r.optional('grid', boolean) ?? grid,
       hidden: r.optional('hidden', boolean) ?? false,
+      labelAngle: r.optional('labelAngle', labelAngle) ?? 0,
       format: {
         decimals: format?.optional('decimals', integer(0, MAX_DECIMALS)),
         thousands: formatText('thousands', ','),
