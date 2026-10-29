@@ -537,7 +537,7 @@ function checkPolarChart(r: Fields, base: CheckedChartBase, series: SeriesOf<'po
   }
   const spokes = angle.type === 'band' ? angle.categories.length : 0;
   if (spokes < 3 && radius.shape === 'polygon') {
-    fail('axes.angle.categories', `must have at least 3 categories for a radar chart, got ${spokes}`);
+    fail('axes.angle.categories', `must have at least 3 categories for the polygon gridlines of axes.radius, got ${spokes}`);
   }
   const band = angle.type === 'band' ? angle : radius.type === 'band' ? radius : undefined;
   for (const entry of series) {
