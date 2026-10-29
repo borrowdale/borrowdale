@@ -49,6 +49,9 @@ The result holds the drawing position (`x`, `y` of the baseline start), the `wid
 `family` and `fontSize` it is drawn in. A layout is plain JSON. The renderers draw a layout as it
 is and do not check it again, so draw only layouts that `layoutText` returned.
 
+`textBounds(layout)` returns the upright box that holds a rotated layout: its `box` turned by
+`rotate` around the `pivot`, for keeping rotated labels clear of each other and of the edges.
+
 Both return the text exactly as it will be drawn, which is the text that was measured:
 
 - variation selectors 15 and 16 and bidirectional controls removed, because they switch

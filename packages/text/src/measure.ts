@@ -1,4 +1,5 @@
-import type { LayoutOptions, MeasureOptions, TextAnchor, TextBaseline, TextExtent, TextLayout } from './types.js';
+import { cos, sin } from '@borrowdale/core/math';
+import type { Box, LayoutOptions, MeasureOptions, TextAnchor, TextBaseline, TextExtent, TextLayout } from './types.js';
 import {
   advanceOf,
   checkLayout,
@@ -56,6 +57,25 @@ export function layoutText(text: string, options: LayoutOptions): TextLayout {
     rotate,
     pivot: [round(x), round(y)],
   };
+}
+
+/**
+ * The upright box that holds a layout once it is rotated: its `box` turned by `rotate` degrees
+ * around its `pivot`. Equal to `box` when the text is not rotated.
+ */
+export function textBounds({ box, rotate, pivot: [px, py] }: TextLayout): Box {
+  const radians = (rotate * Math.PI) / 180;
+  const [c, s] = [cos(radians), sin(radians)];
+  const corners = [
+    [box.x, box.y],
+    [box.x + box.width, box.y],
+    [box.x, box.y + box.height],
+    [box.x + box.width, box.y + box.height],
+  ].map(([cx, cy]) => [px + (cx! - px) * c - (cy! - py) * s, py + (cx! - px) * s + (cy! - py) * c] as const);
+  const xs = corners.map(([cx]) => cx);
+  const ys = corners.map(([, cy]) => cy);
+  const [left, top] = [Math.min(...xs), Math.min(...ys)];
+  return { x: round(left), y: round(top), width: round(Math.max(...xs) - left), height: round(Math.max(...ys) - top) };
 }
 
 // Unrounded, so each value is rounded once, after the arithmetic.
