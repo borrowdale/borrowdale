@@ -624,12 +624,12 @@ function checkPieChart(r: Fields, base: CheckedChartBase, series: SeriesOf<'pie'
   if (series.length > MAX_RINGS) {
     fail('series', `of a pie chart must be 1 to ${MAX_RINGS} pie series, got ${series.length}`);
   }
-  const [first] = series;
+  const first = series[0]!;
   const count = series.length;
   const rings = series.map((pie, k) => {
     for (const key of ['startAngle', 'endAngle'] as const) {
-      if (pie[key] !== first![key]) {
-        fail(`${pie.path}.${key}`, `is ${pie[key]}, but series[0].${key} is ${first![key]}: nested rings share their sweep`);
+      if (pie[key] !== first[key]) {
+        fail(`${pie.path}.${key}`, `is ${pie[key]}, but series[0].${key} is ${first[key]}: nested rings share their sweep`);
       }
     }
     // Nested rings split the radius equally, the first outermost.
@@ -681,7 +681,7 @@ function checkPieSeries(r: Fields, path: string) {
     const i = data.findIndex((slice) => slice.radius === undefined);
     fail(`${path}.data[${i}].radius`, 'is missing: every slice has a radius, or none does');
   }
-  if (sized > 0 && !data.some((slice) => slice.radius! > 0)) {
+  if (sized > 0 && !data.some((slice) => (slice.radius ?? 0) > 0)) {
     fail(`${path}.data`, 'has no radius above 0, so there is nothing to draw');
   }
   const { startAngle, endAngle } = checkSweep(r, path);
@@ -809,8 +809,9 @@ function checkRadarData(r: Fields, path: string): { data: number[] } | { data: [
   const entry = (entryPath: string, raw: unknown): number | [number, number] =>
     Array.isArray(raw) ? checkRange(entryPath, raw) : value(entryPath, raw);
   const data = r.required('data', list(0, MAX_POINTS, entry));
-  const pairs = data.filter((item) => Array.isArray(item)).length;
-  if (pairs > 0 && pairs < data.length) {
+  const ranges = data.filter((item): item is [number, number] => Array.isArray(item));
+  const values = data.filter((item): item is number => !Array.isArray(item));
+  if (ranges.length > 0 && values.length > 0) {
     const i = data.findIndex((item) => !Array.isArray(item));
     fail(`${path}.data[${i}]`, `is ${show(data[i])}: every value is a [low, high] pair, or none is`);
   }
@@ -819,7 +820,7 @@ function checkRadarData(r: Fields, path: string): { data: number[] } | { data: [
       fail(`${path}.data[${i}]`, `has a negative low value, ${item[0]}`);
     }
   }
-  return pairs > 0 ? { data: data as [number, number][] } : { data: data as number[] };
+  return ranges.length > 0 ? { data: ranges } : { data: values };
 }
 
 function checkRange(path: string, raw: unknown): [number, number] {
