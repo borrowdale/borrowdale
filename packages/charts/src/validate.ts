@@ -430,8 +430,8 @@ function checkCartesianChart(
 ): CheckedCartesianChart {
   const axes = r.required('axes', fields);
   axes.allow(['x', 'y', 'y2']);
-  const x = axes.required('x', checkAxis(true));
-  const y = axes.required('y', checkAxis(true));
+  const x = axes.required('x', checkAxis(CARTESIAN_KEYS, true));
+  const y = axes.required('y', checkAxis(CARTESIAN_KEYS, true));
   const y2 = axes.optional('y2', checkLinearAxis(LINEAR_KEYS, false));
   if (x.type === 'band' && y.type === 'band') {
     fail('axes', 'has two band axes; one of x and y must be linear');
@@ -493,32 +493,28 @@ const SWEEP_KEYS = ['startAngle', 'endAngle'];
 const HOLE_KEYS = ['innerRadius'];
 const MAX_HOLE = 0.95;
 
-/** A polar axis, band or linear by its `type`, with the keys `extra` adds to either. */
-function checkPolarAxis(extra: readonly string[]): Check<CheckedAxis> {
-  return (path, raw) => {
-    const type = fields(path, raw).required('type', (typePath, given) =>
-      given === 'band' || given === 'linear' ? given : fail(typePath, `must be "band" or "linear", got ${show(given)}`),
-    );
-    return type === 'band'
-      ? checkBandAxis([...POLAR_BAND_KEYS, ...extra])(path, raw)
-      : checkLinearAxis([...POLAR_LINEAR_KEYS, ...extra], true)(path, raw);
-  };
+/** The keys of a polar axis, band or linear, with `extra` added to both. */
+function polarKeys(extra: readonly string[]): { band: readonly string[]; linear: readonly string[] } {
+  return { band: [...POLAR_BAND_KEYS, ...extra], linear: [...POLAR_LINEAR_KEYS, ...extra] };
 }
+
+const checkAngleAxis = checkAxis(polarKeys(SWEEP_KEYS), true, (r, path) => checkSweep(r, path));
+
+const checkRadiusAxis = checkAxis(polarKeys([...HOLE_KEYS, 'shape']), true, (r, _path, type) => ({
+  innerRadius: r.optional('innerRadius', number(0, MAX_HOLE)) ?? 0,
+  // Resolved against the series once they are known.
+  shapeGiven:
+    type === 'band'
+      ? r.optional('shape', (shapePath) => fail(shapePath, 'is only for a linear radius axis'))
+      : r.optional('shape', oneOf(['polygon', 'circle'] as const)),
+}));
 
 function checkPolarChart(r: Fields, base: CheckedChartBase, series: SeriesOf<'polar'>[]): CheckedPolarChart {
   const axes = r.required('axes', fields);
   axes.allow(['angle', 'radius']);
-  const raw = (_path: string, value: unknown): unknown => value;
-  const angleRaw = axes.required('angle', raw);
-  const angle = { ...checkPolarAxis(SWEEP_KEYS)('axes.angle', angleRaw), ...checkSweep(fields('axes.angle', angleRaw), 'axes.angle') };
-  const radiusRaw = axes.optional('radius', raw) ?? { type: 'linear' };
-  const radiusAxis = checkPolarAxis([...HOLE_KEYS, 'shape'])('axes.radius', radiusRaw);
-  const radiusFields = fields('axes.radius', radiusRaw);
-  const innerRadius = radiusFields.optional('innerRadius', number(0, MAX_HOLE)) ?? 0;
-  const shape =
-    radiusAxis.type === 'band'
-      ? radiusFields.optional('shape', (path) => fail(path, 'is only for a linear radius axis'))
-      : radiusFields.optional('shape', oneOf(['polygon', 'circle'] as const));
+  const angle = axes.required('angle', checkAngleAxis);
+  const { shapeGiven: shape, ...radiusAxis } =
+    axes.optional('radius', checkRadiusAxis) ?? checkRadiusAxis('axes.radius', { type: 'linear' });
   for (const entry of series) {
     const needs = SERIES_RULES[entry.type].polar;
     for (const [key, axis] of [['angle', angle], ['radius', radiusAxis]] as const) {
@@ -529,7 +525,6 @@ function checkPolarChart(r: Fields, base: CheckedChartBase, series: SeriesOf<'po
   }
   const radius: CheckedRadiusAxis = {
     ...radiusAxis,
-    innerRadius,
     shape: shape ?? (series.every((entry) => SERIES_RULES[entry.type].polar.polygon) ? 'polygon' : 'circle'),
   };
   if (radius.shape === 'polygon' && angle.type !== 'band') {
@@ -586,18 +581,24 @@ const GAUGE_KEYS = ['type', 'min', 'max', 'hidden', 'format', 'startAngle', 'end
 function checkGaugeChart(r: Fields, base: CheckedChartBase, series: SeriesOf<'gauge'>[]): CheckedGaugeChart {
   const axes = r.optional('axes', fields);
   axes?.allow(['angle']);
-  const raw = axes ? axes.required('angle', (_path, value): unknown => value) : { type: 'linear', min: 0, max: 100 };
-  const angleFields = fields('axes.angle', raw);
-  const axis = checkLinearAxis(GAUGE_KEYS, false)('axes.angle', raw);
-  const sweep = checkSweep(angleFields, 'axes.angle', GAUGE_SWEEP);
-  const bands = angleFields.optional(
+  const angle = axes ? axes.required('angle', checkDial) : checkDial('axes.angle', { type: 'linear', min: 0, max: 100 });
+  return { ...base, system: 'gauge', angle, series };
+}
+
+const checkDial = checkLinearAxis(GAUGE_KEYS, false, (r, path) => ({
+  ...checkSweep(r, path, GAUGE_SWEEP),
+  bands: checkGaugeBands(r.optional(
     'bands',
     list(0, MAX_BANDS, (path, value) => {
       const band = fields(path, value);
       band.allow(['from', 'to', 'color']);
       return { from: band.required('from', anyValue), to: band.required('to', anyValue), color: band.required('color', color) };
     }),
-  ) ?? [];
+  ) ?? []),
+}));
+
+/** Gauge bands, each ending after it starts and none starting before the one before it ends. */
+function checkGaugeBands(bands: CheckedGaugeBand[]): CheckedGaugeBand[] {
   bands.forEach((band, i) => {
     if (!(band.to > band.from)) {
       fail(`axes.angle.bands[${i}].to`, `must be greater than from (${band.from}), got ${band.to}`);
@@ -607,7 +608,7 @@ function checkGaugeChart(r: Fields, base: CheckedChartBase, series: SeriesOf<'ga
       fail(`axes.angle.bands[${i}].from`, `is ${band.from}, before the end of bands[${i - 1}] (${before.to})`);
     }
   });
-  return { ...base, system: 'gauge', angle: { ...axis, ...sweep, bands }, series };
+  return bands;
 }
 
 const MAX_RINGS = 10;
@@ -695,19 +696,31 @@ function checkPieSeries(r: Fields, path: string) {
   };
 }
 
-/** An x or y axis, band or linear by its `type`. Gridlines of a linear one default to `grid`. */
-function checkAxis(grid: boolean): Check<CheckedAxis> {
+/** Reads an axis' own keys beyond the common ones, from the same fields, once those are checked. */
+type Extra<X> = (r: Fields, path: string, type: 'band' | 'linear') => X;
+
+const noExtra: Extra<object> = () => ({});
+
+/**
+ * An axis, band or linear by its `type`, allowing `keys.band` or `keys.linear`. Gridlines of a
+ * linear one default to `grid`; `extra` reads what the axis has beyond the common keys.
+ */
+function checkAxis<X extends object = object>(
+  keys: { band: readonly string[]; linear: readonly string[] },
+  grid: boolean,
+  extra: Extra<X> = noExtra as Extra<X>,
+): Check<(CheckedBandAxis | CheckedLinearAxis) & X> {
   return (path, raw) => {
     const type = fields(path, raw).required('type', (typePath, given) =>
       given === 'band' || given === 'linear' ? given : fail(typePath, `must be "band" or "linear", got ${show(given)}`),
     );
-    return type === 'band'
-      ? checkBandAxis(['type', 'categories', 'title', 'hidden', 'labelAngle'])(path, raw)
-      : checkLinearAxis(LINEAR_KEYS, grid)(path, raw);
+    return type === 'band' ? checkBandAxis(keys.band, extra)(path, raw) : checkLinearAxis(keys.linear, grid, extra)(path, raw);
   };
 }
 
-function checkBandAxis(keys: readonly string[]): Check<CheckedBandAxis> {
+const CARTESIAN_KEYS = { band: ['type', 'categories', 'title', 'hidden', 'labelAngle'], linear: LINEAR_KEYS };
+
+function checkBandAxis<X extends object = object>(keys: readonly string[], extra: Extra<X> = noExtra as Extra<X>): Check<CheckedBandAxis & X> {
   return (path, raw) => {
     const r = fields(path, raw);
     r.allow(keys);
@@ -718,11 +731,15 @@ function checkBandAxis(keys: readonly string[]): Check<CheckedBandAxis> {
     unique(categories, (i) => `${path}.categories[${i}]`);
     const title = r.optional('title', text());
     const hidden = r.optional('hidden', boolean) ?? false;
-    return { type: 'band', path, categories, title, hidden, labelAngle: r.optional('labelAngle', labelAngle) ?? 0 };
+    return { type: 'band', path, categories, title, hidden, labelAngle: r.optional('labelAngle', labelAngle) ?? 0, ...extra(r, path, 'band') };
   };
 }
 
-function checkLinearAxis(keys: readonly string[], grid: boolean): Check<CheckedLinearAxis> {
+function checkLinearAxis<X extends object = object>(
+  keys: readonly string[],
+  grid: boolean,
+  extra: Extra<X> = noExtra as Extra<X>,
+): Check<CheckedLinearAxis & X> {
   return (path, raw) => {
     const r = fields(path, raw);
     r.allow(keys);
@@ -756,6 +773,7 @@ function checkLinearAxis(keys: readonly string[], grid: boolean): Check<CheckedL
         prefix: formatText('prefix', ''),
         suffix: formatText('suffix', percent ? '%' : ''),
       },
+      ...extra(r, path, 'linear'),
     };
   };
 }
