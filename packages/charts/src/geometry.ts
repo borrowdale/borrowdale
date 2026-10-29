@@ -66,13 +66,15 @@ export function polarFrame([cx, cy]: Point, radius: number, hole: number): Polar
 /**
  * The centre and radius of the largest part of a circle from `startAngle` to `endAngle` that fits in
  * `rect`, with a hole of `innerRadius` times the radius: its extent is that of its ends, the quarter
- * turns between them, and the centre or the ends of the hole.
+ * turns between them, and the centre or the ends of the hole. `padding` expands this normalized
+ * envelope on every side, reserving room for a translation of up to that share of the radius.
  */
 export function fitSweep(
   rect: Rect,
   startAngle: number,
   endAngle: number,
   innerRadius: number,
+  padding = 0,
 ): { center: Point; radius: number } {
   const quarters = Array.from({ length: 16 }, (_, i) => (Math.floor(startAngle / 90) + i) * 90).filter(
     (angle) => angle > startAngle && angle < endAngle,
@@ -82,7 +84,10 @@ export function fitSweep(
     innerRadius === 0 ? [[0, 0] as Point] : [startAngle, endAngle].map((angle) => scaled(onCircle(angle), innerRadius));
   const xs = [...outer, ...inner].map(([px]) => px);
   const ys = [...outer, ...inner].map(([, py]) => py);
-  const [minX, maxX, minY, maxY] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+  const [minX, maxX, minY, maxY] = [
+    Math.min(...xs) - padding, Math.max(...xs) + padding,
+    Math.min(...ys) - padding, Math.max(...ys) + padding,
+  ];
   const radius = Math.min((rect.right - rect.left) / (maxX - minX), (rect.bottom - rect.top) / (maxY - minY));
   const center: Point = [
     (rect.left + rect.right) / 2 - (radius * (minX + maxX)) / 2,

@@ -268,8 +268,8 @@ export function layoutPolar(drawing: Drawing, chart: CheckedPolarChart, rect: Re
       drawing.push(drawing.shape(shape, grid, `grid|radius|${tick}`));
     }
   }
-  // A band angle axis always draws its spokes, a radar's web; a linear one only as gridlines.
-  if (angleAxis.type === 'band' || (!angleAxis.hidden && angleAxis.grid)) {
+  // A visible band angle axis draws its spokes, a radar's web; a linear one only as gridlines.
+  if (!angleAxis.hidden && (angleAxis.type === 'band' || angleAxis.grid)) {
     for (const spoke of spokes) {
       const [[x1, y1], [x2, y2]] = [frame.point(spoke.angle, hole), frame.point(spoke.angle, radius)];
       drawing.push(drawing.shape({ kind: 'line', x1, y1, x2, y2 }, grid, `spoke|${spoke.key}`));

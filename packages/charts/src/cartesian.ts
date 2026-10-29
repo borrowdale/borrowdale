@@ -68,6 +68,7 @@ export function layoutCartesian(drawing: Drawing, chart: CheckedCartesianChart, 
   const valueAxisOf = (entry: CartesianSeries): AxisKey =>
     'axis' in entry && entry.axis === 'y2' ? 'y2' : horizontal ? 'x' : 'y';
   const spans = spansOf(series, valueAxisOf, linear);
+  const cuts = areaCutsOf(series, valueAxisOf);
   // An axis with nothing drawn on it starts at its fixed end, or shows 0 to 1.
   const extentOf = (key: AxisKey): [number, number] => {
     const end = linear[key]?.min ?? linear[key]?.max ?? 0;
@@ -135,6 +136,7 @@ export function layoutCartesian(drawing: Drawing, chart: CheckedCartesianChart, 
     scaleOf: (entry) => scales[valueAxisOf(entry)]!,
     axisOf: (entry) => linear[valueAxisOf(entry)]!,
     spansOf: (entry) => spans.get(entry)!,
+    areaCutsOf: (entry) => entry.type === 'area' ? cuts.get(stackOf(entry, valueAxisOf)) : undefined,
     slots: slotsOf(series, valueAxisOf),
     x: scales.x,
     xAxis: linear.x,
@@ -155,6 +157,7 @@ interface MarkContext {
   /** The axis of a series' values. */
   axisOf: (entry: CartesianSeries) => CheckedLinearAxis;
   spansOf: (entry: CartesianSeries) => Span[];
+  areaCutsOf: (entry: CartesianSeries) => ReadonlySet<number> | undefined;
   slots: { slotOf: (entry: CartesianSeries) => number; count: number };
   /** The x scale and axis of a chart with two linear axes. */
   x: PlacedScale | undefined;
@@ -224,6 +227,31 @@ function spansOf(
     }
   }
   return spans;
+}
+
+/**
+ * Shared interpolation endpoints for a monotone stack. A peer's gap must not make the same edge
+ * acquire a new tangent in only one series. Cuts keep the boundary vertex in both adjacent runs.
+ */
+function areaCutsOf(
+  series: readonly CartesianSeries[],
+  valueAxisOf: (entry: CartesianSeries) => AxisKey,
+): Map<string, Set<number>> {
+  const groups = new Map<string, Set<number>>();
+  for (const entry of series) {
+    if (entry.type !== 'area' || entry.stack === undefined || entry.curve !== 'monotone') {
+      continue;
+    }
+    const key = stackOf(entry, valueAxisOf);
+    const cuts = groups.get(key) ?? new Set<number>();
+    entry.data.forEach((value, i) => {
+      if (value !== null && (entry.data[i - 1] === null || entry.data[i + 1] === null)) {
+        cuts.add(i);
+      }
+    });
+    groups.set(key, cuts);
+  }
+  return groups;
 }
 
 /** The series a bar or area stacks with: its own, or every one of its type on its axis with its stack name. */
@@ -341,7 +369,7 @@ function drawArea(
     const along = frame.center(i);
     return span && { from: [along, scale.at(span[0])] as Point, to: [along, scale.at(span[1])] as Point };
   });
-  const nodes = runsOf(edges).flatMap((run, r) => {
+  const nodes = runsOf(edges, context.areaCutsOf(entry)).flatMap((run, r) => {
     const to = run.map((edge) => edge.to);
     const from = run.map((edge) => edge.from);
     const key = `${entry.name}|area|${r}`;

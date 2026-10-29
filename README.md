@@ -20,6 +20,9 @@ Planned: `@borrowdale/svg`, `@borrowdale/react`, `@borrowdale/elements`.
 
 ## Development
 
+Node.js 24 is required for development, builds and tests. Use `nvm use` with the included `.nvmrc`,
+or select Node 24 through your version manager, before installing dependencies.
+
 ```sh
 npm ci
 npx playwright-core install chromium-headless-shell   # once: the parity tests render in Chromium

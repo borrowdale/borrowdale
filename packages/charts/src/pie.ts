@@ -7,8 +7,8 @@ import { formatNumber, formatValue, PLAIN_FORMAT } from './scale.js';
 import type { CheckedPie, CheckedPieChart } from './validate.js';
 
 /**
- * Lays out a pie or donut, or nested rings of them, into `rect`, as large as fits with every slice
- * pulled out by its offset. `paintOf` gives each slice name its legend entry's paint.
+ * Lays out a pie or donut, or nested rings of them, into `rect`, reserving room on every side
+ * for the largest slice offset. `paintOf` gives each slice name its legend entry's paint.
  */
 export function layoutPie(
   drawing: Drawing,
@@ -29,9 +29,9 @@ export function layoutPie(
     ...series.flatMap((pie) => pie.data.filter((slice) => pulls(pie, slice)).map((slice) => slice.offset)),
     0,
   );
-  const fitted = fitSweep(rect, startAngle, endAngle, innermost / outermost);
+  const fitted = fitSweep(rect, startAngle, endAngle, innermost / outermost, offset);
   const { center } = fitted;
-  const radius = (offset === 0 ? fitted.radius : fitted.radius / (1 + offset)) / outermost;
+  const radius = fitted.radius / outermost;
 
   for (const pie of series) {
     const sum = totals.get(pie)!;

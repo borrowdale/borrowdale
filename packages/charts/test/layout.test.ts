@@ -708,3 +708,42 @@ describe('layoutChart', () => {
     expect(titles(layoutChart(tinyHiddenDial))).toEqual(['g: 5']);
   });
 });
+
+describe('hidden polar axes and offset pie fitting', () => {
+  it.each(['polarLine', 'radar', 'rose'] as const)('draws %s without spokes when both axes are hidden', (type) => {
+    const layout = layoutChart({ width: 300, height: 300, legend: 'none',
+      axes: { angle: { type: 'band', categories: ['A', 'B', 'C'], hidden: true },
+        radius: { type: 'linear', hidden: true } },
+      series: [{ type, name: 'S', data: [1, 2, 3] }],
+    });
+    expect(layout.nodes.filter((node) => node.kind === 'sketch')).toHaveLength(0);
+    expect(layout.nodes.some((node) => node.kind === 'mark')).toBe(true);
+    expect(texts(layout)).toEqual([]);
+  });
+
+  it.each([-10, 80, 170, 260])('fits a pulled narrow donut starting at %s degrees', (startAngle) => {
+    const layout = layoutChart({ width: 300, height: 260, legend: 'none',
+      style: { roughness: 0, fillStyle: 'solid' },
+      series: [{ type: 'pie', name: 'P', innerRadius: 0.9, startAngle, endAngle: startAngle + 20,
+        data: [{ name: 'a', value: 1, offset: 0.5 }, { name: 'b', value: 1 }] }],
+    });
+    expect(titles(layout)).toHaveLength(2);
+    expect(pointsOutside(layout)).toBe(0);
+  });
+
+  it('fits nested, rounded and variable-radius slices with different offsets', () => {
+    const layout = layoutChart({ width: 300, height: 260, legend: 'none',
+      style: { roughness: 0, fillStyle: 'solid' },
+      series: [
+        { type: 'pie', name: 'Inner', innerRadius: 0.5, outerRadius: 0.7,
+          startAngle: 80, endAngle: 100, padAngle: 2, cornerRadius: 8,
+          data: [{ name: 'a', value: 1, offset: 0.5 }, { name: 'b', value: 1 }] },
+        { type: 'pie', name: 'Outer', innerRadius: 0.75, outerRadius: 1,
+          startAngle: 80, endAngle: 100, padAngle: 1, cornerRadius: 4,
+          data: [{ name: 'a', value: 1, radius: 1 }, { name: 'b', value: 1, radius: 0.5, offset: 0.3 }] },
+      ],
+    });
+    expect(titles(layout)).toHaveLength(4);
+    expect(pointsOutside(layout)).toBe(0);
+  });
+});
