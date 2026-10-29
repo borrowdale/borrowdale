@@ -150,6 +150,69 @@ const charts = {
       { type: 'polarScatter', name: 'Bats', data: [[45, 1], [120, 4], [190, 3], [260, 5], [330, 2]] },
     ],
   },
+  gauge: {
+    width: 320,
+    height: 280,
+    title: 'Load',
+    axes: {
+      angle: {
+        type: 'linear',
+        min: 0,
+        max: 100,
+        format: { suffix: '%' },
+        bands: [
+          { from: 0, to: 60, color: '#009e73' },
+          { from: 60, to: 85, color: '#e69f00' },
+          { from: 85, to: 100, color: '#d55e00' },
+        ],
+      },
+    },
+    series: [{ type: 'gauge', name: 'CPU', value: 72 }],
+  },
+  rings: {
+    width: 420,
+    height: 380,
+    title: 'Sales by region',
+    series: [
+      {
+        type: 'pie',
+        name: '2025',
+        padAngle: 2,
+        cornerRadius: 4,
+        data: [
+          { name: 'North', value: 5, offset: 0.06 },
+          { name: 'South', value: 3 },
+          { name: 'East', value: 2 },
+        ],
+      },
+      {
+        type: 'pie',
+        name: '2024',
+        innerRadius: 0.25,
+        padAngle: 2,
+        cornerRadius: 4,
+        data: [
+          { name: 'North', value: 3 },
+          { name: 'South', value: 4 },
+          { name: 'West', value: 1 },
+        ],
+      },
+    ],
+  },
+  slanted: {
+    width: 480,
+    height: 320,
+    title: 'Visits by city',
+    axes: {
+      x: {
+        type: 'band',
+        categories: ['Zürich', 'Łódź', 'São Paulo', 'Reykjavík', 'Kraków', 'Montréal', 'Ho Chi Minh City', 'Kyiv'],
+        labelAngle: -45,
+      },
+      y: { type: 'linear' },
+    },
+    series: [{ type: 'bar', name: 'Visits', data: [5, 3, 8, 4, 6, 7, 9, 2] }],
+  },
   sparkline: {
     width: 120,
     height: 32,
