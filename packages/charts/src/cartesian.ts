@@ -8,7 +8,7 @@ import { GRID, GRID_WIDTH, hatched, INK, LINE_WIDTH, type Paint } from './palett
 import { stackGroup, stackSpans, type Span } from './stack.js';
 import { bandScale, formatValue, linearScale, place, type BandScale, type PlacedScale, type Scale } from './scale.js';
 import type { ChartNode, Curve } from './types.js';
-import type { CheckedAxis, CheckedCartesianChart, CheckedLinearAxis, SeriesOf } from './validate.js';
+import { isStacking, type CheckedAxis, type CheckedCartesianChart, type CheckedLinearAxis, type SeriesOf } from './validate.js';
 
 type CartesianSeries = SeriesOf<'cartesian'>;
 type MarkType = CartesianSeries['type'];
@@ -80,9 +80,9 @@ export function layoutCartesian(drawing: Drawing, chart: CheckedCartesianChart, 
     : x.labelAngle === 0
       ? depthOf('bottom', line, x, line)
       : guide('bottom', 'x', x, linear.x && linearScale(linear.x, extentOf('x'), rect.right - rect.left), drawing, line).depth;
-  const half = (y.type === 'linear' && !y.hidden) || (y2 && !y2.hidden) ? line / 2 : 0;
-  const top = rect.top + half;
-  const bottom = rect.bottom - Math.max(bottomDepth, half);
+  const ends = [endRoom(drawing, 'left', y, extentOf('y'), rect, line), endRoom(drawing, 'right', y2, extentOf('y2'), rect, line)];
+  const top = rect.top + Math.max(...ends.map((end) => end.up));
+  const bottom = rect.bottom - Math.max(bottomDepth, ...ends.map((end) => end.down));
   assertRoom({ left: rect.left, top, right: rect.right, bottom }, chart.width, chart.height);
   const yScale = linear.y && linearScale(linear.y, extentOf('y'), bottom - top);
   const y2Scale = y2 && linearScale(y2, extentOf('y2'), bottom - top);
@@ -197,7 +197,7 @@ function spansOf(
   valueAxisOf: (entry: CartesianSeries) => AxisKey,
   linear: Record<AxisKey, CheckedLinearAxis | undefined>,
 ): Map<CartesianSeries, Span[]> {
-  const stacking = series.filter((entry) => entry.type === 'bar' || entry.type === 'area');
+  const stacking = series.filter(isStacking);
   const spans: Map<CartesianSeries, Span[]> = stackSpans(
     stacking,
     (entry) => stackOf(entry, valueAxisOf),
@@ -470,6 +470,34 @@ function guide(
       ? Math.min(most((extent) => extent.left + extent.right), line / Math.abs(sin(radians))) + GAP
       : Math.min(most((extent) => extent.up + extent.down), line / Math.abs(cos(radians))) + GAP / 2;
   return { side, key, axis, labels, reach, room, depth: depthOf(side, reach, axis, line) };
+}
+
+/**
+ * How far the end labels of an axis at the side reach above and below the plot. Flat, a linear
+ * axis' labels are centred on its end ticks and reach half a line, and a band axis' sit inside the
+ * plot. Rotated, each end label reaches as far as its rotated bounds, counted whole: a band axis'
+ * labels are inside the plot by part of a band, so this leaves room to spare there. A linear axis'
+ * labels are measured from ticks for the chart's whole height, before the plot's height is known.
+ */
+function endRoom(
+  drawing: Drawing,
+  side: 'left' | 'right',
+  axis: CheckedAxis | undefined,
+  extent: [number, number],
+  rect: Rect,
+  line: number,
+): { up: number; down: number } {
+  if (!axis || axis.hidden) {
+    return { up: 0, down: 0 };
+  }
+  if (axis.labelAngle === 0) {
+    return axis.type === 'linear' ? { up: line / 2, down: line / 2 } : { up: 0, down: 0 };
+  }
+  // The first category is at the top, the first tick at the bottom.
+  const labels = axis.type === 'band' ? axis.categories : linearScale(axis, extent, rect.bottom - rect.top).labels;
+  const [high, low] = axis.type === 'band' ? [labels[0], labels.at(-1)] : [labels.at(-1), labels[0]];
+  const style = labelStyle(side, axis.labelAngle);
+  return { up: drawing.extent(high ?? '', style).up, down: drawing.extent(low ?? '', style).down };
 }
 
 /** How a rotated label is anchored at its tick: ending there on the left of it, starting there on the right. */

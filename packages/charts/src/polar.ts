@@ -19,6 +19,7 @@ import {
 import { stackGroup, stackSpans, type Span } from './stack.js';
 import type { ChartNode } from './types.js';
 import {
+  isStacking,
   TURN_ROUNDING,
   type CheckedFormat,
   type CheckedLinearAxis,
@@ -227,8 +228,9 @@ interface PolarContext {
 
 /** What a series type is on a polar chart. A new type fails to compile until it has an entry. */
 interface PolarMark<S extends PolarSeries> {
-  /** Every value the series puts on its value axis: the radius, or the angle for a radial bar. */
-  values: (entry: S, spans: Span[] | undefined) => number[];
+  /** Every value the series puts on each axis; none on a band axis. */
+  angle: (entry: S, spans: Span[] | undefined) => number[];
+  radius: (entry: S, spans: Span[] | undefined) => number[];
   /** Stands on zero, so its value axis always shows zero. */
   zero: boolean;
   /** Takes a share of its own beside other series in each category, as bars do. */
@@ -242,13 +244,22 @@ const spanValues = (_entry: unknown, spans: Span[] | undefined): number[] => (sp
 const plainValues = (entry: { data: readonly (number | null)[] }): number[] =>
   entry.data.filter((value): value is number => value !== null);
 
+const none = (): number[] => [];
+
 const POLAR_MARKS: { [K in PolarType]: PolarMark<Extract<PolarSeries, { type: K }>> } = {
-  radar: { values: (entry) => entry.data.flat(), zero: false, slot: false, legend: 'box', draw: drawRadar },
-  rose: { values: spanValues, zero: true, slot: true, legend: 'box', draw: drawWedges },
-  radialBar: { values: spanValues, zero: true, slot: true, legend: 'box', draw: drawWedges },
-  polarLine: { values: plainValues, zero: false, slot: false, legend: 'line', draw: drawPolarLine },
-  polarArea: { values: spanValues, zero: true, slot: false, legend: 'box', draw: drawPolarArea },
-  polarScatter: { values: (entry) => entry.data.map(([, r]) => r), zero: false, slot: false, legend: 'box', draw: drawPolarPoints },
+  radar: { angle: none, radius: (entry) => entry.data.flat(), zero: false, slot: false, legend: 'box', draw: drawRadar },
+  rose: { angle: none, radius: spanValues, zero: true, slot: true, legend: 'box', draw: drawWedges },
+  radialBar: { angle: spanValues, radius: none, zero: true, slot: true, legend: 'box', draw: drawWedges },
+  polarLine: { angle: none, radius: plainValues, zero: false, slot: false, legend: 'line', draw: drawPolarLine },
+  polarArea: { angle: none, radius: spanValues, zero: true, slot: false, legend: 'box', draw: drawPolarArea },
+  polarScatter: {
+    angle: (entry) => entry.data.map(([a]) => a),
+    radius: (entry) => entry.data.map(([, r]) => r),
+    zero: false,
+    slot: false,
+    legend: 'box',
+    draw: drawPolarPoints,
+  },
 };
 
 // One cast, as for the cartesian marks: the entry for `entry.type` takes exactly that series.
@@ -271,22 +282,13 @@ export function layoutPolar(drawing: Drawing, chart: CheckedPolarChart, rect: Re
   const sweep = endAngle - startAngle;
   const whole = sweep >= 360 - TURN_ROUNDING;
   const line = drawing.lineHeight();
-  const stacking = series.filter((entry) => entry.type === 'rose' || entry.type === 'radialBar' || entry.type === 'polarArea');
+  const stacking = series.filter(isStacking);
   const spans: Map<PolarSeries, Span[]> = stackSpans(stacking, (entry) => stackGroup(entry, 'polar'), () => false);
   const extentOf = (axis: 'angle' | 'radius'): [number, number] | undefined => {
     let [low, high] = [Infinity, -Infinity];
     for (const entry of series) {
       const mark = polarMarkOf(entry);
-      const values =
-        axis === 'angle'
-          ? entry.type === 'polarScatter'
-            ? entry.data.map(([a]) => a)
-            : entry.type === 'radialBar'
-              ? mark.values(entry, spans.get(entry))
-              : []
-          : entry.type === 'radialBar'
-            ? []
-            : mark.values(entry, spans.get(entry));
+      const values = mark[axis](entry, spans.get(entry));
       for (const value of [...values, ...(mark.zero && values.length > 0 ? [0] : [])]) {
         [low, high] = [Math.min(low, value), Math.max(high, value)];
       }

@@ -3093,5 +3093,41 @@
     }
    ]
   }
+ },
+ {
+  "name": "labels-rotated-left-linear",
+  "spec": {
+   "width": 300,
+   "height": 200,
+   "legend": "none",
+   "axes": {
+    "x": {
+     "type": "band",
+     "categories": [
+      "Alpha",
+      "Beta"
+     ]
+    },
+    "y": {
+     "type": "linear",
+     "labelAngle": -45,
+     "format": {
+      "prefix": "$"
+     },
+     "min": 1000000,
+     "max": 2000000
+    }
+   },
+   "series": [
+    {
+     "type": "line",
+     "name": "S",
+     "data": [
+      1500000,
+      1800000
+     ]
+    }
+   ]
+  }
  }
 ]

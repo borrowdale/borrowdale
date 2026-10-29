@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { SketchPath } from '@borrowdale/core';
 import { layoutChart, type ChartLayout, type ChartNode, type ChartSpec } from '@borrowdale/charts';
+import { textBounds } from '@borrowdale/text';
 import { handFont } from '../../text/test/support/hand-font.js';
 
 const months = { type: 'band', categories: ['Jan', 'Feb'] } as const;
@@ -189,6 +190,18 @@ const flatCities: ChartSpec = {
 };
 const slantedCities: ChartSpec = { ...flatCities, axes: { x: { ...cityAxis, labelAngle: -60 }, y: { type: 'linear' } } };
 
+// Long money labels slanted on the side: the lowest must stay on the 200-unit-high chart.
+const slantedMoney: ChartSpec = {
+  width: 300,
+  height: 200,
+  legend: 'none',
+  axes: {
+    x: { type: 'band', categories: ['Alpha', 'Beta'] },
+    y: { type: 'linear', labelAngle: -45, format: { prefix: '$' }, min: 1_000_000, max: 2_000_000 },
+  },
+  series: [{ type: 'line', name: 'S', data: [1_500_000, 1_800_000] }],
+};
+
 /** The mark whose tooltip is `title`. */
 function mark(layout: ChartLayout, title: string): ChartNode {
   const found = layout.nodes.find((node) => node.kind === 'mark' && node.title === title);
@@ -212,6 +225,16 @@ function outline(layout: ChartLayout, title: string): SketchPath {
 function width(layout: ChartLayout, title: string): number {
   const xs = [...outline(layout, title).d.matchAll(/(-?[\d.]+)[ ,](-?[\d.]+)/g)].map((match) => Number(match[1]));
   return Math.round(Math.max(...xs) - Math.min(...xs));
+}
+
+/** How far down the chart the label `text` reaches, once rotated. */
+function lowestEdge(layout: ChartLayout, text: string): number {
+  const found = layout.nodes.find((node) => node.kind === 'text' && node.text.text === text);
+  if (found?.kind !== 'text') {
+    throw new Error(`No label ${text}`);
+  }
+  const { y, height } = textBounds(found.text);
+  return y + height;
 }
 
 function titles(layout: ChartLayout): string[] {
@@ -434,5 +457,9 @@ describe('layoutChart', () => {
 
   it('fits every label once they are slanted', () => {
     expect(texts(layoutChart(slantedCities))).toEqual(expect.arrayContaining(cities));
+  });
+
+  it('keeps the lowest slanted label of a side axis on the chart, inside its padding', () => {
+    expect(lowestEdge(layoutChart(slantedMoney), '$1,000,000')).toBeLessThanOrEqual(192);
   });
 });

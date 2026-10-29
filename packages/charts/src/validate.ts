@@ -255,6 +255,14 @@ const SERIES_RULES = {
 
 type Rules = typeof SERIES_RULES;
 
+/**
+ * Whether a series stacks, as its type's rule says. Every stacking type has a `stack` field; one
+ * cast, since TypeScript cannot follow that through a lookup by a union key.
+ */
+export function isStacking<S extends CheckedSeries>(entry: S): entry is Extract<S, { stack: string | undefined }> {
+  return SERIES_RULES[entry.type].stacks;
+}
+
 // The types whose series stack, which are the ones a percent axis can show.
 const STACKING = (Object.keys(SERIES_RULES) as SeriesType[])
   .filter((type) => SERIES_RULES[type].stacks && SERIES_RULES[type].system === 'cartesian')
