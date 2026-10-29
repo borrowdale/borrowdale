@@ -68,50 +68,53 @@ export function layoutCartesian(drawing: Drawing, chart: CheckedCartesianChart, 
     return extent(key, series, spans, valueAxisOf) ?? [end, end];
   };
 
-  // Vertical room first: the bottom axis takes a fixed depth, and a value axis at the side centres
-  // its labels on the ticks, so the end ones stick out by half a line.
   const line = drawing.lineHeight();
-  // Rotated labels of a linear x axis are measured from ticks for the chart's whole width: its plot's
-  // width depends on this depth, through the labels of the y axes.
-  const bottomDepth = x.hidden
-    ? 0
-    : x.labelAngle === 0
-      ? depthOf('bottom', line, x, line)
-      : guide('bottom', 'x', x, linear.x && linearScale(linear.x, extentOf('x'), rect.right - rect.left), drawing, line).depth;
-  const ends = [endRoom(drawing, 'left', y, extentOf('y'), rect, line), endRoom(drawing, 'right', y2, extentOf('y2'), rect, line)];
-  const top = rect.top + Math.max(...ends.map((end) => end.up));
-  const bottom = rect.bottom - Math.max(bottomDepth, ...ends.map((end) => end.down));
-  assertRoom({ left: rect.left, top, right: rect.right, bottom }, chart.width, chart.height);
-  const yScale = linear.y && linearScale(linear.y, extentOf('y'), bottom - top);
-  const y2Scale = y2 && linearScale(y2, extentOf('y2'), bottom - top);
-
-  // Then horizontal room, from the widest label at each side.
-  const left = guide('left', 'y', y, yScale, drawing, line);
-  const right = y2 && guide('right', 'y2', y2, y2Scale, drawing, line);
-  let plotLeft = rect.left + (y.hidden ? 0 : left.depth);
-  let plotRight = rect.right - (!right || right.axis.hidden ? 0 : right.depth);
-  const xScale = linear.x && linearScale(linear.x, extentOf('x'), plotRight - plotLeft);
-  if (xScale && !x.hidden && x.labelAngle === 0) {
-    // The first and last labels are centred on the ends of the axis, so they need room outside it.
-    plotLeft = Math.max(plotLeft, rect.left + drawing.width(xScale.labels[0] ?? '') / 2);
-    plotRight = Math.min(plotRight, rect.right - drawing.width(xScale.labels.at(-1) ?? '') / 2);
-  } else if (!x.hidden && x.labelAngle !== 0) {
-    // Rotated, the first label reaches left from its tick and the last right, as far as the whole of
-    // each may: the ticks of a band axis are inside the plot, so this leaves room to spare there.
-    const labels = x.type === 'band' ? x.categories : xScale!.labels;
-    const style = labelStyle('bottom', x.labelAngle);
-    plotLeft = Math.max(plotLeft, rect.left + drawing.extent(labels[0] ?? '', style).left);
-    plotRight = Math.min(plotRight, rect.right - drawing.extent(labels.at(-1) ?? '', style).right);
+  // The plot is what is left once the axes have their room: below it the x axis' labels and title,
+  // above and below its ends the y axes' end labels, and beside it the y axes' labels and titles.
+  const fitPlot = (reserve: Reserve) => {
+    const top = rect.top + reserve.up;
+    const bottom = rect.bottom - Math.max(reserve.bottom, reserve.down);
+    assertRoom({ left: rect.left, top, right: rect.right, bottom }, chart.width, chart.height);
+    const yScale = linear.y && linearScale(linear.y, extentOf('y'), bottom - top);
+    const y2Scale = y2 && linearScale(y2, extentOf('y2'), bottom - top);
+    const left = guide('left', 'y', y, yScale, drawing, line);
+    const right = y2 && guide('right', 'y2', y2, y2Scale, drawing, line);
+    let plotLeft = rect.left + (y.hidden ? 0 : left.depth);
+    let plotRight = rect.right - (!right || right.axis.hidden ? 0 : right.depth);
+    const xScale = linear.x && linearScale(linear.x, extentOf('x'), plotRight - plotLeft);
+    const below = guide('bottom', 'x', x, xScale, drawing, line);
+    // The first and last x labels reach past the ends of the axis.
+    plotLeft = Math.max(plotLeft, rect.left + below.ends.left);
+    plotRight = Math.min(plotRight, rect.right - below.ends.right);
+    const plot: Rect = { left: plotLeft, top, right: plotRight, bottom };
+    assertRoom(plot, chart.width, chart.height);
+    return { plot, scales: { x: xScale, y: yScale, y2: y2Scale }, guides: [below, left, ...(right ? [right] : [])] };
+  };
+  // A linear axis' labels are its ticks', and those depend on the plot's size. So room is reserved
+  // for ticks over the whole chart first, then again, once, for the plot's own ticks should they
+  // reach further, which only rotated labels can.
+  const first = reserveFor([
+    guide('bottom', 'x', x, linear.x && linearScale(linear.x, extentOf('x'), rect.right - rect.left), drawing, line),
+    guide('left', 'y', y, linear.y && linearScale(linear.y, extentOf('y'), rect.bottom - rect.top), drawing, line),
+    ...(y2 ? [guide('right', 'y2', y2, linearScale(y2, extentOf('y2'), rect.bottom - rect.top), drawing, line)] : []),
+  ]);
+  let fitted = fitPlot(first);
+  const needed = reserveFor(fitted.guides);
+  if (needed.bottom > first.bottom || needed.up > first.up || needed.down > first.down) {
+    fitted = fitPlot({
+      bottom: Math.max(first.bottom, needed.bottom),
+      up: Math.max(first.up, needed.up),
+      down: Math.max(first.down, needed.down),
+    });
   }
-  const plot: Rect = { left: plotLeft, top, right: plotRight, bottom };
-  assertRoom(plot, chart.width, chart.height);
+  const { plot, guides } = fitted;
+  const [xScale, yScale, y2Scale] = [fitted.scales.x, fitted.scales.y, fitted.scales.y2];
 
   const scales: Record<AxisKey, PlacedScale | undefined> = {
     x: xScale && place(xScale, [plot.left, plot.right]),
     y: yScale && place(yScale, [plot.bottom, plot.top]),
     y2: y2Scale && place(y2Scale, [plot.bottom, plot.top]),
   };
-  const guides = [guide('bottom', 'x', x, xScale, drawing, line), left, ...(right ? [right] : [])];
   const across: [number, number] = horizontal ? [plot.top, plot.bottom] : [plot.left, plot.right];
   const bands = band && bandScale(band.categories.length, across, BAND_PADDING);
   const frame = makeFrame(plot, horizontal, bands);
@@ -419,10 +422,40 @@ interface Guide {
   reach: number;
   /** How much room a label needs along the axis, to thin out labels that would overlap. */
   room: number;
+  /** How far its end labels reach past the ends of the axis: left and right, or up and down. */
+  ends: Extent;
+  /** How a label sits at its tick, over the side's own placing: rotated labels' anchor and turn. */
+  style: Partial<ReturnType<typeof labelStyle>>;
   /** How far the axis reaches out from the plot: tick, gap, labels and title. */
   depth: number;
 }
 
+/** The room an axis' labels need below the plot and above and below its ends. */
+interface Reserve {
+  bottom: number;
+  up: number;
+  down: number;
+}
+
+function reserveFor(guides: readonly Guide[]): Reserve {
+  const [below, ...sides] = guides;
+  const shown = sides.filter((side) => !side.axis.hidden);
+  return {
+    bottom: below!.axis.hidden ? 0 : below!.depth,
+    up: Math.max(0, ...shown.map((side) => side.ends.up)),
+    down: Math.max(0, ...shown.map((side) => side.ends.down)),
+  };
+}
+
+const NO_ENDS: Extent = { left: 0, right: 0, up: 0, down: 0 };
+
+/**
+ * An axis at one side of the plot with its labels measured. Flat labels take one line below the plot
+ * and the widest label's width beside it; a linear axis' end labels, centred on its end ticks, reach
+ * half their width past the ends below the plot, and half a line beside it, while a band axis' sit
+ * inside. Rotated labels take their rotated bounds, the end ones counted whole: a band axis' are
+ * inside the plot by part of a band, so that leaves room to spare.
+ */
 function guide(
   side: Side,
   key: AxisKey,
@@ -433,13 +466,22 @@ function guide(
 ): Guide {
   const labels = axis.type === 'band' ? axis.categories : scale!.labels;
   const angle = axis.labelAngle;
+  const [first, last] = [labels[0] ?? '', labels.at(-1) ?? ''];
+  const shown = (ends: Extent): Extent => (axis.hidden ? NO_ENDS : ends);
   if (angle === 0) {
-    // One line deep below the plot, as wide as the widest beside it.
     const widest = Math.max(0, ...labels.map((label) => drawing.width(label)));
     const reach = side === 'bottom' ? line : widest;
-    return { side, key, axis, labels, reach, room: SIDES[side].room(widest, line), depth: depthOf(side, reach, axis, line) };
+    const ends =
+      axis.type === 'band'
+        ? NO_ENDS
+        : side === 'bottom'
+          ? { ...NO_ENDS, left: drawing.width(first) / 2, right: drawing.width(last) / 2 }
+          : { ...NO_ENDS, up: line / 2, down: line / 2 };
+    const room = SIDES[side].room(widest, line);
+    return { side, key, axis, labels, reach, room, ends: shown(ends), style: {}, depth: depthOf(reach, axis, line) };
   }
-  const extents = labels.map((label) => drawing.extent(label, labelStyle(side, angle)));
+  const style = labelStyle(side, angle);
+  const extents = labels.map((label) => drawing.extent(label, style));
   const most = (of: (extent: Extent) => number): number => Math.max(0, ...extents.map(of));
   const reach = most((extent) => (side === 'bottom' ? extent.down : side === 'left' ? extent.left : extent.right));
   // Along the axis, a slanted label needs its line height divided by the sine of its slant to clear
@@ -449,35 +491,13 @@ function guide(
     side === 'bottom'
       ? Math.min(most((extent) => extent.left + extent.right), line / Math.abs(sin(radians))) + GAP
       : Math.min(most((extent) => extent.up + extent.down), line / Math.abs(cos(radians))) + GAP / 2;
-  return { side, key, axis, labels, reach, room, depth: depthOf(side, reach, axis, line) };
-}
-
-/**
- * How far the end labels of an axis at the side reach above and below the plot. Flat, a linear
- * axis' labels are centred on its end ticks and reach half a line, and a band axis' sit inside the
- * plot. Rotated, each end label reaches as far as its rotated bounds, counted whole: a band axis'
- * labels are inside the plot by part of a band, so this leaves room to spare there. A linear axis'
- * labels are measured from ticks for the chart's whole height, before the plot's height is known.
- */
-function endRoom(
-  drawing: Drawing,
-  side: 'left' | 'right',
-  axis: CheckedAxis | undefined,
-  extent: [number, number],
-  rect: Rect,
-  line: number,
-): { up: number; down: number } {
-  if (!axis || axis.hidden) {
-    return { up: 0, down: 0 };
-  }
-  if (axis.labelAngle === 0) {
-    return axis.type === 'linear' ? { up: line / 2, down: line / 2 } : { up: 0, down: 0 };
-  }
   // The first category is at the top, the first tick at the bottom.
-  const labels = axis.type === 'band' ? axis.categories : linearScale(axis, extent, rect.bottom - rect.top).labels;
-  const [high, low] = axis.type === 'band' ? [labels[0], labels.at(-1)] : [labels.at(-1), labels[0]];
-  const style = labelStyle(side, axis.labelAngle);
-  return { up: drawing.extent(high ?? '', style).up, down: drawing.extent(low ?? '', style).down };
+  const [top, bottom] = axis.type === 'band' ? [first, last] : [last, first];
+  const ends =
+    side === 'bottom'
+      ? { ...NO_ENDS, left: drawing.extent(first, style).left, right: drawing.extent(last, style).right }
+      : { ...NO_ENDS, up: drawing.extent(top, style).up, down: drawing.extent(bottom, style).down };
+  return { side, key, axis, labels, reach, room, ends: shown(ends), style, depth: depthOf(reach, axis, line) };
 }
 
 /** How a rotated label is anchored at its tick: ending there on the left of it, starting there on the right. */
@@ -493,7 +513,7 @@ function labelStyle(side: Side, angle: number): { anchor: TextAnchor; baseline: 
 }
 
 // How far an axis reaches out from the plot: tick, gap, its labels' `reach` and its title.
-function depthOf(side: Side, reach: number, axis: CheckedAxis, line: number): number {
+function depthOf(reach: number, axis: CheckedAxis, line: number): number {
   return TICK + GAP + reach + titleDepth(axis, line);
 }
 
@@ -582,8 +602,7 @@ function drawGuide(
   const ink = { stroke: INK, strokeWidth: 1 };
   // How many labels `spacing` apart to step over, to keep one that does not overlap the last.
   const every = (spacing: number): number => Math.max(1, Math.ceil(room / spacing));
-  const label = (at: number) =>
-    axis.labelAngle === 0 ? rules.label(plot, at) : { ...rules.label(plot, at), ...labelStyle(side, axis.labelAngle) };
+  const label = (at: number) => ({ ...rules.label(plot, at), ...guide.style });
   drawing.push(drawing.shape(lineShape(rules.edge(plot)), ink, `axis|${key}`));
   if (axis.type === 'linear') {
     // Ticks are evenly spaced, and a lone tick has nothing to overlap.

@@ -26,6 +26,10 @@ export class Drawing {
   readonly #budget = new Budget(MAX_OPERATIONS);
   readonly #labels = new Set<string>();
   readonly #missing = new Set<string>();
+  // Measurements by their text and options: layout measures an axis' labels more than once as it
+  // fits the plot.
+  readonly #widths = new Map<string, number>();
+  readonly #extents = new Map<string, Extent>();
 
   constructor(chart: CheckedChart) {
     this.#chart = chart;
@@ -46,7 +50,7 @@ export class Drawing {
   }
 
   width(text: string, fontSize = this.#chart.fontSize): number {
-    return measureText(text, { font: this.#chart.font, fontSize }).width;
+    return remembered(this.#widths, `${fontSize}|${text}`, () => measureText(text, { font: this.#chart.font, fontSize }).width);
   }
 
   /**
@@ -65,8 +69,11 @@ export class Drawing {
    */
   extent(text: string, options: Omit<TextOptions, 'x' | 'y'>): Extent {
     const fontSize = options.fontSize ?? this.#chart.fontSize;
-    const { x, y, width, height } = textBounds(layoutText(text, { ...options, x: 0, y: 0, font: this.#chart.font, fontSize }));
-    return { left: -x, right: x + width, up: -y, down: y + height };
+    const { anchor, baseline, rotate } = options;
+    return remembered(this.#extents, `${fontSize}|${anchor}|${baseline}|${rotate}|${text}`, () => {
+      const { x, y, width, height } = textBounds(layoutText(text, { ...options, x: 0, y: 0, font: this.#chart.font, fontSize }));
+      return { left: -x, right: x + width, up: -y, down: y + height };
+    });
   }
 
   text(text: string, options: TextOptions): ChartNode {
@@ -87,4 +94,15 @@ export class Drawing {
   mark(title: string, nodes: ChartNode[]): void {
     this.nodes.push({ kind: 'mark', title, nodes });
   }
+}
+
+/** The value `known` holds for `key`, measured and kept the first time it is asked for. */
+function remembered<T>(known: Map<string, T>, key: string, measure: () => T): T {
+  const kept = known.get(key);
+  if (kept !== undefined) {
+    return kept;
+  }
+  const value = measure();
+  known.set(key, value);
+  return value;
 }
