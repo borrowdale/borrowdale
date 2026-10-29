@@ -4,6 +4,8 @@ import { fail } from './read.js';
 export const PAD = 8;
 /** Space between a label and what it labels, and between parts of the chart. */
 export const GAP = 6;
+/** The share of each band's step left as a gap between bands. */
+export const BAND_PADDING = 0.2;
 /** The length of a tick mark. */
 export const TICK = 5;
 

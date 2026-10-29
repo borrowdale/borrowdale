@@ -3,7 +3,8 @@ import { cos, sin } from '@borrowdale/core/math';
 import type { TextAnchor, TextBaseline } from '@borrowdale/text';
 import { areaPath, linePath } from './curves.js';
 import type { Drawing, Extent } from './drawing.js';
-import { assertRoom, GAP, TICK, type Rect } from './frame.js';
+import { assertRoom, BAND_PADDING, GAP, TICK, type Rect } from './frame.js';
+import { loneDot, POINT_SIZE, runsOf, solid } from './marks.js';
 import { GRID, GRID_WIDTH, hatched, INK, LINE_WIDTH, type Paint } from './palette.js';
 import { stackGroup, stackSpans, type Span } from './stack.js';
 import { bandScale, formatValue, linearScale, place, type BandScale, type PlacedScale, type Scale } from './scale.js';
@@ -14,11 +15,8 @@ type CartesianSeries = SeriesOf<'cartesian'>;
 type MarkType = CartesianSeries['type'];
 type AxisKey = 'x' | 'y' | 'y2';
 
-// The share of each band's step left as a gap between bands.
-export const BAND_PADDING = 0.2;
 // The share of a bar's slot left as a gap between bars side by side.
 const BAR_GAP = 0.1;
-export const POINT_SIZE = 6;
 const MAX_BUBBLE = 60;
 
 /** What a series type is on a cartesian chart. A new type fails to compile until it has an entry. */
@@ -376,7 +374,7 @@ function drawPoints(
       return;
     }
     const style: SketchStyle =
-      size === undefined ? { stroke: paint.color, fill: paint.color, fillStyle: 'solid' } : hatched(paint);
+      size === undefined ? solid(paint.color) : hatched(paint);
     const sizeText = size === undefined ? '' : `, size ${formatValue(size)}`;
     drawing.mark(`${entry.name}: ${valueText(px, xAxis)}, ${valueText(py, context.axisOf(entry))}${sizeText}`, [
       drawing.shape({ kind: 'circle', cx: x.at(px), cy: y.at(py), diameter }, style, `${entry.name}|${i}`, entry.style),
@@ -395,29 +393,11 @@ function lineOrDot(
   own: SketchStyle,
 ): ChartNode {
   if (run.length === 1) {
-    const [cx, cy] = frame.point(run[0]!);
-    const dot = { stroke: style.stroke, fill: style.stroke, fillStyle: 'solid' as const };
-    return drawing.shape({ kind: 'circle', cx, cy, diameter: POINT_SIZE * 0.7 }, dot, key, own);
+    return loneDot(drawing, frame.point(run[0]!), style.stroke, key, own);
   }
   return drawing.shape({ kind: 'path', d: frame.line(run, curve) }, style, key, own);
 }
 
-/** The values between nulls, each run in order. */
-function runsOf<T>(entries: readonly (T | null)[]): T[][] {
-  const runs: T[][] = [];
-  let current: T[] = [];
-  for (const entry of entries) {
-    if (entry === null) {
-      if (current.length > 0) {
-        runs.push(current);
-      }
-      current = [];
-    } else {
-      current.push(entry);
-    }
-  }
-  return current.length > 0 ? [...runs, current] : runs;
-}
 
 /** A value in a tooltip, in its axis format; on a percent axis it is the value, not its share. */
 function valueText(value: number, axis: CheckedLinearAxis): string {

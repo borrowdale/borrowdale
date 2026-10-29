@@ -1,204 +1,30 @@
 import type { Point, Shape, SketchStyle } from '@borrowdale/core';
-import { cos, sin } from '@borrowdale/core/math';
-import type { TextAnchor, TextBaseline } from '@borrowdale/text';
-import { BAND_PADDING, POINT_SIZE } from './cartesian.js';
 import { coordinate } from './curves.js';
 import type { Drawing } from './drawing.js';
-import { assertRoom, GAP, type Rect } from './frame.js';
+import { assertRoom, BAND_PADDING, GAP, type Rect } from './frame.js';
+import { alignTowards, fitSweep, isWholeTurn, polarFrame, RADIANS, RIM_SHARE, rimTicks, sliceShape, type PolarFrame } from './geometry.js';
+import { loneDot, POINT_SIZE, runsOf, solid } from './marks.js';
 import { GRID, GRID_WIDTH, hatched, LINE_WIDTH, type Paint } from './palette.js';
 import {
   bandScale,
-  formatNumber,
   formatValue,
   linearScale,
   place,
   PLAIN_FORMAT,
   type PlacedScale,
-  type Scale,
 } from './scale.js';
 import { stackGroup, stackSpans, type Span } from './stack.js';
 import type { ChartNode } from './types.js';
 import {
   isStacking,
-  TURN_ROUNDING,
   type CheckedFormat,
   type CheckedLinearAxis,
-  type CheckedPieChart,
   type CheckedPolarChart,
   type SeriesOf,
 } from './validate.js';
 
-const RADIANS = Math.PI / 180;
-// Beyond this share of a unit vector's length off an axis, a label is placed to that side.
-const SIDE = 0.01;
-// The share of the rim's length that ticks around it are spaced along.
-const RIM_SHARE = 0.5;
-
-/** The point `degrees` clockwise from the top of a circle of radius 1 around the origin. */
-export function onCircle(degrees: number): Point {
-  const radians = degrees * RADIANS;
-  return [sin(radians), -cos(radians)];
-}
-
-/**
- * Lays out a pie or donut, or nested rings of them, into `rect`, as large as fits with every slice
- * pulled out by its offset. `paintOf` gives each slice name its legend entry's paint.
- */
-export function layoutPie(drawing: Drawing, chart: CheckedPieChart, rect: Rect, paintOf: ReadonlyMap<string, Paint>): void {
-  assertRoom(rect, chart.width, chart.height);
-  const { series } = chart;
-  const { startAngle, endAngle } = series[0]!;
-  const outermost = Math.max(...series.map((pie) => pie.outerRadius));
-  const innermost = Math.min(...series.map((pie) => pie.innerRadius));
-  const offset = Math.max(...series.flatMap((pie) => pie.data.map((slice) => slice.offset)));
-  const fitted = fitSweep(rect, startAngle, endAngle, innermost / outermost);
-  const { center } = fitted;
-  const radius = (offset === 0 ? fitted.radius : fitted.radius / (1 + offset)) / outermost;
-
-  for (const pie of series) {
-    const total = pie.data.reduce((sum, slice) => sum + slice.value, 0);
-    const largest = Math.max(...pie.data.map((slice) => slice.radius ?? 0));
-    const [outer, hole] = [radius * pie.outerRadius, radius * pie.innerRadius];
-    // Space between slices only where there is more than one slice to part.
-    const pad = pie.data.filter((slice) => slice.value > 0).length > 1 ? pie.padAngle / 2 : 0;
-    let angle = startAngle;
-    pie.data.forEach((slice) => {
-      const from = angle;
-      angle += (slice.value / total) * (endAngle - startAngle);
-      // A slice whose sweep rounds to nothing, or that the space between slices takes up, has nothing
-      // to draw.
-      if (!(angle - pad > from + pad)) {
-        return;
-      }
-      const reach = slice.radius === undefined ? outer : hole + ((outer - hole) * slice.radius) / largest;
-      const [dx, dy] = onCircle((from + angle) / 2);
-      const pulled: Point = slice.offset === 0 ? center : [center[0] + slice.offset * radius * dx, center[1] + slice.offset * radius * dy];
-      const share = formatNumber((slice.value / total) * 100, 1, PLAIN_FORMAT);
-      const ring = series.length === 1 ? '' : `${pie.name}, `;
-      drawing.mark(`${ring}${slice.name}: ${formatValue(slice.value)} (${share}%)`, [
-        drawing.shape(
-          sliceShape(pulled, reach, hole, from + pad, angle - pad, pie.cornerRadius),
-          hatched(paintOf.get(slice.name)!),
-          `${pie.name}|${slice.name}|slice`,
-          pie.style,
-        ),
-      ]);
-    });
-  }
-}
-
-/**
- * The centre and radius of the largest part of a circle from `startAngle` to `endAngle` that fits in
- * `rect`, with a hole of `innerRadius` times the radius: its extent is that of its ends, the quarter
- * turns between them, and the centre or the ends of the hole.
- */
-export function fitSweep(rect: Rect, startAngle: number, endAngle: number, innerRadius: number): { center: Point; radius: number } {
-  const quarters = Array.from({ length: 16 }, (_, i) => (Math.floor(startAngle / 90) + i) * 90).filter(
-    (angle) => angle > startAngle && angle < endAngle,
-  );
-  const outer = [startAngle, endAngle, ...quarters].map(onCircle);
-  const inner =
-    innerRadius === 0 ? [[0, 0] as Point] : [startAngle, endAngle].map((angle) => scaled(onCircle(angle), innerRadius));
-  const xs = [...outer, ...inner].map(([px]) => px);
-  const ys = [...outer, ...inner].map(([, py]) => py);
-  const [minX, maxX, minY, maxY] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
-  const radius = Math.min((rect.right - rect.left) / (maxX - minX), (rect.bottom - rect.top) / (maxY - minY));
-  const center: Point = [
-    (rect.left + rect.right) / 2 - (radius * (minX + maxX)) / 2,
-    (rect.top + rect.bottom) / 2 - (radius * (minY + maxY)) / 2,
-  ];
-  return { center, radius };
-}
-
-/**
- * A slice from `from` to `to` degrees between `hole` and `radius`, a ring when it is a whole turn,
- * with its corners rounded to `corner` where there is room for them.
- */
-export function sliceShape([cx, cy]: Point, radius: number, hole: number, from: number, to: number, corner = 0): Shape {
-  const whole = to - from >= 360 - TURN_ROUNDING;
-  if (hole === 0 && whole) {
-    return { kind: 'circle', cx, cy, diameter: 2 * radius };
-  }
-  const at = (r: number, angle: number): string => {
-    const [px, py] = onCircle(angle);
-    return `${coordinate(cx + r * px)} ${coordinate(cy + r * py)}`;
-  };
-  // An arc whose ends round to one point is dropped, by SVG and the stroke engine alike, as one arc
-  // over nearly a whole turn would be. So each edge is two arcs that meet at the middle of the
-  // slice, and neither sweeps more than half a turn.
-  const middle = (from + to) / 2;
-  const arcTo = (r: number, angle: number, clockwise: boolean): string =>
-    ` A${coordinate(r)} ${coordinate(r)} 0 0 ${clockwise ? 1 : 0} ${at(r, angle)}`;
-  const edge = (r: number, end: number, clockwise: boolean): string =>
-    `${arcTo(r, middle, clockwise)}${arcTo(r, end, clockwise)}`;
-  if (whole) {
-    // A ring: the outer and the inner circle, the inner a hole by the even-odd rule the engine fills
-    // paths with.
-    const outer = `M${at(radius, from)}${edge(radius, from, true)} Z`;
-    return { kind: 'path', d: `${outer} M${at(hole, from)}${edge(hole, from, false)} Z` };
-  }
-  if (corner > 0) {
-    return { kind: 'path', d: roundedSlice(at, edge, [cx, cy], radius, hole, from, to, corner) };
-  }
-  // A path, not core's arc shape, whose sampling makes a thin slice cost more the thinner it is.
-  const start = hole === 0 ? `M${coordinate(cx)} ${coordinate(cy)} L${at(radius, from)}` : `M${at(radius, from)}`;
-  const back = hole === 0 ? '' : ` L${at(hole, to)}${edge(hole, from, false)}`;
-  return { kind: 'path', d: `${start}${edge(radius, to, true)}${back} Z` };
-}
-
-/**
- * A slice's path with its corners rounded: each corner is cut where the edges are `corner` from it,
- * and a quadratic curve through the corner joins the cuts. A corner shrinks to fit half its edges.
- * The tip of a pie slice, at the centre, stays sharp.
- */
-function roundedSlice(
-  at: (r: number, angle: number) => string,
-  edge: (r: number, end: number, clockwise: boolean) => string,
-  [cx, cy]: Point,
-  radius: number,
-  hole: number,
-  from: number,
-  to: number,
-  corner: number,
-): string {
-  const half = ((to - from) * RADIANS) / 2;
-  const outer = Math.min(corner, (radius - hole) / 2, radius * half);
-  // The cut along the arc, in degrees.
-  const outerTurn = outer / radius / RADIANS;
-  const rim = `Q${at(radius, from)} ${at(radius, from + outerTurn)}${edge(radius, to - outerTurn, true)} Q${at(radius, to)} ${at(radius - outer, to)}`;
-  if (hole === 0) {
-    return `M${coordinate(cx)} ${coordinate(cy)} L${at(radius - outer, from)} ${rim} Z`;
-  }
-  const inner = Math.min(corner, (radius - hole) / 2, hole * half);
-  const innerTurn = inner / hole / RADIANS;
-  const back = `Q${at(hole, to)} ${at(hole, to - innerTurn)}${edge(hole, from + innerTurn, false)} Q${at(hole, from)} ${at(hole + inner, from)}`;
-  return `M${at(radius - outer, from)} ${rim} L${at(hole + inner, to)} ${back} Z`;
-}
-
 type PolarSeries = SeriesOf<'polar'>;
 type PolarType = PolarSeries['type'];
-
-/** A polar chart's place: its centre and radius, and the points around it. */
-interface PolarFrame {
-  center: Point;
-  radius: number;
-  /** The radius of the hole in the middle. */
-  hole: number;
-  /** The point `distance` from the centre, `degrees` clockwise from the top. */
-  point: (degrees: number, distance: number) => Point;
-}
-
-function polarFrame([cx, cy]: Point, radius: number, hole: number): PolarFrame {
-  return {
-    center: [cx, cy],
-    radius,
-    hole,
-    point: (degrees, distance) => {
-      const [dx, dy] = onCircle(degrees);
-      return [cx + distance * dx, cy + distance * dy];
-    },
-  };
-}
 
 /** Where values and categories go on one of a polar chart's axes. */
 interface PolarScale {
@@ -280,7 +106,7 @@ export function layoutPolar(drawing: Drawing, chart: CheckedPolarChart, rect: Re
   const { angle: angleAxis, radius: radiusAxis, series } = chart;
   const { startAngle, endAngle } = angleAxis;
   const sweep = endAngle - startAngle;
-  const whole = sweep >= 360 - TURN_ROUNDING;
+  const whole = isWholeTurn(startAngle, endAngle);
   const line = drawing.lineHeight();
   const stacking = series.filter(isStacking);
   const spans: Map<PolarSeries, Span[]> = stackSpans(stacking, (entry) => stackGroup(entry, 'polar'), () => false);
@@ -390,10 +216,7 @@ export function layoutPolar(drawing: Drawing, chart: CheckedPolarChart, rect: Re
   if (!angleAxis.hidden) {
     spokeAngles(angleAxis, angle).forEach((a, i) => {
       const [px, py] = frame.point(a, radius + GAP);
-      const [dx, dy] = onCircle(a);
-      const anchor: TextAnchor = dx > SIDE ? 'start' : dx < -SIDE ? 'end' : 'middle';
-      const baseline: TextBaseline = dy < -SIDE ? 'bottom' : dy > SIDE ? 'top' : 'middle';
-      drawing.push(drawing.text(rimLabels[i]!, { x: px, y: py, anchor, baseline }));
+      drawing.push(drawing.text(rimLabels[i]!, { x: px, y: py, ...alignTowards(a, true) }));
     });
   }
 }
@@ -416,18 +239,11 @@ function bandAround(count: number, start: number, sweep: number, whole: boolean)
   });
 }
 
-/** The ticks of a linear angle axis that get a spoke and a label: on a whole turn the end is the start. */
-export function rimTicks(scale: Scale, whole: boolean): { ticks: number[]; labels: string[] } {
-  const last = scale.ticks.length - 1;
-  const repeats = whole && last > 0 && scale.fraction(scale.ticks[last]!) === 1 && scale.fraction(scale.ticks[0]!) === 0;
-  return repeats ? { ticks: scale.ticks.slice(0, last), labels: scale.labels.slice(0, last) } : scale;
-}
-
 /** The angle of each spoke: each category's middle, or each tick of a linear angle axis. */
 function spokeAngles(axis: CheckedPolarChart['angle'], angle: PolarScale): number[] {
   return axis.type === 'band'
     ? axis.categories.map((_, k) => angle.band(k).middle)
-    : rimTicks(angle.linear!, axis.endAngle - axis.startAngle >= 360 - TURN_ROUNDING).ticks.map((tick) => angle.linear!.at(tick));
+    : rimTicks(angle.linear!, isWholeTurn(axis.startAngle, axis.endAngle)).ticks.map((tick) => angle.linear!.at(tick));
 }
 
 function circleOrArc(frame: PolarFrame, distance: number, from: number, to: number, whole: boolean): Shape {
@@ -543,9 +359,8 @@ function drawPolarPoints(context: PolarContext, entry: Extract<PolarSeries, { ty
   const { formats } = context;
   entry.data.forEach(([a, r], i) => {
     const [cx, cy] = frame.point(angle.linear!.at(a), radius.linear!.at(r));
-    const style = { stroke: paint.color, fill: paint.color, fillStyle: 'solid' as const };
     drawing.mark(`${entry.name}: ${formatValue(a, formats.angle)}, ${formatValue(r, formats.radius)}`, [
-      drawing.shape({ kind: 'circle', cx, cy, diameter: POINT_SIZE }, style, `${entry.name}|${i}`, entry.style),
+      drawing.shape({ kind: 'circle', cx, cy, diameter: POINT_SIZE }, solid(paint.color), `${entry.name}|${i}`, entry.style),
     ]);
   });
 }
@@ -555,21 +370,15 @@ function drawPolarPoints(context: PolarContext, entry: Extract<PolarSeries, { ty
  * radar's outline does; with nulls, the last run joins the first across the start.
  */
 function polarRuns<T>(entries: readonly (T | null)[], whole: boolean): { points: T[]; closed: boolean }[] {
-  const runs: T[][] = [[]];
-  for (const entry of entries) {
-    if (entry === null) {
-      runs.push([]);
-    } else {
-      runs.at(-1)!.push(entry);
-    }
-  }
-  const closed = whole && runs.length === 1 && runs[0]!.length >= 3;
+  const runs = runsOf(entries);
+  const gaps = entries.includes(null);
+  const closed = whole && !gaps && runs.length === 1 && runs[0]!.length >= 3;
   // On a whole turn the last category is next to the first, so a run that ends the data goes on
   // into the run that starts it.
-  if (whole && runs.length > 1 && runs[0]!.length > 0 && runs.at(-1)!.length > 0) {
+  if (whole && gaps && entries[0] !== null && entries.at(-1) !== null && runs.length > 1) {
     runs[0] = [...runs.pop()!, ...runs[0]!];
   }
-  return runs.filter((run) => run.length > 0).map((points) => ({ points, closed }));
+  return runs.map((points) => ({ points, closed }));
 }
 
 /** A run of points as an outline, closed or open; a lone point, which a line cannot show, as a dot. */
@@ -581,9 +390,7 @@ function polyline(
   own: SketchStyle,
 ): ChartNode {
   if (points.length === 1) {
-    const [cx, cy] = points[0]!;
-    const dot = { stroke: style.stroke, fill: style.stroke, fillStyle: 'solid' as const };
-    return drawing.shape({ kind: 'circle', cx, cy, diameter: POINT_SIZE * 0.7 }, dot, key, own);
+    return loneDot(drawing, points[0]!, style.stroke, key, own);
   }
   const shape: Shape = closed ? { kind: 'polygon', points } : { kind: 'linearPath', points };
   return drawing.shape(shape, closed ? { ...style, fill: 'none' } : style, key, own);
@@ -593,6 +400,3 @@ function pathThrough(points: readonly Point[]): string {
   return points.map(([px, py], i) => `${i === 0 ? 'M' : 'L'}${coordinate(px)} ${coordinate(py)}`).join(' ');
 }
 
-function scaled([px, py]: Point, factor: number): Point {
-  return [px * factor, py * factor];
-}

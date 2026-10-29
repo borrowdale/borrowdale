@@ -1,11 +1,11 @@
 import type { Point, Shape } from '@borrowdale/core';
-import type { TextAnchor, TextBaseline } from '@borrowdale/text';
 import type { Drawing } from './drawing.js';
 import { assertRoom, GAP, TICK, type Rect } from './frame.js';
 import { GRID, GRID_WIDTH, hatched, INK, type Paint } from './palette.js';
-import { fitSweep, onCircle, rimTicks, sliceShape } from './polar.js';
+import { alignTowards, fitSweep, isWholeTurn, polarFrame, RADIANS, RIM_SHARE, rimTicks, sliceShape } from './geometry.js';
+import { solid } from './marks.js';
 import { formatValue, linearScale, place } from './scale.js';
-import { TURN_ROUNDING, type CheckedGaugeChart, type SeriesOf } from './validate.js';
+import type { CheckedGaugeChart, SeriesOf } from './validate.js';
 
 type GaugeSeries = SeriesOf<'gauge'>;
 
@@ -18,9 +18,6 @@ const NEEDLE_HALF = 3;
 const HUB = 5;
 // How much larger than the labels a lone gauge writes its value.
 const VALUE_GROWTH = 4;
-const RADIANS = Math.PI / 180;
-// Beyond this share of a unit vector's length off an axis, a label is placed to that side.
-const SIDE = 0.01;
 
 /**
  * Lays out a gauge into `rect`: its dial, as large as fits, with coloured bands along the rim, ticks
@@ -30,7 +27,7 @@ const SIDE = 0.01;
 export function layoutGauge(drawing: Drawing, chart: CheckedGaugeChart, rect: Rect, paints: Paint[]): void {
   const { angle: axis, series } = chart;
   const { startAngle, endAngle, bands } = axis;
-  const whole = endAngle - startAngle >= 360 - TURN_ROUNDING;
+  const whole = isWholeTurn(startAngle, endAngle);
   const lone = series.length === 1;
   const valueSize = chart.fontSize + VALUE_GROWTH;
   // Room under the centre for the hub and a lone gauge's value, which the dial may not leave.
@@ -45,16 +42,13 @@ export function layoutGauge(drawing: Drawing, chart: CheckedGaugeChart, rect: Re
   }
   assertRoom({ left: 0, top: 0, right: radius, bottom: radius }, chart.width, chart.height);
   const [cx, cy] = center;
-  const point = (degrees: number, distance: number): Point => {
-    const [dx, dy] = onCircle(degrees);
-    return [cx + distance * dx, cy + distance * dy];
-  };
+  const { point } = polarFrame(center, radius, 0);
 
   let [low, high] = [0, 0];
   for (const value of [...series.map((entry) => entry.value), ...bands.flatMap((band) => [band.from, band.to])]) {
     [low, high] = [Math.min(low, value), Math.max(high, value)];
   }
-  const rimLength = radius * (endAngle - startAngle) * RADIANS * 0.5;
+  const rimLength = radius * (endAngle - startAngle) * RADIANS * RIM_SHARE;
   const scale = place(linearScale(axis, [low, high], rimLength), [startAngle, endAngle]);
   const [first, last] = scale.domain;
   const origin = Math.min(Math.max(0, first), last);
@@ -84,10 +78,7 @@ export function layoutGauge(drawing: Drawing, chart: CheckedGaugeChart, rect: Re
       drawing.push(drawing.shape({ kind: 'line', x1, y1, x2, y2 }, ink, `tick|${tick}`));
       // Inside the rim, so each label is placed towards the centre.
       const [px, py] = point(at, inner - TICK - GAP);
-      const [dx, dy] = onCircle(at);
-      const anchor: TextAnchor = dx > SIDE ? 'end' : dx < -SIDE ? 'start' : 'middle';
-      const baseline: TextBaseline = dy < -SIDE ? 'top' : dy > SIDE ? 'bottom' : 'middle';
-      drawing.push(drawing.text(labels[i]!, { x: px, y: py, anchor, baseline }));
+      drawing.push(drawing.text(labels[i]!, { x: px, y: py, ...alignTowards(at, false) }));
     });
   }
 
@@ -122,6 +113,3 @@ function needle(point: (degrees: number, distance: number) => Point, degrees: nu
   };
 }
 
-function solid(color: string): { stroke: string; fill: string; fillStyle: 'solid' } {
-  return { stroke: color, fill: color, fillStyle: 'solid' };
-}
