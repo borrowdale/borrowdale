@@ -78,7 +78,8 @@ and a radius above 0.
 fills the chart: a lone pie's `outerRadius` changes nothing. `startAngle` (default 0) and `endAngle`
 (default 360) are degrees clockwise from the top, the end greater than the start and at most 360
 past it; −90 and 90 make a half donut. A slice's `offset` is a share of the outermost ring's radius,
-and the pie shrinks to leave room for it; a slice that is the whole of its pie is not pulled out.
+and the pie shrinks to leave room for the largest offset on every side, whichever way the slices are
+pulled; a slice that is the whole of its pie is not pulled out.
 With several pies, each slice's tooltip starts with its ring's name.
 
 The polar types share the rules of their cartesian twins: a `rose` is a `bar` wrapped around a band
@@ -93,7 +94,9 @@ turn with two needles of different lengths.
 
 `curve` is `linear` (the default), `monotone` (smooth, and never beyond the data between points),
 or `step`, `step-before` or `step-after` (the value changes halfway, at the point, or at the next
-point).
+point). In a stack of `monotone` areas with missing values, each layer is smoothed only between the
+categories where a layer's run begins or ends, or where its gap begins or ends with layers drawn both
+below and above it, so the layers still meet exactly; a layer can show a corner there.
 
 With `y` as the band axis, bars and lines run horizontally. A sparkline is a small chart with
 `hidden: true` on both axes.
