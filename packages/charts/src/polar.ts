@@ -243,7 +243,7 @@ const plainValues = (entry: { data: readonly (number | null)[] }): number[] =>
   entry.data.filter((value): value is number => value !== null);
 
 const POLAR_MARKS: { [K in PolarType]: PolarMark<Extract<PolarSeries, { type: K }>> } = {
-  radar: { values: (entry) => entry.data, zero: false, slot: false, legend: 'box', draw: drawRadar },
+  radar: { values: (entry) => entry.data.flat(), zero: false, slot: false, legend: 'box', draw: drawRadar },
   rose: { values: spanValues, zero: true, slot: true, legend: 'box', draw: drawWedges },
   radialBar: { values: spanValues, zero: true, slot: true, legend: 'box', draw: drawWedges },
   polarLine: { values: plainValues, zero: false, slot: false, legend: 'line', draw: drawPolarLine },
@@ -447,11 +447,25 @@ function slotsOf(series: readonly PolarSeries[], keyOf: (entry: PolarSeries) => 
   return { slotOf: (entry) => keys.indexOf(keyOf(entry)), count: keys.length };
 }
 
+/** A radar's outline through its values on the spokes, or a range radar's band between its pairs. */
 function drawRadar(context: PolarContext, entry: Extract<PolarSeries, { type: 'radar' }>, paint: Paint): void {
   const { drawing, frame, angle, radius } = context;
-  const points = entry.data.map((value, k) => frame.point(angle.band(k).middle, radius.linear!.at(value)));
+  const around = (values: readonly number[]): Point[] =>
+    values.map((value, k) => frame.point(angle.band(k).middle, radius.linear!.at(value)));
   const style = { ...hatched(paint), strokeWidth: LINE_WIDTH };
-  drawing.mark(entry.name, [drawing.shape({ kind: 'polygon', points }, style, `${entry.name}|radar`, entry.style)]);
+  const key = `${entry.name}|radar`;
+  if (isRanges(entry.data)) {
+    const [low, high] = [around(entry.data.map(([value]) => value)), around(entry.data.map(([, value]) => value))];
+    // The inner outline a hole in the outer, by the even-odd rule the engine fills paths with.
+    const band: Shape = { kind: 'path', d: `${pathThrough(high)} Z ${pathThrough(low)} Z` };
+    drawing.mark(entry.name, [drawing.shape(band, style, key, entry.style)]);
+    return;
+  }
+  drawing.mark(entry.name, [drawing.shape({ kind: 'polygon', points: around(entry.data) }, style, key, entry.style)]);
+}
+
+function isRanges(data: readonly number[] | readonly (readonly [number, number])[]): data is readonly (readonly [number, number])[] {
+  return Array.isArray(data[0]);
 }
 
 /**

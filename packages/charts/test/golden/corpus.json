@@ -2668,5 +2668,110 @@
     }
    ]
   }
+ },
+ {
+  "name": "radar-circle-grid",
+  "spec": {
+   "width": 320,
+   "height": 300,
+   "axes": {
+    "angle": {
+     "type": "band",
+     "categories": [
+      "Speed",
+      "Power",
+      "Range",
+      "Control",
+      "Stamina"
+     ]
+    },
+    "radius": {
+     "type": "linear",
+     "shape": "circle"
+    }
+   },
+   "series": [
+    {
+     "type": "radar",
+     "name": "Ada",
+     "data": [
+      8,
+      6,
+      7,
+      9,
+      5
+     ]
+    },
+    {
+     "type": "radar",
+     "name": "Bo",
+     "data": [
+      5,
+      9,
+      6,
+      4,
+      8
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "radar-range",
+  "spec": {
+   "width": 320,
+   "height": 300,
+   "axes": {
+    "angle": {
+     "type": "band",
+     "categories": [
+      "Speed",
+      "Power",
+      "Range",
+      "Control",
+      "Stamina"
+     ]
+    }
+   },
+   "series": [
+    {
+     "type": "radar",
+     "name": "Usual",
+     "data": [
+      [
+       4,
+       8
+      ],
+      [
+       3,
+       6
+      ],
+      [
+       5,
+       7
+      ],
+      [
+       6,
+       9
+      ],
+      [
+       2,
+       5
+      ]
+     ]
+    },
+    {
+     "type": "radar",
+     "name": "Today",
+     "data": [
+      7,
+      5,
+      6,
+      8,
+      4
+     ]
+    }
+   ]
+  }
  }
 ]

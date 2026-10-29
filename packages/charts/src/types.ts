@@ -277,8 +277,11 @@ export interface PieSeries extends SeriesBase {
 
 export interface RadarSeries extends SeriesBase {
   type: 'radar';
-  /** One value per spoke, none negative. */
-  data: readonly number[];
+  /**
+   * One value per spoke, none negative; or one `[low, high]` pair per spoke, high not below low, for
+   * a range radar that fills the band between them.
+   */
+  data: readonly number[] | readonly (readonly [low: number, high: number])[];
 }
 
 /**

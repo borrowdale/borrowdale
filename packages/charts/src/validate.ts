@@ -176,7 +176,7 @@ const SERIES_RULES = {
     stacks: false,
     polar: { angle: 'band', radius: 'linear' },
     keys: ['data'],
-    read: (r: Fields) => ({ data: r.required('data', list(0, MAX_POINTS, number(0, MAX_VALUE))) }),
+    read: (r: Fields, path: string) => checkRadarData(r, path),
   },
   // The polar twins of bar, line, area and scatter: the same fields, read by the same readers, less
   // what a polar chart has no use for (a second value axis, curves).
@@ -514,7 +514,8 @@ function checkPolarChart(r: Fields, base: CheckedChartBase, series: SeriesOf<'po
       const which = band === angle ? 'angle' : 'radius';
       fail(`${entry.path}.data`, `has ${entry.data.length} values, but axes.${which}.categories has ${band.categories.length}`);
     }
-    if (radius.type === 'linear') {
+    // A radar's values are read as not negative.
+    if (radius.type === 'linear' && entry.type !== 'radar') {
       // Wedges and stacks grow out from 0; a line may go below it only on an axis that starts below.
       const outward = entry.type === 'rose' || ('stack' in entry && entry.stack !== undefined);
       entry.data.forEach((value, i) => {
@@ -712,6 +713,25 @@ function checkDash(path: string, dash: unknown): number[] {
   // Copied by index, as core's check read it.
   const lengths = dash as number[];
   return Array.from({ length: lengths.length }, (_, i) => lengths[i]!);
+}
+
+/** A radar's values: a number per spoke, or a `[low, high]` pair per spoke for a range radar. */
+function checkRadarData(r: Fields, path: string): { data: number[] } | { data: [number, number][] } {
+  const value = number(0, MAX_VALUE);
+  const entry = (entryPath: string, raw: unknown): number | [number, number] =>
+    Array.isArray(raw) ? checkRange(entryPath, raw) : value(entryPath, raw);
+  const data = r.required('data', list(0, MAX_POINTS, entry));
+  const pairs = data.filter((item) => Array.isArray(item)).length;
+  if (pairs > 0 && pairs < data.length) {
+    const i = data.findIndex((item) => !Array.isArray(item));
+    fail(`${path}.data[${i}]`, `is ${show(data[i])}: every value is a [low, high] pair, or none is`);
+  }
+  for (const [i, item] of data.entries()) {
+    if (Array.isArray(item) && item[0] < 0) {
+      fail(`${path}.data[${i}]`, `has a negative low value, ${item[0]}`);
+    }
+  }
+  return pairs > 0 ? { data: data as [number, number][] } : { data: data as number[] };
 }
 
 function checkRange(path: string, raw: unknown): [number, number] {
