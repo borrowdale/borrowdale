@@ -1,0 +1,43 @@
+{
+  "name": "@borrowdale/charts",
+  "version": "0.0.0",
+  "description": "Hand-drawn charts for SVG and canvas, laid out the same way in Node and the browser.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "@borrowdale/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "!dist/*.tsbuildinfo",
+    "src",
+    "THIRD_PARTY_NOTICES.md"
+  ],
+  "scripts": {
+    "prepack": "tsc -b"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/borrowdale/borrowdale.git",
+    "directory": "packages/charts"
+  },
+  "keywords": [
+    "hand-drawn",
+    "sketch",
+    "chart",
+    "svg",
+    "canvas"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@borrowdale/core": "0.0.0",
+    "@borrowdale/text": "0.0.0"
+  }
+}

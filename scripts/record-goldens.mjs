@@ -1,5 +1,5 @@
 // Records the golden files from freshly built packages: `npm run goldens` (builds first).
-// Usage: node scripts/record-goldens.mjs [core] [fills] [text]   (every package when none is named)
+// Usage: node scripts/record-goldens.mjs [core] [fills] [text] [charts]   (every package when none is named)
 //
 // Two uses, and they are not interchangeable:
 // 1. A DELIBERATE output change in this repo: run `npm run goldens` and review the diff of every
@@ -10,7 +10,7 @@
 //      copy scripts/record-goldens.mjs and the core and fills test/golden/corpus.json files into it
 //      node scripts/record-goldens.mjs core fills, then copy both goldens.json files back
 //    Then run the tests here: any failing case is a port bug.
-// Text goldens have no rough.js origin: they only ever come from use 1. Each package is imported
+// Text and charts goldens have no rough.js origin: they only ever come from use 1. Each package is imported
 // only when it is recorded, so the script runs in a checkout that lacks the others.
 import { readFileSync, writeFileSync } from 'node:fs';
 
@@ -35,6 +35,13 @@ const recorders = {
     record('../packages/text/test/golden', ({ text, options, style }) => {
       const layout = layoutText(text, options);
       return { ...layout, svg: toSvgText(layout, style) };
+    });
+  },
+  async charts() {
+    const { layoutChart, toSvgChart } = await import('@borrowdale/charts');
+    record('../packages/charts/test/golden', ({ spec }) => {
+      const layout = layoutChart(spec);
+      return { svg: toSvgChart(layout), missing: layout.missing };
     });
   },
 };

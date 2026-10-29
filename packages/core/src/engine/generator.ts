@@ -3,6 +3,7 @@
 // shared by all sets of one shape, exactly as in rough.js, because its randomizer is stateful.
 
 import { curveToBezier, pointsOnBezierCurves } from './bezier.js';
+import { show } from '../show.js';
 import type { Point as ShapePoint, Shape } from '../types.js';
 import type { Op, OpSet, Point, ResolvedOptions } from './core.js';
 import { fillArc, fillPolygons } from './fillers.js';
@@ -48,7 +49,8 @@ export function shapeSets(shape: Shape, o: ResolvedOptions): OpSet[] {
 }
 
 function unknownKind(shape: never): never {
-  throw new Error(`Unknown shape kind: ${String((shape as { kind?: unknown }).kind)}`);
+  const { kind } = shape as { kind?: unknown };
+  throw new Error(`Unknown shape kind: ${typeof kind === 'string' ? kind : show(kind)}`);
 }
 
 // The fill code rotates polygons in place, so the engine always works on its own copy.
@@ -165,7 +167,10 @@ function curve(points: Point[], o: ResolvedOptions): OpSet[] {
         ...pointsOnBezierCurves(curveToBezier([points[0]!, points[0]!, points[1]!, points[2]!]), 10, (1 + o.roughness) / 2),
       );
     } else {
-      polyPoints.push(...pointsOnBezierCurves(curveToBezier(points), 10, (1 + o.roughness) / 2));
+      // A loop, not a spread: a long curve has more points than an engine allows as arguments to one call.
+      for (const point of pointsOnBezierCurves(curveToBezier(points), 10, (1 + o.roughness) / 2)) {
+        polyPoints.push(point);
+      }
     }
     return polyPoints.length ? fillPolygons([polyPoints], o) : undefined;
   };

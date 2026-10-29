@@ -14,9 +14,9 @@ industry was found.
 | [`@borrowdale/core`](packages/core) | Deterministic hand-drawn shapes for SVG and canvas. Framework-agnostic, SSR-safe |
 | [`@borrowdale/fills`](packages/fills) | Hand-drawn pattern fills and backgrounds |
 | [`@borrowdale/text`](packages/text) | Hand-written text for SVG and canvas, measured with no DOM |
+| [`@borrowdale/charts`](packages/charts) | Hand-drawn charts: bar, line, area, range area, scatter, bubble, pie, donut and radar |
 
-Planned: `@borrowdale/svg`, `@borrowdale/charts`, `@borrowdale/react`,
-`@borrowdale/elements`.
+Planned: `@borrowdale/svg`, `@borrowdale/react`, `@borrowdale/elements`.
 
 ## Development
 
@@ -28,15 +28,16 @@ npm test
 npm run typecheck
 npm run example
 npm run example:text
+npm run example:charts
 npm run goldens   # re-record golden drawings after a deliberate output change
 npm run fonts     # regenerate the bundled font modules from the font files
 ```
 
-`npm test` includes parity tests that draw every `@borrowdale/core` and `@borrowdale/text` golden
-in headless Chromium and require the output to match Node's byte for byte. For text they also
-require the width Chromium draws to match the measured width. They fail, rather than skip, when
-Chromium is not installed. Node and Chromium both run V8, so this does not exercise another
-JavaScript engine.
+`npm test` includes parity tests that draw every `@borrowdale/core`, `@borrowdale/text` and
+`@borrowdale/charts` golden in headless Chromium and require the output to match Node's byte for
+byte. For text they also require the width Chromium draws to match the measured width. They fail,
+rather than skip, when Chromium is not installed. Node and Chromium both run V8, so this does not
+exercise another JavaScript engine.
 
 ## License
 

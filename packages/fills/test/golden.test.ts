@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
+// Before the package, so the guard also reaches Math references it takes when it loads.
+import '../../core/test/support/forbid-unportable-math.js';
 import { pattern, type Pattern, type PatternOptions } from '@borrowdale/fills';
 import corpus from './golden/corpus.json' with { type: 'json' };
 import goldens from './golden/goldens.json' with { type: 'json' };
-import '../../core/test/support/forbid-unportable-math.js';
 
 // Recorded from rough.js 4.6.6, then re-recorded from this engine after each deliberate change.
 // See scripts/record-goldens.mjs.

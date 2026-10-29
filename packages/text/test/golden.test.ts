@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
+// Before the package, so the guard also reaches Math references it takes when it loads.
+import '../../core/test/support/forbid-unportable-math.js';
 import { layoutText, toSvgText, type LayoutOptions, type TextStyle } from '@borrowdale/text';
 import corpus from './golden/corpus.json' with { type: 'json' };
 import goldens from './golden/goldens.json' with { type: 'json' };
-import '../../core/test/support/forbid-unportable-math.js';
 
 // Recorded from this package with scripts/record-goldens.mjs, and drawn again in Chromium by
 // parity.test.ts, which also checks every width against the width Chromium draws.

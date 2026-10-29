@@ -82,6 +82,22 @@ describe('pattern', () => {
     expect(pattern({ kind: 'lines', id: 'p', stroke: '#b58900' }).def).toContain('stroke="#b58900"');
   });
 
+  it('dashes the tile strokes with strokeLineDash', () => {
+    expect(pattern({ kind: 'lines', id: 'p', strokeLineDash: [4, 2] }).def).toContain('stroke-dasharray="4 2"');
+  });
+
+  it('gives a dashed tile a different id from a solid one with the same seed', () => {
+    expect(pattern({ kind: 'lines', seed: 's', strokeLineDash: [4, 2] }).id).not.toBe(
+      pattern({ kind: 'lines', seed: 's' }).id,
+    );
+  });
+
+  it('gives tiles with different dashes different ids', () => {
+    expect(pattern({ kind: 'lines', seed: 's', strokeLineDash: [4, 2] }).id).not.toBe(
+      pattern({ kind: 'lines', seed: 's', strokeLineDash: [2, 4] }).id,
+    );
+  });
+
   it('draws three diagonal strokes for lines', () => {
     expect(pattern({ kind: 'lines', id: 'p' }).def.match(/<path /g)).toHaveLength(3);
   });

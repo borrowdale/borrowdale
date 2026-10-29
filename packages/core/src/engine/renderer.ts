@@ -116,8 +116,10 @@ export function arc(
   const arcInc = Math.min(ellipseInc / 2, (stp - strt) / 2);
   const ops = _arc(arcInc, cx, cy, rx, ry, strt, stp, 1, o);
   if (!o.disableMultiStroke) {
-    const o2 = _arc(arcInc, cx, cy, rx, ry, strt, stp, 1.5, o);
-    ops.push(...o2);
+    // A loop, not a spread: the arc can have more ops than an engine allows as arguments to one call.
+    for (const op of _arc(arcInc, cx, cy, rx, ry, strt, stp, 1.5, o)) {
+      ops.push(op);
+    }
   }
   if (closed) {
     if (roughClosure) {

@@ -1,8 +1,12 @@
 import { MAX_COORDINATE } from './engine/core.js';
+import { show } from './show.js';
 import { FILL_STYLES, type Shape, type ShapeKind, type SketchOptions } from './types.js';
 
 // Bounds on what callers may pass. The engine additionally bounds its total work per drawing.
 const MAX_CURVE_STEPS = 1000;
+const MAX_DASHES = 16;
+// The shortest dash pattern, dash and gap lengths added up.
+const MIN_DASH_PATTERN = 1;
 const MAX_ROUGHNESS = 10;
 // Degrees. The engine's own trigonometry reduces arguments only up to about 1.6e6 radians.
 const MAX_ANGLE = 1e6;
@@ -45,7 +49,26 @@ function range(min: number, max: number, integer = false): OptionRule {
   };
 }
 
+// Read by index, so a hole in the array is rejected rather than skipped.
+function isDashArray(value: unknown): boolean {
+  if (!Array.isArray(value) || value.length < 1 || value.length > MAX_DASHES) {
+    return false;
+  }
+  let total = 0;
+  for (let i = 0; i < value.length; i++) {
+    const length: unknown = value[i];
+    if (!isWithin(length, MAX_COORDINATE) || length < 0) {
+      return false;
+    }
+    total += length;
+  }
+  // All zeros draw nothing in a canvas and a solid line in SVG, and a pattern much shorter than a unit
+  // has a browser paint millions of dashes, work that no budget sees.
+  return total >= MIN_DASH_PATTERN;
+}
+
 const STRING: OptionRule = { ok: (value) => typeof value === 'string', expected: 'a string' };
+
 const FINITE: OptionRule = { ok: Number.isFinite, expected: 'a finite number' };
 const UNIT = range(0, 1);
 const ROUGHNESS = range(0, MAX_ROUGHNESS);
@@ -54,11 +77,17 @@ const ROUGHNESS = range(0, MAX_ROUGHNESS);
 const OPTION_RULES: Record<keyof SketchOptions, OptionRule> = {
   stroke: STRING,
   strokeWidth: FINITE,
+  strokeLineDash: {
+    ok: isDashArray,
+    expected:
+      `an array of 1 to ${MAX_DASHES} lengths from 0 to ${MAX_COORDINATE}, ` +
+      `adding up to at least ${MIN_DASH_PATTERN}`,
+  },
   fill: STRING,
   fillStyle: {
     ok: (value) => (FILL_STYLES as readonly unknown[]).includes(value),
     expected: 'a fill style',
-    message: (value) => `Unknown fill style: ${String(value)}`,
+    message: (value) => `Unknown fill style: ${typeof value === 'string' ? value : show(value)}`,
   },
   fillWeight: FINITE,
   hachureAngle: { ok: (value) => isWithin(value, MAX_ANGLE), expected: `a finite number within ±${MAX_ANGLE}` },
@@ -100,7 +129,7 @@ function assertShape(shape: Shape): void {
   // The shape comes from callers' data, so its type is a claim until checked here.
   const raw = shape as unknown as Record<string, unknown>;
   if (typeof raw.kind !== 'string' || !Object.hasOwn(SHAPE_FIELDS, raw.kind)) {
-    throw new Error(`Unknown shape kind: ${String(raw.kind)}`);
+    throw new Error(`Unknown shape kind: ${typeof raw.kind === 'string' ? raw.kind : show(raw.kind)}`);
   }
   const fields: Record<string, FieldRule> = SHAPE_FIELDS[shape.kind];
   for (const [field, rule] of Object.entries(fields)) {
@@ -162,9 +191,4 @@ function assertNumber(name: string, value: unknown): asserts value is number {
   if (!isWithin(value, MAX_COORDINATE)) {
     throw new Error(`Invalid shape: ${name} must be a finite number within ±${MAX_COORDINATE}, got ${show(value)}`);
   }
-}
-
-// Strings are quoted so `"10"` is visibly not the number 10.
-function show(value: unknown): string {
-  return typeof value === 'string' ? JSON.stringify(value) : String(value);
 }

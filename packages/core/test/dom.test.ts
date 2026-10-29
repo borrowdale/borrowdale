@@ -5,6 +5,7 @@ import { appendSketch, drawSketch, type Sketch } from '@borrowdale/core';
 const outlined: Sketch = { paths: [{ d: 'M0 0 L1 1', stroke: '#000', strokeWidth: 2, fill: 'none' }] };
 const filled: Sketch = { paths: [{ d: 'M0 0 L1 1 Z', stroke: 'none', strokeWidth: 0, fill: 'red' }] };
 const evenOdd: Sketch = { paths: [{ d: 'M0 0 L1 1 Z', stroke: 'none', strokeWidth: 0, fill: 'red', fillRule: 'evenodd' }] };
+const dashed: Sketch = { paths: [{ d: 'M0 0 L1 1', stroke: '#000', strokeWidth: 1, strokeLineDash: [4, 2], fill: 'none' }] };
 const twoStrokes: Sketch = {
   paths: [
     { d: 'M0 0 L1 1', stroke: '#111', strokeWidth: 1, fill: 'none' },
@@ -22,6 +23,7 @@ function fakeContext() {
     restore: vi.fn(),
     fill: vi.fn(),
     stroke: vi.fn(),
+    setLineDash: vi.fn(),
     fillStyle: '',
     strokeStyle: '',
     lineWidth: 0,
@@ -52,6 +54,22 @@ describe('appendSketch', () => {
     const [path] = appendSketch(svg, evenOdd);
 
     expect(path?.getAttribute('fill-rule')).toBe('evenodd');
+  });
+
+  it('sets the dash pattern attribute when a path has one', () => {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+
+    const [path] = appendSketch(svg, dashed);
+
+    expect(path?.getAttribute('stroke-dasharray')).toBe('4 2');
+  });
+
+  it('leaves the dash pattern attribute off otherwise', () => {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+
+    const [path] = appendSketch(svg, outlined);
+
+    expect(path?.hasAttribute('stroke-dasharray')).toBe(false);
   });
 
   it('leaves the fill rule attribute off otherwise', () => {
@@ -101,6 +119,35 @@ describe('drawSketch', () => {
 
     expect(context.stroke).toHaveBeenNthCalledWith(2, new RecordingPath2D('M2 2 L3 3'));
     expect(context.stroke).toHaveBeenCalledTimes(2);
+  });
+
+  it('sets the dash pattern before stroking a dashed path', () => {
+    vi.stubGlobal('Path2D', RecordingPath2D);
+    const context = fakeContext();
+
+    drawSketch(context as unknown as CanvasRenderingContext2D, dashed);
+
+    expect(context.setLineDash).toHaveBeenCalledWith([4, 2]);
+    expect(context.setLineDash.mock.invocationCallOrder[0]).toBeLessThan(context.stroke.mock.invocationCallOrder[0]!);
+  });
+
+  it('sets the dash pattern between save() and restore(), so it does not reach later drawing', () => {
+    vi.stubGlobal('Path2D', RecordingPath2D);
+    const context = fakeContext();
+
+    drawSketch(context as unknown as CanvasRenderingContext2D, dashed);
+
+    expect(context.save.mock.invocationCallOrder[0]).toBeLessThan(context.setLineDash.mock.invocationCallOrder[0]!);
+    expect(context.restore.mock.invocationCallOrder[0]).toBeGreaterThan(context.setLineDash.mock.invocationCallOrder[0]!);
+  });
+
+  it('sets no dash pattern for a solid path', () => {
+    vi.stubGlobal('Path2D', RecordingPath2D);
+    const context = fakeContext();
+
+    drawSketch(context as unknown as CanvasRenderingContext2D, outlined);
+
+    expect(context.setLineDash).not.toHaveBeenCalled();
   });
 
   it('fills with the even-odd rule when the path asks for it', () => {

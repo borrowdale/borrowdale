@@ -10,6 +10,11 @@
       "@borrowdale/source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./math": {
+      "@borrowdale/source": "./src/math.ts",
+      "types": "./dist/math.d.ts",
+      "default": "./dist/math.js"
     }
   },
   "files": [

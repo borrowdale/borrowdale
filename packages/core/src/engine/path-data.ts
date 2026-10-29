@@ -510,7 +510,10 @@ export function pointsOnPath(segments: Segment[], tolerance?: number, distance?:
 
   const appendPendingCurve = () => {
     if (pendingCurve.length >= 4) {
-      currentPoints.push(...pointsOnBezierCurves(pendingCurve, tolerance));
+      // A loop, not a spread: a large curve has more points than an engine allows as arguments to one call.
+      for (const point of pointsOnBezierCurves(pendingCurve, tolerance)) {
+        currentPoints.push(point);
+      }
     }
     pendingCurve = [];
   };

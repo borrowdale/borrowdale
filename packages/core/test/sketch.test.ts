@@ -109,6 +109,7 @@ describe('validation', () => {
   it.each<[string, unknown, unknown, string]>([
     ['a kind that is missing', { x: 0 }, {}, 'Unknown shape kind: undefined'],
     ['an unknown kind', { kind: 'hexagon' }, {}, 'Unknown shape kind: hexagon'],
+    ['a kind that cannot become a string', JSON.parse('{"kind":{"toString":1}}'), {}, 'Unknown shape kind: object'],
     ['a missing field', { kind: 'rectangle', x: 0, y: 0, width: 20 }, { fill: 'red' }, 'rectangle.height must be a finite number within ±1000000, got undefined'],
     ['a number given as a string', { kind: 'line', x1: '1', y1: 0, x2: 5, y2: 5 }, {}, 'line.x1 must be a finite number within ±1000000, got "1"'],
     ['an infinite size', { kind: 'circle', cx: 0, cy: 0, diameter: Infinity }, {}, 'circle.diameter must be a finite number within ±1000000, got Infinity'],
@@ -158,6 +159,17 @@ describe('validation', () => {
     ['a curveTightness above 1', wave, { curveTightness: 1e308 }, 'curveTightness must be a number from 0 to 1, got 1e+308'],
     ['a negative curveFitting', { kind: 'ellipse', cx: 0, cy: 0, width: 10, height: 10 }, { curveFitting: -0.1 }, 'curveFitting must be a number from 0 to 1, got -0.1'],
     ['a hachure angle too large for the engine trigonometry', rectangle, { fill: 'red', hachureAngle: 1e300 }, 'hachureAngle must be a finite number within ±1000000, got 1e+300'],
+    ['a dash that is not an array', rectangle, { strokeLineDash: 4 }, 'strokeLineDash must be an array of 1 to 16 lengths from 0 to 1000000, adding up to at least 1, got 4'],
+    ['an empty dash', rectangle, { strokeLineDash: [] }, 'strokeLineDash must be an array of 1 to 16 lengths from 0 to 1000000, adding up to at least 1, got '],
+    ['a dash pattern shorter than one unit', rectangle, { strokeLineDash: [0.005, 0] }, 'strokeLineDash must be an array of 1 to 16 lengths from 0 to 1000000, adding up to at least 1, got 0.005,0'],
+    ['a dash of zeros', rectangle, { strokeLineDash: [0, 0] }, 'strokeLineDash must be an array of 1 to 16 lengths from 0 to 1000000, adding up to at least 1, got 0,0'],
+    ['a negative dash length', rectangle, { strokeLineDash: [4, -1] }, 'strokeLineDash must be an array of 1 to 16 lengths from 0 to 1000000, adding up to at least 1, got 4,-1'],
+    ['a dash length given as a string', rectangle, { strokeLineDash: [4, '2'] }, 'strokeLineDash must be an array of 1 to 16 lengths from 0 to 1000000, adding up to at least 1, got 4,2'],
+    ['a dash with a hole', rectangle, { strokeLineDash: [4, , 2] }, 'strokeLineDash must be an array of 1 to 16 lengths from 0 to 1000000, adding up to at least 1, got 4,,2'],
+    ['a fill style that cannot become a string', rectangle, JSON.parse('{"fillStyle":{"toString":1}}'), 'Unknown fill style: object'],
+    ['a dash length that cannot become a string', rectangle, JSON.parse('{"strokeLineDash":[{"toString":1}]}'), 'strokeLineDash must be an array of 1 to 16 lengths from 0 to 1000000, adding up to at least 1, got object'],
+    ['a dash length past the coordinate range', rectangle, { strokeLineDash: [2e6] }, 'strokeLineDash must be an array of 1 to 16 lengths from 0 to 1000000, adding up to at least 1, got 2000000'],
+    ['17 dash lengths', rectangle, { strokeLineDash: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1] }, 'strokeLineDash must be an array of 1 to 16 lengths from 0 to 1000000, adding up to at least 1, got 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1'],
   ])('rejects %s with a named error', (_case, shape, options, message) => {
     expect(() => sketch(shape as Shape, options as SketchOptions)).toThrow(message);
   });
@@ -173,6 +185,10 @@ describe('validation', () => {
     ['curveStepCount 1000', { kind: 'circle', cx: 5, cy: 5, diameter: 10 }, { curveStepCount: 1000 }],
     ['a numeric seed', rectangle, { seed: 42 }],
     ['an explicit closed: false', { kind: 'arc', cx: 0, cy: 0, width: 4, height: 4, start: 0, stop: 1, closed: false }, {}],
+    ['a dash of one length', rectangle, { strokeLineDash: [3] }],
+    ['a dash pattern of exactly one unit', rectangle, { strokeLineDash: [0.5, 0.5] }],
+    ['16 dash lengths, some 0', rectangle, { strokeLineDash: [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0] }],
+    ['a dash length of exactly 1,000,000', rectangle, { strokeLineDash: [1e6] }],
   ])('accepts %s', (_case, shape, options) => {
     expect(sketch(shape, options).paths.length).toBeGreaterThan(0);
   });
@@ -210,6 +226,34 @@ describe('work budget', () => {
     expect(() => sketch(largestSquare, { fill: 'red' })).toThrow(TOO_COMPLEX);
 
     expect(sketch(rectangle, { fill: 'red' }).paths).toHaveLength(2);
+  });
+});
+
+describe('dashed outlines', () => {
+  it('puts the dash on the outline', () => {
+    expect(sketch({ kind: 'line', x1: 0, y1: 0, x2: 10, y2: 10 }, { strokeLineDash: [4, 2] }).paths).toMatchObject([
+      { stroke: '#000', strokeLineDash: [4, 2] },
+    ]);
+  });
+
+  it('leaves the hachure lines of a fill solid', () => {
+    expect(sketch(rectangle, { fill: 'red', strokeLineDash: [4, 2] }).paths[0]).not.toHaveProperty('strokeLineDash');
+  });
+
+  it("copies the caller's dash array", () => {
+    const dash = [4, 2];
+
+    const [outline] = sketch({ kind: 'line', x1: 0, y1: 0, x2: 10, y2: 10 }, { strokeLineDash: dash }).paths;
+
+    expect(outline?.strokeLineDash).not.toBe(dash);
+  });
+
+  it('leaves the strokes themselves as they are without a dash', () => {
+    expect(sketch(rectangle, { strokeLineDash: [4, 2] }).paths[0]?.d).toBe(sketch(rectangle).paths[0]?.d);
+  });
+
+  it('adds no dash field without the option', () => {
+    expect(sketch(rectangle).paths[0]).not.toHaveProperty('strokeLineDash');
   });
 });
 

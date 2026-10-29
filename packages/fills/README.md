@@ -31,9 +31,10 @@ const svg = toSvgDocument({
 | `id` | derived | `<pattern>` id: a letter followed by letters, digits, `_` or `-` |
 | `seed` | derived | same seed, same strokes |
 
-Any `@borrowdale/core` style option (`stroke`, `strokeWidth`, `roughness`, …) applies to the tile
-strokes. An unknown `kind`, an invalid `id`, or a `size` that is not a finite number above 0 throws
-an error.
+Any `@borrowdale/core` style option (`stroke`, `strokeWidth`, `strokeLineDash`, `roughness`, …)
+applies to the tile strokes, and is checked as `sketch` checks it. Tiles that differ in any option
+get different ids, unless you set `id` yourself. An unknown `kind`, an invalid `id`, or a `size`
+that is not a finite number above 0 throws an error.
 
 For hatched, dashed or zigzag fills *inside* a single shape, use `fillStyle` in `@borrowdale/core`
 instead.
