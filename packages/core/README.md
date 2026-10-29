@@ -157,7 +157,9 @@ of it.
 | `drawSketch(context2d, sketch)` | draws into a canvas | `Path2D` |
 
 A dashed outline keeps its `strokeLineDash` in the sketch. `toSvgPaths` and `appendSketch` write
-it as `stroke-dasharray`, and `drawSketch` sets it with `setLineDash`.
+it as `stroke-dasharray`, and `drawSketch` sets it with `setLineDash`. For a sketch from `sketch()`,
+`drawSketch` draws every outline with its own dash, starting at its beginning, and a solid one solid,
+whatever dash the canvas had, and puts the canvas's own dash back afterwards.
 
 The type declarations refer to DOM types (`Element`, `CanvasRenderingContext2D`), so TypeScript
 projects need `"dom"` in `compilerOptions.lib`, even when they only render on the server.

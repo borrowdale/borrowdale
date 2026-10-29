@@ -377,15 +377,34 @@ function lowestEdge(layout: ChartLayout, text: string): number {
 }
 
 /**
- * How many points the drawn shapes pass through lie outside the chart: each path's starting points,
- * line ends and the end of each curve, not a curve's control points, which lie off the curve.
+ * The points the drawn shapes pass through: each path's starting points, line ends and the end of
+ * each curve, not a curve's control points, which lie off the curve.
  */
-function pointsOutside(layout: ChartLayout): number {
+function pointsOnCurves(layout: ChartLayout): [number, number][] {
   const ds = layout.nodes.flatMap((node) => (node.kind === 'mark' ? node.nodes : [node]));
   const paths = ds.flatMap((node) => (node.kind === 'sketch' ? node.sketch.paths.map((path) => path.d) : []));
   const onCurve = /(?:[ML]|C[^,]*,[^,]*,)\s*(-?[\d.]+)[ ,](-?[\d.]+)/g;
-  const points = paths.flatMap((d) => [...d.matchAll(onCurve)].map((match) => [Number(match[1]), Number(match[2])]));
-  return points.filter(([px, py]) => px! < 0 || py! < 0 || px! > layout.width || py! > layout.height).length;
+  return paths.flatMap((d) =>
+    [...d.matchAll(onCurve)].map((match): [number, number] => [Number(match[1]), Number(match[2])]),
+  );
+}
+
+/** How many of those points lie outside the chart, or within `margin` of its edges. */
+function pointsOutside(layout: ChartLayout, margin = 0): number {
+  const [right, bottom] = [layout.width - margin, layout.height - margin];
+  return pointsOnCurves(layout).filter(([px, py]) => px < margin || py < margin || px > right || py > bottom).length;
+}
+
+/** The box around those points, `[left, top, right, bottom]`, rounded. */
+function extentOf(layout: ChartLayout): number[] {
+  const points = pointsOnCurves(layout);
+  const [xs, ys] = [points.map(([px]) => px), points.map(([, py]) => py)];
+  return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)].map(Math.round);
+}
+
+/** How many shapes are drawn outside the series' marks: gridlines, spokes, ticks. */
+function sketchCount(layout: ChartLayout): number {
+  return layout.nodes.filter((node) => node.kind === 'sketch').length;
 }
 
 /** Where the label `text` is drawn, down the chart. */
@@ -706,5 +725,76 @@ describe('layoutChart', () => {
 
   it('draws a dial too small for ticks when it hides them', () => {
     expect(titles(layoutChart(tinyHiddenDial))).toEqual(['g: 5']);
+  });
+});
+
+/** A narrow donut over 20 degrees from `startAngle`, half its sweep pulled out as far as it goes. */
+function pulledDonut(width: number, height: number, startAngle: number): ChartSpec {
+  return { width, height, legend: 'none', style: { roughness: 0, fillStyle: 'solid' },
+    series: [{ type: 'pie', name: 'P', innerRadius: 0.9, startAngle, endAngle: startAngle + 20,
+      data: [{ name: 'a', value: 1, offset: 0.5 }, { name: 'b', value: 1 }] }] };
+}
+
+const radarAngleHidden: ChartSpec = { width: 300, height: 300, legend: 'none',
+  axes: { angle: { type: 'band', categories: ['A', 'B', 'C'], hidden: true }, radius: { type: 'linear' } },
+  series: [{ type: 'radar', name: 'S', data: [1, 2, 3] }] };
+const radarAngleShown: ChartSpec = { ...radarAngleHidden,
+  axes: { angle: { type: 'band', categories: ['A', 'B', 'C'] }, radius: { type: 'linear' } } };
+const hiddenLinearAngle: ChartSpec = { width: 300, height: 300, legend: 'none',
+  axes: { angle: { type: 'linear', min: 0, max: 360, hidden: true, grid: true },
+    radius: { type: 'linear', hidden: true } },
+  series: [{ type: 'polarScatter', name: 'S', data: [[10, 1], [200, 2]] }] };
+
+describe('hidden polar axes and offset pie fitting', () => {
+  it.each(['polarLine', 'radar', 'rose'] as const)('draws %s without spokes when both axes are hidden', (type) => {
+    const layout = layoutChart({ width: 300, height: 300, legend: 'none',
+      axes: { angle: { type: 'band', categories: ['A', 'B', 'C'], hidden: true },
+        radius: { type: 'linear', hidden: true } },
+      series: [{ type, name: 'S', data: [1, 2, 3] }],
+    });
+    expect(sketchCount(layout)).toBe(0);
+    expect(titles(layout)).not.toHaveLength(0);
+    expect(texts(layout)).toEqual([]);
+  });
+
+  it('hides the spokes of a hidden band angle axis and keeps the radius gridlines', () => {
+    expect(sketchCount(layoutChart(radarAngleHidden))).toBe(2);
+    expect(sketchCount(layoutChart(radarAngleShown))).toBe(5);
+  });
+
+  it('draws no spokes for a hidden linear angle axis that has a grid', () => {
+    expect(sketchCount(layoutChart(hiddenLinearAngle))).toBe(0);
+  });
+
+  it.each([-10, 80, 170, 260])('fits a pulled narrow donut starting at %s degrees', (startAngle) => {
+    const layout = layoutChart(pulledDonut(300, 260, startAngle));
+    expect(titles(layout)).toHaveLength(2);
+    expect(pointsOutside(layout, PAD)).toBe(0);
+  });
+
+  it.each([
+    [120, 300, 260], [300, 120, -10],
+  ])('keeps a pulled narrow donut inside the padding of a %i × %i chart from %i degrees', (width, height, start) => {
+    expect(pointsOutside(layoutChart(pulledDonut(width, height, start)), PAD)).toBe(0);
+  });
+
+  it('pins the size of a pulled narrow donut', () => {
+    expect(extentOf(layoutChart(pulledDonut(300, 260, 80)))).toEqual([140, 91, 251, 161]);
+  });
+
+  it('fits nested, rounded and variable-radius slices with different offsets', () => {
+    const layout = layoutChart({ width: 300, height: 260, legend: 'none',
+      style: { roughness: 0, fillStyle: 'solid' },
+      series: [
+        { type: 'pie', name: 'Inner', innerRadius: 0.5, outerRadius: 0.7,
+          startAngle: 80, endAngle: 100, padAngle: 2, cornerRadius: 8,
+          data: [{ name: 'a', value: 1, offset: 0.5 }, { name: 'b', value: 1 }] },
+        { type: 'pie', name: 'Outer', innerRadius: 0.75, outerRadius: 1,
+          startAngle: 80, endAngle: 100, padAngle: 1, cornerRadius: 4,
+          data: [{ name: 'a', value: 1, radius: 1 }, { name: 'b', value: 1, radius: 0.5, offset: 0.3 }] },
+      ],
+    });
+    expect(titles(layout)).toHaveLength(4);
+    expect(pointsOutside(layout)).toBe(0);
   });
 });
