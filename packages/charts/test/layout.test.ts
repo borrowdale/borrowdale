@@ -116,6 +116,41 @@ const halfDonut: ChartSpec = {
   series: [{ type: 'pie', name: 'Mix', innerRadius: 0.5, startAngle: -90, endAngle: 90, data: [{ name: 'Wind', value: 3 }, { name: 'Sun', value: 1 }] }],
 };
 
+const compass = { type: 'band', categories: ['N', 'E', 'S', 'W'] } as const;
+const windRose: ChartSpec = {
+  width: 300,
+  height: 300,
+  legend: 'none',
+  axes: { angle: compass, radius: { type: 'linear', max: 6 } },
+  series: [
+    { type: 'rose', name: 'Calm', stack: 'w', data: [4, 3, null, 2] },
+    { type: 'rose', name: 'Gale', stack: 'w', data: [1, 1, 2, 1] },
+  ],
+};
+// The same Calm wedges on the same axis, with Gale left out.
+const calmOnly: ChartSpec = { ...windRose, series: [windRose.series[0]!] };
+const goals: ChartSpec = {
+  width: 300,
+  height: 300,
+  axes: { angle: { type: 'linear', max: 100, format: { suffix: '%' } }, radius: { type: 'band', categories: ['Move', 'Stand'] } },
+  series: [{ type: 'radialBar', name: 'Today', data: [82, null] }],
+};
+const sightings: ChartSpec = {
+  width: 300,
+  height: 300,
+  axes: { angle: { type: 'linear', min: 0, max: 360 }, radius: { type: 'linear', format: { suffix: ' km' } } },
+  series: [{ type: 'polarScatter', name: 'Owls', data: [[20, 3]] }],
+};
+// Gaps at c and e: around the circle f runs on into a and b, and d stands alone.
+const wrappedLine: ChartSpec = {
+  width: 300,
+  height: 300,
+  axes: { angle: { type: 'band', categories: ['a', 'b', 'c', 'd', 'e', 'f'] } },
+  series: [{ type: 'polarLine', name: 'L', data: [1, 2, null, 4, null, 3] }],
+};
+// The same gaps on half a turn, where f and a are at opposite ends.
+const halfLine: ChartSpec = { ...wrappedLine, axes: { angle: { ...wrappedLine.axes!.angle as object, startAngle: -90, endAngle: 90 } as never } };
+
 /** The mark whose tooltip is `title`. */
 function mark(layout: ChartLayout, title: string): ChartNode {
   const found = layout.nodes.find((node) => node.kind === 'mark' && node.title === title);
@@ -290,5 +325,46 @@ describe('layoutChart', () => {
     const layout = layoutChart(bubbles);
 
     expect(width(layout, 'A: 1, 1, size 10')).toBe(width(layout, 'B: 2, 2, size 10'));
+  });
+
+  it('gives each wedge of a rose a tooltip with its value, and none to a null', () => {
+    expect(titles(layoutChart(windRose))).toEqual([
+      'Calm, N: 4',
+      'Calm, E: 3',
+      'Calm, W: 2',
+      'Gale, N: 1',
+      'Gale, E: 1',
+      'Gale, S: 2',
+      'Gale, W: 1',
+    ]);
+  });
+
+  it('keeps the strokes of a wedge when a series stacked on it changes', () => {
+    expect(mark(layoutChart(windRose), 'Calm, E: 3')).toEqual(mark(layoutChart(calmOnly), 'Calm, E: 3'));
+  });
+
+  it('writes a radial bar value in the angle axis format', () => {
+    expect(titles(layoutChart(goals))).toEqual(['Today, Move: 82%']);
+  });
+
+  it('labels the rings of a radial bar chart', () => {
+    expect(texts(layoutChart(goals))).toEqual(expect.arrayContaining(['Move', 'Stand']));
+  });
+
+  it('labels a whole turn of a linear angle axis once where it starts and ends', () => {
+    expect(texts(layoutChart(sightings))).toEqual(expect.arrayContaining(['0', '300']));
+    expect(texts(layoutChart(sightings))).not.toContain('360');
+  });
+
+  it('writes a polar point as its angle and radius, each in its axis format', () => {
+    expect(titles(layoutChart(sightings))).toEqual(['Owls: 20, 3 km']);
+  });
+
+  it('joins a polar line across the start of a whole turn', () => {
+    expect(mark(layoutChart(wrappedLine), 'L')).toMatchObject({ nodes: [{ kind: 'sketch' }, { kind: 'sketch' }] });
+  });
+
+  it('keeps the ends of part of a turn apart', () => {
+    expect(mark(layoutChart(halfLine), 'L')).toMatchObject({ nodes: [{}, {}, {}] });
   });
 });

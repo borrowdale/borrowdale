@@ -1,6 +1,8 @@
 export { layoutChart } from './layout.js';
 export { appendChart, drawChart, toSvgChart, type SvgChartOptions } from './render.js';
 export type {
+  AngleBandAxis,
+  AngleLinearAxis,
   AreaSeries,
   Axis,
   BandAxis,
@@ -18,10 +20,18 @@ export type {
   NumberFormat,
   PieSeries,
   PieSlice,
+  PolarAreaSeries,
   PolarAxes,
+  PolarLineSeries,
+  PolarScatterSeries,
   RadarSeries,
+  RadialBarSeries,
+  RadiusBandAxis,
+  RadiusLinearAxis,
   RangeAreaSeries,
+  RoseSeries,
   ScatterSeries,
   Series,
   SeriesType,
+  Sweep,
 } from './types.js';

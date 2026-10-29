@@ -3,7 +3,7 @@ import { layoutCartesian, legendOf } from './cartesian.js';
 import { Drawing } from './drawing.js';
 import { GAP, PAD, type Rect } from './frame.js';
 import { hatched, LINE_WIDTH, paints, type Paint } from './palette.js';
-import { layoutPie, layoutPolar } from './polar.js';
+import { layoutPie, layoutPolar, polarLegendOf } from './polar.js';
 import { fail } from './read.js';
 import type { ChartLayout, ChartOptions, ChartSpec, LegendPosition } from './types.js';
 import { checkChart, type CheckedChart } from './validate.js';
@@ -83,11 +83,11 @@ function legendEntries(chart: CheckedChart): LegendEntry[] {
   const lines =
     chart.system === 'cartesian'
       ? chart.series.map((entry) => legendOf(entry) === 'line')
-      : chart.series.map(() => false);
+      : chart.series.map((entry) => polarLegendOf(entry) === 'line');
   const series: readonly CheckedChart['series'][number][] = chart.series;
   return paints(series).map((paint, i) => {
     const entry = series[i]!;
-    const dash = entry.type === 'line' ? entry.dash : undefined;
+    const dash = entry.type === 'line' || entry.type === 'polarLine' ? entry.dash : undefined;
     return { name: entry.name, paint, line: lines[i]!, dash, style: entry.style };
   });
 }

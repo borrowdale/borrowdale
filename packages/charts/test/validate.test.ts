@@ -12,6 +12,13 @@ const xy = { x: { type: 'linear' }, y: { type: 'linear' } };
 const pie = { width: 300, height: 200, series: [{ type: 'pie', name: 'P', data: [{ name: 'a', value: 1 }] }] };
 const spokes = { angle: { type: 'band', categories: ['a', 'b', 'c'] } };
 const radar = { width: 300, height: 300, axes: spokes, series: [{ type: 'radar', name: 'R', data: [1, 2, 3] }] };
+const rose = { width: 300, height: 300, axes: spokes, series: [{ type: 'rose', name: 'R', data: [1, 2, 3] }] };
+const radialBars = {
+  width: 300,
+  height: 300,
+  axes: { angle: { type: 'linear' }, radius: { type: 'band', categories: ['a', 'b'] } },
+  series: [{ type: 'radialBar', name: 'B', data: [1, 2] }],
+};
 /** A style made in code whose stroke is a colour when first read, and a paint reference after. */
 function shiftingStroke(): object {
   let reads = 0;
@@ -67,7 +74,7 @@ describe('chart validation', () => {
     ['a style with a seed', { ...bars, style: { seed: 3 } }, 'Invalid chart: style.seed is not allowed: each mark gets its own seed from the chart seed'],
     ['no series', { ...bars, series: [] }, 'Invalid chart: series must have 1 to 100 entries, got 0'],
     ['series that are not an array', { ...bars, series: {} }, 'Invalid chart: series must be an array, got an object'],
-    ['an unknown series type', { ...bars, series: [{ type: 'pyramid', name: 'A', data: [] }] }, 'Invalid chart: series[0].type must be a series type (bar, line, area, rangeArea, scatter, bubble, pie, radar), got "pyramid"'],
+    ['an unknown series type', { ...bars, series: [{ type: 'pyramid', name: 'A', data: [] }] }, 'Invalid chart: series[0].type must be a series type (bar, line, area, rangeArea, scatter, bubble, pie, radar, rose, radialBar, polarLine, polarArea, polarScatter), got "pyramid"'],
     ['an unknown series key', { ...bars, series: [{ type: 'bar', name: 'A', data: [1, 2], colour: 'red' }] }, 'Invalid chart: series[0] has an unknown key, "colour"'],
     ['a key of another series type', { ...bars, series: [{ type: 'bar', name: 'A', data: [1, 2], curve: 'step' }] }, 'Invalid chart: series[0] has an unknown key, "curve"'],
     ['a missing name', { ...bars, series: [{ type: 'bar', data: [1, 2] }] }, 'Invalid chart: series[0].name is missing'],
@@ -140,8 +147,8 @@ describe('chart validation', () => {
     ['1001 slices', oneSliceTooMany, 'Invalid chart: series[0].data must have 1 to 1000 entries, got 1001'],
     ['100,001 data points in all', onePointTooMany, 'Invalid chart: series hold 100001 data points in all, more than 100000'],
     ['a stacked area value just below 0', { ...bars, series: [{ type: 'area', name: 'A', stack: 's', data: [1, -0.5] }] }, 'Invalid chart: series[0].data[1] is negative, -0.5, which a stacked area cannot show'],
-    ['the series type "constructor"', { ...bars, series: [{ type: 'constructor', name: 'A', data: [1, 2] }] }, 'Invalid chart: series[0].type must be a series type (bar, line, area, rangeArea, scatter, bubble, pie, radar), got "constructor"'],
-    ['the series type "toString"', { ...bars, series: [{ type: 'toString', name: 'A', data: [1, 2] }] }, 'Invalid chart: series[0].type must be a series type (bar, line, area, rangeArea, scatter, bubble, pie, radar), got "toString"'],
+    ['the series type "constructor"', { ...bars, series: [{ type: 'constructor', name: 'A', data: [1, 2] }] }, 'Invalid chart: series[0].type must be a series type (bar, line, area, rangeArea, scatter, bubble, pie, radar, rose, radialBar, polarLine, polarArea, polarScatter), got "constructor"'],
+    ['the series type "toString"', { ...bars, series: [{ type: 'toString', name: 'A', data: [1, 2] }] }, 'Invalid chart: series[0].type must be a series type (bar, line, area, rangeArea, scatter, bubble, pie, radar, rose, radialBar, polarLine, polarArea, polarScatter), got "toString"'],
     ['a series given as an array', { ...bars, series: [[1, 2]] }, 'Invalid chart: series[0] must be an object, got an array of 2'],
     ['a style given as an array', { ...bars, style: [] }, 'Invalid chart: style must be an object, got an array of 0'],
     ['axes given as an array', { ...bars, axes: [] }, 'Invalid chart: axes must be an object, got an array of 0'],
@@ -162,9 +169,22 @@ describe('chart validation', () => {
     ['a radar with more values than spokes', { ...radar, series: [{ type: 'radar', name: 'R', data: [1, 2, 3, 4] }] }, 'Invalid chart: series[0].data has 4 values, but axes.angle.categories has 3'],
     ['a radar with fewer values than spokes', { ...radar, series: [{ type: 'radar', name: 'R', data: [1, 2] }] }, 'Invalid chart: series[0].data has 2 values, but axes.angle.categories has 3'],
     ['a line on a percent y2', { ...bars, axes: { ...bands, y2: { type: 'linear', percent: true } }, series: [{ type: 'bar', name: 'A', data: [1, 2] }, { type: 'line', name: 'B', axis: 'y2', data: [1, 2] }] }, 'Invalid chart: series[1] is a line series on axes.y2, a percent axis, which only stacking series (bar, area) can use'],
-    ['a linear angle axis', { ...radar, axes: { angle: { type: 'linear', categories: ['a', 'b', 'c'] } } }, 'Invalid chart: axes.angle.type must be "band", got "linear"'],
+    ['a radar on a linear angle axis', { ...radar, axes: { angle: { type: 'linear' } } }, 'Invalid chart: series[0] is a radar series, which needs a band angle axis, but axes.angle is linear'],
     ['a band y2', { ...bars, axes: { ...bands, y2: { type: 'band' } } }, 'Invalid chart: axes.y2.type must be "linear", got "band"'],
-    ['a band radius', { ...radar, axes: { ...spokes, radius: { type: 'band' } } }, 'Invalid chart: axes.radius.type must be "linear", got "band"'],
+    ['a radar on a band radius', { ...radar, axes: { ...spokes, radius: { type: 'band', categories: ['x'] } } }, 'Invalid chart: series[0] is a radar series, which needs a linear radius axis, but axes.radius is band'],
+    ['a rose with a negative value', { ...rose, series: [{ type: 'rose', name: 'R', data: [1, -1, 2] }] }, 'Invalid chart: series[0].data[1] is negative, -1, which a rose series cannot show'],
+    ['a stacked polar area with a negative value', { ...rose, axes: { ...spokes, radius: { type: 'linear', min: -5 } }, series: [{ type: 'polarArea', name: 'A', stack: 's', data: [1, -1, 2] }] }, 'Invalid chart: series[0].data[1] is negative, -1, which a stacked polarArea series cannot show'],
+    ['a polar line below a radius that starts at 0', { ...rose, series: [{ type: 'polarLine', name: 'L', data: [1, -1, 2] }] }, 'Invalid chart: series[0].data[1] is negative, -1, but axes.radius starts at 0 unless its min is set'],
+    ['a curve on a polar line', { ...rose, series: [{ type: 'polarLine', name: 'L', curve: 'monotone', data: [1, 2, 3] }] }, 'Invalid chart: series[0] has an unknown key, "curve"'],
+    ['a second value axis on a rose', { ...rose, series: [{ type: 'rose', name: 'R', axis: 'y2', data: [1, 2, 3] }] }, 'Invalid chart: series[0] has an unknown key, "axis"'],
+    ['a polar scatter on a band angle axis', { ...rose, series: [{ type: 'polarScatter', name: 'S', data: [[1, 2]] }] }, 'Invalid chart: series[0] is a polarScatter series, which needs a linear angle axis, but axes.angle is band'],
+    ['a radial bar with values for the wrong number of rings', { ...radialBars, series: [{ type: 'radialBar', name: 'B', data: [1] }] }, 'Invalid chart: series[0].data has 1 values, but axes.radius.categories has 2'],
+    ['a rose beside a bar series', { ...rose, series: [rose.series[0], { type: 'bar', name: 'B', data: [1, 2, 3] }] }, 'Invalid chart: series[1] is a bar series, which cannot share a chart with series[0], a rose series'],
+    ['polygon gridlines on a linear angle axis', { ...radialBars, axes: { angle: { type: 'linear' }, radius: { type: 'linear', shape: 'polygon' } }, series: [{ type: 'polarScatter', name: 'S', data: [[1, 2]] }] }, 'Invalid chart: axes.radius.shape is polygon, which needs a band angle axis for its corners'],
+    ['a shape on a band radius', { ...radialBars, axes: { ...radialBars.axes, radius: { ...radialBars.axes.radius, shape: 'circle' } } }, 'Invalid chart: axes.radius.shape is only for a linear radius axis'],
+    ['a hole of the whole radius', { ...rose, axes: { ...spokes, radius: { type: 'linear', innerRadius: 1 } } }, 'Invalid chart: axes.radius.innerRadius must be a number from 0 to 0.95, got 1'],
+    ['an angle axis that ends where it starts', { ...rose, axes: { angle: { ...spokes.angle, startAngle: 90, endAngle: 90 } } }, 'Invalid chart: axes.angle.endAngle must be greater than startAngle (90) and at most 360 past it, got 90'],
+    ['an angle axis of more than a turn', { ...rose, axes: { angle: { ...spokes.angle, startAngle: 0, endAngle: 361 } } }, 'Invalid chart: axes.angle.endAngle must be greater than startAngle (0) and at most 360 past it, got 361'],
     ['a dash pattern shorter than one unit', { ...bars, series: [{ type: 'line', name: 'A', dash: [0.005, 0], data: [1, 2] }] }, 'Invalid chart: series[0].dash is not valid: Invalid style: strokeLineDash must be an array of 1 to 16 lengths from 0 to 1000000, adding up to at least 1, got 0.005,0'],
     ['a stroke width past 100', { ...bars, style: { strokeWidth: 1e300 } }, 'Invalid chart: style.strokeWidth must be a number from 0 to 100, got 1e+300'],
     ['a fill weight past 100', { ...bars, series: [{ type: 'bar', name: 'A', style: { fillWeight: 101 }, data: [1, 2] }] }, 'Invalid chart: series[0].style.fillWeight must be a number from 0 to 100, got 101'],

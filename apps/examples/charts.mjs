@@ -106,6 +106,50 @@ const charts = {
       { type: 'radar', name: 'Bo', data: [5, 9, 6, 4, 8] },
     ],
   },
+  rose: {
+    width: 420,
+    height: 400,
+    title: 'Wind by direction',
+    axes: { angle: { type: 'band', categories: ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'] } },
+    series: [
+      { type: 'rose', name: 'Calm', stack: 'wind', data: [4, 3, 2, 2, 3, 5, 6, 5] },
+      { type: 'rose', name: 'Breezy', stack: 'wind', data: [3, 2, 1, 2, 2, 4, 5, 4] },
+      { type: 'rose', name: 'Gale', stack: 'wind', data: [1, 1, 0, 1, 1, 2, 3, 2] },
+    ],
+  },
+  radialBar: {
+    width: 420,
+    height: 400,
+    title: 'Goals reached',
+    axes: {
+      angle: { type: 'linear', max: 100, endAngle: 270, format: { suffix: '%' } },
+      radius: { type: 'band', categories: ['Move', 'Exercise', 'Stand'], innerRadius: 0.3 },
+    },
+    series: [{ type: 'radialBar', name: 'Today', data: [82, 45, 67] }],
+  },
+  polarLine: {
+    width: 420,
+    height: 400,
+    title: 'Temperature by month',
+    axes: {
+      angle: { type: 'band', categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] },
+      radius: { type: 'linear', format: { suffix: '°' } },
+    },
+    series: [
+      { type: 'polarArea', name: 'High', data: [6, 7, 10, 13, 17, 20, 22, 22, 19, 14, 9, 7] },
+      { type: 'polarLine', name: 'Low', dash: [5, 3], data: [1, 1, 3, 5, 8, 11, 13, 13, 10, 7, 4, 2] },
+    ],
+  },
+  polarScatter: {
+    width: 420,
+    height: 400,
+    title: 'Sightings',
+    axes: { angle: { type: 'linear', min: 0, max: 360 }, radius: { type: 'linear' } },
+    series: [
+      { type: 'polarScatter', name: 'Owls', data: [[20, 3], [75, 5], [140, 2], [210, 6], [300, 4]] },
+      { type: 'polarScatter', name: 'Bats', data: [[45, 1], [120, 4], [190, 3], [260, 5], [330, 2]] },
+    ],
+  },
   sparkline: {
     width: 120,
     height: 32,

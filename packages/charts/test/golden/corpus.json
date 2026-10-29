@@ -1951,5 +1951,522 @@
     }
    ]
   }
+ },
+ {
+  "name": "rose-stacked",
+  "spec": {
+   "width": 360,
+   "height": 340,
+   "title": "Wind",
+   "axes": {
+    "angle": {
+     "type": "band",
+     "categories": [
+      "N",
+      "NE",
+      "E",
+      "SE",
+      "S",
+      "SW",
+      "W",
+      "NW"
+     ]
+    }
+   },
+   "series": [
+    {
+     "type": "rose",
+     "name": "Calm",
+     "stack": "w",
+     "data": [
+      4,
+      3,
+      2,
+      2,
+      3,
+      5,
+      6,
+      5
+     ]
+    },
+    {
+     "type": "rose",
+     "name": "Gale",
+     "stack": "w",
+     "data": [
+      1,
+      1,
+      0,
+      1,
+      null,
+      2,
+      3,
+      2
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "rose-grouped-hole",
+  "spec": {
+   "width": 320,
+   "height": 320,
+   "axes": {
+    "angle": {
+     "type": "band",
+     "categories": [
+      "N",
+      "E",
+      "S",
+      "W"
+     ]
+    },
+    "radius": {
+     "type": "linear",
+     "innerRadius": 0.2
+    }
+   },
+   "series": [
+    {
+     "type": "rose",
+     "name": "2024",
+     "data": [
+      3,
+      5,
+      2,
+      4
+     ]
+    },
+    {
+     "type": "rose",
+     "name": "2025",
+     "data": [
+      4,
+      4,
+      3,
+      1
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "rose-half",
+  "spec": {
+   "width": 360,
+   "height": 220,
+   "legend": "none",
+   "axes": {
+    "angle": {
+     "type": "band",
+     "categories": [
+      "a",
+      "b",
+      "c",
+      "d",
+      "e"
+     ],
+     "startAngle": -90,
+     "endAngle": 90
+    }
+   },
+   "series": [
+    {
+     "type": "rose",
+     "name": "R",
+     "data": [
+      1,
+      4,
+      2,
+      5,
+      3
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "radial-bar-three-quarters",
+  "spec": {
+   "width": 340,
+   "height": 320,
+   "axes": {
+    "angle": {
+     "type": "linear",
+     "max": 100,
+     "endAngle": 270,
+     "format": {
+      "suffix": "%"
+     }
+    },
+    "radius": {
+     "type": "band",
+     "categories": [
+      "Move",
+      "Exercise",
+      "Stand"
+     ],
+     "innerRadius": 0.3
+    }
+   },
+   "series": [
+    {
+     "type": "radialBar",
+     "name": "Today",
+     "data": [
+      82,
+      45,
+      67
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "radial-bar-stacked",
+  "spec": {
+   "width": 320,
+   "height": 320,
+   "axes": {
+    "angle": {
+     "type": "linear"
+    },
+    "radius": {
+     "type": "band",
+     "categories": [
+      "a",
+      "b"
+     ]
+    }
+   },
+   "series": [
+    {
+     "type": "radialBar",
+     "name": "X",
+     "stack": "s",
+     "data": [
+      3,
+      2
+     ]
+    },
+    {
+     "type": "radialBar",
+     "name": "Y",
+     "stack": "s",
+     "data": [
+      1,
+      4
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "radial-bar-grouped-negative",
+  "spec": {
+   "width": 320,
+   "height": 320,
+   "axes": {
+    "angle": {
+     "type": "linear"
+    },
+    "radius": {
+     "type": "band",
+     "categories": [
+      "a",
+      "b"
+     ],
+     "hidden": true
+    }
+   },
+   "series": [
+    {
+     "type": "radialBar",
+     "name": "X",
+     "data": [
+      3,
+      -2
+     ]
+    },
+    {
+     "type": "radialBar",
+     "name": "Y",
+     "data": [
+      1,
+      null
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "polar-line-area-closed",
+  "spec": {
+   "width": 340,
+   "height": 340,
+   "axes": {
+    "angle": {
+     "type": "band",
+     "categories": [
+      "a",
+      "b",
+      "c",
+      "d",
+      "e",
+      "f"
+     ]
+    },
+    "radius": {
+     "type": "linear",
+     "format": {
+      "suffix": "°"
+     }
+    }
+   },
+   "series": [
+    {
+     "type": "polarArea",
+     "name": "High",
+     "data": [
+      6,
+      9,
+      12,
+      10,
+      8,
+      7
+     ]
+    },
+    {
+     "type": "polarLine",
+     "name": "Low",
+     "dash": [
+      5,
+      3
+     ],
+     "data": [
+      1,
+      3,
+      5,
+      4,
+      2,
+      1
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "polar-line-gaps",
+  "spec": {
+   "width": 300,
+   "height": 300,
+   "axes": {
+    "angle": {
+     "type": "band",
+     "categories": [
+      "a",
+      "b",
+      "c",
+      "d",
+      "e",
+      "f"
+     ]
+    }
+   },
+   "series": [
+    {
+     "type": "polarLine",
+     "name": "L",
+     "data": [
+      1,
+      2,
+      null,
+      4,
+      null,
+      3
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "polar-area-stacked",
+  "spec": {
+   "width": 320,
+   "height": 320,
+   "axes": {
+    "angle": {
+     "type": "band",
+     "categories": [
+      "a",
+      "b",
+      "c",
+      "d",
+      "e"
+     ]
+    }
+   },
+   "series": [
+    {
+     "type": "polarArea",
+     "name": "A",
+     "stack": "s",
+     "data": [
+      2,
+      3,
+      2,
+      4,
+      3
+     ]
+    },
+    {
+     "type": "polarArea",
+     "name": "B",
+     "stack": "s",
+     "data": [
+      1,
+      1,
+      2,
+      1,
+      2
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "polar-area-half",
+  "spec": {
+   "width": 340,
+   "height": 220,
+   "axes": {
+    "angle": {
+     "type": "band",
+     "categories": [
+      "a",
+      "b",
+      "c",
+      "d"
+     ],
+     "startAngle": -90,
+     "endAngle": 90
+    },
+    "radius": {
+     "type": "linear",
+     "min": -2
+    }
+   },
+   "series": [
+    {
+     "type": "polarArea",
+     "name": "A",
+     "data": [
+      2,
+      -1,
+      3,
+      1
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "polar-scatter",
+  "spec": {
+   "width": 320,
+   "height": 320,
+   "axes": {
+    "angle": {
+     "type": "linear",
+     "min": 0,
+     "max": 360
+    },
+    "radius": {
+     "type": "linear"
+    }
+   },
+   "series": [
+    {
+     "type": "polarScatter",
+     "name": "Owls",
+     "data": [
+      [
+       20,
+       3
+      ],
+      [
+       75,
+       5
+      ],
+      [
+       140,
+       2
+      ],
+      [
+       210,
+       6
+      ],
+      [
+       300,
+       4
+      ]
+     ]
+    },
+    {
+     "type": "polarScatter",
+     "name": "Bats",
+     "data": [
+      [
+       45,
+       1
+      ],
+      [
+       190,
+       3
+      ]
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "polar-scatter-quarter",
+  "spec": {
+   "width": 300,
+   "height": 300,
+   "axes": {
+    "angle": {
+     "type": "linear",
+     "startAngle": 0,
+     "endAngle": 90,
+     "grid": false
+    },
+    "radius": {
+     "type": "linear",
+     "shape": "circle"
+    }
+   },
+   "series": [
+    {
+     "type": "polarScatter",
+     "name": "S",
+     "data": [
+      [
+       1,
+       1
+      ],
+      [
+       2,
+       3
+      ],
+      [
+       4,
+       2
+      ]
+     ]
+    }
+   ]
+  }
  }
 ]

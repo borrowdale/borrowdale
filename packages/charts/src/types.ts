@@ -4,7 +4,8 @@ import type { Font, TextLayout } from '@borrowdale/text';
 /**
  * A chart, as plain data that can come from JSON. Its series' type picks its coordinate system, and
  * every series must draw in the same one, with that system's axes: `x` and `y` for cartesian
- * series, `angle` (and optionally `radius`) for radar series, none for a pie.
+ * series, `angle` (and optionally `radius`) for polar series (radar, rose, radial bar, polar line,
+ * area and scatter), none for a pie.
  */
 export interface ChartSpec {
   width: number;
@@ -49,12 +50,51 @@ export interface CartesianAxes {
   y2?: LinearAxis | undefined;
 }
 
+/**
+ * The axes of a polar chart: `angle` around the circle and `radius` out from the centre. Each series
+ * type says which of them holds its categories.
+ */
 export interface PolarAxes {
-  /** The spokes of a radar chart, clockwise from the top: at least 3. */
-  angle: Omit<BandAxis, 'title'>;
-  /** Starts at 0 unless `min` is set. */
-  radius?: Omit<LinearAxis, 'title' | 'percent'> | undefined;
+  angle: AngleBandAxis | AngleLinearAxis;
+  /** Defaults to a linear axis. */
+  radius?: RadiusLinearAxis | RadiusBandAxis | undefined;
 }
+
+/** The part of the circle an angle axis takes up. */
+export interface Sweep {
+  /**
+   * Degrees clockwise from the top. Defaults to 0 and 360. `endAngle` must be greater than
+   * `startAngle` and at most 360 past it.
+   */
+  startAngle?: number | undefined;
+  endAngle?: number | undefined;
+}
+
+/**
+ * Categories around the circle: the spokes of a radar chart, the wedges of a rose. On a whole turn
+ * the first is at `startAngle`; on part of one each takes an equal share, centred in it.
+ */
+export interface AngleBandAxis extends Omit<BandAxis, 'title'>, Sweep {}
+
+/** Values around the circle, from the start of the sweep to its end. */
+export interface AngleLinearAxis extends Omit<LinearAxis, 'title' | 'percent'>, Sweep {}
+
+/** The hole in the middle, as a share of the radius, from 0 to 0.95. Defaults to 0. */
+interface Hole {
+  innerRadius?: number | undefined;
+}
+
+/** Values out from the centre, from 0 unless `min` is set. */
+export interface RadiusLinearAxis extends Omit<LinearAxis, 'title' | 'percent'>, Hole {
+  /**
+   * Gridlines as polygons through the spokes, or as circles. Defaults to `polygon` when every series
+   * is a radar, else `circle`. A polygon needs a band angle axis.
+   */
+  shape?: 'polygon' | 'circle' | undefined;
+}
+
+/** Categories out from the centre, as rings, the first outermost. */
+export interface RadiusBandAxis extends Omit<BandAxis, 'title'>, Hole {}
 
 export type Axis = BandAxis | LinearAxis;
 
@@ -218,6 +258,54 @@ export interface RadarSeries extends SeriesBase {
   data: readonly number[];
 }
 
+/**
+ * A Nightingale rose: a bar chart wrapped around a band angle axis, one wedge per category, with
+ * the value on the radius. Stacked roses make a wind rose.
+ */
+export interface RoseSeries extends SeriesBase {
+  type: 'rose';
+  /** One value per category, none negative; `null` draws no wedge. */
+  data: readonly (number | null)[];
+  /** As a bar's: wedges of series with the same stack name stack outwards. */
+  stack?: string | undefined;
+}
+
+/** A bar chart wrapped around: one ring per category of a band radius axis, the value on the angle. */
+export interface RadialBarSeries extends SeriesBase {
+  type: 'radialBar';
+  /** One value per category; `null` draws no bar. */
+  data: readonly (number | null)[];
+  /** As a bar's: bars of series with the same stack name stack clockwise. */
+  stack?: string | undefined;
+}
+
+/**
+ * A line through one point per category of a band angle axis, the value on the radius, joined
+ * straight. On a whole turn with no gap it closes, as a radar does; with gaps, the run that ends the
+ * data joins the run that starts it.
+ */
+export interface PolarLineSeries extends SeriesBase {
+  type: 'polarLine';
+  /** One value per category, none negative unless the radius axis sets `min`; `null` leaves a gap. */
+  data: readonly (number | null)[];
+  /** As a line's. */
+  dash?: readonly number[] | undefined;
+}
+
+/** A polar line filled to the centre, or to the area below it in its stack. */
+export interface PolarAreaSeries extends SeriesBase {
+  type: 'polarArea';
+  /** As a polar line's; stacked values must not be negative. */
+  data: readonly (number | null)[];
+  stack?: string | undefined;
+}
+
+/** Points by angle and radius. Needs both axes to be linear. */
+export interface PolarScatterSeries extends SeriesBase {
+  type: 'polarScatter';
+  data: readonly (readonly [angle: number, radius: number])[];
+}
+
 export type Series =
   | BarSeries
   | LineSeries
@@ -226,7 +314,12 @@ export type Series =
   | ScatterSeries
   | BubbleSeries
   | PieSeries
-  | RadarSeries;
+  | RadarSeries
+  | RoseSeries
+  | RadialBarSeries
+  | PolarLineSeries
+  | PolarAreaSeries
+  | PolarScatterSeries;
 
 export type SeriesType = Series['type'];
 

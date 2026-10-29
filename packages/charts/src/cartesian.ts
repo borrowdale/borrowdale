@@ -4,6 +4,7 @@ import { areaPath, linePath } from './curves.js';
 import type { Drawing } from './drawing.js';
 import { assertRoom, GAP, TICK, type Rect } from './frame.js';
 import { GRID, GRID_WIDTH, hatched, INK, LINE_WIDTH, type Paint } from './palette.js';
+import { stackGroup, stackSpans, type Span } from './stack.js';
 import { bandScale, formatValue, linearScale, place, type BandScale, type PlacedScale, type Scale } from './scale.js';
 import type { ChartNode, Curve } from './types.js';
 import type { CheckedAxis, CheckedCartesianChart, CheckedLinearAxis, SeriesOf } from './validate.js';
@@ -11,14 +12,12 @@ import type { CheckedAxis, CheckedCartesianChart, CheckedLinearAxis, SeriesOf } 
 type CartesianSeries = SeriesOf<'cartesian'>;
 type MarkType = CartesianSeries['type'];
 type AxisKey = 'x' | 'y' | 'y2';
-/** From a series' value at the start of its bar or band to the value at its end, per category. */
-type Span = [from: number, to: number] | null;
 
 // The share of each band's step left as a gap between bands.
-const BAND_PADDING = 0.2;
+export const BAND_PADDING = 0.2;
 // The share of a bar's slot left as a gap between bars side by side.
 const BAR_GAP = 0.1;
-const POINT_SIZE = 6;
+export const POINT_SIZE = 6;
 const MAX_BUBBLE = 60;
 
 /** What a series type is on a cartesian chart. A new type fails to compile until it has an entry. */
@@ -175,61 +174,26 @@ function makeFrame(plot: Rect, horizontal: boolean, bands: BandScale | undefined
 }
 
 /**
- * Where each bar and area of each category starts and ends on its value axis. Series with a stack
- * name stack positive values up and negative values down (as ECharts does; stacked areas have no
- * negative values). On a percent axis each stack's values become shares of its total. Lines span
- * one value and range areas their pair.
+ * Where each bar and area of each category starts and ends on its value axis: stacked by stack name
+ * (stacked areas have no negative values), as shares of each stack's total on a percent axis. Lines
+ * span one value and range areas their pair.
  */
 function spansOf(
   series: readonly CartesianSeries[],
   valueAxisOf: (entry: CartesianSeries) => AxisKey,
   linear: Record<AxisKey, CheckedLinearAxis | undefined>,
 ): Map<CartesianSeries, Span[]> {
-  const spans = new Map<CartesianSeries, Span[]>();
-  const totals = new Map<string, number[]>();
-  const sums = new Map<string, number[][]>();
+  const stacking = series.filter((entry) => entry.type === 'bar' || entry.type === 'area');
+  const spans: Map<CartesianSeries, Span[]> = stackSpans(
+    stacking,
+    (entry) => stackOf(entry, valueAxisOf),
+    (entry) => linear[valueAxisOf(entry)]?.percent ?? false,
+  );
   for (const entry of series) {
-    if (entry.type === 'bar' || entry.type === 'area') {
-      const total = totals.get(stackOf(entry, valueAxisOf)) ?? entry.data.map(() => 0);
-      entry.data.forEach((value, i) => {
-        total[i]! += Math.abs(value ?? 0);
-      });
-      totals.set(stackOf(entry, valueAxisOf), total);
-    }
-  }
-  for (const entry of series) {
-    switch (entry.type) {
-      case 'line':
-        spans.set(entry, entry.data.map((value) => (value === null ? null : [value, value])));
-        break;
-      case 'rangeArea':
-        spans.set(entry, entry.data.map((pair) => pair && [pair[0], pair[1]]));
-        break;
-      case 'bar':
-      case 'area': {
-        const stack = stackOf(entry, valueAxisOf);
-        const total = totals.get(stack)!;
-        const percent = linear[valueAxisOf(entry)]?.percent ?? false;
-        const [up, down] = sums.get(stack) ?? [entry.data.map(() => 0), entry.data.map(() => 0)];
-        sums.set(stack, [up!, down!]);
-        const share = (part: number, i: number): number => (total[i]! === 0 ? 0 : (part / total[i]!) * 100);
-        spans.set(
-          entry,
-          entry.data.map((value, i) => {
-            if (value === null) {
-              return null;
-            }
-            const side = value < 0 ? down! : up!;
-            const from = side[i]!;
-            side[i] = from + value;
-            return percent ? [share(from, i), share(from + value, i)] : [from, from + value];
-          }),
-        );
-        break;
-      }
-      case 'scatter':
-      case 'bubble':
-        break;
+    if (entry.type === 'line') {
+      spans.set(entry, entry.data.map((value) => (value === null ? null : [value, value])));
+    } else if (entry.type === 'rangeArea') {
+      spans.set(entry, entry.data.map((pair) => pair && [pair[0], pair[1]]));
     }
   }
   return spans;
@@ -240,7 +204,7 @@ function stackOf(
   entry: Extract<CartesianSeries, { stack: unknown }>,
   valueAxisOf: (entry: CartesianSeries) => AxisKey,
 ): string {
-  return `${entry.type}|${valueAxisOf(entry)}|${entry.stack === undefined ? `#${entry.index}` : `@${entry.stack}`}`;
+  return stackGroup(entry, valueAxisOf(entry));
 }
 
 /** The lowest and highest value drawn on the axis, counting zero where a series stands on it. */

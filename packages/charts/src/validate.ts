@@ -94,11 +94,27 @@ const color: Check<string> = (path, value) => {
   return given;
 };
 
+// Each field a series type may have, read the same way by every type that has it, so a cartesian
+// type and its polar twin take the same values.
+const readAxis = (r: Fields) => r.optional('axis', valueAxis) ?? 'y';
+const readStack = (r: Fields) => r.optional('stack', text());
+const readCurve = (r: Fields) => r.optional('curve', curve) ?? 'linear';
+const readDash = (r: Fields) => r.optional('dash', checkDash);
+const readValues = (r: Fields) => r.required('data', categoryValues);
+const readPoints = <const N extends readonly [string, string]>(names: N) => (r: Fields) =>
+  r.required('data', list(0, MAX_POINTS, tuple(names)));
+
+/** The kinds of a polar chart's two axes a series type needs. */
+interface PolarNeeds {
+  angle: 'band' | 'linear';
+  radius: 'band' | 'linear';
+}
+
 /**
  * What each series type needs: its coordinate system, whether it is drawn per category of a band
- * axis, whether it stacks, its keys beyond the common ones, and how its own fields are read.
- * `satisfies` makes a new type fail to compile until it is listed, and `CheckedSeries` is derived
- * from it.
+ * axis, whether it stacks, which polar axes it needs, its keys beyond the common ones, and how its own
+ * fields are read. `satisfies` makes a new type fail to compile until it is listed, and
+ * `CheckedSeries` is derived from it.
  */
 const SERIES_RULES = {
   bar: {
@@ -106,35 +122,21 @@ const SERIES_RULES = {
     band: true,
     stacks: true,
     keys: ['axis', 'data', 'stack'],
-    read: (r: Fields) => ({
-      axis: r.optional('axis', valueAxis) ?? 'y',
-      stack: r.optional('stack', text()),
-      data: r.required('data', categoryValues),
-    }),
+    read: (r: Fields) => ({ axis: readAxis(r), stack: readStack(r), data: readValues(r) }),
   },
   line: {
     system: 'cartesian',
     band: true,
     stacks: false,
     keys: ['axis', 'data', 'curve', 'dash'],
-    read: (r: Fields) => ({
-      axis: r.optional('axis', valueAxis) ?? 'y',
-      curve: r.optional('curve', curve) ?? 'linear',
-      dash: r.optional('dash', checkDash),
-      data: r.required('data', categoryValues),
-    }),
+    read: (r: Fields) => ({ axis: readAxis(r), curve: readCurve(r), dash: readDash(r), data: readValues(r) }),
   },
   area: {
     system: 'cartesian',
     band: true,
     stacks: true,
     keys: ['axis', 'data', 'stack', 'curve'],
-    read: (r: Fields) => ({
-      axis: r.optional('axis', valueAxis) ?? 'y',
-      stack: r.optional('stack', text()),
-      curve: r.optional('curve', curve) ?? 'linear',
-      data: r.required('data', categoryValues),
-    }),
+    read: (r: Fields) => ({ axis: readAxis(r), stack: readStack(r), curve: readCurve(r), data: readValues(r) }),
   },
   rangeArea: {
     system: 'cartesian',
@@ -142,8 +144,8 @@ const SERIES_RULES = {
     stacks: false,
     keys: ['axis', 'data', 'curve'],
     read: (r: Fields) => ({
-      axis: r.optional('axis', valueAxis) ?? 'y',
-      curve: r.optional('curve', curve) ?? 'linear',
+      axis: readAxis(r),
+      curve: readCurve(r),
       data: r.required('data', list(0, MAX_POINTS, nullable(checkRange))),
     }),
   },
@@ -152,7 +154,7 @@ const SERIES_RULES = {
     band: false,
     stacks: false,
     keys: ['data'],
-    read: (r: Fields) => ({ data: r.required('data', list(0, MAX_POINTS, tuple(['x', 'y']))) }),
+    read: (r: Fields) => ({ data: readPoints(['x', 'y'])(r) }),
   },
   bubble: {
     system: 'cartesian',
@@ -172,18 +174,70 @@ const SERIES_RULES = {
     system: 'polar',
     band: false,
     stacks: false,
+    polar: { angle: 'band', radius: 'linear' },
     keys: ['data'],
     read: (r: Fields) => ({ data: r.required('data', list(0, MAX_POINTS, number(0, MAX_VALUE))) }),
   },
+  // The polar twins of bar, line, area and scatter: the same fields, read by the same readers, less
+  // what a polar chart has no use for (a second value axis, curves).
+  rose: {
+    system: 'polar',
+    band: false,
+    stacks: true,
+    polar: { angle: 'band', radius: 'linear' },
+    keys: ['data', 'stack'],
+    read: (r: Fields) => ({ stack: readStack(r), data: readValues(r) }),
+  },
+  radialBar: {
+    system: 'polar',
+    band: false,
+    stacks: true,
+    polar: { angle: 'linear', radius: 'band' },
+    keys: ['data', 'stack'],
+    read: (r: Fields) => ({ stack: readStack(r), data: readValues(r) }),
+  },
+  polarLine: {
+    system: 'polar',
+    band: false,
+    stacks: false,
+    polar: { angle: 'band', radius: 'linear' },
+    keys: ['data', 'dash'],
+    read: (r: Fields) => ({ dash: readDash(r), data: readValues(r) }),
+  },
+  polarArea: {
+    system: 'polar',
+    band: false,
+    stacks: true,
+    polar: { angle: 'band', radius: 'linear' },
+    keys: ['data', 'stack'],
+    read: (r: Fields) => ({ stack: readStack(r), data: readValues(r) }),
+  },
+  polarScatter: {
+    system: 'polar',
+    band: false,
+    stacks: false,
+    polar: { angle: 'linear', radius: 'linear' },
+    keys: ['data'],
+    read: (r: Fields) => ({ data: readPoints(['angle', 'radius'])(r) }),
+  },
 } as const satisfies Record<
   SeriesType,
-  { system: System; band: boolean; stacks: boolean; keys: readonly string[]; read: (r: Fields, path: string) => object }
+  {
+    system: System;
+    band: boolean;
+    stacks: boolean;
+    polar?: PolarNeeds;
+    keys: readonly string[];
+    read: (r: Fields, path: string) => object;
+  }
 >;
 
 type Rules = typeof SERIES_RULES;
 
 // The types whose series stack, which are the ones a percent axis can show.
-const STACKING = (Object.keys(SERIES_RULES) as SeriesType[]).filter((type) => SERIES_RULES[type].stacks).join(', ');
+const STACKING = (Object.keys(SERIES_RULES) as SeriesType[])
+  .filter((type) => SERIES_RULES[type].stacks && SERIES_RULES[type].system === 'cartesian')
+  .join(', ');
 
 /** The fields every series has, checked. */
 interface CheckedSeriesBase {
@@ -226,10 +280,23 @@ export interface CheckedCartesianChart extends CheckedChartBase {
   series: SeriesOf<'cartesian'>[];
 }
 
+export interface CheckedSweep {
+  startAngle: number;
+  endAngle: number;
+}
+
+export type CheckedAngleAxis = (CheckedBandAxis | CheckedLinearAxis) & CheckedSweep;
+
+export type CheckedRadiusAxis = (CheckedBandAxis | CheckedLinearAxis) & {
+  /** As a share of the radius. */
+  innerRadius: number;
+  shape: 'polygon' | 'circle';
+};
+
 export interface CheckedPolarChart extends CheckedChartBase {
   system: 'polar';
-  angle: CheckedBandAxis;
-  radius: CheckedLinearAxis;
+  angle: CheckedAngleAxis;
+  radius: CheckedRadiusAxis;
   series: SeriesOf<'polar'>[];
 }
 
@@ -382,22 +449,92 @@ function checkCartesianChart(
   return { ...base, system: 'cartesian', x, y, y2, band, series };
 }
 
+const POLAR_LINEAR_KEYS = ['type', 'min', 'max', 'grid', 'hidden', 'format'];
+const POLAR_BAND_KEYS = ['type', 'categories', 'hidden'];
+const SWEEP_KEYS = ['startAngle', 'endAngle'];
+const HOLE_KEYS = ['innerRadius'];
+const MAX_HOLE = 0.95;
+
+/** A polar axis, band or linear by its `type`, with the keys `extra` adds to either. */
+function checkPolarAxis(extra: readonly string[]): Check<CheckedAxis> {
+  return (path, raw) => {
+    const type = fields(path, raw).required('type', (typePath, given) =>
+      given === 'band' || given === 'linear' ? given : fail(typePath, `must be "band" or "linear", got ${show(given)}`),
+    );
+    return type === 'band'
+      ? checkBandAxis([...POLAR_BAND_KEYS, ...extra])(path, raw)
+      : checkLinearAxis([...POLAR_LINEAR_KEYS, ...extra], true)(path, raw);
+  };
+}
+
 function checkPolarChart(r: Fields, base: CheckedChartBase, series: SeriesOf<'polar'>[]): CheckedPolarChart {
   const axes = r.required('axes', fields);
   axes.allow(['angle', 'radius']);
-  const angle = axes.required('angle', checkBandAxis(['type', 'categories', 'hidden']));
-  const radiusAxis = checkLinearAxis(['type', 'min', 'max', 'grid', 'hidden', 'format'], true);
-  const radius = axes.optional('radius', radiusAxis) ?? radiusAxis('axes.radius', { type: 'linear' });
-  const spokes = angle.categories.length;
-  if (spokes < 3) {
+  const raw = (_path: string, value: unknown): unknown => value;
+  const angleRaw = axes.required('angle', raw);
+  const angle = { ...checkPolarAxis(SWEEP_KEYS)('axes.angle', angleRaw), ...checkSweep(fields('axes.angle', angleRaw), 'axes.angle') };
+  const radiusRaw = axes.optional('radius', raw) ?? { type: 'linear' };
+  const radiusAxis = checkPolarAxis([...HOLE_KEYS, 'shape'])('axes.radius', radiusRaw);
+  const radiusFields = fields('axes.radius', radiusRaw);
+  const innerRadius = radiusFields.optional('innerRadius', number(0, MAX_HOLE)) ?? 0;
+  const shape =
+    radiusAxis.type === 'band'
+      ? radiusFields.optional('shape', (path) => fail(path, 'is only for a linear radius axis'))
+      : radiusFields.optional('shape', oneOf(['polygon', 'circle'] as const));
+  for (const entry of series) {
+    const needs = SERIES_RULES[entry.type].polar;
+    for (const [key, axis] of [['angle', angle], ['radius', radiusAxis]] as const) {
+      if (axis.type !== needs[key]) {
+        fail(entry.path, `is a ${entry.type} series, which needs a ${needs[key]} ${key} axis, but axes.${key} is ${axis.type}`);
+      }
+    }
+  }
+  const radius: CheckedRadiusAxis = {
+    ...radiusAxis,
+    innerRadius,
+    shape: shape ?? (series.every((entry) => entry.type === 'radar') ? 'polygon' : 'circle'),
+  };
+  if (radius.shape === 'polygon' && angle.type !== 'band') {
+    fail('axes.radius.shape', 'is polygon, which needs a band angle axis for its corners');
+  }
+  const spokes = angle.type === 'band' ? angle.categories.length : 0;
+  if (spokes < 3 && radius.shape === 'polygon') {
     fail('axes.angle.categories', `must have at least 3 categories for a radar chart, got ${spokes}`);
   }
+  const band = angle.type === 'band' ? angle : radius.type === 'band' ? radius : undefined;
   for (const entry of series) {
-    if (entry.data.length !== spokes) {
-      fail(`${entry.path}.data`, `has ${entry.data.length} values, but axes.angle.categories has ${spokes}`);
+    if (entry.type === 'polarScatter') {
+      continue;
+    }
+    if (band && entry.data.length !== band.categories.length) {
+      const which = band === angle ? 'angle' : 'radius';
+      fail(`${entry.path}.data`, `has ${entry.data.length} values, but axes.${which}.categories has ${band.categories.length}`);
+    }
+    if (radius.type === 'linear') {
+      // Wedges and stacks grow out from 0; a line may go below it only on an axis that starts below.
+      const outward = entry.type === 'rose' || ('stack' in entry && entry.stack !== undefined);
+      entry.data.forEach((value, i) => {
+        if (value !== null && value < 0 && (outward || radius.min === undefined)) {
+          const reason = outward
+            ? `which ${entry.type === 'rose' ? 'a rose' : 'a stacked polarArea'} series cannot show`
+            : 'but axes.radius starts at 0 unless its min is set';
+          fail(`${entry.path}.data[${i}]`, `is negative, ${value}, ${reason}`);
+        }
+      });
     }
   }
   return { ...base, system: 'polar', angle, radius, series };
+}
+
+/** `startAngle` and `endAngle` at `path`: `endAngle` greater, and at most a whole turn past it. */
+function checkSweep(r: Fields, path: string): CheckedSweep {
+  const startAngle = r.optional('startAngle', number(-360, 360)) ?? 0;
+  const endAngle = r.optional('endAngle', number(-360, 720)) ?? 360;
+  if (!(endAngle > startAngle && endAngle - startAngle <= 360 + TURN_ROUNDING)) {
+    const after = `greater than startAngle (${startAngle}) and at most 360 past it`;
+    fail(`${path}.endAngle`, `must be ${after}, got ${endAngle}`);
+  }
+  return { startAngle, endAngle };
 }
 
 function checkPieChart(r: Fields, base: CheckedChartBase, series: SeriesOf<'pie'>[]): CheckedPieChart {
@@ -428,13 +565,8 @@ function checkPieSeries(r: Fields, path: string) {
   if (!data.some((slice) => slice.value > 0)) {
     fail(`${path}.data`, 'has no value above 0, so there is nothing to draw');
   }
-  const startAngle = r.optional('startAngle', number(-360, 360)) ?? 0;
-  const endAngle = r.optional('endAngle', number(-360, 720)) ?? 360;
-  if (!(endAngle > startAngle && endAngle - startAngle <= 360 + TURN_ROUNDING)) {
-    const after = `greater than startAngle (${startAngle}) and at most 360 past it`;
-    fail(`${path}.endAngle`, `must be ${after}, got ${endAngle}`);
-  }
-  return { data, innerRadius: r.optional('innerRadius', number(0, 0.95)) ?? 0, startAngle, endAngle };
+  const { startAngle, endAngle } = checkSweep(r, path);
+  return { data, innerRadius: r.optional('innerRadius', number(0, MAX_HOLE)) ?? 0, startAngle, endAngle };
 }
 
 
