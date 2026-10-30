@@ -154,7 +154,7 @@ export function layoutCartesian(drawing: Drawing, chart: CheckedCartesianChart, 
   const scales: Record<AxisKey, PlacedScale | undefined> = {
     x: xScale && place(xScale, [data.left, data.right]),
     y: yScale && place(yScale, [data.bottom, data.top]),
-    y2: y2Scale && place(y2Scale, [plot.bottom, plot.top]),
+    y2: y2Scale && place(y2Scale, [data.bottom, data.top]),
   };
   const across: [number, number] = horizontal ? [plot.top, plot.bottom] : [plot.left, plot.right];
   const bands = band && bandScale(band.categories.length, across, BAND_PADDING);

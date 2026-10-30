@@ -74,7 +74,7 @@ export class Drawing {
   /**
    * A shape in its `defaults` style, then the chart's style, then its series' `own` style, seeded
    * from the chart seed and `key`, so a mark keeps its strokes when other marks change. Each part is
-   * written with its length, so names holding any character never make two keys alike.
+   * written with its length, so a separator inside a name never makes two keys alike.
    */
   shape(shape: Shape, defaults: SketchStyle, key: SeedKey, own: SketchStyle = {}): ChartNode {
     return this.#sketch(shape, { ...defaults, ...this.#chart.style, ...own }, key);

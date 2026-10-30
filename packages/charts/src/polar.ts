@@ -231,7 +231,7 @@ export function layoutPolar(drawing: Drawing, chart: CheckedPolarChart, rect: Re
       break;
     }
     if (round === MAX_REFITS) {
-      fail(`a ${chart.width} × ${chart.height} chart`, 'leaves no room for the labels of axes.radius');
+      fail('', `a ${chart.width} × ${chart.height} chart leaves no room for the labels of axes.radius`);
     }
     box = {
       left: box.left + over.left,

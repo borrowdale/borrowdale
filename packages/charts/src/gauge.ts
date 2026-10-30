@@ -86,7 +86,7 @@ export function layoutGauge(drawing: Drawing, chart: CheckedGaugeChart, rect: Re
     const [where, problem] =
       bars.length > 0
         ? ['series', `holds ${bars.length} gauge bars, more rings than the dial has room for`]
-        : [`a ${chart.width} × ${chart.height} chart`, "leaves no room for the dial's ticks around its hub"];
+        : ['', `a ${chart.width} × ${chart.height} chart leaves no room for the dial's ticks around its hub`];
     fail(where, problem);
   }
   const grid = { stroke: GRID, strokeWidth: GRID_WIDTH };

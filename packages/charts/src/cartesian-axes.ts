@@ -262,7 +262,8 @@ const LABEL_ROUNDING = 0.005;
  * The plot narrowed so that the end labels of `guide`, a flat band axis, stay inside `rect`. Band labels are
  * centred on their bands, so the first and last shown can reach past the ends of the axis. Each time
  * the plot is narrowed by what they still reach out, which narrows the bands and moves the labels out
- * again, but by less, until they fit. A lone label wider than the chart never fits, and throws.
+ * again, but by less, until they fit. Labels that never fit throw; a lone label wider than the chart
+ * leaves no room for the plot first, which throws that instead.
  */
 export function fitBandEnds(plot: Rect, guide: Guide, rect: Rect, chart: { width: number; height: number }): Rect {
   const { axis, labels, halves, room, side } = guide;
@@ -285,7 +286,7 @@ export function fitBandEnds(plot: Rect, guide: Guide, rect: Rect, chart: { width
     }
     fitted = { ...fitted, [start]: fitted[start] + Math.max(0, before), [end]: fitted[end] - Math.max(0, after) };
   }
-  return fail(`a ${chart.width} × ${chart.height} chart`, `leaves no room for the end labels of ${axis.path}`);
+  return fail('', `a ${chart.width} × ${chart.height} chart leaves no room for the end labels of ${axis.path}`);
 }
 
 /** How many labels `spacing` apart to step over, to keep one that does not overlap the last. */
