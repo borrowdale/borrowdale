@@ -22,8 +22,7 @@ const descriptions: Record<string, string> = {
     'BorrowdaleJS text API: measure and lay out Excalifont lettering, identify missing glyphs, and render text in SVG or Canvas.',
   '/docs/fills/':
     'BorrowdaleJS fill API: generate repeatable hand-drawn line, crosshatch and circle patterns for SVG backgrounds.',
-  '/playground/':
-    `Explore ${examples.length} editable BorrowdaleJS examples covering charts, shapes, text, patterns and native HTML component recipes.`,
+  '/playground/': `Explore ${examples.length} editable BorrowdaleJS examples covering charts, shapes, text, patterns and native HTML component recipes.`,
   '/examples/':
     'Explore three complete BorrowdaleJS dashboards using World Bank, NASA GISS and USGS datasets. Every chart includes its code.',
   '/examples/world/':
@@ -44,7 +43,14 @@ const descriptions: Record<string, string> = {
 /** The site's origin, for canonical URLs, the sitemap and robots.txt; throws unless it is a bare HTTPS origin. */
 export function checkOrigin(origin: string) {
   const url = new URL(origin);
-  if (url.protocol !== 'https:' || url.pathname !== '/' || url.search || url.hash || url.username || url.password)
+  if (
+    url.protocol !== 'https:' ||
+    url.pathname !== '/' ||
+    url.search ||
+    url.hash ||
+    url.username ||
+    url.password
+  )
     throw new Error('SITE_ORIGIN must be an HTTPS origin without credentials, path, query or fragment.');
   return url;
 }
@@ -99,7 +105,14 @@ export function metadata(
         inLanguage: 'en',
       }
     : undefined;
-  return { title, description, canonical, image, structured, robots: missing ? 'noindex, follow' : undefined };
+  return {
+    title,
+    description,
+    canonical,
+    image,
+    structured,
+    robots: missing ? 'noindex, follow' : undefined,
+  };
 }
 export function metadataHtml(path: string, origin?: string, base?: string) {
   const m = metadata(path, origin, base);

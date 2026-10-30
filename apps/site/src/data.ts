@@ -28,7 +28,12 @@ export function median(values: number[]) {
 export const worldYears = [...new Set(world.rows.map((x) => x.year))].sort((a, b) => a - b);
 /** A snapshot's retrieval date (YYYY-MM-DD) as the dashboards show it, such as "29 Oct 2026". */
 export const retrievedOn = (date: string) =>
-  new Date(`${date}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+  new Date(`${date}T00:00:00Z`).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
 export const completedYears = climate.rows.filter((x) => x.annual !== null);
 export const pretty = (n: number | null, digits = 1) =>
   n === null ? '—' : new Intl.NumberFormat('en', { maximumFractionDigits: digits }).format(n);

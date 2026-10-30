@@ -22,12 +22,14 @@ export function decorative(svg: string) {
   return svg.replace(/ role="img" aria-label="[^"]*"/, ' aria-hidden="true" focusable="false"');
 }
 export function scribble(width = 260, height = 64, fill = '#f0c557') {
-  return decorative(shapeSvg(
-    { kind: 'rectangle', x: 3, y: 3, width: width - 6, height: height - 6 },
-    { fill, fillStyle: 'solid', roughness: 0.8 },
-    width,
-    height,
-  ));
+  return decorative(
+    shapeSvg(
+      { kind: 'rectangle', x: 3, y: 3, width: width - 6, height: height - 6 },
+      { fill, fillStyle: 'solid', roughness: 0.8 },
+      width,
+      height,
+    ),
+  );
 }
 export function textSvg(text: string, options: LayoutOptions) {
   const layout = layoutText(text, options),

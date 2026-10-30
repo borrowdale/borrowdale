@@ -118,7 +118,9 @@ describe('interactive examples', () => {
   });
   it('keeps dashboards chart-based, with each table only as a collapsed data view of a chart', () => {
     const html = worldDashboard() + climateDashboard() + quakeDashboard();
-    expect(html.match(/<table/g)).toHaveLength(html.match(/<details class="dashboard-code dashboard-data">/g)!.length);
+    expect(html.match(/<table/g)).toHaveLength(
+      html.match(/<details class="dashboard-code dashboard-data">/g)!.length,
+    );
     expect(html.match(/<table/g)).toHaveLength(html.match(/class="chart-view"/g)!.length);
   });
 });

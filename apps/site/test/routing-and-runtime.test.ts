@@ -23,7 +23,10 @@ function openEditor() {
   StubWorker.runs.mockClear();
   vi.stubGlobal('Worker', StubWorker);
   history.replaceState(null, '', '/playground/charts/bars-grouped/');
-  document.body.innerHTML = pageHtml(location.pathname).replace(/<iframe[^>]*><\/iframe>/, '<div id="editor-preview"></div>');
+  document.body.innerHTML = pageHtml(location.pathname).replace(
+    /<iframe[^>]*><\/iframe>/,
+    '<div id="editor-preview"></div>',
+  );
   bindEditor();
   return document.getElementById('editor-source') as HTMLTextAreaElement;
 }
@@ -118,8 +121,12 @@ describe('playground and routing edge cases', () => {
   });
   it('fits a data-fit drawing to its paths with an 8-unit margin', () => {
     openEditor();
-    StubWorker.latest.onmessage!({ data: { ok: true, output: '<svg data-fit viewBox="0 0 300 240"><path d="M10 20 L30 40"/></svg>' } });
-    expect((document.getElementById('editor-preview') as HTMLIFrameElement).srcdoc).toContain('viewBox="2 12 36 36"');
+    StubWorker.latest.onmessage!({
+      data: { ok: true, output: '<svg data-fit viewBox="0 0 300 240"><path d="M10 20 L30 40"/></svg>' },
+    });
+    expect((document.getElementById('editor-preview') as HTMLIFrameElement).srcdoc).toContain(
+      'viewBox="2 12 36 36"',
+    );
     expect(document.getElementById('editor-status')!.textContent).toBe('Up to date');
   });
   it('ignores a message from a worker that a newer run replaced', () => {

@@ -23,7 +23,9 @@ export const dashboardState = { year: 2023, country: 'HUN', since: 1970, magnitu
 const number = (value: number) => value.toLocaleString('en', { maximumFractionDigits: 2 });
 // The categories a series of plain values is drawn against, from whichever axis is the band axis.
 function categoriesOf(spec: ChartSpec): readonly string[] {
-  const axes = (spec as unknown as { axes?: Record<string, { type?: string; categories?: readonly string[] }> }).axes ?? {};
+  const axes =
+    (spec as unknown as { axes?: Record<string, { type?: string; categories?: readonly string[] }> }).axes ??
+    {};
   return Object.values(axes).find((axis) => axis.type === 'band')?.categories ?? [];
 }
 // One row per drawn value, so the numbers behind a chart can be read without seeing it.
@@ -31,7 +33,8 @@ function dataRows(spec: ChartSpec) {
   const categories = categoriesOf(spec);
   return spec.series.flatMap((series) => {
     if (series.type === 'gauge') return [[series.name, '', number(series.value)]];
-    if (series.type === 'pie') return series.data.map((slice) => [series.name, slice.name, number(slice.value)]);
+    if (series.type === 'pie')
+      return series.data.map((slice) => [series.name, slice.name, number(slice.value)]);
     return (series.data as readonly (number | null | readonly number[])[]).map((value, i) => [
       series.name,
       categories[i] ?? String(i + 1),
@@ -41,7 +44,10 @@ function dataRows(spec: ChartSpec) {
 }
 function dataTable(title: string, spec: ChartSpec) {
   const rows = dataRows(spec)
-    .map(([series, point, value]) => `<tr><th scope="row">${escape(series)}</th><td>${escape(point)}</td><td>${value}</td></tr>`)
+    .map(
+      ([series, point, value]) =>
+        `<tr><th scope="row">${escape(series)}</th><td>${escape(point)}</td><td>${value}</td></tr>`,
+    )
     .join('');
   return `<details class="dashboard-code dashboard-data"><summary>View data</summary><div class="table-scroll"><table><caption class="visually-hidden">${escape(title)} data</caption><thead><tr><th scope="col">Series</th><th scope="col">Point</th><th scope="col">Value</th></tr></thead><tbody>${rows}</tbody></table></div></details>`;
 }
@@ -51,7 +57,14 @@ export function chartPanel(title: string, note: string, spec: ChartSpec, extra =
 function metric(label: string, value: string, note: string, accent = '') {
   return `<article class="metric ${accent}"><span>${label}</span><strong>${value}</strong><small>${note}</small></article>`;
 }
-function heading(kicker: string, title: string, desc: string, source: string, retrieved: string, controls: string) {
+function heading(
+  kicker: string,
+  title: string,
+  desc: string,
+  source: string,
+  retrieved: string,
+  controls: string,
+) {
   return `<div class="dashboard-heading"><div><p class="eyebrow">${kicker} / OPEN DATA NOTEBOOK</p><h1>${title}</h1><p>${desc}</p></div><div class="snapshot"><span class="status-dot"></span> Saved snapshot<small>Retrieved ${retrievedOn(retrieved)}</small></div></div><div class="dashboard-toolbar"><span>${source}</span><div>${controls}<button class="button small" id="download-data">↓ Download data</button></div></div>`;
 }
 function sourceNote(content: string) {
@@ -208,7 +221,11 @@ export function climateDashboard() {
     legend: 'top',
     axes: {
       angle: { type: 'band', categories: months },
-      radius: { type: 'linear', min: Math.min(0, ...recent.flatMap((r) => r.months.filter((x) => x !== null))), format: { suffix: '°C' } },
+      radius: {
+        type: 'linear',
+        min: Math.min(0, ...recent.flatMap((r) => r.months.filter((x) => x !== null))),
+        format: { suffix: '°C' },
+      },
     },
     series: recent.map((r, i) => ({
       type: i === 0 ? 'polarArea' : 'polarLine',
@@ -238,7 +255,14 @@ export function climateDashboard() {
     width: 660,
     height: 310,
     title: `${latest.year} annual anomaly`,
-    axes: { angle: { type: 'linear', min: Math.min(0, latest.annual!), max: Math.max(2, Math.ceil(latest.annual!)), format: { suffix: '°C' } } },
+    axes: {
+      angle: {
+        type: 'linear',
+        min: Math.min(0, latest.annual!),
+        max: Math.max(2, Math.ceil(latest.annual!)),
+        format: { suffix: '°C' },
+      },
+    },
     series: [{ type: 'gauge', name: 'Anomaly', color: colors[3], value: latest.annual! }],
   };
   return (

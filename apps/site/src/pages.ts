@@ -257,9 +257,7 @@ export function pageHtml(path: string) {
       ['License & credits', '/license/'],
     ]
       .map(([label, url]) => `<a href="${url}">${label}</a>`)
-      .join(
-        '',
-      )}</nav><span>MIT code · OFL font</span></footer>`,
+      .join('')}</nav><span>MIT code · OFL font</span></footer>`,
   );
 }
 export function allPaths() {

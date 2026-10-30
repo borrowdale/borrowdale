@@ -61,7 +61,13 @@ export const docs = [
     body: p.body,
     group: 'Package reference',
   })),
-  { url: '/about/', title: 'About BorrowdaleJS', source: 'apps/site/content/about.md', body: about, group: 'Project' },
+  {
+    url: '/about/',
+    title: 'About BorrowdaleJS',
+    source: 'apps/site/content/about.md',
+    body: about,
+    group: 'Project',
+  },
   {
     url: '/contributing/',
     title: 'Contributing',

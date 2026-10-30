@@ -68,7 +68,8 @@ for (const [file, html] of contents) {
   }
 }
 // A build that wrote no pages, or pages without links, would otherwise pass with nothing checked.
-if (files.length < 2 || checked === 0) errors.push(`Only ${files.length} pages and ${checked} links: is the build complete?`);
+if (files.length < 2 || checked === 0)
+  errors.push(`Only ${files.length} pages and ${checked} links: is the build complete?`);
 if (errors.length) throw new Error(errors.join('\n'));
 console.log(
   `Checked ${checked} local links/assets across ${files.length} static pages, including fragments.`,

@@ -45,16 +45,20 @@ it('links every playground from the HTML directory without requiring filters', (
   for (const path of allPaths().filter((p) => p.startsWith('/playground/') && p !== '/playground/'))
     expect(html).toContain(`href="${path}"`);
 });
-it.each(['http://example.test', 'https://example.test/path/', 'https://example.test/?q=1', 'https://example.test/#top'])(
-  'refuses %s as the site origin',
-  (origin) => {
-    expect(() => checkOrigin(origin)).toThrow('SITE_ORIGIN');
-  },
-);
+it.each([
+  'http://example.test',
+  'https://example.test/path/',
+  'https://example.test/?q=1',
+  'https://example.test/#top',
+])('refuses %s as the site origin', (origin) => {
+  expect(() => checkOrigin(origin)).toThrow('SITE_ORIGIN');
+});
 it('sets the canonical link, og:url and structured data in the browser when an origin is configured', () => {
   vi.stubEnv('VITE_SITE_ORIGIN', 'https://example.test');
   applyMetadata('/docs/charts/');
-  expect(document.querySelector<HTMLLinkElement>('link[rel="canonical"]')!.href).toBe('https://example.test/docs/charts/');
+  expect(document.querySelector<HTMLLinkElement>('link[rel="canonical"]')!.href).toBe(
+    'https://example.test/docs/charts/',
+  );
   expect(document.querySelector('meta[property="og:url"]')!.getAttribute('content')).toBe(
     'https://example.test/docs/charts/',
   );
@@ -67,7 +71,9 @@ it('names an example by its kind and points a raw-name URL at the slug URL', () 
 });
 it('links a large social image and ties every page to the website entity', () => {
   const html = metadataHtml('/docs/charts/', 'https://example.test', '/borrowdale/');
-  expect(html).toContain('<meta property="og:image" content="https://example.test/borrowdale/social-card.png">');
+  expect(html).toContain(
+    '<meta property="og:image" content="https://example.test/borrowdale/social-card.png">',
+  );
   expect(html).toContain('<meta name="twitter:card" content="summary_large_image">');
   expect(metadata('/docs/charts/', 'https://example.test', '/borrowdale/').structured).toMatchObject({
     '@type': 'TechArticle',

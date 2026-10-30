@@ -54,14 +54,54 @@ const patterns: Example[] = fillCases.map((e) => ({
 // Each UI recipe is written once, with ${frame(width,height,fill)} where a sketched frame goes: the
 // playground shows this markup as code, and the gallery draws the frames into it for its preview.
 export const recipes = [
-  { name: 'Primary action', tag: 'button', template: '<button class="sketch-button">${frame(260,64,"#f0c557")}<span>Make something ↗</span></button>' },
-  { name: 'Choice controls', tag: 'checkbox', template: '<fieldset class="recipe-choices"><legend>Layers</legend><label><input type="checkbox" checked> Show labels</label><label><input type="checkbox"> Show grid</label></fieldset>' },
-  { name: 'Segmented control', tag: 'radio', template: '<fieldset class="recipe-segments"><legend>Range</legend><label><input type="radio" name="range" checked><span>Week</span></label><label><input type="radio" name="range"><span>Month</span></label><label><input type="radio" name="range"><span>Year</span></label></fieldset>' },
-  { name: 'Metric card', tag: 'card', template: '<div class="recipe-metric">${frame(260,145,"#f5e9c4")}<div><small>Sketches made</small><strong>12,480</strong><span>↑ 18% this month · sample data</span></div></div>' },
-  { name: 'Status chips', tag: 'badge', template: '<div class="recipe-badges"><span>${frame(120,44,"#dfebd9")}<b>Ready</b></span><span>${frame(120,44,"#f5df9c")}<b>In progress</b></span><span>${frame(120,44,"#e3e5ec")}<b>Draft</b></span></div>' },
-  { name: 'Progress indicator', tag: 'progress', template: '<div class="recipe-progress"><label>Collection complete <span>68%</span></label><progress max="100" value="68">68%</progress></div>' },
-  { name: 'Note & disclosure', tag: 'disclosure', template: '<details class="recipe-note"><summary>A small observation</summary><p>Data can feel human without losing its precision.</p></details>' },
-  { name: 'Form field', tag: 'input', template: '<label class="recipe-input">Name your collection<input placeholder="A new perspective…" maxlength="80"></label>' },
+  {
+    name: 'Primary action',
+    tag: 'button',
+    template:
+      '<button class="sketch-button">${frame(260,64,"#f0c557")}<span>Make something ↗</span></button>',
+  },
+  {
+    name: 'Choice controls',
+    tag: 'checkbox',
+    template:
+      '<fieldset class="recipe-choices"><legend>Layers</legend><label><input type="checkbox" checked> Show labels</label><label><input type="checkbox"> Show grid</label></fieldset>',
+  },
+  {
+    name: 'Segmented control',
+    tag: 'radio',
+    template:
+      '<fieldset class="recipe-segments"><legend>Range</legend><label><input type="radio" name="range" checked><span>Week</span></label><label><input type="radio" name="range"><span>Month</span></label><label><input type="radio" name="range"><span>Year</span></label></fieldset>',
+  },
+  {
+    name: 'Metric card',
+    tag: 'card',
+    template:
+      '<div class="recipe-metric">${frame(260,145,"#f5e9c4")}<div><small>Sketches made</small><strong>12,480</strong><span>↑ 18% this month · sample data</span></div></div>',
+  },
+  {
+    name: 'Status chips',
+    tag: 'badge',
+    template:
+      '<div class="recipe-badges"><span>${frame(120,44,"#dfebd9")}<b>Ready</b></span><span>${frame(120,44,"#f5df9c")}<b>In progress</b></span><span>${frame(120,44,"#e3e5ec")}<b>Draft</b></span></div>',
+  },
+  {
+    name: 'Progress indicator',
+    tag: 'progress',
+    template:
+      '<div class="recipe-progress"><label>Collection complete <span>68%</span></label><progress max="100" value="68">68%</progress></div>',
+  },
+  {
+    name: 'Note & disclosure',
+    tag: 'disclosure',
+    template:
+      '<details class="recipe-note"><summary>A small observation</summary><p>Data can feel human without losing its precision.</p></details>',
+  },
+  {
+    name: 'Form field',
+    tag: 'input',
+    template:
+      '<label class="recipe-input">Name your collection<input placeholder="A new perspective…" maxlength="80"></label>',
+  },
 ];
 const recipeHtml = (template: string) =>
   template.replace(/\$\{frame\((\d+),(\d+),"(#[0-9a-f]+)"\)\}/g, (_, width, height, fill) =>
@@ -88,10 +128,7 @@ function exampleIndex() {
       (category) =>
         `<section><h2>${category}</h2><ul>${examples
           .filter((e) => e.category === category)
-          .map(
-            (e) =>
-              `<li><a href="${examplePath(e)}">${escape(e.name.replaceAll('-', ' '))}</a></li>`,
-          )
+          .map((e) => `<li><a href="${examplePath(e)}">${escape(e.name.replaceAll('-', ' '))}</a></li>`)
           .join('')}</ul></section>`,
     )
     .join('')}</details>`;

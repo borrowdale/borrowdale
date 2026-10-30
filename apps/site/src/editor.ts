@@ -106,7 +106,9 @@ export function bindEditor() {
         clearTimeout(timeout);
         timeout = setTimeout(
           () =>
-            fail('Execution stopped after 3 seconds. Check for an infinite loop or reduce the drawing workload.'),
+            fail(
+              'Execution stopped after 3 seconds. Check for an infinite loop or reduce the drawing workload.',
+            ),
           3000,
         );
         return;
