@@ -40,6 +40,13 @@ const descriptions: Record<string, string> = {
   '/license/':
     'Read the BorrowdaleJS MIT license, Excalifont SIL OFL license, incorporated-code notices and open-dataset credits.',
 };
+/** The site's origin, for canonical URLs, the sitemap and robots.txt; throws unless it is a bare HTTPS origin. */
+export function checkOrigin(origin: string) {
+  const url = new URL(origin);
+  if (url.protocol !== 'https:' || url.pathname !== '/' || url.search || url.hash || url.username || url.password)
+    throw new Error('SITE_ORIGIN must be an HTTPS origin without credentials, path, query or fragment.');
+  return url;
+}
 export function metadata(
   path: string,
   origin = import.meta.env.VITE_SITE_ORIGIN || '',
@@ -56,16 +63,7 @@ export function metadata(
       : (descriptions[clean] ?? 'Explore BorrowdaleJS documentation and examples.');
   let canonical: string | undefined;
   if (origin) {
-    const url = new URL(origin);
-    if (
-      url.protocol !== 'https:' ||
-      url.pathname !== '/' ||
-      url.search ||
-      url.hash ||
-      url.username ||
-      url.password
-    )
-      throw new Error('SITE_ORIGIN must be an HTTPS origin without credentials, path, query or fragment.');
+    const url = checkOrigin(origin);
     if (!missing) canonical = new URL(base + clean.slice(1), url).href;
   }
   const structured = canonical
