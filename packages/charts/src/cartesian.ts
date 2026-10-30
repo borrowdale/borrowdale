@@ -28,17 +28,29 @@ interface Mark<S extends CartesianSeries> {
   slot: boolean;
   /** How the legend shows it. */
   legend: 'line' | 'box';
+  /**
+   * How far its marks may reach past the point of their value, on a plot whose shorter side is
+   * `plotSize` or less: the plot keeps that much room inside its edges.
+   */
+  reach: (plotSize: number) => number;
   draw: (context: MarkContext, placed: Placed<S>, paint: Paint) => void;
 }
 
+const none = (): number => 0;
+
 const MARKS: { [K in MarkType]: Mark<Extract<CartesianSeries, { type: K }>> } = {
-  bar: { zero: true, slot: true, legend: 'box', draw: drawBars },
-  line: { zero: false, slot: false, legend: 'line', draw: drawLine },
-  area: { zero: true, slot: false, legend: 'box', draw: drawArea },
-  rangeArea: { zero: false, slot: false, legend: 'box', draw: drawArea },
-  scatter: { zero: false, slot: false, legend: 'box', draw: drawPoints },
-  bubble: { zero: false, slot: false, legend: 'box', draw: drawPoints },
+  bar: { zero: true, slot: true, legend: 'box', reach: none, draw: drawBars },
+  line: { zero: false, slot: false, legend: 'line', reach: none, draw: drawLine },
+  area: { zero: true, slot: false, legend: 'box', reach: none, draw: drawArea },
+  rangeArea: { zero: false, slot: false, legend: 'box', reach: none, draw: drawArea },
+  scatter: { zero: false, slot: false, legend: 'box', reach: () => POINT_SIZE / 2, draw: drawPoints },
+  bubble: { zero: false, slot: false, legend: 'box', reach: (size) => bubbleDiameter(size) / 2, draw: drawPoints },
 };
+
+/** The diameter of the largest bubble on a plot whose shorter side is `plotSize`. */
+function bubbleDiameter(plotSize: number): number {
+  return Math.min(MAX_BUBBLE, plotSize / 5);
+}
 
 // One cast: the entry for `entry.type` takes exactly that series, which TypeScript cannot follow
 // through a lookup by a union key.
@@ -71,11 +83,22 @@ export function layoutCartesian(drawing: Drawing, chart: CheckedCartesianChart, 
   };
 
   const line = drawing.lineHeight();
+  // Points and bubbles are centred on their values, so they reach past them. An end of a linear axis
+  // that is not fixed is widened by that much, keeping its ticks; at a fixed end, the plot keeps
+  // that much room from the edges of the chart, so a mark there stays on the chart.
+  const reach = Math.max(
+    0,
+    ...series.map((entry) => markOf(entry).reach(Math.min(rect.right - rect.left, rect.bottom - rect.top))),
+  );
+  const fixed = (key: 'x' | 'y', end: 'min' | 'max'): number =>
+    linear[key]?.[end] === undefined ? 0 : reach;
+  const widened = (key: 'x' | 'y', end: 'min' | 'max'): number =>
+    linear[key] && linear[key][end] === undefined ? reach : 0;
   // The plot is what is left once the axes have their room: below it the x axis' labels and title,
   // above and below its ends the y axes' end labels, and beside it the y axes' labels and titles.
   const fitPlot = (reserve: Reserve) => {
-    const top = rect.top + reserve.up;
-    const bottom = rect.bottom - Math.max(reserve.bottom, reserve.down);
+    const top = rect.top + Math.max(reserve.up, fixed('y', 'max'));
+    const bottom = rect.bottom - Math.max(reserve.bottom, reserve.down, fixed('y', 'min'));
     assertRoom({ left: rect.left, top, right: rect.right, bottom }, chart.width, chart.height);
     const yScale = linear.y && linearScale(linear.y, extentOf('y'), bottom - top);
     const y2Scale = y2 && linearScale(y2, extentOf('y2'), bottom - top);
@@ -86,10 +109,20 @@ export function layoutCartesian(drawing: Drawing, chart: CheckedCartesianChart, 
     const xScale = linear.x && linearScale(linear.x, extentOf('x'), plotRight - plotLeft);
     const below = guide('bottom', 'x', x, xScale, drawing, line);
     // The first and last x labels reach past the ends of the axis.
-    plotLeft = Math.max(plotLeft, rect.left + below.ends.left);
-    plotRight = Math.min(plotRight, rect.right - below.ends.right);
+    plotLeft = Math.max(plotLeft, rect.left + below.ends.left, rect.left + fixed('x', 'min'));
+    plotRight = Math.min(plotRight, rect.right - below.ends.right, rect.right - fixed('x', 'max'));
     const plot: Rect = { left: plotLeft, top, right: plotRight, bottom };
     assertRoom(plot, chart.width, chart.height);
+    assertRoom(
+      {
+        left: plot.left + widened('x', 'min'),
+        top: plot.top + widened('y', 'max'),
+        right: plot.right - widened('x', 'max'),
+        bottom: plot.bottom - widened('y', 'min'),
+      },
+      chart.width,
+      chart.height,
+    );
     return { plot, scales: { x: xScale, y: yScale, y2: y2Scale }, guides: [below, left, ...(right ? [right] : [])] };
   };
   // A linear axis' labels are its ticks', and those depend on the plot's size. So room is reserved
@@ -113,8 +146,8 @@ export function layoutCartesian(drawing: Drawing, chart: CheckedCartesianChart, 
   const [xScale, yScale, y2Scale] = [fitted.scales.x, fitted.scales.y, fitted.scales.y2];
 
   const scales: Record<AxisKey, PlacedScale | undefined> = {
-    x: xScale && place(xScale, [plot.left, plot.right]),
-    y: yScale && place(yScale, [plot.bottom, plot.top]),
+    x: xScale && place(xScale, [plot.left + widened('x', 'min'), plot.right - widened('x', 'max')]),
+    y: yScale && place(yScale, [plot.bottom - widened('y', 'min'), plot.top + widened('y', 'max')]),
     y2: y2Scale && place(y2Scale, [plot.bottom, plot.top]),
   };
   const across: [number, number] = horizontal ? [plot.top, plot.bottom] : [plot.left, plot.right];
@@ -456,7 +489,7 @@ function drawPoints(
   const x = context.x!;
   const xAxis = context.xAxis!;
   const plotSize = Math.min(frame.plot.right - frame.plot.left, frame.plot.bottom - frame.plot.top);
-  const maxDiameter = Math.min(MAX_BUBBLE, plotSize / 5);
+  const maxDiameter = bubbleDiameter(plotSize);
   entry.data.forEach((point, i) => {
     const [px, py] = point;
     const size = point[2];

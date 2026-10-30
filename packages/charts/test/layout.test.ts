@@ -85,6 +85,19 @@ const filledRadarLine: ChartSpec = {
   axes: { angle: { type: 'band', categories: ['a', 'b', 'c'] } },
   series: [{ type: 'polarLine', name: 'Loop', data: [1, 2, 3] }],
 };
+// The largest bubble at the top right corner of the data, and the smallest at the bottom left.
+const cornerBubbles: ChartSpec = {
+  width: 300,
+  height: 300,
+  axes: { x: { type: 'linear' }, y: { type: 'linear' } },
+  series: [{ type: 'bubble', name: 'B', data: [[0, 0, 1], [10, 10, 60]] }],
+};
+// The same, with both ends of x fixed at the data and no y labels to keep the plot off the edge.
+const fixedBubbles: ChartSpec = {
+  ...cornerBubbles,
+  axes: { x: { type: 'linear', min: 0, max: 10 }, y: { type: 'linear', hidden: true } },
+};
+const cornerPoints: ChartSpec = { ...cornerBubbles, series: [{ type: 'scatter', name: 'S', data: [[0, 0], [10, 10]] }] };
 const dashed: ChartSpec = { ...revenue, series: [{ type: 'line', name: 'Goal', dash: [6, 4], data: [10, 20] }] };
 const coloured: ChartSpec = { ...revenue, series: [{ type: 'bar', name: 'Pencils', color: '#123456', data: [12, 15] }] };
 const unsetStroke: ChartSpec = { ...revenue, series: [{ type: 'bar', name: 'Pencils', style: { stroke: undefined }, data: [12, 15] }] };
@@ -514,6 +527,18 @@ describe('layoutChart', () => {
 
   it('fills no part of a closed polar line under a chart style with a fill', () => {
     expect(fillsOf(layoutChart(filledRadarLine), 'Loop')).toEqual(['none']);
+  });
+
+  it('keeps bubbles at the ends of the data inside the chart', () => {
+    expect(pointsOutside(layoutChart(cornerBubbles))).toBe(0);
+  });
+
+  it('keeps bubbles at fixed ends of an axis inside the chart', () => {
+    expect(pointsOutside(layoutChart(fixedBubbles))).toBe(0);
+  });
+
+  it('widens an axis for its points without adding ticks', () => {
+    expect(texts(layoutChart(cornerPoints))).toEqual(['0', '2', '4', '6', '8', '10', '0', '2', '4', '6', '8', '10']);
   });
 
   it('draws other strokes for names that join to the same text', () => {
