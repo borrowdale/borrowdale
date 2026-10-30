@@ -41,6 +41,7 @@ it('renders preloaded images and continuous gradients on native Canvas and SVG',
     const svgSource = new Image();
     svgSource.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(api.toSvgChart(image, assets))}`;
     await svgSource.decode();
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     context.clearRect(0, 0, 64, 64); context.drawImage(svgSource, 0, 0);
     const svgImage = [...context.getImageData(32, 32, 1, 1).data];
     const gradient = api.layoutChart({ width: 64, height: 64, legend: 'none', axes, style: { roughness: 0, strokeWidth: 12 },

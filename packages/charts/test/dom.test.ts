@@ -58,6 +58,32 @@ function fakeContext(status = 'loaded') {
   };
 }
 
+// A gradient over a path that is both filled and stroked.
+const painted: ChartLayout = { width: 100, height: 50, family: 'Excalifont', labels: [], missing: [], nodes: [{ kind: 'gradient', from: [0, 0], to: [10, 0],
+  stops: [{ offset: 0, color: '#ff0000' }, { offset: 1, color: '#0000ff' }],
+  sketch: { paths: [{ d: 'M0 0 L1 1 Z', stroke: '#000', strokeWidth: 1, fill: '#123' }] } }] };
+
+// A context that records the paint in force at each fill and stroke.
+class PaintContext {
+  fillStyle: unknown = '';
+  strokeStyle: unknown = '';
+  readonly fills: unknown[] = [];
+  readonly strokes: unknown[] = [];
+  readonly gradient = { addColorStop: vi.fn() };
+  save(): void {}
+  restore(): void {}
+  setLineDash(): void {}
+  createLinearGradient(): unknown {
+    return this.gradient;
+  }
+  fill(): void {
+    this.fills.push(this.fillStyle);
+  }
+  stroke(): void {
+    this.strokes.push(this.strokeStyle);
+  }
+}
+
 afterEach(() => {
   vi.unstubAllGlobals();
 });
@@ -98,6 +124,14 @@ describe('appendChart', () => {
     expect(svg.querySelector('text')?.textContent).toBe('Hi');
   });
 
+  it('paints a gradient node with its definition', () => {
+    const svg = appendChart(document.createElement('div'), painted);
+    const paint = `url(#${svg.querySelector('linearGradient')?.id})`;
+
+    expect(svg.querySelector('path')?.getAttribute('fill')).toBe(paint);
+    expect(svg.querySelector('path')?.getAttribute('stroke')).toBe(paint);
+  });
+
   it('keeps a hostile title as text, not markup', () => {
     const svg = appendChart(document.createElement('div'), { ...layout, title: '<script>x</script>' });
 
@@ -114,6 +148,16 @@ describe('drawChart', () => {
 
     expect(context.stroke).toHaveBeenNthCalledWith(1, new RecordingPath2D('M0 0 L1 1'));
     expect(context.stroke).toHaveBeenNthCalledWith(2, new RecordingPath2D('M2 2 L3 3'));
+  });
+
+  it('fills and strokes a gradient node with the gradient', () => {
+    vi.stubGlobal('Path2D', RecordingPath2D);
+    const context = new PaintContext();
+
+    drawChart(context as unknown as CanvasRenderingContext2D, painted);
+
+    expect(context.fills).toEqual([context.gradient]);
+    expect(context.strokes).toEqual([context.gradient]);
   });
 
   it('draws text with the font loaded', () => {
