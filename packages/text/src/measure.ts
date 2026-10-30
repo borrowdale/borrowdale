@@ -2,6 +2,7 @@ import { cos, sin } from '@borrowdale/core/math';
 import type { Box, LayoutOptions, MeasureOptions, TextAnchor, TextBaseline, TextExtent, TextLayout } from './types.js';
 import {
   advanceOf,
+  checkFit,
   checkLayout,
   checkMeasure,
   codePointOf,
@@ -15,6 +16,15 @@ import {
 // a cluster from one font file, or all of it in a fallback font. Marks with no character before
 // them make a cluster of their own.
 const CLUSTER = /[^\p{M}\u200D][\p{M}\u200D]*|[\p{M}\u200D]+/gu;
+
+// Where text may be cut: a character with the marks, emoji modifiers and tags after it, and through a
+// zero-width joiner the character after that; a pair of regional indicators, which make one flag; or
+// marks with no character before them. So a cut never splits a surrogate pair, an accent from its
+// letter, an emoji sequence or a flag.
+const ATTACHED = String.raw`\p{M}\p{Emoji_Modifier}\u{E0020}-\u{E007F}`;
+const BASE = String.raw`\p{Regional_Indicator}{2}|[^${ATTACHED}\u200D]`;
+const CUT_UNIT = new RegExp(String.raw`(?:${BASE})(?:[${ATTACHED}]|\u200D(?:${BASE})?)*|[${ATTACHED}\u200D]+`, 'gu');
+const ELLIPSIS = '…';
 
 // How far left of `x` the text starts, as a share of its width.
 const ANCHOR_SHARE: Record<TextAnchor, number> = { start: 0, middle: 0.5, end: 1 };
@@ -33,6 +43,38 @@ const BASELINE_SHIFT: Record<TextBaseline, (ascent: number, descent: number) => 
  */
 export function measureText(text: string, options?: MeasureOptions): TextExtent {
   return rounded(extent(checkMeasure(text, options)));
+}
+
+/**
+ * `text` as it is drawn, whole if it is at most `maxWidth` wide, else cut short to fit with an
+ * ellipsis at its end ("…", or "..." in a font without it). Cut between whole characters as they
+ * are drawn, never inside one. Undefined when not even the ellipsis fits.
+ */
+export function fitText(text: string, maxWidth: number, options?: MeasureOptions): string | undefined {
+  const checked = checkFit(text, maxWidth, options);
+  const widthOf = (candidate: string): number => round(extent({ ...checked, text: candidate }).width);
+  if (widthOf(checked.text) <= checked.maxWidth) {
+    return checked.text;
+  }
+  const { font } = checked;
+  const ellipsis = advanceOf(font, 0x2026) === undefined && advanceOf(font, 0x2e) !== undefined ? '...' : ELLIPSIS;
+  const units = checked.text.match(CUT_UNIT) ?? [];
+  // The text cut after its first `count` units, without the spaces before the cut.
+  const cut = (count: number): string => `${units.slice(0, count).join('').trimEnd()}${ellipsis}`;
+  if (widthOf(cut(0)) > checked.maxWidth) {
+    return undefined;
+  }
+  // A cut only grows wider with more units, so the longest that fits is found by halving.
+  let [low, high] = [0, units.length - 1];
+  while (low < high) {
+    const middle = Math.ceil((low + high) / 2);
+    if (widthOf(cut(middle)) <= checked.maxWidth) {
+      low = middle;
+    } else {
+      high = middle - 1;
+    }
+  }
+  return cut(low);
 }
 
 /** Measures text and places it, so the renderers only draw and never measure. */

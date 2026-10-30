@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   excalifont,
+  fitText,
   layoutText,
   measureText,
   textBounds,
@@ -364,5 +365,58 @@ describe('layoutText', () => {
 
   it('never returns negative zero', () => {
     expect(Object.is(layoutText('', { ...at, x: -0.001 }).x, 0)).toBe(true);
+  });
+});
+
+// At 12 units, "ab" is 13.57 wide and "…" 8.51; Excalifont has no emoji, so each emoji character
+// is measured 12 wide in a fallback font.
+const flags = 'ab\u{1F1ED}\u{1F1FA}\u{1F1ED}\u{1F1FA}';
+const family = 'ab\u{1F468}\u200D\u{1F469}x';
+const thumb = 'ab\u{1F44D}\u{1F3FD}x';
+// In the hand font at 20 units: A is 10 wide, B 14, U+0301 0, and the ellipsis, which it lacks, 20.
+const hand = { font: handFont, fontSize: 20 };
+const dotted = { ...hand, font: { ...handFont, advances: { ...handFont.advances, 0x2e: 2 } } };
+
+describe('fitText', () => {
+  it('keeps text that fits whole, as it is drawn', () => {
+    expect(fitText('  Revenue   by  region ', 1000, { fontSize: 12 })).toBe('Revenue by region');
+  });
+
+  it('cuts text that does not fit, and ends it with an ellipsis', () => {
+    expect(fitText('Revenue by region', 60, { fontSize: 12 })).toBe('Revenue…');
+  });
+
+  it('drops the spaces before the cut', () => {
+    expect(fitText('abc def', 30, { fontSize: 12 })).toBe('abc…');
+  });
+
+  it('keeps a flag whole, or leaves it out', () => {
+    expect(fitText(flags, 34.08, { fontSize: 12 })).toBe('ab…');
+    expect(fitText(flags, 46.08, { fontSize: 12 })).toBe('ab\u{1F1ED}\u{1F1FA}…');
+  });
+
+  it('keeps an emoji sequence joined by a zero-width joiner whole', () => {
+    expect(fitText(family, 34.08, { fontSize: 12 })).toBe('ab…');
+  });
+
+  it('keeps an emoji with its skin tone', () => {
+    expect(fitText(thumb, 34.08, { fontSize: 12 })).toBe('ab…');
+  });
+
+  it('keeps a letter with its accent', () => {
+    expect(fitText('ABB\u0301AAA', 57, hand)).toBe('AB…');
+    expect(fitText('ABB\u0301AAA', 58, hand)).toBe('ABB\u0301…');
+  });
+
+  it('writes the ellipsis as three dots in a font that has dots but no ellipsis', () => {
+    expect(fitText('ABAB', 40, dotted)).toBe('AB...');
+  });
+
+  it('gives undefined when not even the ellipsis fits', () => {
+    expect(fitText('Revenue', 5, { fontSize: 12 })).toBeUndefined();
+  });
+
+  it('rejects a width that is not a number from 0 to 2000000', () => {
+    expect(() => fitText('a', -1)).toThrow('maxWidth must be a number from 0 to 2000000, got -1');
   });
 });

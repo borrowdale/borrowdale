@@ -90,6 +90,15 @@ export function checkMeasure(text: unknown, options: MeasureOptions = {}): Check
   return measureInput(text, ownCopy(options));
 }
 
+/** The text and options of `fitText`, and its width: from 0 to as wide as a layout may be placed. */
+export function checkFit(
+  text: unknown,
+  maxWidth: unknown,
+  options: MeasureOptions = {},
+): CheckedMeasure & { maxWidth: number } {
+  return { ...checkMeasure(text, options), maxWidth: checkNumber('maxWidth', maxWidth, 0, 2 * MAX_COORDINATE) };
+}
+
 export function checkLayout(text: unknown, given: LayoutOptions): CheckedLayout {
   checkKeys(given, LAYOUT_KEYS);
   const options = ownCopy(given);
