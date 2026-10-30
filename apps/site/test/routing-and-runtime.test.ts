@@ -11,7 +11,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
   document.body.innerHTML = '';
 });
-describe('site review regressions', () => {
+describe('playground and routing edge cases', () => {
   it.each(['/playground/charts/%/', '/playground/charts/%E0%A4%A/', '/playground/nope/missing/'])(
     'handles invalid example URL %s',
     (path) => {
