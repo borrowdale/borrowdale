@@ -5,6 +5,38 @@ import { checkChart } from '../src/validate.js';
 const axes = { x: { type: 'linear' }, y: { type: 'linear' } } as const;
 
 describe('chart data validation budget', () => {
+  it('uses one array length for both reservation and copying', () => {
+    let lengths = 0;
+    const data = new Proxy(Array(60_000).fill([1, 1]), {
+      get(target, key, receiver) {
+        if (key === 'length') {
+          return ++lengths <= 2 ? 0 : 60_000;
+        }
+        return Reflect.get(target, key, receiver);
+      },
+    });
+    const checked = checkChart({
+      width: 400, height: 300, axes,
+      series: [
+        { type: 'scatter', name: 'A', data: Array(60_000).fill([1, 1]) },
+        { type: 'scatter', name: 'B', data },
+      ],
+    });
+    expect(lengths).toBe(1);
+    expect(checked.series[1]).toMatchObject({ data: [] });
+  });
+
+  it.each([NaN, undefined, '1', 0.5])('rejects a non-integer array length (%s) before reading entries', (length) => {
+    const data = new Proxy<[number, number][]>([[1, 1]], {
+      get(target, key, receiver) {
+        return key === 'length' ? length : Reflect.get(target, key, receiver);
+      },
+    });
+    expect(() => checkChart({
+      width: 400, height: 300, axes, series: [{ type: 'scatter', name: 'A', data }],
+    })).toThrow(expect.objectContaining({ path: 'series[0].data' }));
+  });
+
   it('rejects an overflowing series before reading or copying its points', () => {
     let reads = 0;
     const overflow = Array.from({ length: 50_000 }, () => [1, 1]);

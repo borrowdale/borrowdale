@@ -105,21 +105,24 @@ function join(path: string, key: string): string {
 
 /**
  * An array of `min` to `max` entries, read by index, so a hole is undefined and is rejected. Each
- * entry's check also gets its index.
+ * entry's check also gets its index. `reserve` receives the validated length before allocation.
  */
 export function list<T>(
   min: number,
   max: number,
   entry: (path: string, value: unknown, index: number) => T,
+  reserve?: (count: number) => void,
 ): Check<T[]> {
   return (path, value) => {
     if (!Array.isArray(value)) {
       fail(path, `must be an array, got ${show(value)}`);
     }
-    if (value.length < min || value.length > max) {
-      fail(path, `must have ${min === max ? min : `${min} to ${max}`} entries, got ${value.length}`);
+    const length = value.length;
+    if (!Number.isInteger(length) || length < min || length > max) {
+      fail(path, `must have ${min === max ? min : `${min} to ${max}`} entries, got ${show(length)}`);
     }
-    return Array.from({ length: value.length }, (_, i) => entry(`${path}[${i}]`, value[i] as unknown, i));
+    reserve?.(length);
+    return Array.from({ length }, (_, i) => entry(`${path}[${i}]`, value[i] as unknown, i));
   };
 }
 
