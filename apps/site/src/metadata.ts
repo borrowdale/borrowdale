@@ -1,6 +1,7 @@
 import { pageTitle, route } from './pages';
 import { docs } from './documents';
 import { findExample } from './editor';
+import { examples } from './gallery';
 import { localPath } from './routing';
 import { escape } from './drawing';
 const descriptions: Record<string, string> = {
@@ -22,11 +23,11 @@ const descriptions: Record<string, string> = {
   '/docs/fills/':
     'BorrowdaleJS fill API: generate repeatable hand-drawn line, crosshatch and circle patterns for SVG backgrounds.',
   '/playground/':
-    'Explore 328 editable BorrowdaleJS examples covering charts, shapes, text, patterns and native HTML component recipes.',
+    `Explore ${examples.length} editable BorrowdaleJS examples covering charts, shapes, text, patterns and native HTML component recipes.`,
   '/examples/':
     'Explore three complete BorrowdaleJS dashboards using World Bank, NASA GISS and USGS datasets. Every chart includes its code.',
   '/examples/world/':
-    'Compare income, life expectancy and population across 12 countries in an interactive BorrowdaleJS dashboard using World Bank data.',
+    'Compare income, life expectancy and population across selected countries in an interactive BorrowdaleJS dashboard using World Bank data.',
   '/examples/climate/':
     'Explore NASA GISTEMP temperature anomalies through hand-drawn annual trends, monthly ranges, polar charts and a gauge.',
   '/examples/earthquakes/':

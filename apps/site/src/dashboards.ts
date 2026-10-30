@@ -12,6 +12,8 @@ import {
   compact,
   day,
   dailyCounts,
+  worldYears,
+  retrievedOn,
 } from './data';
 import { chart, chartSpec, colors, escape } from './drawing';
 import { codeBlock, chartCode } from './gallery';
@@ -49,8 +51,8 @@ export function chartPanel(title: string, note: string, spec: ChartSpec, extra =
 function metric(label: string, value: string, note: string, accent = '') {
   return `<article class="metric ${accent}"><span>${label}</span><strong>${value}</strong><small>${note}</small></article>`;
 }
-function heading(kicker: string, title: string, desc: string, source: string, controls: string) {
-  return `<div class="dashboard-heading"><div><p class="eyebrow">${kicker} / OPEN DATA NOTEBOOK</p><h1>${title}</h1><p>${desc}</p></div><div class="snapshot"><span class="status-dot"></span> Saved snapshot<small>Retrieved 29 Oct 2026</small></div></div><div class="dashboard-toolbar"><span>${source}</span><div>${controls}<button class="button small" id="download-data">↓ Download data</button></div></div>`;
+function heading(kicker: string, title: string, desc: string, source: string, retrieved: string, controls: string) {
+  return `<div class="dashboard-heading"><div><p class="eyebrow">${kicker} / OPEN DATA NOTEBOOK</p><h1>${title}</h1><p>${desc}</p></div><div class="snapshot"><span class="status-dot"></span> Saved snapshot<small>Retrieved ${retrievedOn(retrieved)}</small></div></div><div class="dashboard-toolbar"><span>${source}</span><div>${controls}<button class="button small" id="download-data">↓ Download data</button></div></div>`;
 }
 function sourceNote(content: string) {
   return `<aside class="source-note"><span>↳</span><div><h3>Behind these numbers</h3><p>${content}</p></div></aside>`;
@@ -63,7 +65,7 @@ export function worldDashboard() {
   const gdp = rows.filter((x) => x.gdp !== null).sort((a, b) => b.gdp! - a.gdp!);
   const population = rows.reduce((n, r) => n + (r.population ?? 0), 0);
   const life = median(rows.flatMap((x) => (x.life === null ? [] : [x.life])));
-  const years = Array.from({ length: 15 }, (_, i) => 2010 + i);
+  const years = worldYears;
   const controls = `<label>Year <select id="world-year">${years.map((y) => `<option ${y === year ? 'selected' : ''}>${y}</option>`).join('')}</select></label><label>Country <select id="world-country">${countries.map((c) => `<option value="${c.code}" ${country === c.code ? 'selected' : ''}>${escape(c.name)}</option>`).join('')}</select></label>`;
   const rank = chartSpec(
     'GDP per capita',
@@ -154,13 +156,14 @@ export function worldDashboard() {
     heading(
       '01 · WORLD BANK',
       'A wider world.',
-      'Different economies. Shared questions. Explore income, longevity and population across 12 countries.',
+      `Different economies. Shared questions. Explore income, longevity and population across ${countries.length} countries.`,
       'World Development Indicators',
+      world.retrieved,
       controls,
     ) +
     `<div class="metrics">${metric('COUNTRIES IN VIEW', String(rows.length), 'A selected comparison, not the whole world')}${metric('COMBINED POPULATION', compact(population), `${year} · available observations`)}${metric('MEDIAN LIFE EXPECTANCY', `${pretty(life)} <em>years</em>`, 'Unweighted country median', 'tint-green')}${metric('COMPLETE OBSERVATIONS', `${complete.length} / ${rows.length}`, 'Income + life expectancy + population')}</div>
  <div class="dashboard-grid">${chartPanel('The income picture', 'Current US$ per person · bars use thousands', rank)}${chartPanel('More than an income', 'Bubble area represents population · each bubble is one country', scatter)}${chartPanel('A longer perspective', `${selected.name} · 2010–2024 · gaps are missing observations`, trend, 'wide')}
- ${chartPanel('People in perspective', 'Share of population among these 12 countries only', share)}${profileKeys.every((k) => rows.find((r) => r.code === country)![k] !== null) ? chartPanel('Three dimensions', 'Each measure is relative to the highest of the 12 countries (100).', profile) : '<article class="chart-panel empty"><h2>Profile unavailable</h2><p>One or more measures are missing for this country and year.</p></article>'}</div>` +
+ ${chartPanel('People in perspective', `Share of population among these ${countries.length} countries only`, share)}${profileKeys.every((k) => rows.find((r) => r.code === country)![k] !== null) ? chartPanel('Three dimensions', `Each measure is relative to the highest of the ${countries.length} countries (100).`, profile) : '<article class="chart-panel empty"><h2>Profile unavailable</h2><p>One or more measures are missing for this country and year.</p></article>'}</div>` +
     sourceNote(
       `World Bank, <a href="https://datacatalog.worldbank.org/infrastructure-data/search/dataset/0037712/world-development-indicators" target="_blank" rel="noreferrer">World Development Indicators</a>, CC BY 4.0. Indicators: NY.GDP.PCAP.CD, SP.DYN.LE00.IN and SP.POP.TOTL. GDP is in current US dollars, not adjusted for purchasing power or inflation. Missing values stay missing. Bubble positions use complete observations only; the selected-country median is not a population-weighted global estimate. <a href="${escape(world.sourceUrl)}" target="_blank" rel="noreferrer">Original API query ↗</a>`,
     )
@@ -205,7 +208,7 @@ export function climateDashboard() {
     legend: 'top',
     axes: {
       angle: { type: 'band', categories: months },
-      radius: { type: 'linear', min: 0, format: { suffix: '°C' } },
+      radius: { type: 'linear', min: Math.min(0, ...recent.flatMap((r) => r.months.filter((x) => x !== null))), format: { suffix: '°C' } },
     },
     series: recent.map((r, i) => ({
       type: i === 0 ? 'polarArea' : 'polarLine',
@@ -235,7 +238,7 @@ export function climateDashboard() {
     width: 660,
     height: 310,
     title: `${latest.year} annual anomaly`,
-    axes: { angle: { type: 'linear', min: 0, max: 2, format: { suffix: '°C' } } },
+    axes: { angle: { type: 'linear', min: Math.min(0, latest.annual!), max: Math.max(2, Math.ceil(latest.annual!)), format: { suffix: '°C' } } },
     series: [{ type: 'gauge', name: 'Anomaly', color: colors[3], value: latest.annual! }],
   };
   return (
@@ -244,6 +247,7 @@ export function climateDashboard() {
       'A warming record.',
       'A long view of a changing climate, drawn one year at a time. Global land–ocean temperature anomalies.',
       'GISTEMP v4 · baseline 1951–1980',
+      climate.retrieved,
       `<label>View from <select id="climate-since">${[1880, 1950, 1970, 2000].map((y) => `<option ${since === y ? 'selected' : ''}>${y}</option>`).join('')}</select></label>`,
     ) +
     `<div class="metrics">${metric('LATEST COMPLETE YEAR', String(latest.year), 'Incomplete annual records are excluded')}${metric('ANNUAL ANOMALY', `${latest.annual! >= 0 ? '+' : ''}${pretty(latest.annual, 2)}<em>°C</em>`, 'Compared with the 1951–1980 mean', 'tint-coral')}${metric('CHANGE IN VIEW', `${change >= 0 ? '+' : ''}${pretty(change, 2)}<em>°C</em>`, `${earliest.year} to ${latest.year} · endpoint difference`)}${metric('WARMEST COMPLETE YEAR', String(warmest.year), `${pretty(warmest.annual, 2)}°C above the baseline`)}</div>
@@ -338,6 +342,7 @@ export function quakeDashboard() {
       'Beneath the surface.',
       'A 30-day field notebook of earthquakes recorded around the world. Patterns in magnitude, time and depth.',
       'USGS Earthquake Hazards Program',
+      quakes.retrieved,
       `<label>Minimum magnitude <select id="quake-magnitude">${[4.5, 5, 6, 7].map((m) => `<option value="${m}" ${m === threshold ? 'selected' : ''}>M ${m}+</option>`).join('')}</select></label>`,
     ) +
     `<div class="metrics">${metric('RECORDED EVENTS', pretty(events.length, 0), `Magnitude ${threshold}+ · saved feed`)}${metric('LARGEST MAGNITUDE', strongest === null ? '—' : `M ${pretty(strongest)}`, 'Magnitude types are supplied by USGS', 'tint-blue')}${metric('MEDIAN DEPTH', `${pretty(depth)} <em>km</em>`, 'Below the reference surface')}${metric('FEED WINDOW ENDS', day(quakes.generated).slice(5), 'UTC · archived snapshot, not live monitoring')}</div>
