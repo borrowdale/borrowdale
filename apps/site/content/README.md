@@ -12,9 +12,9 @@ The packages are in early development and are not yet published. Start with the 
 
 ## Package reference
 
-- [Charts](../packages/charts/README.md): chart families, data contracts, axes, legends and renderers.
-- [Shapes](../packages/core/README.md): geometry, styles, SVG and Canvas drawing.
-- [Text](../packages/text/README.md): measuring, layout, fallback glyphs and Excalifont.
-- [Fills](../packages/fills/README.md): repeatable background patterns.
+- [Charts](../../../packages/charts/README.md): chart families, data contracts, axes, legends and renderers.
+- [Shapes](../../../packages/core/README.md): geometry, styles, SVG and Canvas drawing.
+- [Text](../../../packages/text/README.md): measuring, layout, fallback glyphs and Excalifont.
+- [Fills](../../../packages/fills/README.md): repeatable background patterns.
 
 These are the same Markdown files rendered on the website. Changes to an API and its documentation belong in the same pull request.

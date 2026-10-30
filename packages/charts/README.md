@@ -4,7 +4,7 @@ Hand-drawn charts for SVG and canvas. A chart is plain data, so it can come stra
 `layoutChart` measures every label, picks scales and ticks and draws every stroke with no DOM, and
 the result is the same on the server and in the browser, down to the byte.
 
-> **Unpublished:** use the [local workspace setup](../../docs/getting-started.md). Package installation instructions will be added when releases are available.
+> **Unpublished:** use the [local workspace setup](https://github.com/borrowdale/borrowdale/blob/main/apps/site/content/getting-started.md). Package installation instructions will be added when releases are available.
 
 ```js
 import { layoutChart, toSvgChart } from '@borrowdale/charts';

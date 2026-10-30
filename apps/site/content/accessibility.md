@@ -16,7 +16,7 @@ SVG output exposes chart descriptions and labels. Canvas is a bitmap: provide an
 
 Missing values are supported only where documented for the series type. For example, a line can use `null` to create a gap, while radar values must be nonnegative numbers. Do not replace missing observations with zero just to draw them.
 
-Stacked areas require nonnegative values. Chart families have specific axis requirements and cannot all be mixed together. Consult the [chart reference](../packages/charts/README.md) before composing series.
+Stacked areas require nonnegative values. Chart families have specific axis requirements and cannot all be mixed together. Consult the [chart reference](../../../packages/charts/README.md) before composing series.
 
 ## Scope and verification
 

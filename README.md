@@ -20,7 +20,7 @@ Planned: `@borrowdale/svg`, `@borrowdale/react`, `@borrowdale/elements`.
 
 ## Documentation
 
-Start with the [shared documentation](docs/README.md), [contributing guide](CONTRIBUTING.md), [changelog](CHANGELOG.md), or [license and credits](docs/license.md). The website renders these same public Markdown sources.
+Start with the [shared documentation](apps/site/content/README.md), [contributing guide](CONTRIBUTING.md), [changelog](CHANGELOG.md), or [license and credits](apps/site/content/license.md). The website renders these same public Markdown sources.
 
 ## Development
 

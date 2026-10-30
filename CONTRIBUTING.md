@@ -29,10 +29,10 @@ Only regenerate golden output after checking that the visual change is intention
 
 ## Improve the website and documentation
 
-Shared guides live in `docs/`. Package references are the existing `packages/*/README.md` files. The website renders these sources directly. Keep examples executable and use public data with clear provenance.
+Shared guides live in `apps/site/content/`. Package references are the existing `packages/*/README.md` files. The website renders these sources directly. The playground examples come from the golden corpora in `packages/*/test/golden/`, so adding, renaming or removing a golden case also changes a public page and its URL. When a package is first published, replace the "Unpublished" note in its README with installation instructions. Keep examples executable and use public data with clear provenance.
 
 Do not commit credentials, machine-specific paths, private review material or tool-specific working notes to this public repository.
 
 ## Contributors
 
-See the [public GitHub contributor history](https://github.com/borrowdale/borrowdale/graphs/contributors) for the people behind the project. Credits for incorporated code, fonts and datasets are listed on the [License & credits page](docs/license.md).
+See the [public GitHub contributor history](https://github.com/borrowdale/borrowdale/graphs/contributors) for the people behind the project. Credits for incorporated code, fonts and datasets are listed on the [License & credits page](apps/site/content/license.md).

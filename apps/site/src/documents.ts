@@ -1,14 +1,14 @@
 import { Marked } from 'marked';
 import { escape } from './drawing';
 import { codeBlock } from './gallery';
-import introduction from '../../../docs/README.md?raw';
-import gettingStarted from '../../../docs/getting-started.md?raw';
-import rendering from '../../../docs/rendering.md?raw';
-import accessibility from '../../../docs/accessibility.md?raw';
-import about from '../../../docs/about.md?raw';
+import introduction from '../content/README.md?raw';
+import gettingStarted from '../content/getting-started.md?raw';
+import rendering from '../content/rendering.md?raw';
+import accessibility from '../content/accessibility.md?raw';
+import about from '../content/about.md?raw';
 import contributing from '../../../CONTRIBUTING.md?raw';
 import changelog from '../../../CHANGELOG.md?raw';
-import license from '../../../docs/license.md?raw';
+import license from '../content/license.md?raw';
 import charts from '../../../packages/charts/README.md?raw';
 import core from '../../../packages/core/README.md?raw';
 import text from '../../../packages/text/README.md?raw';
@@ -21,28 +21,28 @@ export const docs = [
   {
     url: '/docs/',
     title: 'Documentation',
-    source: 'docs/README.md',
+    source: 'apps/site/content/README.md',
     body: introduction,
     group: 'Start here',
   },
   {
     url: '/docs/getting-started/',
     title: 'Getting started',
-    source: 'docs/getting-started.md',
+    source: 'apps/site/content/getting-started.md',
     body: gettingStarted,
     group: 'Start here',
   },
   {
     url: '/docs/rendering/',
     title: 'Rendering and fonts',
-    source: 'docs/rendering.md',
+    source: 'apps/site/content/rendering.md',
     body: rendering,
     group: 'Guides',
   },
   {
     url: '/docs/accessibility/',
     title: 'Accessibility and limitations',
-    source: 'docs/accessibility.md',
+    source: 'apps/site/content/accessibility.md',
     body: accessibility,
     group: 'Guides',
   },
@@ -58,7 +58,7 @@ export const docs = [
     body: p.body,
     group: 'Package reference',
   })),
-  { url: '/about/', title: 'About BorrowdaleJS', source: 'docs/about.md', body: about, group: 'Project' },
+  { url: '/about/', title: 'About BorrowdaleJS', source: 'apps/site/content/about.md', body: about, group: 'Project' },
   {
     url: '/contributing/',
     title: 'Contributing',
@@ -70,7 +70,7 @@ export const docs = [
   {
     url: '/license/',
     title: 'License & credits',
-    source: 'docs/license.md',
+    source: 'apps/site/content/license.md',
     body: license,
     group: 'Project',
   },

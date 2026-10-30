@@ -24,7 +24,7 @@ canvas.height = spec.height;
 drawChart(canvas.getContext('2d'), layoutChart(spec));
 ```
 
-Here `spec` is a chart spec such as the one in [Getting started](getting-started.md). Consult the [chart reference](../packages/charts/README.md) for the renderer signature and interaction helpers.
+Here `spec` is a chart spec such as the one in [Getting started](getting-started.md). Consult the [chart reference](../../../packages/charts/README.md) for the renderer signature and interaction helpers.
 
 ## Seeds and styles
 
@@ -34,7 +34,7 @@ Tune roughness, stroke width and fill style through the documented style options
 
 ## Text and fallback glyphs
 
-Excalifont is bundled under its own font license. Layout and measurement do not require a DOM. Check the `missing` field returned by text layout or measurement when accepting arbitrary user text; do not assume every writing system is covered. See the [text reference](../packages/text/README.md).
+Excalifont is bundled under its own font license. Layout and measurement do not require a DOM. Check the `missing` field returned by text layout or measurement when accepting arbitrary user text; do not assume every writing system is covered. See the [text reference](../../../packages/text/README.md).
 
 ## Playground execution
 

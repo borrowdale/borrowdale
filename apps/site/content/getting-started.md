@@ -53,4 +53,4 @@ npm run site:build
 npm test --workspace @borrowdale/site
 ```
 
-See [Contributing](../CONTRIBUTING.md) for the library's full build and test workflow.
+See [Contributing](../../../CONTRIBUTING.md) for the library's full build and test workflow.

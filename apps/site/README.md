@@ -32,7 +32,7 @@ Snapshots were retrieved on 2026-10-29. Each JSON file preserves its original so
 
 ## Public documentation and URLs
 
-The website and GitHub share the same Markdown sources: `docs/*.md`, the four package READMEs, `CONTRIBUTING.md` and `CHANGELOG.md`. The license page also renders the original MIT, font-license and third-party-notice files. Only these explicitly listed public files are included in the site.
+The website and GitHub share the same Markdown sources: `apps/site/content/*.md`, the four package READMEs, `CONTRIBUTING.md` and `CHANGELOG.md`. The license page also renders the original MIT, font-license and third-party-notice files. Only these explicitly listed public files are included in the site.
 
 `npm run site:build` produces a static HTML file for every page, including `/docs/`, `/playground/`, `/examples/`, their detail pages and the footer pages. Documentation is readable without JavaScript. Interactive examples and editing require JavaScript. Old hash links are translated to the corresponding paths in the browser.
 
