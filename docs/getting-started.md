@@ -9,7 +9,7 @@ git clone https://github.com/borrowdale/borrowdale.git
 cd borrowdale
 nvm use
 npm ci
-npm run demo
+npm run site
 ```
 
 Open http://127.0.0.1:5173/. The site imports the local `@borrowdale/*` packages directly. You do not need to publish or link an npm release.
@@ -49,8 +49,8 @@ Use `@borrowdale/charts` for data visualization, `@borrowdale/core` for drawing 
 ## Check your changes
 
 ```sh
-npm run demo:build
-npm test --workspace @borrowdale/demo
+npm run site:build
+npm test --workspace @borrowdale/site
 ```
 
 See [Contributing](../CONTRIBUTING.md) for the library's full build and test workflow.

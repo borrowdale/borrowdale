@@ -24,7 +24,7 @@ Start with the [shared documentation](docs/README.md), [contributing guide](CONT
 
 ## Development
 
-The [local demo site](apps/demo/README.md) includes the interactive collection and three open-data dashboards. Run `npm run demo` after installing dependencies; the unpublished packages resolve directly from the workspace.
+The [product website](apps/site/README.md) includes the interactive collection and three open-data dashboards. Run `npm run site` after installing dependencies; the unpublished packages resolve directly from the workspace.
 
 Node.js 24 is required for development, builds and tests. Use `nvm use` with the included `.nvmrc`,
 or select Node 24 through your version manager, before installing dependencies.

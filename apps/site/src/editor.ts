@@ -51,7 +51,7 @@ function componentCode(e: Example) {
     disclosure: '<details class="recipe-note"><summary>A small observation</summary><p>Data can feel human without losing its precision.</p></details>',
     input: '<label class="recipe-input">Name your collection<input placeholder="A new perspective…" maxlength="80"></label>',
   };
-  return `// UI recipe: native HTML + BorrowdaleJS drawing primitives.\n// Preview includes the demo stylesheet and Excalifont.\nimport { sketch, toSvgPaths } from '@borrowdale/core';\n\nfunction frame(width, height, fill) {\n  const drawing = sketch(\n    { kind: 'rectangle', x: 3, y: 3, width: width-6, height: height-6 },\n    { seed: ${seed}, fill, fillStyle: 'solid', roughness: 0.8 }\n  );\n  return \`<svg viewBox="0 0 \${width} \${height}" aria-hidden="true">\${toSvgPaths(drawing)}</svg>\`;\n}\n\nrender(\`${templates[e.tag]}\`);`;
+  return `// UI recipe: native HTML + BorrowdaleJS drawing primitives.\n// Preview includes the site stylesheet and Excalifont.\nimport { sketch, toSvgPaths } from '@borrowdale/core';\n\nfunction frame(width, height, fill) {\n  const drawing = sketch(\n    { kind: 'rectangle', x: 3, y: 3, width: width-6, height: height-6 },\n    { seed: ${seed}, fill, fillStyle: 'solid', roughness: 0.8 }\n  );\n  return \`<svg viewBox="0 0 \${width} \${height}" aria-hidden="true">\${toSvgPaths(drawing)}</svg>\`;\n}\n\nrender(\`${templates[e.tag]}\`);`;
 }
 export function editorPage(path = location.pathname) {
   const e = findExample(path);
