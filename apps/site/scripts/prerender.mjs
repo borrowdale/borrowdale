@@ -16,7 +16,7 @@ try {
  for(const path of [...paths,'/404/']){
   const content=pageHtml(path);
   const base=server.config.base;
-  const html=template.replace('<div id="app"></div>',`<div id="app">${content}</div>`).replace(/<title>.*?<\/title>/,'').replace(/<meta name="description"[^>]*>/,'').replace('</head>',`${metadataHtml(path,origin,base)}<style>${fontFaceCss(excalifontFiles)}</style></head>`);
+  const html=template.replace('<div id="app"></div>',()=>`<div id="app">${content}</div>`).replace(/<title>.*?<\/title>/,'').replace(/<meta name="description"[^>]*>/,'').replace('</head>',()=>`${metadataHtml(path,origin,base)}<style>${fontFaceCss(excalifontFiles)}</style></head>`);
   const output=resolve(root,'dist',path==='/404/'?'404.html':path.slice(1)+'index.html');await mkdir(dirname(output),{recursive:true});await writeFile(output,html);
  }
  await writeFile(resolve(root,'dist/.nojekyll'),'');
