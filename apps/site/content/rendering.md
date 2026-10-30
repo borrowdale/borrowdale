@@ -24,7 +24,7 @@ canvas.height = spec.height;
 drawChart(canvas.getContext('2d'), layoutChart(spec));
 ```
 
-Here `spec` is a chart spec such as the one in [Getting started](getting-started.md). Consult the [chart reference](../../../packages/charts/README.md) for the renderer signature and interaction helpers.
+Here `spec` is a chart spec such as the one in [Getting started](getting-started.md). Consult the [chart reference](../../../packages/charts/README.md) for the renderer signatures and the `<title>` tooltips each mark carries.
 
 ## Seeds and styles
 

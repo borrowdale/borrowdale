@@ -10,7 +10,7 @@ Hand-drawn styling should support the information rather than hide it. Accessibi
 - Do not communicate differences through color alone; use labels, patterns and context.
 - Keep text legible and check contrast against the background.
 
-SVG output exposes chart descriptions and labels. Canvas is a bitmap: provide an accessible name and an equivalent explanation or data view in the surrounding HTML. A tooltip alone is not a keyboard-accessible data alternative.
+SVG output gives each chart a title and each mark a `<title>` with its value. Canvas is a bitmap: provide an accessible name and an equivalent explanation or data view in the surrounding HTML. A tooltip alone is not a keyboard-accessible data alternative.
 
 ## Data contracts
 
