@@ -19,9 +19,25 @@ export const MAX_DECIMALS = 20;
 /** Reads a value at `path`, returning it checked, or throws. */
 export type Check<T> = (path: string, value: unknown) => T;
 
-/** Throws the error every spec problem becomes: "Invalid chart: <path> <problem>". */
+/**
+ * What every spec problem throws. Its message is "Invalid chart: <path> <problem>"; `path` is the
+ * place in the spec, such as `series[2].data[5]`, or `''` for the spec itself.
+ */
+export class InvalidChartError extends Error {
+  override readonly name = 'InvalidChartError';
+  readonly path: string;
+  readonly problem: string;
+
+  constructor(path: string, problem: string) {
+    super(`Invalid chart: ${path === '' ? '' : `${path} `}${problem}`);
+    this.path = path;
+    this.problem = problem;
+  }
+}
+
+/** Throws an `InvalidChartError` for the spec at `path`. */
 export function fail(path: string, problem: string): never {
-  throw new Error(`Invalid chart: ${path === '' ? '' : `${path} `}${problem}`);
+  throw new InvalidChartError(path, problem);
 }
 
 /**

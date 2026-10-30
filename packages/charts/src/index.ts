@@ -1,4 +1,5 @@
 export { layoutChart } from './layout.js';
+export { InvalidChartError } from './read.js';
 export { appendChart, drawChart, toSvgChart, type SvgChartOptions } from './render.js';
 export type {
   AngleBandAxis,
