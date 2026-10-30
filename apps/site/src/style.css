@@ -10,7 +10,7 @@
   background: #f7f5ef;
   font-synthesis: none;
   --ink: #283c34;
-  --muted: #73796e;
+  --muted: #696e64;
   --paper: #fffefa;
   --line: #dcded2;
   --gold: #efbd4d;
@@ -51,7 +51,7 @@ button:disabled {
   opacity: 0.4;
 }
 a:hover {
-  color: #397e92;
+  color: #357587;
 }
 button:hover:not(:disabled) {
   filter: brightness(0.97);
@@ -216,7 +216,7 @@ main h1:focus {
   font-size: 10px;
   font-weight: 650;
   letter-spacing: 1.7px;
-  color: #6c786a;
+  color: #657063;
   line-height: 1.6;
   display: flex;
   align-items: center;
@@ -244,7 +244,7 @@ main h1:focus {
 }
 .hero-description {
   font-size: 16px;
-  color: #6c756c;
+  color: #656d65;
   max-width: 440px;
   line-height: 1.85;
 }
@@ -288,11 +288,11 @@ main h1:focus {
   display: flex;
   gap: 13px;
   font-size: 11px;
-  color: #7d8277;
+  color: #696d64;
 }
 .hero-footnote i {
   font-style: normal;
-  color: #9caa98;
+  color: #61705d;
 }
 .hero-art {
   height: 460px;
@@ -334,7 +334,7 @@ main h1:focus {
   left: 85px;
   transform: rotate(-9deg);
   font-size: 22px;
-  color: #78816b;
+  color: #68705d;
 }
 .hero-donut {
   position: absolute;
@@ -384,7 +384,7 @@ main h1:focus {
   bottom: -29px;
   font-size: 8px;
   letter-spacing: 1.4px;
-  color: #8a8d80;
+  color: #6b6e62;
 }
 .package-strip {
   border-top: 1px solid var(--line);
@@ -409,7 +409,7 @@ main h1:focus {
   display: block;
   font-size: 9px;
   margin-bottom: 8px;
-  color: #929b89;
+  color: #676f5e;
 }
 .intro-section {
   display: grid;
@@ -425,7 +425,7 @@ main h1:focus {
 }
 .intro-section > p {
   font-size: 15px;
-  color: #778071;
+  color: #656d60;
   max-width: 455px;
 }
 .feature-grid {
@@ -453,7 +453,7 @@ main h1:focus {
 }
 .feature-grid p {
   font-size: 13px;
-  color: #7b8175;
+  color: #696e64;
 }
 .demo-section {
   border-top: 1px solid var(--line);
@@ -507,7 +507,7 @@ main h1:focus {
 .demo-caption small {
   font-size: 9px;
   letter-spacing: 1.5px;
-  color: #7e8978;
+  color: #656e60;
 }
 .demo-caption h3 {
   font-size: 23px;
@@ -520,7 +520,7 @@ main h1:focus {
 }
 .demo-caption p {
   font-size: 12px;
-  color: #7d8577;
+  color: #696f64;
 }
 .quickstart {
   border-top: 1px solid var(--line);
@@ -536,7 +536,7 @@ main h1:focus {
   line-height: 1.15;
 }
 .quickstart p {
-  color: #778071;
+  color: #656d60;
   font-size: 14px;
 }
 .quickstart .code-block pre {
@@ -603,7 +603,7 @@ main h1:focus {
 }
 .closing > p:nth-child(2) {
   font-size: 12px;
-  color: #88907f;
+  color: #676e5f;
   margin: 14px 0 25px;
 }
 .button {
@@ -643,12 +643,12 @@ footer .brand-symbol {
 }
 footer p {
   font-size: 11px;
-  color: #89907f;
+  color: #686e5f;
 }
 footer > span {
   margin-left: auto;
   font-size: 10px;
-  color: #89907f;
+  color: #686e5f;
 }
 .page-heading {
   padding: 65px 0 35px;
@@ -659,7 +659,7 @@ footer > span {
 }
 .page-heading p:last-child {
   font-size: 15px;
-  color: #7a8374;
+  color: #666d61;
 }
 .gallery-tools {
   background: #f7f5ef;
@@ -697,7 +697,7 @@ footer > span {
   align-items: center;
   gap: 10px;
   font-size: 12px;
-  color: #74816c;
+  color: #65705e;
 }
 .search {
   display: flex;
@@ -720,7 +720,7 @@ footer > span {
 }
 .gallery-note {
   font-size: 11px;
-  color: #8b927f;
+  color: #676d5d;
   padding: 20px 0;
 }
 .gallery-grid {
@@ -767,7 +767,7 @@ footer > span {
   font-size: 8px;
   overflow: hidden;
   max-height: 22px;
-  color: #9c6c50;
+  color: #8f6349;
 }
 .example-caption {
   padding: 16px;
@@ -777,7 +777,7 @@ footer > span {
 }
 .example-number {
   font-size: 9px;
-  color: #a1aa92;
+  color: #667057;
   line-height: 22px;
 }
 .example-caption h2 {
@@ -789,7 +789,7 @@ footer > span {
 }
 .example-caption div > span {
   font-size: 10px;
-  color: #909982;
+  color: #676f5a;
   line-height: 2;
 }
 .example-code > summary {
@@ -821,7 +821,7 @@ footer > span {
 }
 .pagination > span {
   font-size: 12px;
-  color: #88927d;
+  color: #676f5d;
 }
 .pagination button {
   font-size: 12px;
@@ -834,11 +834,11 @@ footer > span {
 }
 .empty p {
   margin: 15px 0;
-  color: #7c8870;
+  color: #656f5b;
 }
 .render-error {
   font-size: 12px;
-  color: #ae5548;
+  color: #aa5347;
   overflow-wrap: anywhere;
 }
 .panel {
@@ -860,11 +860,11 @@ footer > span {
 }
 .text-playground p {
   font-size: 11px;
-  color: #8c967e;
+  color: #656e5a;
 }
 .text-playground label {
   font-size: 11px;
-  color: #728168;
+  color: #63705a;
 }
 .text-playground input {
   display: block;
@@ -885,7 +885,7 @@ footer > span {
 }
 .text-playground #live-text-output small {
   font-size: 10px;
-  color: #8b967e;
+  color: #656e5a;
 }
 .text-playground details {
   grid-column: 1/-1;
@@ -1026,7 +1026,7 @@ footer > span {
   font-size: 8px;
   letter-spacing: 1.1px;
   margin-right: auto;
-  color: #8e967f;
+  color: #676e5a;
 }
 .dashboard-nav a {
   font-size: 11px;
@@ -1038,7 +1038,7 @@ footer > span {
 }
 .dashboard-nav small {
   margin-right: 7px;
-  color: #8e977d;
+  color: #676f59;
   font-size: 9px;
 }
 .dashboard-heading {
@@ -1054,7 +1054,7 @@ footer > span {
 }
 .dashboard-heading p:last-child {
   font-size: 13px;
-  color: #818c76;
+  color: #656e5c;
   max-width: 630px;
 }
 .snapshot {
@@ -1067,7 +1067,7 @@ footer > span {
 .snapshot small {
   display: block;
   font-size: 9px;
-  color: #8d977d;
+  color: #666f59;
   margin: 9px 0 0 14px;
 }
 .dashboard-toolbar {
@@ -1079,7 +1079,7 @@ footer > span {
 }
 .dashboard-toolbar > span {
   font-size: 11px;
-  color: #8c967f;
+  color: #666e5a;
 }
 .dashboard-toolbar > div {
   display: flex;
@@ -1091,7 +1091,7 @@ footer > span {
   display: flex;
   align-items: center;
   gap: 9px;
-  color: #7a896b;
+  color: #636f57;
 }
 .dashboard-toolbar select {
   font-size: 11px;
@@ -1116,7 +1116,7 @@ footer > span {
 .metric > span {
   font-size: 8px;
   letter-spacing: 1.1px;
-  color: #869277;
+  color: #656e58;
 }
 .metric strong {
   font:
@@ -1132,7 +1132,7 @@ footer > span {
 .metric small {
   font-size: 9px;
   line-height: 1.5;
-  color: #8b967d;
+  color: #656e59;
 }
 .metric.tint-green {
   background: #e6ecdf;
@@ -1171,13 +1171,13 @@ footer > span {
 }
 .chart-panel header p {
   font-size: 10px;
-  color: #8a957c;
+  color: #666f5a;
   margin-top: 7px;
   line-height: 1.6;
 }
 .chart-mark {
   font-size: 18px;
-  color: #a1ac94;
+  color: #646f56;
 }
 .chart-view {
   padding: 10px 15px 12px;
@@ -1193,7 +1193,7 @@ footer > span {
   padding: 11px 23px;
   border-top: 1px solid #e6eadd;
   font-size: 10px;
-  color: #7d8a6d;
+  color: #667059;
   list-style: none;
 }
 .dashboard-code summary span {
@@ -1208,7 +1208,7 @@ footer > span {
 }
 .table-panel > header > span {
   font-size: 10px;
-  color: #929d82;
+  color: #667058;
 }
 .table-scroll {
   overflow-x: auto;
@@ -1222,7 +1222,7 @@ table {
 thead {
   background: #f1f3e9;
   font-size: 9px;
-  color: #7f8d6d;
+  color: #657057;
 }
 th,
 td {
@@ -1235,7 +1235,7 @@ tbody th {
 }
 td {
   font-variant-numeric: tabular-nums;
-  color: #6d7f5b;
+  color: #607050;
 }
 tbody tr:hover {
   background: #f5f7ef;
@@ -1250,7 +1250,7 @@ tbody tr:hover {
 }
 .source-note > span {
   font: 27px Excalifont;
-  color: #97a288;
+  color: #667158;
 }
 .source-note h3 {
   font-size: 14px;
@@ -1259,7 +1259,7 @@ tbody tr:hover {
 }
 .source-note p {
   font-size: 11px;
-  color: #7d8b6b;
+  color: #667157;
   line-height: 1.9;
 }
 .source-note a {
@@ -1831,7 +1831,7 @@ a.example-card:focus-visible {
   border-top: 1px solid var(--line, #deded2);
   font-size: 13px;
   font-weight: 600;
-  color: #397e92;
+  color: #357587;
 }
 .editor-heading {
   display: flex;
@@ -2039,7 +2039,7 @@ a.example-card:focus-visible {
   text-transform: uppercase;
   letter-spacing: 1.2px;
   margin: 25px 0 10px;
-  color: #697465;
+  color: #646f60;
 }
 .docs-sidebar a {
   display: block;
@@ -2133,7 +2133,7 @@ a.example-card:focus-visible {
 }
 .docs-toc p {
   letter-spacing: 1px;
-  color: #75806e;
+  color: #667060;
 }
 .docs-toc a {
   display: block;
