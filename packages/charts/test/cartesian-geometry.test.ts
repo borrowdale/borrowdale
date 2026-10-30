@@ -51,7 +51,7 @@ describe('weighted band labels', () => {
     expect(toSvgChart(layoutChart(bars(260, [1, 1, 1, 1, 1, 1])))).toBe(toSvgChart(layoutChart(bars(260))));
   });
 
-  it('places padded weighted bands with gaps proportional to the weights', () => {
+  it('places padded weighted bands with equal gaps and proportional widths', () => {
     const scale = bandScale(3, [0, 600], 0.2, [1, 3, 2]);
 
     expect(scale.start(0)).toBeCloseTo(37.5, 9);
@@ -166,7 +166,7 @@ describe('marks the examples leave unpinned', () => {
     const layout = marks([bar('Bar')], { axes: { x: { ...abc, weights: [1, 3, 1] }, y: { type: 'linear', min: 0, max: 4 } },
       annotations: [{ type: 'line', axis: 'x', value: 'B', color: ink }] });
 
-    expect(strokedWith(layout, ink)).toMatchObject([{ d: expect.stringMatching(/^M153\.09 15\.56 /) }]);
+    expect(strokedWith(layout, ink)).toMatchObject([{ d: expect.stringMatching(/^M159\.7 15\.56 /) }]);
   });
 
   it('shortens the head of a short arrow to half its length', () => {

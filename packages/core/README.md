@@ -176,3 +176,7 @@ projects need `"dom"` in `compilerOptions.lib`, even when they only render on th
 
 MIT. The stroke engine is ported from MIT-licensed code by Preet Shihn, and its trigonometry uses
 constants from fdlibm; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+### Validation without drawing
+
+`assertDrawable(shape, options)` checks the same shape and style rules as `sketch`, without generating strokes. It returns a shallow options object with undefined entries removed and throws on invalid input. This checks input structure and ranges; drawing still enforces its separate work budget.

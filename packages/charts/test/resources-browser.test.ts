@@ -63,3 +63,36 @@ it('renders preloaded images and continuous gradients on native Canvas and SVG',
   expect(result.state).toEqual(['#00ff00', 7]);
   expect(result.ids[0]).not.toBe(result.ids[1]);
 }, 120_000);
+
+it('keeps native DOM resource references distinct across detached, shadow and template charts', async () => {
+  const result = await evaluateInChromium(new URL('../src/index.ts', import.meta.url), 'charts', '', async () => {
+    const api = (globalThis as unknown as { charts: typeof Charts }).charts;
+    const layout = api.layoutChart({ width: 100, height: 100, legend: 'none',
+      axes: { x: { type: 'linear' }, y: { type: 'linear' } },
+      series: [{ type: 'xyLine', name: 'L', data: [[0, 0], [1, 1]],
+        gradient: { axis: 'x', stops: [{ offset: 0, color: '#f00' }, { offset: 1, color: '#00f' }] } }] });
+    const parent = document.createElement('div');
+    const explicit = api.appendChart(parent, layout, { idPrefix: 'chart' });
+    const automatic = api.appendChart(document.body, layout);
+    const template = document.createElement('template'); template.innerHTML = '<div></div>';
+    const detached = api.appendChart(template.content.firstElementChild!, layout);
+    document.body.appendChild(template.content);
+    document.body.appendChild(parent);
+    const host = document.createElement('div'); document.body.appendChild(host);
+    const shadow = host.attachShadow({ mode: 'closed' });
+    const target = document.createElement('div'); shadow.appendChild(target);
+    const id = detached.querySelector('linearGradient')!.id;
+    const next = id.replace(/chart(?:-(\d+))?-/, (_, n) => `chart-${Number(n ?? 0) + 1}-`);
+    const blocker = document.createElement('span'); blocker.id = next; shadow.appendChild(blocker);
+    const nested = api.appendChart(target, layout);
+    const svgs = [explicit, automatic, detached, nested];
+    return { ids: svgs.map((svg) => svg.querySelector('linearGradient')!.id), next,
+      references: svgs.map((svg) => {
+        const resource = svg.querySelector('linearGradient')!.id;
+        return [...svg.querySelectorAll('path')].some((path) => path.getAttribute('stroke') === `url(#${resource})`);
+      }) };
+  }, undefined);
+  expect(new Set(result.ids).size).toBe(4);
+  expect(result.ids[3]).not.toBe(result.next);
+  expect(result.references).toEqual([true, true, true, true]);
+}, 120_000);
