@@ -60,7 +60,9 @@ const MAX_BANDS = 100;
 
 export type System = 'cartesian' | 'polar' | 'pie' | 'gauge';
 
-const categoryValues = list(0, MAX_POINTS, nullable(number(-MAX_VALUE, MAX_VALUE, 'or null')));
+type ReservePoints = (count: number) => void;
+const categoryValues = (reserve: ReservePoints) =>
+  list(0, MAX_POINTS, nullable(number(-MAX_VALUE, MAX_VALUE, 'or null')), reserve);
 const valueAxis = oneOf(['y', 'y2'] as const);
 const curve = oneOf(CURVES);
 
@@ -78,11 +80,11 @@ const readAxis = (r: Fields) => r.optional('axis', valueAxis) ?? 'y';
 const readStack = (r: Fields) => r.optional('stack', text());
 const readCurve = (r: Fields) => r.optional('curve', curve) ?? 'linear';
 const readDash = (r: Fields) => r.optional('dash', checkDash);
-const readValues = (r: Fields) => r.required('data', categoryValues);
+const readValues = (r: Fields, reserve: ReservePoints) => r.required('data', categoryValues(reserve));
 const readPoints =
   <const N extends readonly [string, string]>(names: N) =>
-  (r: Fields) =>
-    r.required('data', list(0, MAX_POINTS, tuple(names)));
+  (r: Fields, reserve: ReservePoints) =>
+    r.required('data', list(0, MAX_POINTS, tuple(names), reserve));
 
 /** What a series type needs of a polar chart. */
 interface PolarNeeds {
@@ -112,41 +114,41 @@ const SERIES_RULES = {
     system: 'cartesian',
     band: true,
     keys: ['axis', 'data', 'stack'],
-    read: (r: Fields) => ({ axis: readAxis(r), stack: readStack(r), data: readValues(r) }),
+    read: (r: Fields, _path: string, reserve: ReservePoints) => ({ axis: readAxis(r), stack: readStack(r), data: readValues(r, reserve) }),
   },
   line: {
     system: 'cartesian',
     band: true,
     keys: ['axis', 'data', 'curve', 'dash'],
-    read: (r: Fields) => ({ axis: readAxis(r), curve: readCurve(r), dash: readDash(r), data: readValues(r) }),
+    read: (r: Fields, _path: string, reserve: ReservePoints) => ({ axis: readAxis(r), curve: readCurve(r), dash: readDash(r), data: readValues(r, reserve) }),
   },
   area: {
     system: 'cartesian',
     band: true,
     keys: ['axis', 'data', 'stack', 'curve'],
-    read: (r: Fields) => ({ axis: readAxis(r), stack: readStack(r), curve: readCurve(r), data: readValues(r) }),
+    read: (r: Fields, _path: string, reserve: ReservePoints) => ({ axis: readAxis(r), stack: readStack(r), curve: readCurve(r), data: readValues(r, reserve) }),
   },
   rangeArea: {
     system: 'cartesian',
     band: true,
     keys: ['axis', 'data', 'curve'],
-    read: (r: Fields) => ({
+    read: (r: Fields, _path: string, reserve: ReservePoints) => ({
       axis: readAxis(r),
       curve: readCurve(r),
-      data: r.required('data', list(0, MAX_POINTS, nullable(checkRange))),
+      data: r.required('data', list(0, MAX_POINTS, nullable(checkRange), reserve)),
     }),
   },
   scatter: {
     system: 'cartesian',
     band: false,
     keys: ['data'],
-    read: (r: Fields) => ({ data: readPoints(['x', 'y'])(r) }),
+    read: (r: Fields, _path: string, reserve: ReservePoints) => ({ data: readPoints(['x', 'y'])(r, reserve) }),
   },
   bubble: {
     system: 'cartesian',
     band: false,
     keys: ['data'],
-    read: (r: Fields) => ({ data: r.required('data', list(0, MAX_POINTS, checkBubble)) }),
+    read: (r: Fields, _path: string, reserve: ReservePoints) => ({ data: r.required('data', list(0, MAX_POINTS, checkBubble, reserve)) }),
   },
   pie: {
     system: 'pie',
@@ -159,7 +161,7 @@ const SERIES_RULES = {
     band: true,
     polar: { angle: 'band', radius: 'linear', outward: 'always', polygon: true },
     keys: ['data'],
-    read: (r: Fields, path: string) => checkRadarData(r, path),
+    read: checkRadarData,
   },
   // The polar twins of bar, line, area and scatter: the same fields, read by the same readers, less
   // what a polar chart has no use for (a second value axis, curves).
@@ -168,35 +170,35 @@ const SERIES_RULES = {
     band: true,
     polar: { angle: 'band', radius: 'linear', outward: 'always', polygon: false },
     keys: ['data', 'stack'],
-    read: (r: Fields) => ({ stack: readStack(r), data: readValues(r) }),
+    read: (r: Fields, _path: string, reserve: ReservePoints) => ({ stack: readStack(r), data: readValues(r, reserve) }),
   },
   radialBar: {
     system: 'polar',
     band: true,
     polar: { angle: 'linear', radius: 'band', outward: 'never', polygon: false },
     keys: ['data', 'stack'],
-    read: (r: Fields) => ({ stack: readStack(r), data: readValues(r) }),
+    read: (r: Fields, _path: string, reserve: ReservePoints) => ({ stack: readStack(r), data: readValues(r, reserve) }),
   },
   polarLine: {
     system: 'polar',
     band: true,
     polar: { angle: 'band', radius: 'linear', outward: 'never', polygon: false },
     keys: ['data', 'dash'],
-    read: (r: Fields) => ({ dash: readDash(r), data: readValues(r) }),
+    read: (r: Fields, _path: string, reserve: ReservePoints) => ({ dash: readDash(r), data: readValues(r, reserve) }),
   },
   polarArea: {
     system: 'polar',
     band: true,
     polar: { angle: 'band', radius: 'linear', outward: 'stacked', polygon: false },
     keys: ['data', 'stack'],
-    read: (r: Fields) => ({ stack: readStack(r), data: readValues(r) }),
+    read: (r: Fields, _path: string, reserve: ReservePoints) => ({ stack: readStack(r), data: readValues(r, reserve) }),
   },
   polarScatter: {
     system: 'polar',
     band: false,
     polar: { angle: 'linear', radius: 'linear', outward: 'never', polygon: false },
     keys: ['data'],
-    read: (r: Fields) => ({ data: readPoints(['angle', 'radius'])(r) }),
+    read: (r: Fields, _path: string, reserve: ReservePoints) => ({ data: readPoints(['angle', 'radius'])(r, reserve) }),
   },
   gauge: {
     system: 'gauge',
@@ -215,7 +217,7 @@ const SERIES_RULES = {
     band: boolean;
     polar?: PolarNeeds;
     keys: readonly string[];
-    read: (r: Fields, path: string) => object;
+    read: (r: Fields, path: string, reserve: ReservePoints) => object;
   }
 >;
 
@@ -326,12 +328,15 @@ export function checkChart(spec: ChartSpec, font: Font = excalifont): CheckedCha
     legend: r.optional('legend', oneOf(LEGEND_POSITIONS)),
     style: r.optional('style', checkStyle) ?? {},
   };
-  const series = r.required('series', list(1, MAX_SERIES, checkSeries));
+  let points = 0;
+  const reserve = (count: number): void => {
+    points += count;
+    if (points > MAX_POINTS) {
+      fail('series', `hold at least ${points} data points in all, more than ${MAX_POINTS}`);
+    }
+  };
+  const series = r.required('series', list(1, MAX_SERIES, (path, raw, index) => checkSeries(path, raw, index, reserve)));
   unique(series.map((entry) => entry.name), (i) => `series[${i}].name`);
-  const points = series.reduce((sum, entry) => sum + ('data' in entry ? entry.data.length : 1), 0);
-  if (points > MAX_POINTS) {
-    fail('series', `hold ${points} data points in all, more than ${MAX_POINTS}`);
-  }
   // The first series decides the coordinate system; every other series must draw in it.
   const system = SERIES_RULES[series[0]!.type].system;
   switch (system) {
@@ -346,7 +351,7 @@ export function checkChart(spec: ChartSpec, font: Font = excalifont): CheckedCha
   }
 }
 
-function checkSeries(path: string, raw: unknown, index: number): CheckedSeries {
+function checkSeries(path: string, raw: unknown, index: number, reserve: ReservePoints): CheckedSeries {
   const r = fields(path, raw);
   const type = r.required('type', checkSeriesType);
   const rule = SERIES_RULES[type];
@@ -358,9 +363,12 @@ function checkSeries(path: string, raw: unknown, index: number): CheckedSeries {
     color: r.optional('color', color),
     style: r.optional('style', checkStyle) ?? {},
   };
+  if (!rule.keys.some((key) => key === 'data')) {
+    reserve(1);
+  }
   // One cast: `rule.read`'s result matches `type` by construction of SERIES_RULES, which TypeScript
   // cannot follow through a lookup by a union key.
-  return { ...base, type, ...rule.read(r, path) } as CheckedSeries;
+  return { ...base, type, ...rule.read(r, path, reserve) } as CheckedSeries;
 }
 
 const checkSeriesType: Check<SeriesType> = (path, type) => {
@@ -621,7 +629,7 @@ function checkPieChart(r: Fields, base: CheckedChartBase, series: SeriesOf<'pie'
   return { ...base, system: 'pie', series: rings };
 }
 
-function checkPieSeries(r: Fields, path: string) {
+function checkPieSeries(r: Fields, path: string, reserve: ReservePoints) {
   const data = r.required(
     'data',
     list(1, MAX_CATEGORIES, (slicePath, raw) => {
@@ -634,7 +642,7 @@ function checkPieSeries(r: Fields, path: string) {
         offset: slice.optional('offset', number(0, MAX_OFFSET)) ?? 0,
         radius: slice.optional('radius', number(0, MAX_VALUE)),
       };
-    }),
+    }, reserve),
   );
   unique(data.map((slice) => slice.name), (i) => `${path}.data[${i}].name`);
   if (!data.some((slice) => slice.value > 0)) {
@@ -687,11 +695,11 @@ function checkDash(path: string, dash: unknown): number[] {
 }
 
 /** A radar's values: a number per spoke, or a `[low, high]` pair per spoke for a range radar. */
-function checkRadarData(r: Fields, path: string): { data: number[] } | { data: [number, number][] } {
+function checkRadarData(r: Fields, path: string, reserve: ReservePoints): { data: number[] } | { data: [number, number][] } {
   const value = number(0, MAX_VALUE);
   const entry = (entryPath: string, raw: unknown): number | [number, number] =>
     Array.isArray(raw) ? checkRange(entryPath, raw) : value(entryPath, raw);
-  const data = r.required('data', list(0, MAX_POINTS, entry));
+  const data = r.required('data', list(0, MAX_POINTS, entry, reserve));
   const ranges = data.filter((item): item is [number, number] => Array.isArray(item));
   const values = data.filter((item): item is number => !Array.isArray(item));
   if (ranges.length > 0 && values.length > 0) {
