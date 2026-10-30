@@ -58,7 +58,7 @@ describe('automatic SVG resource identifiers', () => {
     stops: [{ offset: 0, color: '#f00' }, { offset: 1, color: '#00f' }],
     sketch: { paths: [{ d: 'M0 0 L10 0', fill: 'none', stroke: '#000', strokeWidth: 2 }] } };
   const layout: ChartLayout = { width: 100, height: 100, family: 'test', labels: [], missing: [],
-    nodes: [gradient, { ...gradient }] };
+    nodes: [gradient, { ...gradient, to: [20, 0] as const }] };
 
   it('reserves distinct identifiers before detached charts are attached', () => {
     const doc = document.implementation.createHTMLDocument('');

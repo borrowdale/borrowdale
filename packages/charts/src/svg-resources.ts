@@ -33,8 +33,11 @@ export function svgResources(
 const symbolAttributes = (id: string) => ({ id, viewBox: '0 0 1 1', preserveAspectRatio: 'none' });
 const rasterAttributes = (image: ChartImage) => ({ href: image.dataUrl, width: 1, height: 1, preserveAspectRatio: 'none' });
 
+/** One definition per id: nodes that paint alike share it. */
+const uniqueGradients = (resources: SvgResources) => new Map([...resources.gradients].map(([node, id]) => [id, node]));
+
 export function resourceSvg(resources: SvgResources, images: ReadonlyMap<string, ChartImage>): string {
-  const gradients = [...resources.gradients].map(([node, id]) => gradientSvg(node, id)).join('');
+  const gradients = [...uniqueGradients(resources)].map(([id, node]) => gradientSvg(node, id)).join('');
   const rasters = [...resources.images].map(([name, id]) =>
     svgElement('symbol', symbolAttributes(id), svgElement('image', rasterAttributes(images.get(name)!)))).join('');
   return gradients || rasters ? svgElement('defs', {}, gradients + rasters) : '';
@@ -49,7 +52,7 @@ export function appendResources(parent: Element, resources: SvgResources, images
     return node;
   };
   const defs = element('defs', {});
-  for (const [node, id] of resources.gradients) {
+  for (const [id, node] of uniqueGradients(resources)) {
     const gradient = element('linearGradient', gradientAttributes(node, id));
     for (const stop of node.stops) gradient.appendChild(element('stop', { offset: stop.offset, 'stop-color': stop.color }));
     defs.appendChild(gradient);
