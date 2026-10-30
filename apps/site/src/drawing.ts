@@ -16,13 +16,18 @@ export function reseed() {
 export function shapeSvg(shape: Shape, options: SketchOptions = {}, width = 300, height = 180, fit = false) {
   return `<svg ${fit ? 'data-fit' : ''} viewBox="0 0 ${width} ${height}" role="img" aria-label="${escape(shape.kind)} drawing">${toSvgPaths(sketch(shape, { seed, stroke: '#263b33', ...options }))}</svg>`;
 }
+// Hides an ornamental drawing from assistive technology, so it adds nothing to the name of the link or
+// button around it.
+export function decorative(svg: string) {
+  return svg.replace(/ role="img" aria-label="[^"]*"/, ' aria-hidden="true" focusable="false"');
+}
 export function scribble(width = 260, height = 64, fill = '#f0c557') {
-  return shapeSvg(
+  return decorative(shapeSvg(
     { kind: 'rectangle', x: 3, y: 3, width: width - 6, height: height - 6 },
     { fill, fillStyle: 'solid', roughness: 0.8 },
     width,
     height,
-  );
+  ));
 }
 export function textSvg(text: string, options: LayoutOptions) {
   const layout = layoutText(text, options),
@@ -83,7 +88,8 @@ export function chartSpec(
     width: 660,
     height: 310,
     title,
-    legend: 'none',
+    // Name the series whenever there is more than one, so they are never told apart by colour alone.
+    legend: series.length > 1 ? 'top' : 'none',
     fontSize: 12,
     axes: { x: { type: 'band', categories }, y: { type: 'linear', grid: true } },
     style: { roughness: 0.8, fillStyle: 'solid' },

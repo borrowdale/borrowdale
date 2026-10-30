@@ -17,8 +17,33 @@ import { chart, chartSpec, colors, escape } from './drawing';
 import { codeBlock, chartCode } from './gallery';
 import type { ChartSpec } from '@borrowdale/charts';
 export const dashboardState = { year: 2023, country: 'HUN', since: 1970, magnitude: 4.5 };
+const number = (value: number) => value.toLocaleString('en', { maximumFractionDigits: 2 });
+// The categories a series of plain values is drawn against, from whichever axis is the band axis.
+function categoriesOf(spec: ChartSpec): readonly string[] {
+  const axes = (spec as { axes?: Record<string, { type?: string; categories?: readonly string[] }> }).axes ?? {};
+  return Object.values(axes).find((axis) => axis.type === 'band')?.categories ?? [];
+}
+// One row per drawn value, so the numbers behind a chart can be read without seeing it.
+function dataRows(spec: ChartSpec) {
+  const categories = categoriesOf(spec);
+  return spec.series.flatMap((series) => {
+    if (series.type === 'gauge') return [[series.name, '', number(series.value)]];
+    if (series.type === 'pie') return series.data.map((slice) => [series.name, slice.name, number(slice.value)]);
+    return (series.data as readonly (number | null | readonly number[])[]).map((value, i) => [
+      series.name,
+      categories[i] ?? String(i + 1),
+      value === null ? 'No data' : typeof value === 'number' ? number(value) : value.map(number).join(' · '),
+    ]);
+  });
+}
+function dataTable(title: string, spec: ChartSpec) {
+  const rows = dataRows(spec)
+    .map(([series, point, value]) => `<tr><th scope="row">${escape(series)}</th><td>${escape(point)}</td><td>${value}</td></tr>`)
+    .join('');
+  return `<details class="dashboard-code dashboard-data"><summary>View data</summary><div class="table-scroll"><table><caption class="visually-hidden">${escape(title)} data</caption><thead><tr><th scope="col">Series</th><th scope="col">Point</th><th scope="col">Value</th></tr></thead><tbody>${rows}</tbody></table></div></details>`;
+}
 export function chartPanel(title: string, note: string, spec: ChartSpec, extra = '') {
-  return `<article class="chart-panel ${extra}"><header><div><h2>${escape(title)}</h2><p>${escape(note)}</p></div><span class="chart-mark">↗</span></header><p class="chart-scroll-hint">Swipe or scroll sideways to explore the chart →</p><div class="chart-view" tabindex="0" role="region" aria-label="${escape(title)} chart">${chart(spec)}</div><details class="dashboard-code"><summary>View chart code <span>⌘</span></summary>${codeBlock(chartCode(spec))}</details></article>`;
+  return `<article class="chart-panel ${extra}"><header><div><h2>${escape(title)}</h2><p>${escape(note)}</p></div><span class="chart-mark">↗</span></header><p class="chart-scroll-hint">Swipe or scroll sideways to explore the chart →</p><div class="chart-view" tabindex="0" role="region" aria-label="${escape(title)} chart">${chart(spec)}</div>${dataTable(title, spec)}<details class="dashboard-code"><summary>View chart code <span>⌘</span></summary>${codeBlock(chartCode(spec))}</details></article>`;
 }
 function metric(label: string, value: string, note: string, accent = '') {
   return `<article class="metric ${accent}"><span>${label}</span><strong>${value}</strong><small>${note}</small></article>`;
@@ -55,7 +80,7 @@ export function worldDashboard() {
     width: 660,
     height: 400,
     title: 'Income and longevity',
-    legend: 'none',
+    legend: 'bottom',
     axes: {
       x: { type: 'linear', title: 'GDP per capita · US$ thousands' },
       y: { type: 'linear', min: 40, max: 95, title: 'Life expectancy · years' },

@@ -1,5 +1,7 @@
 import type { ChartSpec } from '@borrowdale/charts';
-import { chart, chartSpec, shapeSvg, scribble, patternSvg, escape } from './drawing';
+import { chart, chartSpec, shapeSvg, scribble, patternSvg, escape, decorative } from './drawing';
+// Every drawing on these pages is ornament: the text beside it carries the meaning.
+const ornament = (...args: Parameters<typeof shapeSvg>) => decorative(shapeSvg(...args));
 import { gallery, examples, codeBlock, chartCode } from './gallery';
 import { worldDashboard, climateDashboard, quakeDashboard } from './dashboards';
 import { editorPage, findExample } from './editor';
@@ -25,7 +27,7 @@ const demoSpec = chartSpec(
   { legend: 'top', width: 510, height: 300 },
 );
 function logo() {
-  return `<a class="brand" href="#home" aria-label="BorrowdaleJS home"><span class="brand-symbol">${shapeSvg(
+  return `<a class="brand" href="#home" aria-label="BorrowdaleJS home"><span class="brand-symbol">${ornament(
     {
       kind: 'polygon',
       points: [
@@ -64,7 +66,7 @@ function heroArt() {
       },
     ],
   };
-  return `<div class="hero-art" aria-label="BorrowdaleJS chart examples using illustrative data"><div class="art-dotgrid">${patternSvg({ kind: 'circles', size: 17, stroke: '#c8c8b8', strokeWidth: 0.5 })}</div><div class="hand-note">a little less rigid.</div><div class="hero-chart paper">${chart(demoSpec)}</div><div class="hero-donut paper">${chart(donut)}<span>A fresh perspective</span></div><div class="hero-stamp">${scribble(170, 80, '#e4ebda')}<span>Same data.<br>More character.</span></div><div class="hero-spark">${shapeSvg(
+  return `<div class="hero-art" role="group" aria-label="BorrowdaleJS chart examples using illustrative data"><div class="art-dotgrid">${decorative(patternSvg({ kind: 'circles', size: 17, stroke: '#c8c8b8', strokeWidth: 0.5 }))}</div><div class="hand-note">a little less rigid.</div><div class="hero-chart paper">${chart(demoSpec)}</div><div class="hero-donut paper">${chart(donut)}<span>A fresh perspective</span></div><div class="hero-stamp">${scribble(170, 80, '#e4ebda')}<span>Same data.<br>More character.</span></div><div class="hero-spark">${ornament(
     {
       kind: 'linearPath',
       points: [
@@ -167,7 +169,7 @@ function home() {
   return `<section class="hero"><div class="hero-copy"><p class="eyebrow"><span class="status-dot"></span> AN OPEN-SOURCE DRAWING TOOLKIT</p><h1>Serious data.<br><span>A human touch.</span></h1><p class="hero-description">Hand-drawn charts, expressive lettering, and beautifully imperfect shapes. Bring a little character to the things you build.</p><div class="hero-actions"><a href="#gallery" class="sketch-button">${scribble()}<span>Explore the playground ↗</span></a><a class="text-link" href="#world">See it in the wild →</a></div><div class="hero-footnote"><span>TypeScript</span><i>·</i><span>SVG + Canvas</span><i>·</i><span>Seeded & repeatable</span></div></div>${heroArt()}</section>
  <section class="package-strip"><span>ONE VISUAL LANGUAGE.<br>FOUR SMALL PACKAGES.</span>${['core', 'text', 'fills', 'charts'].map((x, i) => `<a href="#gallery?category=${['shapes', 'text', 'patterns', 'charts'][i]}"><small>0${i + 1}</small> @borrowdale/<b>${x}</b> ↗</a>`).join('')}</section>
  <section class="intro-section"><div><p class="eyebrow">PRECISION, WITH PERSONALITY</p><h2>Made by code.<br>Feels made by hand.</h2></div><p>Not a filter on top of a chart. BorrowdaleJS lays out data, measures text, and builds every stroke from the same drawing language. A sketchbook feel, with numbers you can still read.</p></section>
- <section class="feature-grid"><article><span class="feature-icon">${shapeSvg(
+ <section class="feature-grid"><article><span class="feature-icon">${ornament(
    {
      kind: 'curve',
      points: [
@@ -180,7 +182,7 @@ function home() {
    { stroke: '#397e92', strokeWidth: 2 },
    105,
    55,
- )}</span><h3>A considered imperfection</h3><p>Tune roughness, fill patterns and stroke weight. Keep it crisp or let the pencil wander.</p></article><article><span class="feature-icon">${shapeSvg({ kind: 'rectangle', x: 6, y: 6, width: 82, height: 42 }, { fill: '#efbd4d', fillStyle: 'hachure', roughness: 0.7 }, 100, 55)}</span><h3>The same sketch, every time</h3><p>Seeded drawings and DOM-free layout. Share the same input between server and browser.</p></article><article><span class="feature-icon hand">Aa ↗</span><h3>Words belong in the picture</h3><p>Measured Excalifont labels, from a tiny axis tick to a handwritten annotation.</p></article></section>
+ )}</span><h3>A considered imperfection</h3><p>Tune roughness, fill patterns and stroke weight. Keep it crisp or let the pencil wander.</p></article><article><span class="feature-icon">${ornament({ kind: 'rectangle', x: 6, y: 6, width: 82, height: 42 }, { fill: '#efbd4d', fillStyle: 'hachure', roughness: 0.7 }, 100, 55)}</span><h3>The same sketch, every time</h3><p>Seeded drawings and DOM-free layout. Share the same input between server and browser.</p></article><article><span class="feature-icon hand">Aa ↗</span><h3>Words belong in the picture</h3><p>Measured Excalifont labels, from a tiny axis tick to a handwritten annotation.</p></article></section>
  <section class="demo-section"><div class="section-top"><div><p class="eyebrow">THREE OPEN-DATA NOTEBOOKS</p><h2>Real numbers. New perspectives.</h2></div><a class="text-link" href="#world">Explore the examples ↗</a></div><div class="demo-grid">${previews()
    .map(
      (p) =>

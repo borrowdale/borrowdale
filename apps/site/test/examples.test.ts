@@ -114,8 +114,10 @@ describe('interactive examples', () => {
     expect(() => executeExample('render(42)')).toThrow('expects SVG');
     expect(() => executeExample("import { missing } from '@borrowdale/core';")).toThrow('Unknown import');
   });
-  it('keeps dashboards chart-based', () => {
-    expect(worldDashboard() + climateDashboard() + quakeDashboard()).not.toContain('<table');
+  it('keeps dashboards chart-based, with each table only as a collapsed data view of a chart', () => {
+    const html = worldDashboard() + climateDashboard() + quakeDashboard();
+    expect(html.match(/<table/g)).toHaveLength(html.match(/<details class="dashboard-code dashboard-data">/g)!.length);
+    expect(html.match(/<table/g)).toHaveLength(html.match(/class="chart-view"/g)!.length);
   });
 });
 
