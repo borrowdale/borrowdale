@@ -326,12 +326,15 @@ export function checkChart(spec: ChartSpec, font: Font = excalifont): CheckedCha
     legend: r.optional('legend', oneOf(LEGEND_POSITIONS)),
     style: r.optional('style', checkStyle) ?? {},
   };
-  const series = r.required('series', list(1, MAX_SERIES, checkSeries));
+  let points = 0;
+  const reserve = (count: number): void => {
+    points += count;
+    if (points > MAX_POINTS) {
+      fail('series', `hold at least ${points} data points in all, more than ${MAX_POINTS}`);
+    }
+  };
+  const series = r.required('series', list(1, MAX_SERIES, (path, raw, index) => checkSeries(path, raw, index, reserve)));
   unique(series.map((entry) => entry.name), (i) => `series[${i}].name`);
-  const points = series.reduce((sum, entry) => sum + ('data' in entry ? entry.data.length : 1), 0);
-  if (points > MAX_POINTS) {
-    fail('series', `hold ${points} data points in all, more than ${MAX_POINTS}`);
-  }
   // The first series decides the coordinate system; every other series must draw in it.
   const system = SERIES_RULES[series[0]!.type].system;
   switch (system) {
@@ -346,7 +349,7 @@ export function checkChart(spec: ChartSpec, font: Font = excalifont): CheckedCha
   }
 }
 
-function checkSeries(path: string, raw: unknown, index: number): CheckedSeries {
+function checkSeries(path: string, raw: unknown, index: number, reserve: (count: number) => void): CheckedSeries {
   const r = fields(path, raw);
   const type = r.required('type', checkSeriesType);
   const rule = SERIES_RULES[type];
@@ -358,9 +361,23 @@ function checkSeries(path: string, raw: unknown, index: number): CheckedSeries {
     color: r.optional('color', color),
     style: r.optional('style', checkStyle) ?? {},
   };
+  // Charge each data array before its reader copies any entries. Keep the same field read for
+  // charging and validation: a getter must not substitute a different array between them.
+  const dataFields: Fields = {
+    ...r,
+    required: (key, check) => r.required(key, (fieldPath, value) => {
+      if (key === 'data' && Array.isArray(value) && value.length <= MAX_POINTS) {
+        reserve(value.length);
+      }
+      return check(fieldPath, value);
+    }),
+  };
+  if (!rule.keys.some((key) => key === 'data')) {
+    reserve(1);
+  }
   // One cast: `rule.read`'s result matches `type` by construction of SERIES_RULES, which TypeScript
   // cannot follow through a lookup by a union key.
-  return { ...base, type, ...rule.read(r, path) } as CheckedSeries;
+  return { ...base, type, ...rule.read(dataFields, path) } as CheckedSeries;
 }
 
 const checkSeriesType: Check<SeriesType> = (path, type) => {

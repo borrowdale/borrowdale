@@ -239,7 +239,10 @@ Invalid chart: a 20 × 20 chart leaves no room for the plot after its title, leg
 The drawing budget below throws a plain `Error`.
 
 A chart holds at most 100 series, 1,000 categories and 100,000 data points in all, and values
-within ±10¹⁵. A pie holds at most 1,000 slices, and a chart at most 10 nested pies. A gauge's dial
+within ±10¹⁵. Validation reserves each series' point count before copying its data and stops as
+soon as the total exceeds the limit, without reading later series. A limit error reports the
+count reached so far, not a count of unread data. A pie holds at most 1,000 slices, and a chart
+at most 10 nested pies. A gauge's dial
 holds as many bar rings as fit outside its hub. Titles and stack names hold at most 1,000
 characters, and names, categories and colours at most 100. All of a chart's strokes share one
 budget of 400,000 units of drawing work, about a second at most, and a chart that needs more throws
