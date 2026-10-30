@@ -157,9 +157,12 @@ of it.
 | `drawSketch(context2d, sketch)` | draws into a canvas | `Path2D` |
 
 A dashed outline keeps its `strokeLineDash` in the sketch. `toSvgPaths` and `appendSketch` write
-it as `stroke-dasharray`, and `drawSketch` sets it with `setLineDash`. For a sketch from `sketch()`,
+it as `stroke-dasharray`, and `drawSketch` sets it with `setLineDash`.
 `drawSketch` draws every outline with its own dash, starting at its beginning, and a solid one solid,
-whatever dash the canvas had, and puts the canvas's own dash back afterwards.
+whatever dash the canvas had. Outlines use butt caps, miter joins and a miter limit of 4, matching
+SVG defaults. A hand-built sketch's dash list with negative or non-finite entries draws solid.
+The caller's canvas state is restored even if drawing throws; the error still propagates and any
+pixels already drawn remain. Caller transforms, clipping, opacity and compositing still apply.
 
 The type declarations refer to DOM types (`Element`, `CanvasRenderingContext2D`), so TypeScript
 projects need `"dom"` in `compilerOptions.lib`, even when they only render on the server.
