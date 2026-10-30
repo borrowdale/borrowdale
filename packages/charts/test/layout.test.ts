@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { SketchPath } from '@borrowdale/core';
-import { layoutChart, type ChartLayout, type ChartNode, type ChartSpec } from '@borrowdale/charts';
+import { layoutChart, type ChartLayout, type ChartSpec } from '@borrowdale/charts';
 import { textBounds } from '@borrowdale/text';
 import { PAD } from '../src/frame.js';
 import { handFont } from '../../text/test/support/hand-font.js';
+import { labelsOutside, mark, pointsOnCurves, pointsOutside, texts, titles } from './support/layout.js';
 
 const months = { type: 'band', categories: ['Jan', 'Feb'] } as const;
 const revenue: ChartSpec = {
@@ -53,79 +54,6 @@ const share: ChartSpec = {
     { type: 'bar', name: 'B', stack: 's', data: [3, 1] },
   ],
 };
-// One bar, seeded "1|a" and named "b", or seeded "1" and named "a|b": the same parts joined with "|".
-const pipedSeed: ChartSpec = { ...revenue, title: undefined, seed: '1|a', series: [{ type: 'bar', name: 'b', data: [12, 15] }] };
-const pipedName: ChartSpec = { ...pipedSeed, seed: '1', series: [{ type: 'bar', name: 'a|b', data: [12, 15] }] };
-// A line through every one of the most categories a chart may have, from the bottom of the plot to the
-// top at every point: the most a line can turn.
-const thousand = Array.from({ length: 1000 }, (_, i) => `c${i}`);
-const zigzag = Array.from({ length: 1000 }, (_, i) => (i % 2 === 0 ? 0 : 100));
-const zigzags = (curve: 'linear' | 'step', count: number): ChartSpec => ({
-  width: 600,
-  height: 400,
-  legend: 'none',
-  axes: { x: { type: 'band', categories: thousand }, y: { type: 'linear' } },
-  series: Array.from({ length: count }, (_, k) => ({ type: 'line', name: `L${k}`, curve, data: zigzag })),
-});
-// A chart style with a fill, which lines and the edges of areas must not take.
-const filledStyle = { fill: '#f00', fillStyle: 'solid' } as const;
-const filledLines: ChartSpec = {
-  ...revenue,
-  style: filledStyle,
-  series: [
-    { type: 'line', name: 'Straight', data: [10, 20] },
-    { type: 'line', name: 'Smooth', curve: 'monotone', data: [20, 10] },
-    { type: 'rangeArea', name: 'Range', data: [[1, 2], [3, 5]] },
-  ],
-};
-const filledRadarLine: ChartSpec = {
-  width: 300,
-  height: 300,
-  style: filledStyle,
-  axes: { angle: { type: 'band', categories: ['a', 'b', 'c'] } },
-  series: [{ type: 'polarLine', name: 'Loop', data: [1, 2, 3] }],
-};
-// The largest bubble at the top right corner of the data, and the smallest at the bottom left.
-const cornerBubbles: ChartSpec = {
-  width: 300,
-  height: 300,
-  axes: { x: { type: 'linear' }, y: { type: 'linear' } },
-  series: [{ type: 'bubble', name: 'B', data: [[0, 0, 1], [10, 10, 60]] }],
-};
-// The same, with both ends of x fixed at the data and no y labels to keep the plot off the edge.
-const fixedBubbles: ChartSpec = {
-  ...cornerBubbles,
-  axes: { x: { type: 'linear', min: 0, max: 10 }, y: { type: 'linear', hidden: true } },
-};
-const cornerPoints: ChartSpec = { ...cornerBubbles, series: [{ type: 'scatter', name: 'S', data: [[0, 0], [10, 10]] }] };
-// Text too long for a 200 × 200 chart, and band labels that reach past the ends of their axis.
-const longText = 'Revenue from every region and channel';
-const oneBar = { axes: { x: { type: 'band', categories: ['a'] }, y: { type: 'linear' } }, series: [{ type: 'bar', name: 'S', data: [1] }] } as const;
-const longTitle: ChartSpec = { width: 200, height: 200, title: longText, ...oneBar };
-const longLegend: ChartSpec = { ...longTitle, title: undefined, series: [{ type: 'bar', name: longText, data: [1] }, { type: 'bar', name: 'B', data: [2] }] };
-const longAxisTitles: ChartSpec = { ...longTitle, title: undefined, axes: { x: { type: 'band', categories: ['a'], title: longText }, y: { type: 'linear', title: longText } } };
-const wideFirstLabel: ChartSpec = {
-  width: 300,
-  height: 200,
-  axes: { x: { type: 'band', categories: ['A rather long first category', 'b', 'c'] }, y: { type: 'linear' } },
-  series: [{ type: 'bar', name: 'S', data: [1, 2, 3] }],
-};
-const forty = Array.from({ length: 40 }, (_, i) => `c${i}`);
-const denseSide: ChartSpec = {
-  width: 300,
-  height: 120,
-  axes: { x: { type: 'linear' }, y: { type: 'band', categories: forty } },
-  series: [{ type: 'bar', name: 'S', data: forty.map(() => 1) }],
-};
-const loneWideLabel: ChartSpec = { ...wideFirstLabel, width: 100, axes: { x: { type: 'band', categories: ['A category far too wide for this'] }, y: { type: 'linear' } }, series: [{ type: 'bar', name: 'S', data: [1] }] };
-const filledRadar: ChartSpec = { ...filledRadarLine, series: [{ type: 'radar', name: 'R', data: [1, 2, 3] }] };
-const filledRose: ChartSpec = {
-  ...filledRadarLine,
-  axes: { angle: { type: 'band', categories: ['a', 'b', 'c'] }, radius: { type: 'linear', shape: 'circle' } },
-  series: [{ type: 'rose', name: 'R', data: [1, 2, 3] }],
-};
-const plainGauge: ChartSpec = { width: 300, height: 260, series: [{ type: 'gauge', name: 'G', value: 50 }] };
-const filledGauge: ChartSpec = { ...plainGauge, style: filledStyle };
 const dashed: ChartSpec = { ...revenue, series: [{ type: 'line', name: 'Goal', dash: [6, 4], data: [10, 20] }] };
 const coloured: ChartSpec = { ...revenue, series: [{ type: 'bar', name: 'Pencils', color: '#123456', data: [12, 15] }] };
 const unsetStroke: ChartSpec = { ...revenue, series: [{ type: 'bar', name: 'Pencils', style: { stroke: undefined }, data: [12, 15] }] };
@@ -414,39 +342,6 @@ const pulledLoneSlice: ChartSpec = {
   series: [{ type: 'pie', name: 'P', data: [{ name: 'a', value: 1, offset: 0.3 }, { name: 'b', value: 0 }] }],
 };
 
-/** The mark whose tooltip is `title`. */
-function mark(layout: ChartLayout, title: string): ChartNode {
-  const found = layout.nodes.find((node) => node.kind === 'mark' && node.title === title);
-  if (!found) {
-    throw new Error(`No mark titled ${title}`);
-  }
-  return found;
-}
-
-/** The shapes of a mark, without its tooltip. */
-function shapesOf(layout: ChartLayout, title: string): ChartNode[] {
-  const found = mark(layout, title);
-  return found.kind === 'mark' ? found.nodes : [];
-}
-
-/** Every fill the paths of a mark are painted with, each once. */
-function fillsOf(layout: ChartLayout, title: string): string[] {
-  const paths = shapesOf(layout, title).flatMap((node) => (node.kind === 'sketch' ? node.sketch.paths : []));
-  return [...new Set(paths.map((path) => path.fill))];
-}
-
-/** How many paths of a mark are filled. */
-function filledPathsOf(layout: ChartLayout, title: string): number {
-  const paths = shapesOf(layout, title).flatMap((node) => (node.kind === 'sketch' ? node.sketch.paths : []));
-  return paths.filter((path) => path.fill !== 'none').length;
-}
-
-/** How many paths outside the series' marks are filled: legend swatches, gridlines, axes, ticks, tracks, hubs. */
-function filledFramePaths(layout: ChartLayout): number {
-  const paths = layout.nodes.flatMap((node) => (node.kind === 'sketch' ? node.sketch.paths : []));
-  return paths.filter((path) => path.fill !== 'none').length;
-}
-
 /** The outline of a mark's first shape: its last path. */
 function outline(layout: ChartLayout, title: string): SketchPath {
   const group = mark(layout, title);
@@ -473,25 +368,6 @@ function lowestEdge(layout: ChartLayout, text: string): number {
   return y + height;
 }
 
-/**
- * The points the drawn shapes pass through: each path's starting points, line ends and the end of
- * each curve, not a curve's control points, which lie off the curve.
- */
-function pointsOnCurves(layout: ChartLayout): [number, number][] {
-  const ds = layout.nodes.flatMap((node) => (node.kind === 'mark' ? node.nodes : [node]));
-  const paths = ds.flatMap((node) => (node.kind === 'sketch' ? node.sketch.paths.map((path) => path.d) : []));
-  const onCurve = /(?:[ML]|C[^,]*,[^,]*,)\s*(-?[\d.]+)[ ,](-?[\d.]+)/g;
-  return paths.flatMap((d) =>
-    [...d.matchAll(onCurve)].map((match): [number, number] => [Number(match[1]), Number(match[2])]),
-  );
-}
-
-/** How many of those points lie outside the chart, or within `margin` of its edges. */
-function pointsOutside(layout: ChartLayout, margin = 0): number {
-  const [right, bottom] = [layout.width - margin, layout.height - margin];
-  return pointsOnCurves(layout).filter(([px, py]) => px < margin || py < margin || px > right || py > bottom).length;
-}
-
 /** The box around those points, `[left, top, right, bottom]`, rounded. */
 function extentOf(layout: ChartLayout): number[] {
   const points = pointsOnCurves(layout);
@@ -513,22 +389,6 @@ function labelY(layout: ChartLayout, text: string): number {
   return found.text.y;
 }
 
-/** How many labels reach outside the chart's padding. */
-function labelsOutside(layout: ChartLayout): number {
-  const labels = layout.nodes.flatMap((node) => (node.kind === 'text' ? [textBounds(node.text)] : []));
-  const [low, right, bottom] = [PAD - 0.01, layout.width - PAD + 0.01, layout.height - PAD + 0.01];
-  return labels.filter((box) => box.x < low || box.y < low || box.x + box.width > right || box.y + box.height > bottom)
-    .length;
-}
-
-function titles(layout: ChartLayout): string[] {
-  return layout.nodes.flatMap((node) => (node.kind === 'mark' ? [node.title] : []));
-}
-
-function texts(layout: ChartLayout): string[] {
-  return layout.nodes.flatMap((node) => (node.kind === 'text' ? [node.text.text] : []));
-}
-
 describe('layoutChart', () => {
   it('lays out the same spec identically every time', () => {
     expect(layoutChart(revenue)).toEqual(layoutChart(revenue));
@@ -542,95 +402,6 @@ describe('layoutChart', () => {
     expect(mark(layoutChart(reseeded), 'Paper, Jan: €7')).not.toEqual(mark(layoutChart(revenue), 'Paper, Jan: €7'));
   });
 
-  it('draws a straight line through 1,000 categories that turns at every one', () => {
-    expect(layoutChart(zigzags('linear', 1)).nodes.length).toBeGreaterThan(0);
-  });
-
-  it('draws 20 such straight lines, and 10 such step lines, within the budget', () => {
-    expect(layoutChart(zigzags('linear', 20)).nodes.length).toBeGreaterThan(0);
-    expect(layoutChart(zigzags('step', 10)).nodes.length).toBeGreaterThan(0);
-  });
-
-  it.each(['Straight', 'Smooth'])('fills no part of the %s line under a chart style with a fill', (title) => {
-    expect(fillsOf(layoutChart(filledLines), title)).toEqual(['none']);
-  });
-
-  it('fills a range area under a chart style with a fill, but not its edges', () => {
-    expect(filledPathsOf(layoutChart(filledLines), 'Range')).toBe(1);
-  });
-
-  it.each([
-    ['polygon gridlines', filledRadar],
-    ['circle gridlines', filledRose],
-    ['axes, ticks and gridlines', { ...filledLines, legend: 'none' } as ChartSpec],
-  ])('fills none of the %s under a chart style with a fill', (_case, spec) => {
-    expect(filledFramePaths(layoutChart(spec))).toBe(0);
-  });
-
-  it("fills a gauge's hub, and not its track, under a chart style with a fill", () => {
-    expect(filledFramePaths(layoutChart(filledGauge))).toBe(filledFramePaths(layoutChart(plainGauge)));
-  });
-
-  it('fills no part of a closed polar line under a chart style with a fill', () => {
-    expect(fillsOf(layoutChart(filledRadarLine), 'Loop')).toEqual(['none']);
-  });
-
-  it('keeps bubbles at the ends of the data inside the chart', () => {
-    expect(pointsOutside(layoutChart(cornerBubbles))).toBe(0);
-  });
-
-  it('keeps bubbles at fixed ends of an axis inside the chart', () => {
-    expect(pointsOutside(layoutChart(fixedBubbles))).toBe(0);
-  });
-
-  it('widens an axis for its points without adding ticks', () => {
-    expect(texts(layoutChart(cornerPoints))).toEqual(['0', '2', '4', '6', '8', '10', '0', '2', '4', '6', '8', '10']);
-  });
-
-  it('keeps the first label of a band axis on the chart', () => {
-    expect(labelsOutside(layoutChart(wideFirstLabel))).toBe(0);
-  });
-
-  it('keeps the end labels of a dense band axis at the side on the chart', () => {
-    expect(labelsOutside(layoutChart(denseSide))).toBe(0);
-  });
-
-  it('rejects a lone band label wider than the chart', () => {
-    expect(() => layoutChart(loneWideLabel)).toThrow('Invalid chart: a 100 × 200 chart leaves no room for the plot');
-  });
-
-  it('cuts a title too wide for the chart short, and keeps it whole in the SVG title', () => {
-    const layout = layoutChart(longTitle);
-
-    expect(texts(layout)[0]).toBe('Revenue from every r…');
-    expect(layout.title).toBe(longText);
-    expect(labelsOutside(layout)).toBe(0);
-  });
-
-  it('cuts a legend name too wide for the chart short, and keeps it whole in the tooltips', () => {
-    const layout = layoutChart(longLegend);
-
-    expect(texts(layout)[0]).toBe('Revenue from every region…');
-    expect(titles(layout)[0]).toBe(`${longText}, a: 1`);
-    expect(labelsOutside(layout)).toBe(0);
-  });
-
-  it('cuts axis titles longer than the plot short', () => {
-    const layout = layoutChart(longAxisTitles);
-
-    expect(texts(layout)).toEqual(expect.arrayContaining(['Revenue from every r…', 'Revenue from every…']));
-    expect(labelsOutside(layout)).toBe(0);
-  });
-
-  it('rejects a title of a chart too narrow for even the ellipsis', () => {
-    expect(() => layoutChart({ ...longTitle, width: 20 })).toThrow(
-      'Invalid chart: title does not fit even cut short: there are 4 units for it',
-    );
-  });
-
-  it('draws other strokes for names that join to the same text', () => {
-    expect(shapesOf(layoutChart(pipedName), 'a|b, Jan: €12')).not.toEqual(shapesOf(layoutChart(pipedSeed), 'b, Jan: €12'));
-  });
 
   it('gives each bar a tooltip with its series, category and value, in the axis format', () => {
     expect(titles(layoutChart(revenue))).toEqual(['Pencils, Jan: €12', 'Pencils, Feb: €15', 'Paper, Jan: €7', 'Paper, Feb: €8']);
