@@ -177,7 +177,7 @@ function drawLegend(drawing: Drawing, entries: readonly LegendEntry[], position:
 function drawEntry(drawing: Drawing, entry: LegendEntry, name: string, left: number, middle: number): void {
   const key = ['legend', entry.name];
   const swatch = entry.line
-    ? drawing.shape(
+    ? drawing.outline(
         { kind: 'line', x1: left, y1: middle, x2: left + SWATCH, y2: middle },
         { stroke: entry.paint.color, strokeWidth: LINE_WIDTH, ...(entry.dash ? { strokeLineDash: entry.dash } : {}) },
         key,

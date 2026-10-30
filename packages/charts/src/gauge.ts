@@ -93,7 +93,7 @@ export function layoutGauge(drawing: Drawing, chart: CheckedGaugeChart, rect: Re
   const arc = (outer: number, from: number, to: number): Shape =>
     sliceShape(center, outer, outer - width, scale.at(from), scale.at(to));
 
-  drawing.push(drawing.shape(arc(radius, first, last), grid, ['track']));
+  drawing.push(drawing.outline(arc(radius, first, last), grid, ['track']));
   bands.forEach((band, i) => {
     drawing.push(drawing.shape(arc(radius, band.from, band.to), solid(band.color), ['band', i]));
   });
@@ -104,7 +104,7 @@ export function layoutGauge(drawing: Drawing, chart: CheckedGaugeChart, rect: Re
     ticks.forEach((tick, i) => {
       const at = scale.at(tick);
       const [[x1, y1], [x2, y2]] = [point(at, inner), point(at, inner - TICK)];
-      drawing.push(drawing.shape({ kind: 'line', x1, y1, x2, y2 }, ink, ['tick', tick]));
+      drawing.push(drawing.outline({ kind: 'line', x1, y1, x2, y2 }, ink, ['tick', tick]));
       // Inside the rim, so each label is placed towards the centre.
       const [px, py] = point(at, inner - TICK - GAP);
       drawing.push(drawing.text(labels[i]!, { x: px, y: py, ...alignTowards(at, false) }));

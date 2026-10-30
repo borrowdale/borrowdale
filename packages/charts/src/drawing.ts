@@ -87,7 +87,7 @@ export class Drawing {
 
   /**
    * A shape drawn as an outline only, as `shape` draws it but never filled, whatever fill the chart's
-   * or the series' style gives: lines and the edges of areas.
+   * or the series' style gives: lines, the edges of areas, gridlines, axes, ticks and tracks.
    */
   outline(shape: Shape, defaults: SketchStyle, key: SeedKey, own: SketchStyle = {}): ChartNode {
     return this.#sketch(shape, { ...defaults, ...this.#chart.style, ...own, fill: 'none' }, key);

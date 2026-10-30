@@ -763,7 +763,7 @@ function drawGrid(drawing: Drawing, plot: Rect, { side, key, axis }: Guide, scal
   }
   for (const tick of scale!.ticks) {
     const shape = lineShape(SIDES[side].grid(plot, scale!.at(tick)));
-    drawing.push(drawing.shape(shape, { stroke: GRID, strokeWidth: GRID_WIDTH }, ['grid', key, tick]));
+    drawing.push(drawing.outline(shape, { stroke: GRID, strokeWidth: GRID_WIDTH }, ['grid', key, tick]));
   }
 }
 
@@ -783,14 +783,14 @@ function drawGuide(
   const ink = { stroke: INK, strokeWidth: 1 };
   const every = (spacing: number): number => labelEvery(room, spacing);
   const label = (at: number) => ({ ...rules.label(plot, at), ...guide.style });
-  drawing.push(drawing.shape(lineShape(rules.edge(plot)), ink, ['axis', key]));
+  drawing.push(drawing.outline(lineShape(rules.edge(plot)), ink, ['axis', key]));
   if (axis.type === 'linear') {
     // Ticks are evenly spaced, and a lone tick has nothing to overlap.
     const [first, second] = scale!.ticks;
     const nth = every(second === undefined ? Infinity : Math.abs(scale!.at(second) - scale!.at(first!)));
     scale!.ticks.forEach((tick, i) => {
       const at = scale!.at(tick);
-      drawing.push(drawing.shape(lineShape(rules.tick(plot, at)), ink, ['tick', key, tick]));
+      drawing.push(drawing.outline(lineShape(rules.tick(plot, at)), ink, ['tick', key, tick]));
       if (i % nth === 0) {
         drawing.push(drawing.text(labels[i]!, label(at)));
       }

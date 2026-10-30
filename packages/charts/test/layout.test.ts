@@ -118,6 +118,14 @@ const denseSide: ChartSpec = {
   series: [{ type: 'bar', name: 'S', data: forty.map(() => 1) }],
 };
 const loneWideLabel: ChartSpec = { ...wideFirstLabel, width: 100, axes: { x: { type: 'band', categories: ['A category far too wide for this'] }, y: { type: 'linear' } }, series: [{ type: 'bar', name: 'S', data: [1] }] };
+const filledRadar: ChartSpec = { ...filledRadarLine, series: [{ type: 'radar', name: 'R', data: [1, 2, 3] }] };
+const filledRose: ChartSpec = {
+  ...filledRadarLine,
+  axes: { angle: { type: 'band', categories: ['a', 'b', 'c'] }, radius: { type: 'linear', shape: 'circle' } },
+  series: [{ type: 'rose', name: 'R', data: [1, 2, 3] }],
+};
+const plainGauge: ChartSpec = { width: 300, height: 260, series: [{ type: 'gauge', name: 'G', value: 50 }] };
+const filledGauge: ChartSpec = { ...plainGauge, style: filledStyle };
 const dashed: ChartSpec = { ...revenue, series: [{ type: 'line', name: 'Goal', dash: [6, 4], data: [10, 20] }] };
 const coloured: ChartSpec = { ...revenue, series: [{ type: 'bar', name: 'Pencils', color: '#123456', data: [12, 15] }] };
 const unsetStroke: ChartSpec = { ...revenue, series: [{ type: 'bar', name: 'Pencils', style: { stroke: undefined }, data: [12, 15] }] };
@@ -433,6 +441,12 @@ function filledPathsOf(layout: ChartLayout, title: string): number {
   return paths.filter((path) => path.fill !== 'none').length;
 }
 
+/** How many paths outside the series' marks are filled: legend swatches, gridlines, axes, ticks, tracks, hubs. */
+function filledFramePaths(layout: ChartLayout): number {
+  const paths = layout.nodes.flatMap((node) => (node.kind === 'sketch' ? node.sketch.paths : []));
+  return paths.filter((path) => path.fill !== 'none').length;
+}
+
 /** The outline of a mark's first shape: its last path. */
 function outline(layout: ChartLayout, title: string): SketchPath {
   const group = mark(layout, title);
@@ -543,6 +557,18 @@ describe('layoutChart', () => {
 
   it('fills a range area under a chart style with a fill, but not its edges', () => {
     expect(filledPathsOf(layoutChart(filledLines), 'Range')).toBe(1);
+  });
+
+  it.each([
+    ['polygon gridlines', filledRadar],
+    ['circle gridlines', filledRose],
+    ['axes, ticks and gridlines', { ...filledLines, legend: 'none' } as ChartSpec],
+  ])('fills none of the %s under a chart style with a fill', (_case, spec) => {
+    expect(filledFramePaths(layoutChart(spec))).toBe(0);
+  });
+
+  it("fills a gauge's hub, and not its track, under a chart style with a fill", () => {
+    expect(filledFramePaths(layoutChart(filledGauge))).toBe(filledFramePaths(layoutChart(plainGauge)));
   });
 
   it('fills no part of a closed polar line under a chart style with a fill', () => {
