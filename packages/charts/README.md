@@ -255,6 +255,9 @@ categories. Straight and stepped lines cost the same for each point however they
 1,000 points that swing the full height at every point fit, as do 66 such `step` lines. A
 `monotone` line costs more the more it turns: some 18 such lines fit, and one that swings the full
 height fits only about 160 points.
+Data labels and image markers draw no strokes, so the budget does not count them: a chart holds at
+most 10,000 of them together, about 3 MB of SVG, and more throws
+`Drawing too complex (more than 10000 data labels and images)`.
 Hachure fills are what costs most: about 7 KB of SVG for a 40 × 300 bar, against 0.6 KB with
 `style: { fillStyle: 'solid' }`.
 

@@ -10,6 +10,9 @@ import type { Rect } from './frame.js';
 // a work unit takes 0.4 to 2.3 µs depending on the fill, so this stays under about a second; 200
 // hachure-filled bars use about 130,000 units and 1,000 scatter points about 76,000.
 const MAX_OPERATIONS = 400_000;
+// Data labels and image markers draw no strokes, so the budget never sees them: this caps them
+// instead, at about 3 MB of SVG.
+const MAX_PLACED = 10_000;
 
 /** Distances from a point, in each direction. */
 export interface Extent {
@@ -29,6 +32,7 @@ export class Drawing {
   readonly nodes: ChartNode[] = [];
   readonly #chart: CheckedChart;
   readonly #budget = new Budget(MAX_OPERATIONS);
+  #placed = 0;
   readonly #labels = new Set<string>();
   readonly #missing = new Set<string>();
   // Measurements by their text and options: layout measures an axis' labels more than once as it
@@ -120,6 +124,7 @@ export class Drawing {
 
   /** A centred data label, fitted and kept inside the supplied plotting rectangle. */
   label(text: string, x: number, y: number, rect: Rect, path: string): ChartNode {
+    this.#place();
     const fitted = this.fit(text, rect.right - rect.left, path);
     const options = { anchor: 'middle', baseline: 'middle' } as const;
     const extent = this.extent(fitted, options);
@@ -129,6 +134,18 @@ export class Drawing {
       x: Math.max(rect.left + extent.left, Math.min(rect.right - extent.right, x)),
       y: Math.max(rect.top + extent.up, Math.min(rect.bottom - extent.down, y)),
     });
+  }
+
+  /** A trusted image, named by `asset`, fitted inside the box. */
+  image(asset: string, x: number, y: number, width: number, height: number): ChartNode {
+    this.#place();
+    return { kind: 'image', asset, x, y, width, height };
+  }
+
+  #place(): void {
+    if (++this.#placed > MAX_PLACED) {
+      throw new Error(`Drawing too complex (more than ${MAX_PLACED} data labels and images)`);
+    }
   }
 
   push(...nodes: ChartNode[]): void {
