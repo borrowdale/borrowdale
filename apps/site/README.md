@@ -44,6 +44,14 @@ SITE_BASE=/borrowdale/ npm run site:build
 
 To generate canonical URLs and a sitemap, set `SITE_ORIGIN` to the HTTPS origin the site is served from. `SITE_BASE` must start and end with `/`. Search engines read `robots.txt` only at the root of a host, so the build writes it only when `SITE_BASE` is `/`; under a project path, submit `sitemap.xml` to the search engines directly.
 
+The [Website workflow](../../.github/workflows/site.yml) runs the workspace tests and static builds for both root and project paths on pull requests. It has no push-triggered deployment. A manual run validates by default; publishing requires selecting `main` and enabling the `deploy` input. Other branches cannot deploy.
+
+Before publishing, enable GitHub Pages with **GitHub Actions** as its source and allow `main` to deploy through the `github-pages` environment. The repository must be eligible for Pages: public on GitHub Free, or on a plan supporting private-repository Pages. The workflow does not enable Pages automatically.
+
+For publishing, `actions/configure-pages` reads the actual Pages URL. Its `origin` becomes `SITE_ORIGIN`; its `base_path` plus a trailing slash becomes `SITE_BASE`. A project site normally uses `/borrowdale/`; a custom domain configured directly on this repository uses `/`. An inherited organization domain can retain the project path. No separate domain variable is required. The workflow builds and uploads only `apps/site/dist`, using the provided workflow token rather than a personal deployment token.
+
+To add a custom domain later, verify the domain, configure it in the repository's Pages settings, then configure DNS at your domain provider and enable HTTPS. Run the publishing workflow again to regenerate asset paths, canonical URLs and the sitemap. With Actions publishing, a `CNAME` file is not required and does not configure the domain. See [GitHub's custom-domain instructions](https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site/managing-a-custom-domain-for-your-github-pages-site). Domain registration and renewal are separate from Pages hosting.
+
 The output includes `404.html` and `.nojekyll`. Each route has its own `index.html`, so direct visits and refreshes do not depend on a single-page-app rewrite. Use a normal static server against `apps/site/dist` to inspect the output locally. Nothing is published by the build command.
 
 ## Site checks
