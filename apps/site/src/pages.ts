@@ -246,7 +246,7 @@ export function pageHtml(path: string) {
       .map(([label, url]) => `<a href="${url}">${label}</a>`)
       .join(
         '',
-      )}</nav><span>MIT code · OFL font</span></footer><div id="toast" class="toast" role="status" aria-live="polite"></div>`,
+      )}</nav><span>MIT code · OFL font</span></footer>`,
   );
 }
 export function allPaths() {
