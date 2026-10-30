@@ -6,6 +6,7 @@ import type { Shape, SketchOptions } from '@borrowdale/core';
 import type { ChartSpec } from '@borrowdale/charts';
 import type { LayoutOptions } from '@borrowdale/text';
 import type { PatternOptions } from '@borrowdale/fills';
+import { examplePath } from './routing';
 import { chart, shapeSvg, textSvg, patternSvg, scribble, escape, seed } from './drawing';
 export type Category = 'charts' | 'shapes' | 'text' | 'patterns' | 'components';
 export type Example = {
@@ -89,7 +90,7 @@ function exampleIndex() {
           .filter((e) => e.category === category)
           .map(
             (e) =>
-              `<li><a href="#example/${e.category}/${encodeURIComponent(e.name)}">${escape(e.name.replaceAll('-', ' '))}</a></li>`,
+              `<li><a href="${examplePath(e)}">${escape(e.name.replaceAll('-', ' '))}</a></li>`,
           )
           .join('')}</ul></section>`,
     )
@@ -122,7 +123,7 @@ export function gallery() {
        } catch (error) {
          preview = `<p class="render-error">${escape(error)}</p>`;
        }
-       return `<a class="example-card" href="#example/${e.category}/${encodeURIComponent(e.name)}" aria-label="Open ${escape(e.name.replaceAll('-', ' '))} playground, ${escape(e.tag)}"><div class="example-preview ${state.category}" inert aria-hidden="true">${preview}</div><div class="example-caption"><span class="example-number">${String(state.page * 12 + i + 1).padStart(2, '0')}</span><div><h2>${escape(e.name.replaceAll('-', ' '))}</h2><span>${escape(e.tag)}</span></div></div><div class="example-open">Edit code & explore <span>↗</span></div></a>`;
+       return `<a class="example-card" href="${examplePath(e)}" aria-label="Open ${escape(e.name.replaceAll('-', ' '))} playground, ${escape(e.tag)}"><div class="example-preview ${state.category}" inert aria-hidden="true">${preview}</div><div class="example-caption"><span class="example-number">${String(state.page * 12 + i + 1).padStart(2, '0')}</span><div><h2>${escape(e.name.replaceAll('-', ' '))}</h2><span>${escape(e.tag)}</span></div></div><div class="example-open">Edit code & explore <span>↗</span></div></a>`;
      })
      .join('') ||
    '<div class="empty"><h2>No examples found.</h2><p>Try a different name or family.</p><button id="clear-search" class="button">Reset filters</button></div>'

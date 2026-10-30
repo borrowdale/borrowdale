@@ -106,7 +106,7 @@ describe('interactive examples', () => {
     galleryState.category = 'charts';
     galleryState.page = 0;
     const html = gallery();
-    expect(html.match(/<a class="example-card" href="#example\/charts\//g)).toHaveLength(12);
+    expect(html.match(/<a class="example-card" href="\/playground\/charts\//g)).toHaveLength(12);
     expect(html).not.toContain('<article class="example-card">');
     expect(html).toContain('inert aria-hidden="true"');
   });

@@ -27,13 +27,10 @@ export function legacyPath(hash: string): string | undefined {
             : undefined;
   return path ? path + (query ? '?' + query : '') : undefined;
 }
+// Pages link to site paths from the root; this puts the base path in front of each. Fragments and
+// external links are left alone. Old hash URLs are translated only on arrival (legacyPath).
 export function rewriteLinks(html: string) {
-  return html.replace(/href="([^"]+)"/g, (full, href: string) => {
-    const old = legacyPath(href);
-    if (href.startsWith('#') && old) return `href="${siteUrl(old)}"`;
-    if (href.startsWith('/') && !href.startsWith('//')) return `href="${siteUrl(href)}"`;
-    return full;
-  });
+  return html.replace(/href="(\/[^/"][^"]*|\/)"/g, (_, href: string) => `href="${siteUrl(href)}"`);
 }
 
 export function scrollToFragment(hash: string): boolean {

@@ -38,7 +38,7 @@ const demoSpec = chartSpec(
   { legend: 'top', width: 510, height: 300 },
 );
 function logo() {
-  return `<a class="brand" href="#home" aria-label="BorrowdaleJS home"><span class="brand-symbol">${ornament(
+  return `<a class="brand" href="/" aria-label="BorrowdaleJS home"><span class="brand-symbol">${ornament(
     {
       kind: 'polygon',
       points: [
@@ -53,10 +53,10 @@ function logo() {
   )}</span>Borrowdale<span class="brand-js">JS</span><span class="brand-period">.</span></a>`;
 }
 function nav(r: string) {
-  return `<header class="site-header">${logo()}<nav aria-label="Main navigation"><a class="${r === 'docs' ? 'active' : ''}" href="/docs/">Docs</a><a class="${r === 'gallery' || r === 'example' ? 'active' : ''}" href="#gallery">Playground <span>${examples.length}</span></a><a class="${['examples', 'world', 'climate', 'earthquakes'].includes(r) ? 'active' : ''}" href="/examples/">Examples</a></nav><a class="github" href="https://github.com/borrowdale/borrowdale" target="_blank" rel="noreferrer">GitHub ↗</a><button ${r === 'docs' ? 'hidden' : ''} id="resketch" class="resketch" title="Draw again with a different seed" aria-label="Re-sketch">⤨ <span>Re-sketch</span></button></header>`;
+  return `<header class="site-header">${logo()}<nav aria-label="Main navigation"><a class="${r === 'docs' ? 'active' : ''}" href="/docs/">Docs</a><a class="${r === 'gallery' || r === 'example' ? 'active' : ''}" href="/playground/">Playground <span>${examples.length}</span></a><a class="${['examples', 'world', 'climate', 'earthquakes'].includes(r) ? 'active' : ''}" href="/examples/">Examples</a></nav><a class="github" href="https://github.com/borrowdale/borrowdale" target="_blank" rel="noreferrer">GitHub ↗</a><button ${r === 'docs' ? 'hidden' : ''} id="resketch" class="resketch" title="Draw again with a different seed" aria-label="Re-sketch">⤨ <span>Re-sketch</span></button></header>`;
 }
 function dashboardNav(activeRoute: string) {
-  return `<nav class="dashboard-nav" aria-label="Demo dashboards"><span>REAL DATA, DIFFERENT PERSPECTIVES</span>${['world', 'climate', 'earthquakes'].map((r, i) => `<a href="#${r}" class="${r === activeRoute ? 'selected' : ''}" ${r === activeRoute ? 'aria-current="page"' : ''}><small>0${i + 1}</small> ${names[r]}</a>`).join('')}</nav>`;
+  return `<nav class="dashboard-nav" aria-label="Demo dashboards"><span>REAL DATA, DIFFERENT PERSPECTIVES</span>${['world', 'climate', 'earthquakes'].map((r, i) => `<a href="/examples/${r}/" class="${r === activeRoute ? 'selected' : ''}" ${r === activeRoute ? 'aria-current="page"' : ''}><small>0${i + 1}</small> ${names[r]}</a>`).join('')}</nav>`;
 }
 function heroArt() {
   const donut: ChartSpec = {
@@ -177,8 +177,8 @@ function previews() {
   ];
 }
 function home() {
-  return `<section class="hero"><div class="hero-copy"><p class="eyebrow"><span class="status-dot"></span> AN OPEN-SOURCE DRAWING TOOLKIT</p><h1>Serious data.<br><span>A human touch.</span></h1><p class="hero-description">Hand-drawn charts, expressive lettering, and beautifully imperfect shapes. Bring a little character to the things you build.</p><div class="hero-actions"><a href="#gallery" class="sketch-button">${scribble()}<span>Explore the playground ↗</span></a><a class="text-link" href="#world">See it in the wild →</a></div><div class="hero-footnote"><span>TypeScript</span><i>·</i><span>SVG + Canvas</span><i>·</i><span>Seeded & repeatable</span></div></div>${heroArt()}</section>
- <section class="package-strip"><span>ONE VISUAL LANGUAGE.<br>FOUR SMALL PACKAGES.</span>${['core', 'text', 'fills', 'charts'].map((x, i) => `<a href="#gallery?category=${['shapes', 'text', 'patterns', 'charts'][i]}"><small>0${i + 1}</small> @borrowdale/<b>${x}</b> ↗</a>`).join('')}</section>
+  return `<section class="hero"><div class="hero-copy"><p class="eyebrow"><span class="status-dot"></span> AN OPEN-SOURCE DRAWING TOOLKIT</p><h1>Serious data.<br><span>A human touch.</span></h1><p class="hero-description">Hand-drawn charts, expressive lettering, and beautifully imperfect shapes. Bring a little character to the things you build.</p><div class="hero-actions"><a href="/playground/" class="sketch-button">${scribble()}<span>Explore the playground ↗</span></a><a class="text-link" href="/examples/world/">See it in the wild →</a></div><div class="hero-footnote"><span>TypeScript</span><i>·</i><span>SVG + Canvas</span><i>·</i><span>Seeded & repeatable</span></div></div>${heroArt()}</section>
+ <section class="package-strip"><span>ONE VISUAL LANGUAGE.<br>FOUR SMALL PACKAGES.</span>${['core', 'text', 'fills', 'charts'].map((x, i) => `<a href="/playground/?category=${['shapes', 'text', 'patterns', 'charts'][i]}"><small>0${i + 1}</small> @borrowdale/<b>${x}</b> ↗</a>`).join('')}</section>
  <section class="intro-section"><div><p class="eyebrow">PRECISION, WITH PERSONALITY</p><h2>Made by code.<br>Feels made by hand.</h2></div><p>Not a filter on top of a chart. BorrowdaleJS lays out data, measures text, and builds every stroke from the same drawing language. A sketchbook feel, with numbers you can still read.</p></section>
  <section class="feature-grid"><article><span class="feature-icon">${ornament(
    {
@@ -194,14 +194,14 @@ function home() {
    105,
    55,
  )}</span><h3>A considered imperfection</h3><p>Tune roughness, fill patterns and stroke weight. Keep it crisp or let the pencil wander.</p></article><article><span class="feature-icon">${ornament({ kind: 'rectangle', x: 6, y: 6, width: 82, height: 42 }, { fill: '#efbd4d', fillStyle: 'hachure', roughness: 0.7 }, 100, 55)}</span><h3>The same sketch, every time</h3><p>Seeded drawings and DOM-free layout. Share the same input between server and browser.</p></article><article><span class="feature-icon hand">Aa ↗</span><h3>Words belong in the picture</h3><p>Measured Excalifont labels, from a tiny axis tick to a handwritten annotation.</p></article></section>
- <section class="demo-section"><div class="section-top"><div><p class="eyebrow">THREE OPEN-DATA NOTEBOOKS</p><h2>Real numbers. New perspectives.</h2></div><a class="text-link" href="#world">Explore the examples ↗</a></div><div class="demo-grid">${previews()
+ <section class="demo-section"><div class="section-top"><div><p class="eyebrow">THREE OPEN-DATA NOTEBOOKS</p><h2>Real numbers. New perspectives.</h2></div><a class="text-link" href="/examples/world/">Explore the examples ↗</a></div><div class="demo-grid">${previews()
    .map(
      (p) =>
-       `<a class="demo-card ${p.color}" href="#${p.route}"><div class="demo-preview">${chart(p.spec)}<span>Illustrative preview</span></div><div class="demo-caption"><small>NOTEBOOK ${p.num}</small><h3>${p.title} <b>↗</b></h3><p>${p.desc}</p></div></a>`,
+       `<a class="demo-card ${p.color}" href="/examples/${p.route}/"><div class="demo-preview">${chart(p.spec)}<span>Illustrative preview</span></div><div class="demo-caption"><small>NOTEBOOK ${p.num}</small><h3>${p.title} <b>↗</b></h3><p>${p.desc}</p></div></a>`,
    )
    .join('')}</div></section>
- <section class="quickstart" id="quickstart"><div><p class="eyebrow">A FEW LINES. YOUR OWN DRAWING.</p><h2>Start with an idea.<br>Leave with a chart.</h2><p>A plain JavaScript spec describes the data. BorrowdaleJS handles the marks, scales and labels. Every example in the playground comes with its working code.</p><div class="local-note"><b>Work in progress, ready to explore.</b><p>The packages are not published yet. This site runs directly from the workspace—no npm release needed.</p><code>nvm use<br>npm ci<br>npm run site</code></div><a href="#gallery" class="text-link">Browse the playground →</a></div><div>${codeBlock(chartCode(chartSpec('Ideas per day', ['Mon', 'Tue', 'Wed'], [{ type: 'bar', name: 'Ideas', data: [12, 19, 15], color: '#de9b24' }], { width: 480, height: 280 })))}</div></section>
- <section class="closing"><p class="hand">A little graphite goes a long way.</p><p>Named for the Lake District valley where the story of the pencil began.</p><a href="#gallery" class="button">Find your next mark ↗</a></section>`;
+ <section class="quickstart" id="quickstart"><div><p class="eyebrow">A FEW LINES. YOUR OWN DRAWING.</p><h2>Start with an idea.<br>Leave with a chart.</h2><p>A plain JavaScript spec describes the data. BorrowdaleJS handles the marks, scales and labels. Every example in the playground comes with its working code.</p><div class="local-note"><b>Work in progress, ready to explore.</b><p>The packages are not published yet. This site runs directly from the workspace—no npm release needed.</p><code>nvm use<br>npm ci<br>npm run site</code></div><a href="/playground/" class="text-link">Browse the playground →</a></div><div>${codeBlock(chartCode(chartSpec('Ideas per day', ['Mon', 'Tue', 'Wed'], [{ type: 'bar', name: 'Ideas', data: [12, 19, 15], color: '#de9b24' }], { width: 480, height: 280 })))}</div></section>
+ <section class="closing"><p class="hand">A little graphite goes a long way.</p><p>Named for the Lake District valley where the story of the pencil began.</p><a href="/playground/" class="button">Find your next mark ↗</a></section>`;
 }
 
 export function route(path: string): string {
@@ -245,7 +245,7 @@ export function pageHtml(path: string) {
                     ? `<section class="page-heading"><p class="eyebrow">EXAMPLES / REAL DATA</p><h1>See the whole picture.</h1><p>Complete dashboards built with BorrowdaleJS. Explore three open datasets, adjust the views, and copy the code behind each chart.</p></section><div class="demo-grid">${previews()
                         .map(
                           (p) =>
-                            `<a class="demo-card ${p.color}" href="#${p.route}"><div class="demo-preview">${chart(p.spec)}</div><div class="demo-caption"><small>EXAMPLE ${p.num}</small><h2>${p.title} ↗</h2><p>${p.desc}</p></div></a>`,
+                            `<a class="demo-card ${p.color}" href="/examples/${p.route}/"><div class="demo-preview">${chart(p.spec)}</div><div class="demo-caption"><small>EXAMPLE ${p.num}</small><h2>${p.title} ↗</h2><p>${p.desc}</p></div></a>`,
                         )
                         .join('')}</div>`
                     : `<section class="empty"><h1>Page not found.</h1><p>Try the documentation or explore a drawing in the playground.</p><a href="/docs/">Read the docs →</a></section>`;
