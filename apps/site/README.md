@@ -52,7 +52,7 @@ For publishing, `actions/configure-pages` reads the actual Pages URL. Its `origi
 
 To add a custom domain later, verify the domain, configure it in the repository's Pages settings, then configure DNS at your domain provider and enable HTTPS. Run the publishing workflow again to regenerate asset paths, canonical URLs and the sitemap. With Actions publishing, a `CNAME` file is not required and does not configure the domain. See [GitHub's custom-domain instructions](https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site/managing-a-custom-domain-for-your-github-pages-site). Domain registration and renewal are separate from Pages hosting.
 
-The output includes `404.html` and `.nojekyll`. Each route has its own `index.html`, so direct visits and refreshes do not depend on a single-page-app rewrite. Use a normal static server against `apps/site/dist` to inspect the output locally. Nothing is published by the build command.
+The output includes `404.html`, and `.nojekyll` for publishing from a branch; the Website workflow publishes through Actions, which runs no Jekyll build and leaves dotfiles out of the upload. Each route has its own `index.html`, so direct visits and refreshes do not depend on a single-page-app rewrite. Use a normal static server against `apps/site/dist` to inspect the output locally. Nothing is published by the build command.
 
 ## Site checks
 

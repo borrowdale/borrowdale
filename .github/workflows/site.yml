@@ -17,6 +17,10 @@ jobs:
     name: Validate website
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # A newer push to the same pull request replaces its pending validation; publishing runs are never cancelled.
+    concurrency:
+      group: website-validate-${{ github.ref }}
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
@@ -27,10 +31,13 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test --workspace @borrowdale/site
+      # Validation only: the origin exercises the root-path output (robots.txt, sitemap, canonical URLs)
+      # that a custom domain would publish. Nothing built here is uploaded.
       - name: Build at the domain root
         run: npm run site:build
         env:
           SITE_BASE: /
+          SITE_ORIGIN: https://example.org
       - name: Build at the project path
         run: npm run site:build
         env:
