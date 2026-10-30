@@ -2,7 +2,7 @@ import { pageTitle, route } from './pages';
 import { docs } from './documents';
 import { findExample } from './editor';
 import { examples } from './gallery';
-import { localPath } from './routing';
+import { localPath, examplePath } from './routing';
 import { escape } from './drawing';
 const descriptions: Record<string, string> = {
   '/': 'BorrowdaleJS is a TypeScript toolkit for hand-drawn charts, shapes, text and patterns. Explore editable examples, documentation and open-data dashboards.',
@@ -48,6 +48,14 @@ export function checkOrigin(origin: string) {
     throw new Error('SITE_ORIGIN must be an HTTPS origin without credentials, path, query or fragment.');
   return url;
 }
+const kinds: Record<string, string> = {
+  charts: 'Chart',
+  shapes: 'Shape',
+  text: 'Text',
+  patterns: 'Pattern',
+  components: 'UI recipe',
+};
+const titleCase = (name: string) => name.replaceAll('-', ' ').replace(/^./, (c) => c.toUpperCase());
 export function metadata(
   path: string,
   origin = import.meta.env.VITE_SITE_ORIGIN || '',
@@ -56,7 +64,14 @@ export function metadata(
   const clean = localPath(path),
     example = findExample(path),
     missing = route(path) === '404';
-  const title = (clean === '/' ? 'Hand-drawn charts and graphics' : pageTitle(path)) + ' — BorrowdaleJS';
+  // The page's own name; the title adds the site name, and an example says what kind of example it is.
+  const name =
+    clean === '/'
+      ? 'Hand-drawn charts and graphics'
+      : example
+        ? `${titleCase(example.name)} · ${kinds[example.category]} example`
+        : pageTitle(path);
+  const title = `${name} — BorrowdaleJS`;
   const description = missing
     ? 'This BorrowdaleJS page could not be found. Browse the documentation, playground or complete examples.'
     : example
@@ -65,23 +80,30 @@ export function metadata(
   let canonical: string | undefined;
   if (origin) {
     const url = checkOrigin(origin);
-    if (!missing) canonical = new URL(base + clean.slice(1), url).href;
+    // An example reached by its raw name still names its slug URL as canonical.
+    if (!missing) canonical = new URL(base + (example ? examplePath(example) : clean).slice(1), url).href;
   }
+  const site = canonical ? new URL(base, canonical).href : undefined;
+  const image = site && `${site}social-card.png`;
   const structured = canonical
     ? {
         '@context': 'https://schema.org',
         '@type': clean === '/' ? 'WebSite' : clean.startsWith('/docs/') ? 'TechArticle' : 'WebPage',
-        name: title,
+        '@id': clean === '/' ? `${site}#website` : canonical,
+        name,
+        ...(clean.startsWith('/docs/') ? { headline: name } : {}),
+        ...(clean === '/' ? {} : { isPartOf: { '@id': `${site}#website` } }),
         description,
         url: canonical,
+        image,
         inLanguage: 'en',
       }
     : undefined;
-  return { title, description, canonical, structured, robots: missing ? 'noindex, follow' : undefined };
+  return { title, description, canonical, image, structured, robots: missing ? 'noindex, follow' : undefined };
 }
 export function metadataHtml(path: string, origin?: string, base?: string) {
   const m = metadata(path, origin, base);
-  return `<title>${escape(m.title)}</title><meta name="description" content="${escape(m.description)}"><meta property="og:title" content="${escape(m.title)}"><meta property="og:description" content="${escape(m.description)}"><meta property="og:type" content="website"><meta property="og:site_name" content="BorrowdaleJS"><meta name="twitter:card" content="summary">${m.canonical ? `<link rel="canonical" href="${escape(m.canonical)}"><meta property="og:url" content="${escape(m.canonical)}">` : ''}${m.robots ? `<meta name="robots" content="${m.robots}">` : ''}${m.structured ? `<script type="application/ld+json" id="page-schema">${JSON.stringify(m.structured).replaceAll('<', '\\u003c')}</script>` : ''}`;
+  return `<title>${escape(m.title)}</title><meta name="description" content="${escape(m.description)}"><meta property="og:title" content="${escape(m.title)}"><meta property="og:description" content="${escape(m.description)}"><meta property="og:type" content="website"><meta property="og:site_name" content="BorrowdaleJS"><meta name="twitter:card" content="${m.image ? 'summary_large_image' : 'summary'}">${m.image ? `<meta property="og:image" content="${escape(m.image)}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:alt" content="The BorrowdaleJS home page: hand-drawn bar, line and donut charts beside the headline Serious data. A human touch.">` : ''}${m.canonical ? `<link rel="canonical" href="${escape(m.canonical)}"><meta property="og:url" content="${escape(m.canonical)}">` : ''}${m.robots ? `<meta name="robots" content="${m.robots}">` : ''}${m.structured ? `<script type="application/ld+json" id="page-schema">${JSON.stringify(m.structured).replaceAll('<', '\\u003c')}</script>` : ''}`;
 }
 export function applyMetadata(path: string) {
   const m = metadata(path);
@@ -105,7 +127,8 @@ export function applyMetadata(path: string) {
   set('property', 'og:description', m.description);
   set('property', 'og:type', 'website');
   set('property', 'og:site_name', 'BorrowdaleJS');
-  set('name', 'twitter:card', 'summary');
+  set('name', 'twitter:card', m.image ? 'summary_large_image' : 'summary');
+  set('property', 'og:image', m.image);
   set('name', 'robots', m.robots);
   set('property', 'og:url', m.canonical);
   let link = document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]');

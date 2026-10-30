@@ -60,3 +60,21 @@ it('sets the canonical link, og:url and structured data in the browser when an o
   );
   expect(JSON.parse(document.getElementById('page-schema')!.textContent!)['@type']).toBe('TechArticle');
 });
+it('names an example by its kind and points a raw-name URL at the slug URL', () => {
+  const m = metadata('/playground/components/Primary%20action/', 'https://example.test', '/');
+  expect(m.title).toBe('Primary action · UI recipe example — BorrowdaleJS');
+  expect(m.canonical).toBe('https://example.test/playground/components/primary-action/');
+});
+it('links a large social image and ties every page to the website entity', () => {
+  const html = metadataHtml('/docs/charts/', 'https://example.test', '/borrowdale/');
+  expect(html).toContain('<meta property="og:image" content="https://example.test/borrowdale/social-card.png">');
+  expect(html).toContain('<meta name="twitter:card" content="summary_large_image">');
+  expect(metadata('/docs/charts/', 'https://example.test', '/borrowdale/').structured).toMatchObject({
+    '@type': 'TechArticle',
+    headline: 'Charts',
+    isPartOf: { '@id': 'https://example.test/borrowdale/#website' },
+  });
+  expect(metadata('/', 'https://example.test', '/borrowdale/').structured!['@id']).toBe(
+    'https://example.test/borrowdale/#website',
+  );
+});
