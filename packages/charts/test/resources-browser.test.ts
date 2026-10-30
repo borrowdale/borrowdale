@@ -2,6 +2,29 @@ import { expect, it } from 'vitest';
 import type * as Charts from '@borrowdale/charts';
 import { evaluateInChromium } from '../../core/test/support/chromium.js';
 
+it('keeps zero-width segments invisible on Canvas as in SVG', async () => {
+  const result = await evaluateInChromium(new URL('../src/index.ts', import.meta.url), 'charts', '', async () => {
+    const api = (globalThis as unknown as { charts: typeof Charts }).charts;
+    const layout = api.layoutChart({ width: 64, height: 64, legend: 'none', style: { roughness: 0 },
+      axes: { x: { type: 'linear', min: 0, max: 1, hidden: true }, y: { type: 'linear', min: 0, max: 1, hidden: true } },
+      series: [{ type: 'xyLine', name: 'zero', data: [[0, 0.5], [1, 0.5]], segments: [{ width: 0 }] }] });
+    const canvas = document.createElement('canvas'); canvas.width = 64; canvas.height = 64;
+    const context = canvas.getContext('2d')!;
+    context.lineWidth = 10;
+    api.drawChart(context, layout);
+    const native = [...context.getImageData(32, 32, 1, 1).data];
+    const width = context.lineWidth;
+    const source = new Image();
+    source.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(api.toSvgChart(layout))}`;
+    await source.decode();
+    context.clearRect(0, 0, 64, 64); context.drawImage(source, 0, 0);
+    return { native, exported: [...context.getImageData(32, 32, 1, 1).data], width };
+  }, undefined);
+  expect(result.exported).toEqual([0, 0, 0, 0]);
+  expect(result.native).toEqual(result.exported);
+  expect(result.width).toBe(10);
+}, 120_000);
+
 it('renders preloaded images and continuous gradients on native Canvas and SVG', async () => {
   const result = await evaluateInChromium(new URL('../src/index.ts', import.meta.url), 'charts', '', async () => {
     const api = (globalThis as unknown as { charts: typeof Charts }).charts;

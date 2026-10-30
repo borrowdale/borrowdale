@@ -7,4 +7,5 @@ Add interval marks, numeric paths and confidence bands, marker symbols and trust
 image assets, data labels, Cartesian annotations, weighted categories, bar shape
 variants, segment styles, tapered paths, crossing fills and continuous gradients.
 Include complete Cartesian composition examples. Canvas sketch rendering accepts
-optional paint overrides for gradients and patterns.
+optional paint overrides for gradients and patterns, and keeps zero-width strokes
+invisible to match SVG.

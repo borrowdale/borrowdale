@@ -85,7 +85,7 @@ export function drawSketch(
         context.fillStyle = paint.fill ?? path.fill;
         context.fill(outline, path.fillRule ?? 'nonzero');
       }
-      if (path.stroke !== 'none') {
+      if (path.stroke !== 'none' && path.strokeWidth !== 0) {
         context.strokeStyle = paint.stroke ?? path.stroke;
         context.lineWidth = path.strokeWidth;
         context.lineCap = 'butt';

@@ -135,6 +135,17 @@ describe('appendSketch', () => {
 });
 
 describe('drawSketch', () => {
+  it('keeps zero-width strokes invisible without disabling the fill', () => {
+    vi.stubGlobal('Path2D', RecordingPath2D);
+    const context = fakeContext();
+    drawSketch(context as unknown as CanvasRenderingContext2D, {
+      paths: [{ d: 'M0 0 L1 1 Z', stroke: '#000', strokeWidth: 0, fill: '#f00' }],
+    }, { stroke: '#00f' });
+    expect(context.stroke).not.toHaveBeenCalled();
+    expect(context.fill).toHaveBeenCalledTimes(1);
+    expect(context.restore).toHaveBeenCalledTimes(1);
+  });
+
   it('overrides enabled paint channels and preserves disabled ones', () => {
     vi.stubGlobal('Path2D', RecordingPath2D);
     const fillContext = fakeContext();
