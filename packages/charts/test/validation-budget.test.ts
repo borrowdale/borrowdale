@@ -27,14 +27,19 @@ describe('chart data validation budget', () => {
   });
 
   it.each([NaN, undefined, '1', 0.5])('rejects a non-integer array length (%s) before reading entries', (length) => {
+    let reads = 0;
     const data = new Proxy<[number, number][]>([[1, 1]], {
       get(target, key, receiver) {
+        if (key === '0') {
+          reads++;
+        }
         return key === 'length' ? length : Reflect.get(target, key, receiver);
       },
     });
     expect(() => checkChart({
       width: 400, height: 300, axes, series: [{ type: 'scatter', name: 'A', data }],
     })).toThrow(expect.objectContaining({ path: 'series[0].data' }));
+    expect(reads).toBe(0);
   });
 
   it('rejects an overflowing series before reading or copying its points', () => {
