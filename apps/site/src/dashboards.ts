@@ -66,7 +66,7 @@ export function worldDashboard() {
   const population = rows.reduce((n, r) => n + (r.population ?? 0), 0);
   const life = median(rows.flatMap((x) => (x.life === null ? [] : [x.life])));
   const years = worldYears;
-  const controls = `<label>Year <select id="world-year">${years.map((y) => `<option ${y === year ? 'selected' : ''}>${y}</option>`).join('')}</select></label><label>Country <select id="world-country">${countries.map((c) => `<option value="${c.code}" ${country === c.code ? 'selected' : ''}>${escape(c.name)}</option>`).join('')}</select></label>`;
+  const controls = `<label>Year <select id="world-year">${years.map((y) => `<option ${y === year ? 'selected' : ''}>${y}</option>`).join('')}</select></label><label>Country <select id="world-country">${countries.map((c) => `<option value="${escape(c.code)}" ${country === c.code ? 'selected' : ''}>${escape(c.name)}</option>`).join('')}</select></label>`;
   const rank = chartSpec(
     'GDP per capita',
     gdp.map((x) => x.name),
