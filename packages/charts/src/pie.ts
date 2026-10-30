@@ -63,7 +63,7 @@ export function layoutPie(
         drawing.shape(
           sliceShape(pulled, reach, hole, from + pad, angle - pad, pie.cornerRadius),
           hatched(paintOf.get(slice.name)!),
-          `${pie.name}|${slice.name}|slice`,
+          [pie.name, slice.name, 'slice'],
           pie.style,
         ),
       ]);

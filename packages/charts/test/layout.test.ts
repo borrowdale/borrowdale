@@ -53,6 +53,9 @@ const share: ChartSpec = {
     { type: 'bar', name: 'B', stack: 's', data: [3, 1] },
   ],
 };
+// One bar, seeded "1|a" and named "b", or seeded "1" and named "a|b": the same parts joined with "|".
+const pipedSeed: ChartSpec = { ...revenue, title: undefined, seed: '1|a', series: [{ type: 'bar', name: 'b', data: [12, 15] }] };
+const pipedName: ChartSpec = { ...pipedSeed, seed: '1', series: [{ type: 'bar', name: 'a|b', data: [12, 15] }] };
 const dashed: ChartSpec = { ...revenue, series: [{ type: 'line', name: 'Goal', dash: [6, 4], data: [10, 20] }] };
 const coloured: ChartSpec = { ...revenue, series: [{ type: 'bar', name: 'Pencils', color: '#123456', data: [12, 15] }] };
 const unsetStroke: ChartSpec = { ...revenue, series: [{ type: 'bar', name: 'Pencils', style: { stroke: undefined }, data: [12, 15] }] };
@@ -350,6 +353,12 @@ function mark(layout: ChartLayout, title: string): ChartNode {
   return found;
 }
 
+/** The shapes of a mark, without its tooltip. */
+function shapesOf(layout: ChartLayout, title: string): ChartNode[] {
+  const found = mark(layout, title);
+  return found.kind === 'mark' ? found.nodes : [];
+}
+
 /** The outline of a mark's first shape: its last path. */
 function outline(layout: ChartLayout, title: string): SketchPath {
   const group = mark(layout, title);
@@ -443,6 +452,10 @@ describe('layoutChart', () => {
 
   it('draws a mark with other strokes under another chart seed', () => {
     expect(mark(layoutChart(reseeded), 'Paper, Jan: €7')).not.toEqual(mark(layoutChart(revenue), 'Paper, Jan: €7'));
+  });
+
+  it('draws other strokes for names that join to the same text', () => {
+    expect(shapesOf(layoutChart(pipedName), 'a|b, Jan: €12')).not.toEqual(shapesOf(layoutChart(pipedSeed), 'b, Jan: €12'));
   });
 
   it('gives each bar a tooltip with its series, category and value, in the axis format', () => {

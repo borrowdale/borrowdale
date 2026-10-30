@@ -2,7 +2,7 @@ import type { Point, Shape, SketchStyle } from '@borrowdale/core';
 import type { TextAnchor, TextBaseline } from '@borrowdale/text';
 import type { CheckedFormat, CheckedLinearAxis } from './check-axis.js';
 import { coordinate } from './curves.js';
-import type { Drawing } from './drawing.js';
+import type { Drawing, SeedKey } from './drawing.js';
 import { assertRoom, BAND_PADDING, GAP, type Rect } from './frame.js';
 import {
   alignTowards,
@@ -267,14 +267,14 @@ export function layoutPolar(drawing: Drawing, chart: CheckedPolarChart, rect: Re
         radiusAxis.shape === 'polygon'
           ? { kind: 'polygon', points: spokes.map((spoke) => frame.point(spoke.angle, distance)) }
           : circleOrArc(frame, distance, startAngle, endAngle, whole);
-      drawing.push(drawing.shape(shape, grid, `grid|radius|${tick}`));
+      drawing.push(drawing.shape(shape, grid, ['grid', 'radius', tick]));
     }
   }
   // A visible band angle axis draws its spokes, a radar's web; a linear one only as gridlines.
   if (!angleAxis.hidden && (angleAxis.type === 'band' || angleAxis.grid)) {
     for (const spoke of spokes) {
       const [[x1, y1], [x2, y2]] = [frame.point(spoke.angle, hole), frame.point(spoke.angle, radius)];
-      drawing.push(drawing.shape({ kind: 'line', x1, y1, x2, y2 }, grid, `spoke|${spoke.key}`));
+      drawing.push(drawing.shape({ kind: 'line', x1, y1, x2, y2 }, grid, ['spoke', spoke.key]));
     }
   }
 
@@ -436,7 +436,7 @@ function drawRadar(
   const around = (values: readonly number[]): Point[] =>
     values.map((value, k) => frame.point(bandOf(angle)(k).middle, linearOf(radius).at(value)));
   const style = { ...hatched(paint), strokeWidth: LINE_WIDTH };
-  const key = `${entry.name}|radar`;
+  const key = [entry.name, 'radar'];
   if (isRanges(entry.data)) {
     const [low, high] = [around(entry.data.map(([value]) => value)), around(entry.data.map(([, value]) => value))];
     // The inner outline a hole in the outer, by the even-odd rule the engine fills paths with.
@@ -484,7 +484,7 @@ function drawWedges(
         : sliceShape(frame.center, start + width, start, low, high);
     const category = context.categories[i]!;
     drawing.mark(`${entry.name}, ${category}: ${formatValue(value, format)}`, [
-      drawing.shape(shape, hatched(paint), `${entry.name}|${category}|${entry.type}`, entry.style),
+      drawing.shape(shape, hatched(paint), [entry.name, category, entry.type], entry.style),
     ]);
   });
 }
@@ -501,7 +501,7 @@ function drawPolarLine(
   drawing.mark(
     entry.name,
     polarRuns(points, context.whole).map((run, r) =>
-      polyline(drawing, run, style, `${entry.name}|polarLine|${r}`, entry.style),
+      polyline(drawing, run, style, [entry.name, 'polarLine', r], entry.style),
     ),
   );
 }
@@ -519,7 +519,7 @@ function drawPolarArea(
     return span && { from: frame.point(a, at(span[0])), to: frame.point(a, at(span[1])) };
   });
   const nodes = polarRuns(edges, context.whole).flatMap((run, r) => {
-    const key = `${entry.name}|polarArea|${r}`;
+    const key = [entry.name, 'polarArea', r];
     const to = run.points.map((edge) => edge.to);
     if (to.length === 1) {
       return [polyline(drawing, { points: to, closed: false }, outline, key, entry.style)];
@@ -529,8 +529,8 @@ function drawPolarArea(
       ? { kind: 'path', d: `${pathThrough(to)} Z ${pathThrough(from)} Z` }
       : { kind: 'polygon', points: [...to, ...from.reverse()] };
     return [
-      drawing.shape(fill, { ...hatched(paint), stroke: 'none' }, `${key}|fill`, entry.style),
-      polyline(drawing, { points: to, closed: run.closed }, outline, `${key}|high`, entry.style),
+      drawing.shape(fill, { ...hatched(paint), stroke: 'none' }, [...key, 'fill'], entry.style),
+      polyline(drawing, { points: to, closed: run.closed }, outline, [...key, 'high'], entry.style),
     ];
   });
   drawing.mark(entry.name, nodes);
@@ -548,7 +548,7 @@ function drawPolarPoints(
       drawing.shape(
         { kind: 'circle', cx, cy, diameter: POINT_SIZE },
         solid(paint.color),
-        `${entry.name}|${i}`,
+        [entry.name, i],
         entry.style,
       ),
     ]);
@@ -576,7 +576,7 @@ function polyline(
   drawing: Drawing,
   { points, closed }: { points: Point[]; closed: boolean },
   style: SketchStyle & { stroke: string },
-  key: string,
+  key: SeedKey,
   own: SketchStyle,
 ): ChartNode {
   if (points.length === 1) {

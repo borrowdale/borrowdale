@@ -168,7 +168,7 @@ function drawLegend(drawing: Drawing, entries: readonly LegendEntry[], position:
 }
 
 function drawEntry(drawing: Drawing, entry: LegendEntry, left: number, middle: number): void {
-  const key = `legend|${entry.name}`;
+  const key = ['legend', entry.name];
   const swatch = entry.line
     ? drawing.shape(
         { kind: 'line', x1: left, y1: middle, x2: left + SWATCH, y2: middle },

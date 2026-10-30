@@ -93,9 +93,9 @@ export function layoutGauge(drawing: Drawing, chart: CheckedGaugeChart, rect: Re
   const arc = (outer: number, from: number, to: number): Shape =>
     sliceShape(center, outer, outer - width, scale.at(from), scale.at(to));
 
-  drawing.push(drawing.shape(arc(radius, first, last), grid, 'track'));
+  drawing.push(drawing.shape(arc(radius, first, last), grid, ['track']));
   bands.forEach((band, i) => {
-    drawing.push(drawing.shape(arc(radius, band.from, band.to), solid(band.color), `band|${i}`));
+    drawing.push(drawing.shape(arc(radius, band.from, band.to), solid(band.color), ['band', i]));
   });
 
   if (!axis.hidden) {
@@ -104,7 +104,7 @@ export function layoutGauge(drawing: Drawing, chart: CheckedGaugeChart, rect: Re
     ticks.forEach((tick, i) => {
       const at = scale.at(tick);
       const [[x1, y1], [x2, y2]] = [point(at, inner), point(at, inner - TICK)];
-      drawing.push(drawing.shape({ kind: 'line', x1, y1, x2, y2 }, ink, `tick|${tick}`));
+      drawing.push(drawing.shape({ kind: 'line', x1, y1, x2, y2 }, ink, ['tick', tick]));
       // Inside the rim, so each label is placed towards the centre.
       const [px, py] = point(at, inner - TICK - GAP);
       drawing.push(drawing.text(labels[i]!, { x: px, y: py, ...alignTowards(at, false) }));
@@ -118,7 +118,7 @@ export function layoutGauge(drawing: Drawing, chart: CheckedGaugeChart, rect: Re
       const [from, to] = [Math.min(origin, entry.value), Math.max(origin, entry.value)];
       if (to > from) {
         const ring = ringOuter(bars.indexOf(entry) + shift);
-        drawing.mark(title, [drawing.shape(arc(ring, from, to), hatched(paint), `${entry.name}|gauge`, entry.style)]);
+        drawing.mark(title, [drawing.shape(arc(ring, from, to), hatched(paint), [entry.name, 'gauge'], entry.style)]);
       }
       return;
     }
@@ -126,13 +126,13 @@ export function layoutGauge(drawing: Drawing, chart: CheckedGaugeChart, rect: Re
       drawing.shape(
         needle(point, scale.at(entry.value), entry.length * radius),
         solid(paint.color),
-        `${entry.name}|gauge`,
+        [entry.name, 'gauge'],
         entry.style,
       ),
     ]);
   });
   if (series.some((entry) => entry.display === 'needle')) {
-    drawing.push(drawing.shape({ kind: 'circle', cx, cy, diameter: 2 * HUB }, solid(INK), 'hub'));
+    drawing.push(drawing.shape({ kind: 'circle', cx, cy, diameter: 2 * HUB }, solid(INK), ['hub']));
   }
   if (lone) {
     const [only] = series as [GaugeSeries];

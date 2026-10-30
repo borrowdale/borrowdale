@@ -19,6 +19,9 @@ export interface Extent {
 
 type TextOptions = Omit<LayoutOptions, 'font' | 'fontSize'> & { fontSize?: number | undefined };
 
+/** What tells one mark's strokes from another's: its series, category, part and the like. */
+export type SeedKey = readonly (string | number)[];
+
 /** Draws shapes and text for one chart, with one budget, and keeps every label it laid out. */
 export class Drawing {
   readonly nodes: ChartNode[] = [];
@@ -60,10 +63,11 @@ export class Drawing {
 
   /**
    * A shape in its `defaults` style, then the chart's style, then its series' `own` style, seeded
-   * from the chart seed and `key`, so a mark keeps its strokes when other marks change.
+   * from the chart seed and `key`, so a mark keeps its strokes when other marks change. Each part is
+   * written with its length, so names holding any character never make two keys alike.
    */
-  shape(shape: Shape, defaults: SketchStyle, key: string, own: SketchStyle = {}): ChartNode {
-    const seed = `${this.#chart.seed}|${key}`;
+  shape(shape: Shape, defaults: SketchStyle, key: SeedKey, own: SketchStyle = {}): ChartNode {
+    const seed = [this.#chart.seed, ...key].map((part) => `${String(part).length}:${part}`).join('');
     const style = { ...defaults, ...this.#chart.style, ...own, seed };
     return { kind: 'sketch', sketch: sketch(shape, style, this.#budget) };
   }

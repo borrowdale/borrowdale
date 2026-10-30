@@ -3,9 +3,9 @@ import { cos, sin } from '@borrowdale/core/math';
 import type { TextAnchor, TextBaseline } from '@borrowdale/text';
 import type { CheckedAxis, CheckedLinearAxis } from './check-axis.js';
 import { areaPath, linePath } from './curves.js';
-import type { Drawing, Extent } from './drawing.js';
+import type { Drawing, Extent, SeedKey } from './drawing.js';
 import { assertRoom, BAND_PADDING, GAP, TICK, type Rect } from './frame.js';
-import { loneDot, POINT_SIZE, runsOf, solid } from './marks.js';
+import { loneDot, piecesOf, POINT_SIZE, runsOf, solid } from './marks.js';
 import { GRID, GRID_WIDTH, hatched, INK, LINE_WIDTH, type Paint } from './palette.js';
 import { stackGroup, stackSpans, type Span } from './stack.js';
 import { bandScale, formatValue, linearScale, place, type BandScale, type PlacedScale, type Scale } from './scale.js';
@@ -370,7 +370,7 @@ function drawBars(
       drawing.shape(
         frame.box(along, width * (1 - BAR_GAP), scale.at(span[0]), scale.at(span[1])),
         hatched(paint),
-        `${entry.name}|${category}|bar`,
+        [entry.name, category, 'bar'],
         entry.style,
       ),
     ]);
@@ -391,7 +391,7 @@ function drawLine(
   const style = { stroke: paint.color, strokeWidth: LINE_WIDTH, ...(entry.dash ? { strokeLineDash: entry.dash } : {}) };
   drawing.mark(
     entry.name,
-    runs.map((run, r) => lineOrDot(drawing, frame, run, entry.curve, style, `${entry.name}|line|${r}`, entry.style)),
+    runs.map((run, r) => lineOrDot(drawing, frame, run, entry.curve, style, [entry.name, 'line', r], entry.style)),
   );
 }
 
@@ -407,10 +407,10 @@ function drawArea(
     const along = frame.center(i);
     return span && { from: [along, scale.at(span[0])] as Point, to: [along, scale.at(span[1])] as Point };
   });
-  const nodes = runsOf(edges, placed.cuts).flatMap((run, r) => {
+  const nodes = piecesOf(edges, placed.cuts).flatMap(({ points: run, run: r, piece }) => {
     const to = run.map((edge) => edge.to);
     const from = run.map((edge) => edge.from);
-    const key = `${entry.name}|area|${r}`;
+    const key = [entry.name, 'area', r, piece];
     if (run.length === 1) {
       // A range at one category is the line from its low to its high value; a stacked area's lower
       // edge is the series below, so it shows as its top point, as a line would.
@@ -423,10 +423,10 @@ function drawArea(
     }
     const fill = { kind: 'path' as const, d: frame.area(to, from, entry.curve) };
     return [
-      drawing.shape(fill, { ...hatched(paint), stroke: 'none' }, `${key}|fill`, entry.style),
-      drawing.shape({ kind: 'path', d: frame.line(to, entry.curve) }, outline, `${key}|high`, entry.style),
+      drawing.shape(fill, { ...hatched(paint), stroke: 'none' }, [...key, 'fill'], entry.style),
+      drawing.shape({ kind: 'path', d: frame.line(to, entry.curve) }, outline, [...key, 'high'], entry.style),
       ...(entry.type === 'rangeArea'
-        ? [drawing.shape({ kind: 'path', d: frame.line(from, entry.curve) }, outline, `${key}|low`, entry.style)]
+        ? [drawing.shape({ kind: 'path', d: frame.line(from, entry.curve) }, outline, [...key, 'low'], entry.style)]
         : []),
     ];
   });
@@ -457,7 +457,7 @@ function drawPoints(
     const style: SketchStyle = size === undefined ? solid(paint.color) : hatched(paint);
     const sizeText = size === undefined ? '' : `, size ${formatValue(size)}`;
     drawing.mark(`${entry.name}: ${valueText(px, xAxis)}, ${valueText(py, placed.axis)}${sizeText}`, [
-      drawing.shape({ kind: 'circle', cx: x.at(px), cy: y.at(py), diameter }, style, `${entry.name}|${i}`, entry.style),
+      drawing.shape({ kind: 'circle', cx: x.at(px), cy: y.at(py), diameter }, style, [entry.name, i], entry.style),
     ]);
   });
 }
@@ -469,7 +469,7 @@ function lineOrDot(
   run: readonly Point[],
   curve: Curve,
   style: { stroke: string; strokeWidth: number },
-  key: string,
+  key: SeedKey,
   own: SketchStyle,
 ): ChartNode {
   if (run.length === 1) {
@@ -664,7 +664,7 @@ function drawGrid(drawing: Drawing, plot: Rect, { side, key, axis }: Guide, scal
   }
   for (const tick of scale!.ticks) {
     const shape = lineShape(SIDES[side].grid(plot, scale!.at(tick)));
-    drawing.push(drawing.shape(shape, { stroke: GRID, strokeWidth: GRID_WIDTH }, `grid|${key}|${tick}`));
+    drawing.push(drawing.shape(shape, { stroke: GRID, strokeWidth: GRID_WIDTH }, ['grid', key, tick]));
   }
 }
 
@@ -685,14 +685,14 @@ function drawGuide(
   // How many labels `spacing` apart to step over, to keep one that does not overlap the last.
   const every = (spacing: number): number => Math.max(1, Math.ceil(room / spacing));
   const label = (at: number) => ({ ...rules.label(plot, at), ...guide.style });
-  drawing.push(drawing.shape(lineShape(rules.edge(plot)), ink, `axis|${key}`));
+  drawing.push(drawing.shape(lineShape(rules.edge(plot)), ink, ['axis', key]));
   if (axis.type === 'linear') {
     // Ticks are evenly spaced, and a lone tick has nothing to overlap.
     const [first, second] = scale!.ticks;
     const nth = every(second === undefined ? Infinity : Math.abs(scale!.at(second) - scale!.at(first!)));
     scale!.ticks.forEach((tick, i) => {
       const at = scale!.at(tick);
-      drawing.push(drawing.shape(lineShape(rules.tick(plot, at)), ink, `tick|${key}|${tick}`));
+      drawing.push(drawing.shape(lineShape(rules.tick(plot, at)), ink, ['tick', key, tick]));
       if (i % nth === 0) {
         drawing.push(drawing.text(labels[i]!, label(at)));
       }
