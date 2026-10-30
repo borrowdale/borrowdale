@@ -1,6 +1,7 @@
 import { Budget, sketch, type Shape, type SketchStyle } from '@borrowdale/core';
-import { layoutText, measureText, textBounds, type LayoutOptions } from '@borrowdale/text';
+import { fitText, layoutText, measureText, textBounds, type LayoutOptions } from '@borrowdale/text';
 import { INK } from './palette.js';
+import { fail } from './read.js';
 import type { ChartNode } from './types.js';
 import type { CheckedChart } from './validate.js';
 
@@ -59,6 +60,15 @@ export class Drawing {
       `${fontSize}|${text}`,
       () => measureText(text, { font: this.#chart.font, fontSize }).width,
     );
+  }
+
+  /**
+   * `text` whole if it is at most `room` wide, else cut short with an ellipsis to fit. Throws for the
+   * spec at `path` when not even the ellipsis fits.
+   */
+  fit(text: string, room: number, path: string, fontSize = this.#chart.fontSize): string {
+    const fitted = fitText(text, Math.max(0, room), { font: this.#chart.font, fontSize });
+    return fitted ?? fail(path, `does not fit even cut short: there are ${Math.max(0, Math.floor(room))} units for it`);
   }
 
   /**

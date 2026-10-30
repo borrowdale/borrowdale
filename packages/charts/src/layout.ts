@@ -18,6 +18,8 @@ const TITLE_GROWTH = 4;
 
 interface LegendEntry {
   name: string;
+  /** Where the name is in the spec. */
+  path: string;
   paint: Paint;
   /** A series drawn as a line is shown by a line; anything else by a hatched box. */
   line: boolean;
@@ -39,7 +41,8 @@ export function layoutChart(spec: ChartSpec, options: ChartOptions = {}): ChartL
   if (chart.title !== undefined) {
     const size = chart.fontSize + TITLE_GROWTH;
     const position = { x: chart.width / 2, y: rect.top, anchor: 'middle' as const, baseline: 'top' as const };
-    drawing.push(drawing.text(chart.title, { ...position, fontSize: size }));
+    const title = drawing.fit(chart.title, rect.right - rect.left, 'title', size);
+    drawing.push(drawing.text(title, { ...position, fontSize: size }));
     rect.top += drawing.lineHeight(size) + GAP;
   }
   drawLegend(drawing, entries, chart.legend ?? (entries.length >= 2 ? 'top' : 'none'), rect);
@@ -94,6 +97,7 @@ function legendEntries(chart: CheckedChart): LegendEntry[] {
     const slices = [...first.values()];
     return paints(slices).map((paint, i) => ({
       name: slices[i]!.name,
+      path: `${slices[i]!.path}.name`,
       paint,
       line: false,
       dash: undefined,
@@ -110,7 +114,7 @@ function legendEntries(chart: CheckedChart): LegendEntry[] {
   return paints(series).map((paint, i) => {
     const entry = series[i]!;
     const dash = 'dash' in entry ? entry.dash : undefined;
-    return { name: entry.name, paint, line: lines[i]!, dash, style: entry.style };
+    return { name: entry.name, path: `${entry.path}.name`, paint, line: lines[i]!, dash, style: entry.style };
   });
 }
 
@@ -124,7 +128,10 @@ function drawLegend(drawing: Drawing, entries: readonly LegendEntry[], position:
     return;
   }
   const rowHeight = Math.max(drawing.lineHeight(), SWATCH);
-  const widths = entries.map((entry) => SWATCH + SWATCH_GAP + drawing.width(entry.name));
+  // A name too long for a row is cut short; a legend on the right takes at most half the width.
+  const room = (position === 'right' ? (rect.right - rect.left) / 2 : rect.right - rect.left) - SWATCH - SWATCH_GAP;
+  const names = entries.map((entry) => drawing.fit(entry.name, room, entry.path));
+  const widths = names.map((name) => SWATCH + SWATCH_GAP + drawing.width(name));
   if (position === 'right') {
     // One column, which must fit: unlike a legend above or below, it cannot wrap.
     const height = entries.length * rowHeight + (entries.length - 1) * ROW_GAP;
@@ -134,7 +141,7 @@ function drawLegend(drawing: Drawing, entries: readonly LegendEntry[], position:
     }
     const left = rect.right - Math.max(...widths);
     entries.forEach((entry, i) => {
-      drawEntry(drawing, entry, left, rect.top + i * (rowHeight + ROW_GAP) + rowHeight / 2);
+      drawEntry(drawing, entry, names[i]!, left, rect.top + i * (rowHeight + ROW_GAP) + rowHeight / 2);
     });
     rect.right = left - GAP;
     return;
@@ -156,7 +163,7 @@ function drawLegend(drawing: Drawing, entries: readonly LegendEntry[], position:
     const rowWidth = row.reduce((sum, i) => sum + widths[i]!, 0) + (row.length - 1) * ENTRY_SPACING;
     let left = (rect.left + rect.right) / 2 - rowWidth / 2;
     for (const i of row) {
-      drawEntry(drawing, entries[i]!, left, top + r * (rowHeight + ROW_GAP) + rowHeight / 2);
+      drawEntry(drawing, entries[i]!, names[i]!, left, top + r * (rowHeight + ROW_GAP) + rowHeight / 2);
       left += widths[i]! + ENTRY_SPACING;
     }
   });
@@ -167,7 +174,7 @@ function drawLegend(drawing: Drawing, entries: readonly LegendEntry[], position:
   }
 }
 
-function drawEntry(drawing: Drawing, entry: LegendEntry, left: number, middle: number): void {
+function drawEntry(drawing: Drawing, entry: LegendEntry, name: string, left: number, middle: number): void {
   const key = ['legend', entry.name];
   const swatch = entry.line
     ? drawing.shape(
@@ -183,5 +190,5 @@ function drawEntry(drawing: Drawing, entry: LegendEntry, left: number, middle: n
         entry.style,
       );
   const label = { x: left + SWATCH + SWATCH_GAP, y: middle, anchor: 'start' as const, baseline: 'middle' as const };
-  drawing.push(swatch, drawing.text(entry.name, label));
+  drawing.push(swatch, drawing.text(name, label));
 }

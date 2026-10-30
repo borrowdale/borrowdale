@@ -7,6 +7,7 @@ import type { Drawing, Extent, SeedKey } from './drawing.js';
 import { assertRoom, BAND_PADDING, GAP, TICK, type Rect } from './frame.js';
 import { loneDot, piecesOf, POINT_SIZE, runsOf, solid } from './marks.js';
 import { GRID, GRID_WIDTH, hatched, INK, LINE_WIDTH, type Paint } from './palette.js';
+import { fail } from './read.js';
 import { stackGroup, stackSpans, type Span } from './stack.js';
 import { bandScale, formatValue, linearScale, place, type BandScale, type PlacedScale, type Scale } from './scale.js';
 import type { ChartNode, Curve } from './types.js';
@@ -111,8 +112,13 @@ export function layoutCartesian(drawing: Drawing, chart: CheckedCartesianChart, 
     // The first and last x labels reach past the ends of the axis.
     plotLeft = Math.max(plotLeft, rect.left + below.ends.left, rect.left + fixed('x', 'min'));
     plotRight = Math.min(plotRight, rect.right - below.ends.right, rect.right - fixed('x', 'max'));
-    const plot: Rect = { left: plotLeft, top, right: plotRight, bottom };
-    assertRoom(plot, chart.width, chart.height);
+    const plot = fitBandEnds(
+      { left: plotLeft, top, right: plotRight, bottom },
+      [below, left],
+      rect,
+      (label, side) => (side === 'bottom' ? drawing.width(label) / 2 : line / 2),
+      chart,
+    );
     assertRoom(
       {
         left: plot.left + widened('x', 'min'),
@@ -182,6 +188,53 @@ export function layoutCartesian(drawing: Drawing, chart: CheckedCartesianChart, 
   for (const entry of guides) {
     drawGuide(drawing, plot, entry, scales[entry.key], bands, line);
   }
+}
+
+// How many times the plot is narrowed to keep a band axis' end labels on the chart.
+const MAX_REFITS = 20;
+// How far a label may reach past the chart's padding through rounding: positions are written with
+// two decimals.
+const LABEL_ROUNDING = 0.005;
+
+/**
+ * The plot narrowed so that the end labels of its flat band axis stay inside `rect`. Band labels are
+ * centred on their bands, so the first and last shown can reach past the ends of the axis. Each time
+ * the plot is narrowed by what they still reach out, which narrows the bands and moves the labels out
+ * again, but by less, until they fit. A lone label wider than the chart never fits, and throws.
+ */
+function fitBandEnds(
+  plot: Rect,
+  guides: readonly Guide[],
+  rect: Rect,
+  halfOf: (label: string, side: Side) => number,
+  chart: { width: number; height: number },
+): Rect {
+  const guide = guides.find(({ axis }) => axis.type === 'band' && !axis.hidden && axis.labelAngle === 0);
+  if (!guide) {
+    return plot;
+  }
+  const { labels, room, side } = guide;
+  const [start, end] = side === 'bottom' ? (['left', 'right'] as const) : (['top', 'bottom'] as const);
+  let fitted = plot;
+  for (let refit = 0; refit <= MAX_REFITS; refit++) {
+    assertRoom(fitted, chart.width, chart.height);
+    const bands = bandScale(labels.length, [fitted[start], fitted[end]], BAND_PADDING);
+    const every = labelEvery(room, bands.step);
+    const last = Math.floor((labels.length - 1) / every) * every;
+    const center = (i: number): number => bands.start(i) + bands.bandwidth / 2;
+    const before = rect[start] - (center(0) - halfOf(labels[0]!, side));
+    const after = center(last) + halfOf(labels[last]!, side) - rect[end];
+    if (before <= LABEL_ROUNDING && after <= LABEL_ROUNDING) {
+      return fitted;
+    }
+    fitted = { ...fitted, [start]: fitted[start] + Math.max(0, before), [end]: fitted[end] - Math.max(0, after) };
+  }
+  return fail(`a ${chart.width} × ${chart.height} chart`, `leaves no room for the end labels of ${guide.axis.path}`);
+}
+
+/** How many labels `spacing` apart to step over, to keep one that does not overlap the last. */
+function labelEvery(room: number, spacing: number): number {
+  return Math.max(1, Math.ceil(room / spacing));
 }
 
 /** A series with everything resolved about where it is drawn, once, before it is drawn. */
@@ -728,8 +781,7 @@ function drawGuide(
   }
   const rules = SIDES[side];
   const ink = { stroke: INK, strokeWidth: 1 };
-  // How many labels `spacing` apart to step over, to keep one that does not overlap the last.
-  const every = (spacing: number): number => Math.max(1, Math.ceil(room / spacing));
+  const every = (spacing: number): number => labelEvery(room, spacing);
   const label = (at: number) => ({ ...rules.label(plot, at), ...guide.style });
   drawing.push(drawing.shape(lineShape(rules.edge(plot)), ink, ['axis', key]));
   if (axis.type === 'linear') {
@@ -752,6 +804,9 @@ function drawGuide(
     });
   }
   if (axis.title !== undefined) {
-    drawing.push(drawing.text(axis.title, { ...rules.title(plot, reach, line), anchor: 'middle', baseline: 'top' }));
+    // Along the side it is on, as long as the plot.
+    const room = side === 'bottom' ? plot.right - plot.left : plot.bottom - plot.top;
+    const title = drawing.fit(axis.title, room, `${axis.path}.title`);
+    drawing.push(drawing.text(title, { ...rules.title(plot, reach, line), anchor: 'middle', baseline: 'top' }));
   }
 }
