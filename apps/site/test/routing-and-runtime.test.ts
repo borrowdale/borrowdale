@@ -5,6 +5,29 @@ import { pageHtml, pageTitle, route } from '../src/pages';
 import { scrollToFragment } from '../src/routing';
 import { bindEditor, stopEditor } from '../src/editor';
 
+// A worker the tests drive by hand: the latest one is kept so a test can send it messages.
+class StubWorker {
+  static latest: StubWorker;
+  static runs = vi.fn();
+  postMessage = StubWorker.runs;
+  terminate = vi.fn();
+  onmessage: ((event: { data: unknown }) => void) | null = null;
+  onerror = null;
+  constructor() {
+    StubWorker.latest = this;
+  }
+}
+// Renders an example page with the stub worker and binds its editor, as the site does on navigation.
+function openEditor() {
+  vi.useFakeTimers();
+  StubWorker.runs.mockClear();
+  vi.stubGlobal('Worker', StubWorker);
+  history.replaceState(null, '', '/playground/charts/bars-grouped/');
+  document.body.innerHTML = pageHtml(location.pathname).replace(/<iframe[^>]*><\/iframe>/, '<div id="editor-preview"></div>');
+  bindEditor();
+  return document.getElementById('editor-source') as HTMLTextAreaElement;
+}
+const auto = () => document.getElementById('editor-auto') as HTMLInputElement;
 afterEach(() => {
   stopEditor();
   vi.useRealTimers();
@@ -44,43 +67,66 @@ describe('playground and routing edge cases', () => {
     ).toBe('function');
   });
   it('scrolls decoded heading fragments after rendering and tolerates invalid ones', () => {
-    document.body.innerHTML = '<h2 id="your-first-chart">Your first chart</h2>';
+    document.body.innerHTML = '<h2 id="café">Café</h2>';
     const target = document.querySelector('h2')!;
     target.scrollIntoView = vi.fn();
-    expect(scrollToFragment('#your-first-chart')).toBe(true);
+    expect(scrollToFragment('#caf%C3%A9')).toBe(true);
     expect(target.scrollIntoView).toHaveBeenCalledWith({ block: 'start' });
     expect(scrollToFragment('#%ZZ')).toBe(false);
     expect(scrollToFragment('#absent')).toBe(false);
   });
   it('cancels scheduled execution when Auto-run is unchecked and lets Tab leave the editor', () => {
-    vi.useFakeTimers();
-    const runs = vi.fn();
-    class WorkerStub {
-      postMessage = runs;
-      terminate = vi.fn();
-      onmessage = null;
-      onerror = null;
-    }
-    vi.stubGlobal('Worker', WorkerStub);
-    history.replaceState(null, '', '/playground/charts/bars-grouped/');
-    document.body.innerHTML = pageHtml(location.pathname).replace(
-      /<iframe[^>]*><\/iframe>/,
-      '<div id="editor-preview"></div>',
-    );
-    bindEditor();
-    expect(runs).toHaveBeenCalledTimes(1);
-    const input = document.getElementById('editor-source') as HTMLTextAreaElement;
+    const input = openEditor();
+    expect(StubWorker.runs).toHaveBeenCalledTimes(1);
     input.value = "render('<svg/>')";
     input.dispatchEvent(new Event('input'));
-    const auto = document.getElementById('editor-auto') as HTMLInputElement;
-    auto.checked = false;
-    auto.dispatchEvent(new Event('change'));
+    auto().checked = false;
+    auto().dispatchEvent(new Event('change'));
     vi.advanceTimersByTime(700);
-    expect(runs).toHaveBeenCalledTimes(1);
+    expect(StubWorker.runs).toHaveBeenCalledTimes(1);
     const tab = new KeyboardEvent('keydown', { key: 'Tab', cancelable: true });
     input.dispatchEvent(tab);
     expect(tab.defaultPrevented).toBe(false);
     document.getElementById('editor-run')!.click();
-    expect(runs).toHaveBeenCalledTimes(2);
+    expect(StubWorker.runs).toHaveBeenCalledTimes(2);
+  });
+  it('runs the edited code once typing pauses, and again when Auto-run is switched back on', () => {
+    const input = openEditor();
+    input.value = "render('<svg/>')";
+    input.dispatchEvent(new Event('input'));
+    vi.advanceTimersByTime(649);
+    expect(StubWorker.runs).toHaveBeenCalledTimes(1);
+    vi.advanceTimersByTime(1);
+    expect(StubWorker.runs).toHaveBeenLastCalledWith({ code: "render('<svg/>')" });
+    auto().checked = false;
+    auto().dispatchEvent(new Event('change'));
+    auto().checked = true;
+    auto().dispatchEvent(new Event('change'));
+    expect(StubWorker.runs).toHaveBeenCalledTimes(3);
+  });
+  it('stops a run three seconds after the worker has loaded, not before', () => {
+    openEditor();
+    vi.advanceTimersByTime(5000);
+    expect(document.getElementById('editor-error')!.hidden).toBe(true);
+    StubWorker.latest.onmessage!({ data: { ready: true } });
+    vi.advanceTimersByTime(2999);
+    expect(document.getElementById('editor-error')!.hidden).toBe(true);
+    vi.advanceTimersByTime(1);
+    expect(document.getElementById('editor-error')!.hidden).toBe(false);
+    expect(document.getElementById('editor-error')!.textContent).toContain('3 seconds');
+    expect(StubWorker.latest.terminate).toHaveBeenCalled();
+  });
+  it('fits a data-fit drawing to its paths with an 8-unit margin', () => {
+    openEditor();
+    StubWorker.latest.onmessage!({ data: { ok: true, output: '<svg data-fit viewBox="0 0 300 240"><path d="M10 20 L30 40"/></svg>' } });
+    expect((document.getElementById('editor-preview') as HTMLIFrameElement).srcdoc).toContain('viewBox="2 12 36 36"');
+    expect(document.getElementById('editor-status')!.textContent).toBe('Up to date');
+  });
+  it('ignores a message from a worker that a newer run replaced', () => {
+    openEditor();
+    const stale = StubWorker.latest;
+    document.getElementById('editor-run')!.click();
+    stale.onmessage!({ data: { ok: false, error: 'stale failure' } });
+    expect(document.getElementById('editor-error')!.hidden).toBe(true);
   });
 });

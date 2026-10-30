@@ -1,10 +1,18 @@
-import { describe, it, expect } from 'vitest';
+import { afterEach, describe, it, expect } from 'vitest';
 import { examples, categories, gallery, galleryState } from '../src/gallery';
 import { editorCode } from '../src/editor';
 import { executeExample } from '../src/playground-runtime';
 import { worldAt, countryValue, world, climate, quakes, median, dailyCounts } from '../src/data';
 import { dashboardState, worldDashboard, climateDashboard, quakeDashboard } from '../src/dashboards';
 import { chartSpec } from '../src/drawing';
+
+// Tests change the shared dashboard and gallery state; each starts from the state the site loads with.
+const initialDashboard = { ...dashboardState };
+const initialGallery = { ...galleryState };
+afterEach(() => {
+  Object.assign(dashboardState, initialDashboard);
+  Object.assign(galleryState, initialGallery);
+});
 
 describe('gallery coverage and actual rendering', () => {
   it.each(examples)('$category: $name renders and has copyable code', (example) => {
@@ -122,5 +130,5 @@ it.each(
 )('world dashboard renders $country in $year', ({ year, country }) => {
   dashboardState.year = year;
   dashboardState.country = country;
-  expect(() => worldDashboard()).not.toThrow();
+  expect(worldDashboard()).not.toMatch(/NaN|Infinity|render-error/);
 });

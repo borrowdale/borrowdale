@@ -1,7 +1,9 @@
 // @vitest-environment happy-dom
-import { it, expect } from 'vitest';
+import { afterEach, it, expect, vi } from 'vitest';
 import { allPaths, pageHtml } from '../src/pages';
-import { metadata, metadataHtml, applyMetadata } from '../src/metadata';
+import { metadata, metadataHtml, applyMetadata, checkOrigin } from '../src/metadata';
+
+afterEach(() => vi.unstubAllEnvs());
 it('provides specific metadata and valid structured data on every static page', () => {
   const titles = new Set<string>();
   const descriptions = new Set<string>();
@@ -42,4 +44,19 @@ it('links every playground from the HTML directory without requiring filters', (
   const html = pageHtml('/playground/');
   for (const path of allPaths().filter((p) => p.startsWith('/playground/') && p !== '/playground/'))
     expect(html).toContain(`href="${path}"`);
+});
+it.each(['http://example.test', 'https://example.test/path/', 'https://example.test/?q=1', 'https://example.test/#top'])(
+  'refuses %s as the site origin',
+  (origin) => {
+    expect(() => checkOrigin(origin)).toThrow('SITE_ORIGIN');
+  },
+);
+it('sets the canonical link, og:url and structured data in the browser when an origin is configured', () => {
+  vi.stubEnv('VITE_SITE_ORIGIN', 'https://example.test');
+  applyMetadata('/docs/charts/');
+  expect(document.querySelector<HTMLLinkElement>('link[rel="canonical"]')!.href).toBe('https://example.test/docs/charts/');
+  expect(document.querySelector('meta[property="og:url"]')!.getAttribute('content')).toBe(
+    'https://example.test/docs/charts/',
+  );
+  expect(JSON.parse(document.getElementById('page-schema')!.textContent!)['@type']).toBe('TechArticle');
 });

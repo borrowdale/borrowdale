@@ -1,7 +1,12 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { allPaths, pageHtml, pageTitle, route } from '../src/pages';
 import { docs, documentPage } from '../src/documents';
 import { legacyPath } from '../src/routing';
+import { escape } from '../src/drawing';
+
+// The first heading of a Markdown source, as the page renders it.
+const firstHeading = (markdown: string) => escape(markdown.match(/^#{1,2} (.+)$/m)![1]!);
+afterEach(() => vi.unstubAllEnvs());
 
 describe('static website routes and shared documentation', () => {
   it('has distinct paths for every example and public page', () => {
@@ -17,7 +22,7 @@ describe('static website routes and shared documentation', () => {
   it.each(docs)('$title renders its shared Markdown without JavaScript', (page) => {
     const html = documentPage(page.url);
     expect(html).toContain('<h1');
-    expect(html).toContain(page.source);
+    expect(html).toContain(`>${firstHeading(page.body)}</h`);
     expect(html).not.toMatch(/href="\.\.?\//);
   });
   it('includes real license texts and third-party credits', () => {
@@ -68,4 +73,13 @@ it('emits static-host-safe paths for every playground name', () => {
   }
   expect(allPaths()).toContain('/playground/components/note-disclosure/');
   expect(allPaths()).toContain('/playground/shapes/star-dots-b/');
+});
+it('ignores a malformed old example link instead of failing to start', () => {
+  expect(legacyPath('#example/charts/%')).toBeUndefined();
+});
+it('routes and links under a project base path', () => {
+  vi.stubEnv('BASE_URL', '/borrowdale/');
+  expect(route('/borrowdale/docs/')).toBe('docs');
+  expect(route('/borrowdale/playground/charts/bars-grouped/')).toBe('example');
+  expect(pageHtml('/borrowdale/')).toContain('href="/borrowdale/docs/"');
 });
