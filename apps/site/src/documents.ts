@@ -18,37 +18,134 @@ import ofl from '../../../packages/text/OFL.txt?raw';
 import coreNotices from '../../../packages/core/THIRD_PARTY_NOTICES.md?raw';
 import chartNotices from '../../../packages/charts/THIRD_PARTY_NOTICES.md?raw';
 export const docs = [
- {url:'/docs/',title:'Documentation',source:'docs/README.md',body:introduction,group:'Start here'},
- {url:'/docs/getting-started/',title:'Getting started',source:'docs/getting-started.md',body:gettingStarted,group:'Start here'},
- {url:'/docs/rendering/',title:'Rendering and fonts',source:'docs/rendering.md',body:rendering,group:'Guides'},
- {url:'/docs/accessibility/',title:'Accessibility and limitations',source:'docs/accessibility.md',body:accessibility,group:'Guides'},
- ...[{name:'charts',body:charts,title:'Charts'},{name:'core',body:core,title:'Shapes'},{name:'text',body:text,title:'Text'},{name:'fills',body:fills,title:'Fills'}].map(p=>({url:`/docs/${p.name}/`,title:p.title,source:`packages/${p.name}/README.md`,body:p.body,group:'Package reference'})),
- {url:'/about/',title:'About BorrowdaleJS',source:'docs/about.md',body:about,group:'Project'},
- {url:'/contributing/',title:'Contributing',source:'CONTRIBUTING.md',body:contributing,group:'Project'},
- {url:'/changelog/',title:'Changelog',source:'CHANGELOG.md',body:changelog,group:'Project'},
- {url:'/license/',title:'License & credits',source:'docs/license.md',body:license,group:'Project'},
+  {
+    url: '/docs/',
+    title: 'Documentation',
+    source: 'docs/README.md',
+    body: introduction,
+    group: 'Start here',
+  },
+  {
+    url: '/docs/getting-started/',
+    title: 'Getting started',
+    source: 'docs/getting-started.md',
+    body: gettingStarted,
+    group: 'Start here',
+  },
+  {
+    url: '/docs/rendering/',
+    title: 'Rendering and fonts',
+    source: 'docs/rendering.md',
+    body: rendering,
+    group: 'Guides',
+  },
+  {
+    url: '/docs/accessibility/',
+    title: 'Accessibility and limitations',
+    source: 'docs/accessibility.md',
+    body: accessibility,
+    group: 'Guides',
+  },
+  ...[
+    { name: 'charts', body: charts, title: 'Charts' },
+    { name: 'core', body: core, title: 'Shapes' },
+    { name: 'text', body: text, title: 'Text' },
+    { name: 'fills', body: fills, title: 'Fills' },
+  ].map((p) => ({
+    url: `/docs/${p.name}/`,
+    title: p.title,
+    source: `packages/${p.name}/README.md`,
+    body: p.body,
+    group: 'Package reference',
+  })),
+  { url: '/about/', title: 'About BorrowdaleJS', source: 'docs/about.md', body: about, group: 'Project' },
+  {
+    url: '/contributing/',
+    title: 'Contributing',
+    source: 'CONTRIBUTING.md',
+    body: contributing,
+    group: 'Project',
+  },
+  { url: '/changelog/', title: 'Changelog', source: 'CHANGELOG.md', body: changelog, group: 'Project' },
+  {
+    url: '/license/',
+    title: 'License & credits',
+    source: 'docs/license.md',
+    body: license,
+    group: 'Project',
+  },
 ];
-export function documentPage(path:string){
- const page=docs.find(d=>d.url===path)!;
- const headings:{id:string;text:string}[]=[];const used=new Map<string,number>();
- const markdown=new Marked({gfm:true,renderer:{
-  heading({tokens,depth}){const text=this.parser.parseInline(tokens);const slug=text.replace(/<[^>]+>/g,'').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,'-').replace(/^-|-$/g,'');const count=used.get(slug)??0;used.set(slug,count+1);const id=slug+(count?`-${count}`:'');if(depth===2)headings.push({id,text});return `<h${depth} id="${id}">${text}</h${depth}>`;},
-  code({text}){return codeBlock(text);},
- },walkTokens(token){
-  if(token.type!=='link'&&token.type!=='image')return;
-  if(/^(https?:|mailto:|#)/.test(token.href))return;
-  const url=new URL(token.href,`https://repo.invalid/${page.source}`);const source=url.pathname.slice(1);
-  const internal=docs.find(d=>d.source===source);
-  token.href=internal?internal.url+url.hash:`https://github.com/borrowdale/borrowdale/blob/main/${source}${url.hash}`;
- }});
- let body=markdown.parse(page.body,{async:false});
- const related:Record<string,string>={'/docs/getting-started/':'/playground/charts/bars-grouped/','/docs/charts/':'/playground/?category=charts','/docs/core/':'/playground/?category=shapes','/docs/text/':'/playground/?category=text','/docs/fills/':'/playground/?category=patterns'};
- if(related[path])body+=`<p class="docs-playground"><a href="${related[path]}">Try these APIs in the playground ↗</a></p>`;
- if(path==='/license/')body+=`<h2 id="mit-license">MIT license</h2><pre class="license-text">${escape(mit)}</pre><h2 id="font-license">Font license</h2><pre class="license-text">${escape(ofl)}</pre><h2 id="third-party-notices">Third-party notices</h2>${markdown.parse(coreNotices+'\n'+chartNotices,{async:false})}`;
- const sidebar=[...new Set(docs.map(d=>d.group))].map(group=>`<section><h2>${group}</h2>${docs.filter(d=>d.group===group).map(d=>`<a data-doc-link href="${d.url}" ${d===page?'aria-current="page"':''}>${escape(d.title)}</a>`).join('')}</section>`).join('');
- return `<div class="docs-layout"><aside class="docs-sidebar"><label for="docs-search">Find a topic</label><input id="docs-search" type="search" placeholder="Search documentation…"><nav aria-label="Documentation">${sidebar}</nav><p id="docs-no-results" hidden>No matching pages.</p></aside><article class="docs-article"><p class="eyebrow">BORROWDALEJS / ${page.group.toUpperCase()}</p>${body}<div class="docs-source"><a href="https://github.com/borrowdale/borrowdale/blob/main/${page.source}">View Markdown on GitHub ↗</a><a href="https://github.com/borrowdale/borrowdale/edit/main/${page.source}">Edit this page ↗</a></div></article><aside class="docs-toc"><p>ON THIS PAGE</p>${headings.map(h=>`<a href="#${h.id}">${h.text}</a>`).join('')}</aside></div>`;
+export function documentPage(path: string) {
+  const page = docs.find((d) => d.url === path)!;
+  const headings: { id: string; text: string }[] = [];
+  const used = new Map<string, number>();
+  const markdown = new Marked({
+    gfm: true,
+    renderer: {
+      heading({ tokens, depth }) {
+        const text = this.parser.parseInline(tokens);
+        const slug = text
+          .replace(/<[^>]+>/g, '')
+          .toLowerCase()
+          .replace(/[^\p{L}\p{N}]+/gu, '-')
+          .replace(/^-|-$/g, '');
+        const count = used.get(slug) ?? 0;
+        used.set(slug, count + 1);
+        const id = slug + (count ? `-${count}` : '');
+        if (depth === 2) headings.push({ id, text });
+        return `<h${depth} id="${id}">${text}</h${depth}>`;
+      },
+      code({ text }) {
+        return codeBlock(text);
+      },
+    },
+    walkTokens(token) {
+      if (token.type !== 'link' && token.type !== 'image') return;
+      if (/^(https?:|mailto:|#)/.test(token.href)) return;
+      const url = new URL(token.href, `https://repo.invalid/${page.source}`);
+      const source = url.pathname.slice(1);
+      const internal = docs.find((d) => d.source === source);
+      token.href = internal
+        ? internal.url + url.hash
+        : `https://github.com/borrowdale/borrowdale/blob/main/${source}${url.hash}`;
+    },
+  });
+  let body = markdown.parse(page.body, { async: false });
+  const related: Record<string, string> = {
+    '/docs/getting-started/': '/playground/charts/bars-grouped/',
+    '/docs/charts/': '/playground/?category=charts',
+    '/docs/core/': '/playground/?category=shapes',
+    '/docs/text/': '/playground/?category=text',
+    '/docs/fills/': '/playground/?category=patterns',
+  };
+  if (related[path])
+    body += `<p class="docs-playground"><a href="${related[path]}">Try these APIs in the playground ↗</a></p>`;
+  if (path === '/license/')
+    body += `<h2 id="mit-license">MIT license</h2><pre class="license-text">${escape(mit)}</pre><h2 id="font-license">Font license</h2><pre class="license-text">${escape(ofl)}</pre><h2 id="third-party-notices">Third-party notices</h2>${markdown.parse(coreNotices + '\n' + chartNotices, { async: false })}`;
+  const sidebar = [...new Set(docs.map((d) => d.group))]
+    .map(
+      (group) =>
+        `<section><h2>${group}</h2>${docs
+          .filter((d) => d.group === group)
+          .map(
+            (d) =>
+              `<a data-doc-link href="${d.url}" ${d === page ? 'aria-current="page"' : ''}>${escape(d.title)}</a>`,
+          )
+          .join('')}</section>`,
+    )
+    .join('');
+  return `<div class="docs-layout"><aside class="docs-sidebar"><label for="docs-search">Find a topic</label><input id="docs-search" type="search" placeholder="Search documentation…"><nav aria-label="Documentation">${sidebar}</nav><p id="docs-no-results" hidden>No matching pages.</p></aside><article class="docs-article"><p class="eyebrow">BORROWDALEJS / ${page.group.toUpperCase()}</p>${body}<div class="docs-source"><a href="https://github.com/borrowdale/borrowdale/blob/main/${page.source}">View Markdown on GitHub ↗</a><a href="https://github.com/borrowdale/borrowdale/edit/main/${page.source}">Edit this page ↗</a></div></article><aside class="docs-toc"><p>ON THIS PAGE</p>${headings.map((h) => `<a href="#${h.id}">${h.text}</a>`).join('')}</aside></div>`;
 }
-export function bindDocuments(){
- const input=document.getElementById('docs-search') as HTMLInputElement|null;if(!input)return;
- input.oninput=()=>{const term=input.value.toLowerCase().trim();let count=0;document.querySelectorAll<HTMLAnchorElement>('[data-doc-link]').forEach((a,i)=>{a.hidden=!`${docs[i].title} ${docs[i].body}`.toLowerCase().includes(term);if(!a.hidden)count++;});document.getElementById('docs-no-results')!.hidden=count>0;};
+export function bindDocuments() {
+  const input = document.getElementById('docs-search') as HTMLInputElement | null;
+  if (!input) return;
+  input.oninput = () => {
+    const term = input.value.toLowerCase().trim();
+    let count = 0;
+    document.querySelectorAll<HTMLAnchorElement>('[data-doc-link]').forEach((a, i) => {
+      a.hidden = !`${docs[i].title} ${docs[i].body}`.toLowerCase().includes(term);
+      if (!a.hidden) count++;
+    });
+    document.getElementById('docs-no-results')!.hidden = count > 0;
+  };
 }
