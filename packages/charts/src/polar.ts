@@ -1,5 +1,6 @@
 import type { Point, Shape, SketchStyle } from '@borrowdale/core';
 import type { TextAnchor, TextBaseline } from '@borrowdale/text';
+import type { CheckedFormat, CheckedLinearAxis } from './check-axis.js';
 import { coordinate } from './curves.js';
 import type { Drawing } from './drawing.js';
 import { assertRoom, BAND_PADDING, GAP, type Rect } from './frame.js';
@@ -20,13 +21,7 @@ import { fail } from './read.js';
 import { bandScale, formatValue, linearScale, place, PLAIN_FORMAT, type PlacedScale } from './scale.js';
 import { stackGroup, stackSpans, type Span } from './stack.js';
 import type { ChartNode } from './types.js';
-import {
-  isStacking,
-  type CheckedFormat,
-  type CheckedLinearAxis,
-  type CheckedPolarChart,
-  type SeriesOf,
-} from './validate.js';
+import { isStacking, type CheckedPolarChart, type SeriesOf } from './validate.js';
 
 // How far past the chart's box a label may reach and still count as inside: rounding.
 const FIT_TOLERANCE = 0.01;

@@ -3,10 +3,10 @@
 import type { Point, Shape } from '@borrowdale/core';
 import { cos, sin } from '@borrowdale/core/math';
 import type { TextAnchor, TextBaseline } from '@borrowdale/text';
+import { TURN_ROUNDING } from './check-axis.js';
 import { coordinate } from './curves.js';
 import type { Rect } from './frame.js';
 import type { Scale } from './scale.js';
-import { TURN_ROUNDING } from './validate.js';
 
 /** Degrees to radians. */
 export const RADIANS = Math.PI / 180;

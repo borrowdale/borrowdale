@@ -1,6 +1,7 @@
 import type { Point, Shape, SketchStyle } from '@borrowdale/core';
 import { cos, sin } from '@borrowdale/core/math';
 import type { TextAnchor, TextBaseline } from '@borrowdale/text';
+import type { CheckedAxis, CheckedLinearAxis } from './check-axis.js';
 import { areaPath, linePath } from './curves.js';
 import type { Drawing, Extent } from './drawing.js';
 import { assertRoom, BAND_PADDING, GAP, TICK, type Rect } from './frame.js';
@@ -9,13 +10,7 @@ import { GRID, GRID_WIDTH, hatched, INK, LINE_WIDTH, type Paint } from './palett
 import { stackGroup, stackSpans, type Span } from './stack.js';
 import { bandScale, formatValue, linearScale, place, type BandScale, type PlacedScale, type Scale } from './scale.js';
 import type { ChartNode, Curve } from './types.js';
-import {
-  isStacking,
-  type CheckedAxis,
-  type CheckedCartesianChart,
-  type CheckedLinearAxis,
-  type SeriesOf,
-} from './validate.js';
+import { isStacking, type CheckedCartesianChart, type SeriesOf } from './validate.js';
 
 type CartesianSeries = SeriesOf<'cartesian'>;
 type MarkType = CartesianSeries['type'];

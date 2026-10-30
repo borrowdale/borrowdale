@@ -191,3 +191,14 @@ export function probe(path: string, check: () => unknown): void {
     fail(path, `is not valid: ${message.length > MAX_MESSAGE ? short : message}`);
   }
 }
+
+/** Throws at the first name that repeats one before it. */
+export function unique(names: readonly string[], pathOf: (index: number) => string): void {
+  const seen = new Set<string>();
+  names.forEach((name, i) => {
+    if (seen.has(name)) {
+      fail(pathOf(i), `repeats ${show(name)}`);
+    }
+    seen.add(name);
+  });
+}

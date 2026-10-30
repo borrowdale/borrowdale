@@ -1,5 +1,5 @@
+import type { CheckedFormat, CheckedLinearAxis } from './check-axis.js';
 import { fail, MAX_DECIMALS } from './read.js';
-import type { CheckedFormat, CheckedLinearAxis } from './validate.js';
 
 // Powers of ten as literals, which are correctly rounded, rather than `10 ** n` or `Math.pow`, which
 // may differ in the last bit between JavaScript engines. Index i holds 10^(i - 20).
