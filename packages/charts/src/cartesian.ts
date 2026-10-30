@@ -89,22 +89,23 @@ export function layoutCartesian(drawing: Drawing, chart: CheckedCartesianChart, 
   };
 
   const line = drawing.lineHeight();
-  // Points and bubbles are centred on their values, so they reach past them. An end of a linear axis
-  // that is not fixed is widened by that much, keeping its ticks; at a fixed end, the plot keeps
-  // that much room from the edges of the chart, so a mark there stays on the chart.
+  // Points and bubbles are centred on their values, so they reach past them: each end of x and y
+  // keeps that much room.
   const reach = Math.max(
     0,
     ...series.map((entry) => markOf(entry).reach(Math.min(rect.right - rect.left, rect.bottom - rect.top))),
   );
-  const fixed = (key: 'x' | 'y', end: 'min' | 'max'): number =>
-    linear[key]?.[end] === undefined ? 0 : reach;
-  const widened = (key: 'x' | 'y', end: 'min' | 'max'): number =>
-    linear[key] && linear[key][end] === undefined ? reach : 0;
+  const room: Record<keyof Rect, EndRoom> = {
+    left: endRoom(linear.x, 'min', reach),
+    right: endRoom(linear.x, 'max', reach),
+    bottom: endRoom(linear.y, 'min', reach),
+    top: endRoom(linear.y, 'max', reach),
+  };
   // The plot is what is left once the axes have their room: below it the x axis' labels and title,
   // above and below its ends the y axes' end labels, and beside it the y axes' labels and titles.
   const fitPlot = (reserve: Reserve) => {
-    const top = rect.top + Math.max(reserve.up, fixed('y', 'max'));
-    const bottom = rect.bottom - Math.max(reserve.bottom, reserve.down, fixed('y', 'min'));
+    const top = rect.top + Math.max(reserve.up, room.top.outside);
+    const bottom = rect.bottom - Math.max(reserve.bottom, reserve.down, room.bottom.outside);
     assertRoom({ left: rect.left, top, right: rect.right, bottom }, chart.width, chart.height);
     const yScale = linear.y && linearScale(linear.y, extentOf('y'), bottom - top);
     const y2Scale = y2 && linearScale(y2, extentOf('y2'), bottom - top);
@@ -115,21 +116,20 @@ export function layoutCartesian(drawing: Drawing, chart: CheckedCartesianChart, 
     const xScale = linear.x && linearScale(linear.x, extentOf('x'), plotRight - plotLeft);
     const below = guide('bottom', 'x', x, xScale, drawing, line);
     // The first and last x labels reach past the ends of the axis.
-    plotLeft = Math.max(plotLeft, rect.left + below.ends.left, rect.left + fixed('x', 'min'));
-    plotRight = Math.min(plotRight, rect.right - below.ends.right, rect.right - fixed('x', 'max'));
+    plotLeft = Math.max(plotLeft, rect.left + below.ends.left, rect.left + room.left.outside);
+    plotRight = Math.min(plotRight, rect.right - below.ends.right, rect.right - room.right.outside);
     // The band axis, if there is one, is x below the plot or y beside it.
     const plot = fitBandEnds({ left: plotLeft, top, right: plotRight, bottom }, band === x ? below : left, rect, chart);
-    assertRoom(
-      {
-        left: plot.left + widened('x', 'min'),
-        top: plot.top + widened('y', 'max'),
-        right: plot.right - widened('x', 'max'),
-        bottom: plot.bottom - widened('y', 'min'),
-      },
-      chart.width,
-      chart.height,
-    );
-    return { plot, scales: { x: xScale, y: yScale, y2: y2Scale }, guides: [below, left, ...(right ? [right] : [])] };
+    // Where the values of x and y are placed: the plot, less the room kept inside it.
+    const data: Rect = {
+      left: plot.left + room.left.inside,
+      top: plot.top + room.top.inside,
+      right: plot.right - room.right.inside,
+      bottom: plot.bottom - room.bottom.inside,
+    };
+    assertRoom(data, chart.width, chart.height);
+    const guides = [below, left, ...(right ? [right] : [])];
+    return { plot, data, scales: { x: xScale, y: yScale, y2: y2Scale }, guides };
   };
   // A linear axis' labels are its ticks', and those depend on the plot's size. So room is reserved
   // for ticks over the whole chart first, then again, once, for the plot's own ticks should they
@@ -148,12 +148,12 @@ export function layoutCartesian(drawing: Drawing, chart: CheckedCartesianChart, 
       down: Math.max(first.down, needed.down),
     });
   }
-  const { plot, guides } = fitted;
+  const { plot, data, guides } = fitted;
   const [xScale, yScale, y2Scale] = [fitted.scales.x, fitted.scales.y, fitted.scales.y2];
 
   const scales: Record<AxisKey, PlacedScale | undefined> = {
-    x: xScale && place(xScale, [plot.left + widened('x', 'min'), plot.right - widened('x', 'max')]),
-    y: yScale && place(yScale, [plot.bottom - widened('y', 'min'), plot.top + widened('y', 'max')]),
+    x: xScale && place(xScale, [data.left, data.right]),
+    y: yScale && place(yScale, [data.bottom, data.top]),
     y2: y2Scale && place(y2Scale, [plot.bottom, plot.top]),
   };
   const across: [number, number] = horizontal ? [plot.top, plot.bottom] : [plot.left, plot.right];
@@ -188,6 +188,24 @@ export function layoutCartesian(drawing: Drawing, chart: CheckedCartesianChart, 
   for (const entry of guides) {
     drawGuide(drawing, plot, entry, scales[entry.key], bands, line);
   }
+}
+
+/** Room kept at one end of an axis, outside the plot or inside it. */
+interface EndRoom {
+  outside: number;
+  inside: number;
+}
+
+/**
+ * The room marks reaching `reach` past their values need at an end of a linear axis. A free end is
+ * widened, inside the plot, keeping its ticks; at an end fixed with `min` or `max` the plot keeps the
+ * room outside it instead, from the edge of the chart, so a mark there stays on the chart.
+ */
+function endRoom(axis: CheckedLinearAxis | undefined, end: 'min' | 'max', reach: number): EndRoom {
+  if (axis === undefined) {
+    return { outside: 0, inside: 0 };
+  }
+  return axis[end] === undefined ? { outside: 0, inside: reach } : { outside: reach, inside: 0 };
 }
 
 /** A series with everything resolved about where it is drawn, once, before it is drawn. */
