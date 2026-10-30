@@ -66,7 +66,7 @@ function nodeToSvg(node: ChartNode, resources: SvgResources): string {
 export function appendChart(parent: Element, layout: ChartLayout, options: ChartRenderOptions = {}): SVGSVGElement {
   const images = resolveImages(layout.nodes, options);
   const document = parent.ownerDocument;
-  const resources = svgResources(layout.nodes, images, options, document);
+  const resources = svgResources(layout.nodes, images, options, parent);
   const svg = document.createElementNS(SVG_NS, 'svg');
   svg.setAttribute('width', String(layout.width));
   svg.setAttribute('height', String(layout.height));

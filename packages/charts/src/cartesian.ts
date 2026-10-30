@@ -533,18 +533,16 @@ function drawLine(
   );
   const runs = runsOf(points);
   const style = { stroke: paint.color, strokeWidth: LINE_WIDTH, ...(entry.dash ? { strokeLineDash: entry.dash } : {}) };
-  drawing.mark(
-    entry.name,
-    runs.map((run, r) => lineOrDot(drawing, frame, run, entry.curve, style, [entry.name, 'line', r], entry.style)),
-  );
+  const nodes = runs.map((run, r) => lineOrDot(drawing, frame, run, entry.curve, style, [entry.name, 'line', r], entry.style));
   points.forEach((point, i) => {
     if (!point) return;
     const [x, y] = frame.point(point);
-    if (entry.symbol) drawing.push(markerNode(drawing, entry.symbol, [x, y], POINT_SIZE,
+    if (entry.symbol) nodes.push(markerNode(drawing, entry.symbol, [x, y], POINT_SIZE,
       solid(paint.color), [entry.name, 'point', i], entry.style));
-    if (entry.dataLabels) drawing.push(drawing.label(formatAxisValue(entry.data[i]!, placed.axis), x, y,
+    if (entry.dataLabels) nodes.push(drawing.label(formatAxisValue(entry.data[i]!, placed.axis), x, y,
       frame.plot, `${entry.path}.dataLabels`));
   });
+  drawing.mark(entry.name, nodes);
 }
 
 function drawArea(

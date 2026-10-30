@@ -1,7 +1,6 @@
 import { presentationExamples, type ChartExample } from './chart-examples';
 import coreCases from '../../../packages/core/test/golden/corpus.json';
 import chartCases from '../../../packages/charts/test/golden/corpus.json';
-import cartesianCases from '../../examples/cartesian-cases.json';
 import textCases from '../../../packages/text/test/golden/corpus.json';
 import fillCases from '../../../packages/fills/test/golden/corpus.json';
 import type { Shape, SketchOptions } from '@borrowdale/core';
@@ -31,7 +30,7 @@ const shapes: Example[] = coreCases.map((e) => ({
   tag: e.shape.kind,
   render: () => shapeSvg(e.shape as Shape, e.options as SketchOptions, 300, 180, true),
 }));
-export const chartExamples = [...chartCases, ...cartesianCases, ...presentationExamples] as ChartExample[];
+export const chartExamples = [...chartCases, ...presentationExamples] as ChartExample[];
 const charts: Example[] = chartExamples.map((e) => ({
   name: e.name,
   category: 'charts',

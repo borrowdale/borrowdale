@@ -149,21 +149,22 @@ export interface BandScale {
   step: number;
 }
 
-/** Bands across the range: equal by default, or proportional to weights, with proportional gaps. */
+/** Bands across the range: equal by default, or proportional to weights, with equal inner and outer gaps. */
 export function bandScale(count: number, [from, to]: [number, number], padding: number, weights?: readonly number[]): BandScale {
-  if (weights) {
+  if (weights && !weights.every((weight) => weight === weights[0])) {
     const sum = weights.reduce((total, value) => total + value, 0);
     const unit = (to - from) / (sum * (1 + padding / count));
-    const offset = from + unit * sum / count * padding;
+    const gap = unit * sum / count * padding;
+    const offset = from + gap;
     let position = offset;
     const starts = weights.map((weight) => {
       const start = position;
-      position += weight * unit;
+      position += weight * unit * (1 - padding) + gap;
       return start;
     });
-    const step = Math.min(...weights) * unit;
+    const bandwidth = Math.min(...weights) * unit * (1 - padding);
     return { start: (i) => starts[i]!, width: (i) => weights[i]! * unit * (1 - padding),
-      bandwidth: step * (1 - padding), step };
+      bandwidth, step: bandwidth + gap };
   }
   const step = (to - from) / (count + padding);
   const offset = from + step * padding;

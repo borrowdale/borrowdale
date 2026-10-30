@@ -9,8 +9,7 @@ export function markerNode(
   style: SketchStyle, key: SeedKey, own: SketchStyle,
 ): ChartNode {
   if (typeof marker !== 'string') {
-    return { kind: 'image', asset: marker.image, x: center[0] - size / 2,
-      y: center[1] - size / 2, width: size, height: size };
+    return drawing.image(marker.image, center[0] - size / 2, center[1] - size / 2, size, size);
   }
   return marker === 'tick'
     ? drawing.outline(symbolShape(marker, center, size), style, key, own)

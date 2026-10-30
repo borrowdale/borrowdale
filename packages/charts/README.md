@@ -253,6 +253,9 @@ categories. Straight and stepped lines cost the same for each point however they
 1,000 points that swing the full height at every point fit, as do 66 such `step` lines. A
 `monotone` line costs more the more it turns: some 18 such lines fit, and one that swings the full
 height fits only about 160 points.
+Data labels and image markers draw no strokes, so the budget does not count them: a chart holds at
+most 10,000 of them together, about 3 MB of SVG, and more throws
+`Drawing too complex (more than 10000 data labels and images)`.
 Hachure fills are what costs most: about 7 KB of SVG for a 40 × 300 bar, against 0.6 KB with
 `style: { fillStyle: 'solid' }`.
 
@@ -407,3 +410,7 @@ sequentially rather than independently from zero.
 
 MIT. The tick steps are adapted from ISC-licensed code of d3-array; see
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+Weighted categories retain proportional bar widths with equal inner and outer gaps. Equal weights produce the same bands as omitted weights. Categorical line markers and value labels share their series tooltip group.
+
+Automatic `appendChart` resource prefixes are reserved across documents within the loaded module, including detached and template-created charts. Allocation checks the destination root (including shadow roots) and owner document, and skips explicit prefixes already used by this module. Explicit prefixes remain caller-managed: use unique values when combining independently loaded library copies, exported strings, or unrelated SVG content after moving charts.

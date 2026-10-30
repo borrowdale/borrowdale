@@ -1,5 +1,5 @@
 import { afterEach, describe, it, expect } from 'vitest';
-import { examples, categories, gallery, galleryState } from '../src/gallery';
+import { examples, categories, gallery, galleryState, chartExamples } from '../src/gallery';
 import { editorCode } from '../src/editor';
 import { pageHtml } from '../src/pages';
 import { executeExample } from '../src/playground-runtime';
@@ -43,6 +43,7 @@ describe('gallery coverage and actual rendering', () => {
     for (const entry of cartesianCases) {
       const matches = examples.filter((example) => example.category === 'charts' && example.name === entry.name);
       expect(matches).toHaveLength(1);
+      expect(chartExamples.find((example) => example.name === entry.name)!.spec).toEqual(entry.spec);
       expect(executeExample(editorCode(matches[0]!))).toContain('<svg');
     }
   });

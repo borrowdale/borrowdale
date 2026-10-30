@@ -1,5 +1,5 @@
 import { checkAnnotations, type CheckedAnnotation } from './annotations.js';
-import { sketch, type Seed, type SketchStyle } from '@borrowdale/core';
+import { sketch, assertDrawable, type Seed, type SketchStyle } from '@borrowdale/core';
 import { excalifont, type Font } from '@borrowdale/text';
 import {
   anyValue,
@@ -769,7 +769,7 @@ function checkStyle(path: string, raw: unknown): SketchStyle {
 }
 
 function checkDash(path: string, dash: unknown): number[] {
-  probe(path, () => sketch({ kind: 'line', x1: 0, y1: 0, x2: 1, y2: 1 }, { strokeLineDash: dash as number[] }));
+  probe(path, () => assertDrawable({ kind: 'line', x1: 0, y1: 0, x2: 1, y2: 1 }, { strokeLineDash: dash as number[] }));
   // Copied by index, as core's check read it.
   const lengths = dash as number[];
   return Array.from({ length: lengths.length }, (_, i) => lengths[i]!);

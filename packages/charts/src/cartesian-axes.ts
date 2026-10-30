@@ -237,12 +237,9 @@ export function drawGuide(
       }
     });
   } else {
-    const nth = every(bands!.step);
-    labels.forEach((name, i) => {
-      if (i % nth === 0) {
-        drawing.push(drawing.text(name, label(bands!.start(i) + bands!.width(i) / 2)));
-      }
-    });
+    for (const i of shownBands(bands!, labels.length, room, axis.weights !== undefined)) {
+      drawing.push(drawing.text(labels[i]!, label(bands!.start(i) + bands!.width(i) / 2)));
+    }
   }
   if (axis.title !== undefined) {
     // Along the side it is on, as long as the plot.
@@ -276,8 +273,7 @@ export function fitBandEnds(plot: Rect, guide: Guide, rect: Rect, chart: { width
   for (let refit = 0; refit <= MAX_REFITS; refit++) {
     assertRoom(fitted, chart.width, chart.height);
     const bands = bandScale(labels.length, [fitted[start], fitted[end]], BAND_PADDING, axis.weights);
-    const every = labelEvery(room, bands.step);
-    const last = Math.floor((labels.length - 1) / every) * every;
+    const last = shownBands(bands, labels.length, room, axis.weights !== undefined).at(-1)!;
     const center = (i: number): number => bands.start(i) + bands.width(i) / 2;
     const before = rect[start] - (center(0) - halves[0]!);
     const after = center(last) + halves[last]! - rect[end];
@@ -287,6 +283,24 @@ export function fitBandEnds(plot: Rect, guide: Guide, rect: Rect, chart: { width
     fitted = { ...fitted, [start]: fitted[start] + Math.max(0, before), [end]: fitted[end] - Math.max(0, after) };
   }
   return fail('', `a ${chart.width} × ${chart.height} chart leaves no room for the end labels of ${axis.path}`);
+}
+
+/**
+ * The bands whose labels are drawn: from the first, each centred at least `room` past the last one
+ * kept. Equal bands keep every nth; weighted bands are measured one by one.
+ */
+function shownBands(bands: BandScale, count: number, room: number, weighted: boolean): number[] {
+  const indices = [...Array(count).keys()];
+  if (!weighted) {
+    const every = labelEvery(room, bands.step);
+    return indices.filter((i) => i % every === 0);
+  }
+  const center = (i: number): number => bands.start(i) + bands.width(i) / 2;
+  const shown = [0];
+  for (const i of indices) {
+    if (center(i) - center(shown.at(-1)!) >= room) shown.push(i);
+  }
+  return shown;
 }
 
 /** How many labels `spacing` apart to step over, to keep one that does not overlap the last. */
