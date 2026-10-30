@@ -118,6 +118,15 @@ Numbers are never formatted with the locale data of the JavaScript engine, which
 engines; set `thousands` and `decimal` to write them for another language. Bars and areas always
 stand on zero; range areas, lines and points do not have to.
 
+Points and bubbles are centred on their values, so a chart with them widens each end of `x` and `y`
+by the radius of its largest mark, keeping the same ticks, and a point at the end of the data stays
+on the plot. An end fixed with `min` or `max` is not widened: the plot keeps that room outside it
+instead, so a mark on the fixed end may cross the axis line but stays on the chart.
+
+A band axis' labels are centred on their bands. Where the first or last one shown would reach past
+the edge of the chart, the plot is narrowed until it does not; a lone label wider than the chart
+throws an error.
+
 `labelAngle` (−90 to 90 degrees, clockwise) slants the tick labels of an `x`, `y` or `y2` axis; the
 axis makes room for the slanted labels, and keeps more of them than it could flat. At −45 the x
 labels read up to the right and end at their ticks. The axis reserves room past each of its ends for
@@ -154,15 +163,21 @@ rings as fit outside its hub; a lone gauge writes its value under the centre.
 | Option | Default | |
 |---|---|---|
 | `width`, `height` | required | 1 to 10,000 user units |
-| `title` | none | drawn at the top, and the drawing's accessible name |
+| `title` | none | drawn at the top, and the drawing's accessible name; cut short to fit, as below |
 | `legend` | `top` with two or more entries, else `none` | `top`, `bottom`, `right` or `none`; `right` takes one column, which must fit the height |
 | `seed` | 1 | a number, or a string of at most 100 characters; varies every stroke |
 | `fontSize` | 12 | 1 to 200 units, for every label; the title is 4 units larger |
-| `style` | none | core style options for every shape, under each series' own `style`; `stroke` and `fill` are colours, as for `color`, and `strokeWidth` and `fillWeight` from 0 to 100; no `seed`: each mark gets its own from the chart `seed` |
+| `style` | none | core style options for every shape, under each series' own `style`, except that lines, the edges of areas, gridlines, axis lines, ticks and a gauge's track are never filled; `stroke` and `fill` are colours, as for `color`, and `strokeWidth` and `fillWeight` from 0 to 100; no `seed`: each mark gets its own from the chart `seed` |
 
 Styles apply in layers: the palette colour, a series' `color` and a line's `dash` first, the
 chart's `style` over them, and a series' own `style` over all of these. So
 `style: { stroke: 'black' }` on the chart outlines every series in black.
+
+A chart title, an axis title or a legend name too long for its room is cut short with "…" between
+whole characters (see `fitText` in `@borrowdale/text`): the chart title to the chart's width, an
+axis title to the length of the plot, a legend name to the width of a legend row, or half the
+chart's width for a legend on the right. Tooltips and the drawing's accessible name keep the whole text. Where not even
+"…" fits, it is an error naming the text's place in the spec.
 
 The font is not part of the spec, since a spec may come from anyone: pass a `@borrowdale/text` font
 as `layoutChart(spec, { font })`. It defaults to Excalifont.
@@ -213,6 +228,16 @@ Unknown keys are errors too, so a misspelled option never goes unnoticed. Errors
 `@borrowdale/core` or `@borrowdale/text` raise for a series' `style`, a `dash` or a label are
 passed on with the same prefix.
 
+Each of these is an `InvalidChartError`, exported by the package, with the place as `path`
+(`series[2].data[5]`) and the rest of the message as `problem`. A chart too small for its parts has
+no single place in the spec, so its `path` is `''`:
+
+```
+Invalid chart: a 20 × 20 chart leaves no room for the plot after its title, legend and labels
+```
+
+The drawing budget below throws a plain `Error`.
+
 A chart holds at most 100 series, 1,000 categories and 100,000 data points in all, and values
 within ±10¹⁵. A pie holds at most 1,000 slices, and a chart at most 10 nested pies. A gauge's dial
 holds as many bar rings as fit outside its hub. Titles and stack names hold at most 1,000
@@ -220,9 +245,10 @@ characters, and names, categories and colours at most 100. All of a chart's stro
 budget of 400,000 units of drawing work, about a second at most, and a chart that needs more throws
 `Drawing too complex (more than 400000 operations)`. On a 600 × 400 chart that is about 5,000
 scatter points, or about 550 full-height hachured bars; solid bars stay within it up to the 1,000
-categories. A line costs more the more it turns: some 25 lines of 1,000 smooth points fit, but one
-line that swings the full height at every point fits only about 880 points. A `monotone` line costs
-more: some 18 such lines fit, and one that swings the full height fits only about 160 points.
+categories. Straight and stepped lines cost the same for each point however they turn: 100 lines of
+1,000 points that swing the full height at every point fit, as do 66 such `step` lines. A
+`monotone` line costs more the more it turns: some 18 such lines fit, and one that swings the full
+height fits only about 160 points.
 Hachure fills are what costs most: about 7 KB of SVG for a 40 × 300 bar, against 0.6 KB with
 `style: { fillStyle: 'solid' }`.
 
