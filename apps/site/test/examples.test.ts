@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { examples, categories, chartCode } from '../src/gallery';
+import { examples, categories, gallery, galleryState } from '../src/gallery';
+import { editorCode } from '../src/editor';
+import { executeExample } from '../src/playground-runtime';
 import { worldAt, countryValue, world, climate, quakes, median, dailyCounts } from '../src/data';
 import { dashboardState, worldDashboard, climateDashboard, quakeDashboard } from '../src/dashboards';
 import { chartSpec } from '../src/drawing';
@@ -9,7 +11,7 @@ describe('gallery coverage and actual rendering', () => {
     const output = example.render('svg');
     expect(output).not.toMatch(/NaN|Infinity|undefined/);
     expect(output.length).toBeGreaterThan(20);
-    expect(example.code()).toContain('import ');
+    expect(editorCode(example)).toContain('import ');
   });
   it('covers every supported drawing, chart and tile family', () => {
     expect(
@@ -43,11 +45,6 @@ describe('gallery coverage and actual rendering', () => {
       'lines',
     ]);
     expect(categories.every((c) => examples.some((x) => x.category === c))).toBe(true);
-  });
-  it('Canvas snippets load fonts and size the canvas before drawing', () => {
-    const code = chartCode(chartSpec('Sample', ['A'], [{ type: 'bar', name: 'B', data: [1] }]), 'canvas');
-    expect(code.indexOf('await loadFont')).toBeLessThan(code.indexOf('drawChart(canvas'));
-    expect(code).toContain('canvas.width = spec.width');
   });
 });
 describe('data integrity and derived views', () => {
@@ -91,9 +88,6 @@ describe('data integrity and derived views', () => {
   );
 });
 
-import { editorCode } from '../src/editor';
-import { executeExample } from '../src/playground-runtime';
-import { gallery, galleryState } from '../src/gallery';
 describe('interactive examples', () => {
   it.each(examples)('$category: $name has executable playground code', (example) => {
     const output = executeExample(editorCode(example));

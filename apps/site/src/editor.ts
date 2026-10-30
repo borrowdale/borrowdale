@@ -3,7 +3,7 @@ import type { ChartSpec } from '@borrowdale/charts';
 import { fontFaceCss } from '@borrowdale/text';
 import { excalifontFiles } from '@borrowdale/text/excalifont-files';
 import style from './style.css?inline';
-import { examples, type Example } from './gallery';
+import { examples, recipes, type Example } from './gallery';
 import chartCases from '../../../packages/charts/test/golden/corpus.json';
 import coreCases from '../../../packages/core/test/golden/corpus.json';
 import textCases from '../../../packages/text/test/golden/corpus.json';
@@ -53,23 +53,8 @@ export function editorCode(e: Example) {
   return componentCode(e);
 }
 function componentCode(e: Example) {
-  const templates: Record<string, string> = {
-    button: '<button class="sketch-button">${frame(260,64,"#f0c557")}<span>Make something ↗</span></button>',
-    checkbox:
-      '<fieldset class="recipe-choices"><legend>Layers</legend><label><input type="checkbox" checked> Show labels</label><label><input type="checkbox"> Show grid</label></fieldset>',
-    radio:
-      '<fieldset class="recipe-segments"><legend>Range</legend><label><input type="radio" name="range" checked><span>Week</span></label><label><input type="radio" name="range"><span>Month</span></label><label><input type="radio" name="range"><span>Year</span></label></fieldset>',
-    card: '<div class="recipe-metric">${frame(260,145,"#f5e9c4")}<div><small>Sketches made</small><strong>12,480</strong><span>↑ 18% this month · sample data</span></div></div>',
-    badge:
-      '<div class="recipe-badges"><span>${frame(120,44,"#dfebd9")}<b>Ready</b></span><span>${frame(120,44,"#f5df9c")}<b>In progress</b></span><span>${frame(120,44,"#e3e5ec")}<b>Draft</b></span></div>',
-    progress:
-      '<div class="recipe-progress"><label>Collection complete <span>68%</span></label><progress max="100" value="68">68%</progress></div>',
-    disclosure:
-      '<details class="recipe-note"><summary>A small observation</summary><p>Data can feel human without losing its precision.</p></details>',
-    input:
-      '<label class="recipe-input">Name your collection<input placeholder="A new perspective…" maxlength="80"></label>',
-  };
-  return `// UI recipe: native HTML + BorrowdaleJS drawing primitives.\n// Preview includes the site stylesheet and Excalifont.\nimport { sketch, toSvgPaths } from '@borrowdale/core';\n\nfunction frame(width, height, fill) {\n  const drawing = sketch(\n    { kind: 'rectangle', x: 3, y: 3, width: width-6, height: height-6 },\n    { seed: ${seed}, fill, fillStyle: 'solid', roughness: 0.8 }\n  );\n  return \`<svg viewBox="0 0 \${width} \${height}" aria-hidden="true">\${toSvgPaths(drawing)}</svg>\`;\n}\n\nrender(\`${templates[e.tag]}\`);`;
+  const template = recipes.find((r) => r.name === e.name)!.template;
+  return `// UI recipe: native HTML + BorrowdaleJS drawing primitives.\n// Preview includes the site stylesheet and Excalifont.\nimport { sketch, toSvgPaths } from '@borrowdale/core';\n\nfunction frame(width, height, fill) {\n  const drawing = sketch(\n    { kind: 'rectangle', x: 3, y: 3, width: width-6, height: height-6 },\n    { seed: ${seed}, fill, fillStyle: 'solid', roughness: 0.8 }\n  );\n  return \`<svg viewBox="0 0 \${width} \${height}" aria-hidden="true">\${toSvgPaths(drawing)}</svg>\`;\n}\n\nrender(\`${template}\`);`;
 }
 export function editorPage(path = location.pathname) {
   const e = findExample(path);

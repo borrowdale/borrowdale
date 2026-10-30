@@ -14,24 +14,19 @@ export type Example = {
   tag: string;
   families?: string[];
   render: (renderer: 'svg' | 'canvas') => string;
-  code: () => string;
 };
 const json = (x: unknown) => JSON.stringify(x, null, 2);
 export function codeBlock(code: string) {
   return `<div class="code-block"><div class="code-bar"><span>JavaScript · workspace imports</span><button class="copy-code" type="button">Copy code</button></div><pre tabindex="0" aria-label="Code"><code>${escape(code)}</code></pre></div>`;
 }
-export function chartCode(spec: ChartSpec, renderer: 'svg' | 'canvas' = 'svg') {
-  return renderer === 'svg'
-    ? `import { layoutChart, toSvgChart } from '@borrowdale/charts';\nimport { excalifontFiles } from '@borrowdale/text/excalifont-files';\n\nconst spec = ${json({ ...spec, seed })};\nconst svg = toSvgChart(layoutChart(spec), { fontFiles: excalifontFiles });\ndocument.querySelector('#chart').innerHTML = svg;`
-    : `import { layoutChart, drawChart } from '@borrowdale/charts';\nimport { loadFont } from '@borrowdale/text';\nimport { excalifontFiles } from '@borrowdale/text/excalifont-files';\n\nconst spec = ${json({ ...spec, seed })};\nawait loadFont(document.fonts, excalifontFiles);\nconst canvas = document.querySelector('canvas');\ncanvas.width = spec.width;\ncanvas.height = spec.height;\ndrawChart(canvas.getContext('2d'), layoutChart(spec));`;
+export function chartCode(spec: ChartSpec) {
+  return `import { layoutChart, toSvgChart } from '@borrowdale/charts';\nimport { excalifontFiles } from '@borrowdale/text/excalifont-files';\n\nconst spec = ${json({ ...spec, seed })};\nconst svg = toSvgChart(layoutChart(spec), { fontFiles: excalifontFiles });\ndocument.querySelector('#chart').innerHTML = svg;`;
 }
 const shapes: Example[] = coreCases.map((e) => ({
   name: e.name,
   category: 'shapes',
   tag: e.shape.kind,
   render: () => shapeSvg(e.shape as Shape, e.options as SketchOptions, 300, 180, true),
-  code: () =>
-    `import { sketch, toSvgDocument, toSvgPaths } from '@borrowdale/core';\n\nconst shape = ${json(e.shape)};\nconst options = ${json({ seed, ...e.options })};\nconst svg = toSvgDocument({ width: 300, height: 240,\n  body: [toSvgPaths(sketch(shape, options))] });\n// Set a suitable viewBox when drawing beyond this viewport.\ndocument.querySelector('#drawing').innerHTML = svg;`,
 }));
 const charts: Example[] = chartCases.map((e) => ({
   name: e.name,
@@ -39,7 +34,6 @@ const charts: Example[] = chartCases.map((e) => ({
   tag: [...new Set(e.spec.series.map((s) => s.type))].join(' + '),
   families: [...new Set(e.spec.series.map((s) => s.type))],
   render: (renderer) => chart(e.spec as ChartSpec, renderer),
-  code: () => chartCode(e.spec as ChartSpec),
 }));
 const texts: Example[] = textCases.map((e) => ({
   name: e.name,
@@ -49,74 +43,34 @@ const texts: Example[] = textCases.map((e) => ({
     const t = textSvg(e.text, e.options as LayoutOptions);
     return `${t.svg}${t.missing.length ? `<span class="fallback-note">Fallback glyphs: ${escape(t.missing.join(' '))}</span>` : ''}`;
   },
-  code: () =>
-    `import { layoutText, textBounds, toSvgText, fontFaceCss } from '@borrowdale/text';\nimport { excalifontFiles } from '@borrowdale/text/excalifont-files';\n\nconst label = layoutText(${json(e.text)}, ${json(e.options)});\nconst b = textBounds(label);\nconst style = document.createElement('style');\nstyle.textContent = fontFaceCss(excalifontFiles, [label.text]);\ndocument.head.append(style);\ndocument.querySelector('#label').innerHTML =\n  \`<svg viewBox="\${b.x-12} \${b.y-12} \${b.width+24} \${b.height+24}">\${toSvgText(label)}</svg>\`;\nconsole.log(label.missing); // Check uncovered glyphs.`,
 }));
 const patterns: Example[] = fillCases.map((e) => ({
   name: e.name,
   category: 'patterns',
   tag: e.options.kind,
   render: () => patternSvg(e.options as PatternOptions),
-  code: () =>
-    `import { pattern } from '@borrowdale/fills';\n\nconst tile = pattern(${json(e.options)});\ndocument.querySelector('#pattern').innerHTML =\n  \`<svg viewBox="0 0 300 160"><defs>\${tile.def}</defs>\n  <rect width="300" height="160" fill="\${tile.fill}"/></svg>\`;`,
 }));
-const recipes = [
-  {
-    name: 'Primary action',
-    tag: 'button',
-    html: () =>
-      `<button class="sketch-button recipe-action">${scribble()}<span>Make something ↗</span></button>`,
-  },
-  {
-    name: 'Choice controls',
-    tag: 'checkbox',
-    html: () =>
-      `<fieldset class="recipe-choices"><legend>Layers</legend><label><input type="checkbox" checked> Show labels</label><label><input type="checkbox"> Show grid</label></fieldset>`,
-  },
-  {
-    name: 'Segmented control',
-    tag: 'radio',
-    html: () =>
-      `<fieldset class="recipe-segments"><legend>Range</legend>${['Week', 'Month', 'Year'].map((x, i) => `<label><input type="radio" name="range" ${i === 0 ? 'checked' : ''}><span>${x}</span></label>`).join('')}</fieldset>`,
-  },
-  {
-    name: 'Metric card',
-    tag: 'card',
-    html: () =>
-      `<div class="recipe-metric">${scribble(260, 145, '#f5e9c4')}<div><small>Sketches made</small><strong>12,480</strong><span>↑ 18% this month · sample data</span></div></div>`,
-  },
-  {
-    name: 'Status chips',
-    tag: 'badge',
-    html: () =>
-      `<div class="recipe-badges">${['Ready', 'In progress', 'Draft'].map((x, i) => `<span>${scribble(120, 44, ['#dfebd9', '#f5df9c', '#e3e5ec'][i])}<b>${x}</b></span>`).join('')}</div>`,
-  },
-  {
-    name: 'Progress indicator',
-    tag: 'progress',
-    html: () =>
-      `<div class="recipe-progress"><label>Collection complete <span>68%</span></label><progress max="100" value="68">68%</progress></div>`,
-  },
-  {
-    name: 'Note & disclosure',
-    tag: 'disclosure',
-    html: () =>
-      `<details class="recipe-note"><summary>A small observation</summary><p>Data can feel human without losing its precision.</p></details>`,
-  },
-  {
-    name: 'Form field',
-    tag: 'input',
-    html: () =>
-      `<label class="recipe-input">Name your collection<input placeholder="A new perspective…" maxlength="80"></label>`,
-  },
+// Each UI recipe is written once, with ${frame(width,height,fill)} where a sketched frame goes: the
+// playground shows this markup as code, and the gallery draws the frames into it for its preview.
+export const recipes = [
+  { name: 'Primary action', tag: 'button', template: '<button class="sketch-button">${frame(260,64,"#f0c557")}<span>Make something ↗</span></button>' },
+  { name: 'Choice controls', tag: 'checkbox', template: '<fieldset class="recipe-choices"><legend>Layers</legend><label><input type="checkbox" checked> Show labels</label><label><input type="checkbox"> Show grid</label></fieldset>' },
+  { name: 'Segmented control', tag: 'radio', template: '<fieldset class="recipe-segments"><legend>Range</legend><label><input type="radio" name="range" checked><span>Week</span></label><label><input type="radio" name="range"><span>Month</span></label><label><input type="radio" name="range"><span>Year</span></label></fieldset>' },
+  { name: 'Metric card', tag: 'card', template: '<div class="recipe-metric">${frame(260,145,"#f5e9c4")}<div><small>Sketches made</small><strong>12,480</strong><span>↑ 18% this month · sample data</span></div></div>' },
+  { name: 'Status chips', tag: 'badge', template: '<div class="recipe-badges"><span>${frame(120,44,"#dfebd9")}<b>Ready</b></span><span>${frame(120,44,"#f5df9c")}<b>In progress</b></span><span>${frame(120,44,"#e3e5ec")}<b>Draft</b></span></div>' },
+  { name: 'Progress indicator', tag: 'progress', template: '<div class="recipe-progress"><label>Collection complete <span>68%</span></label><progress max="100" value="68">68%</progress></div>' },
+  { name: 'Note & disclosure', tag: 'disclosure', template: '<details class="recipe-note"><summary>A small observation</summary><p>Data can feel human without losing its precision.</p></details>' },
+  { name: 'Form field', tag: 'input', template: '<label class="recipe-input">Name your collection<input placeholder="A new perspective…" maxlength="80"></label>' },
 ];
+const recipeHtml = (template: string) =>
+  template.replace(/\$\{frame\((\d+),(\d+),"(#[0-9a-f]+)"\)\}/g, (_, width, height, fill) =>
+    scribble(Number(width), Number(height), fill),
+  );
 const components: Example[] = recipes.map((e) => ({
   name: e.name,
   tag: e.tag,
   category: 'components',
-  render: e.html,
-  code: () =>
-    `// A demo UI recipe, not an exported component API.\n// Semantic native HTML provides keyboard and focus behavior.\nimport { sketch, toSvgPaths } from '@borrowdale/core';\n\nconst ink = sketch(\n  { kind: 'rectangle', x: 3, y: 3, width: 254, height: 58 },\n  { fill: '#f0c557', fillStyle: 'solid', roughness: 0.8, seed: ${seed} }\n);\nconst background = \`<svg viewBox="0 0 260 64" aria-hidden="true">\${toSvgPaths(ink)}</svg>\`;\n// This recipe's rendered HTML (style with apps/site/src/style.css):\nconst html = ${json(e.html())};\ndocument.querySelector('#component').innerHTML = html;`,
+  render: () => recipeHtml(e.template),
 }));
 export const examples: Example[] = [...charts, ...shapes, ...texts, ...patterns, ...components];
 export const categories: Category[] = ['charts', 'shapes', 'text', 'patterns', 'components'];
