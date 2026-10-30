@@ -2,6 +2,9 @@ export { layoutChart } from './layout.js';
 export { InvalidChartError } from './read.js';
 export { appendChart, drawChart, toSvgChart, type SvgChartOptions } from './render.js';
 export type {
+  Annotation,
+  ChartCoordinate,
+  ChartPosition,
   AngleBandAxis,
   AngleLinearAxis,
   AreaSeries,
@@ -22,6 +25,9 @@ export type {
   LegendPosition,
   LinearAxis,
   LineSeries,
+  LinearGradient,
+  MarkerSymbol,
+  Marker,
   NumberFormat,
   PieSeries,
   PieSlice,
@@ -34,9 +40,14 @@ export type {
   RadiusBandAxis,
   RadiusLinearAxis,
   RangeAreaSeries,
+  IntervalSeries,
+  XYLineSeries,
+  XYAreaSeries,
   RoseSeries,
   ScatterSeries,
   Series,
   SeriesType,
   Sweep,
 } from './types.js';
+
+export type { ChartImage, ChartRenderOptions } from './images.js';

@@ -135,6 +135,29 @@ describe('appendSketch', () => {
 });
 
 describe('drawSketch', () => {
+  it('overrides enabled paint channels and preserves disabled ones', () => {
+    vi.stubGlobal('Path2D', RecordingPath2D);
+    const fillContext = fakeContext();
+    const gradient = { addColorStop: vi.fn() } as unknown as CanvasGradient;
+    drawSketch(fillContext as unknown as CanvasRenderingContext2D, filled, { fill: gradient, stroke: '#123456' });
+    expect(fillContext.fillStyle).toBe(gradient);
+    expect(fillContext.fill).toHaveBeenCalledTimes(1);
+    expect(fillContext.stroke).not.toHaveBeenCalled();
+    const strokeContext = fakeContext();
+    drawSketch(strokeContext as unknown as CanvasRenderingContext2D, outlined, { stroke: gradient, fill: '#123456' });
+    expect(strokeContext.strokeStyle).toBe(gradient);
+    expect(strokeContext.stroke).toHaveBeenCalledTimes(1);
+    expect(strokeContext.fill).not.toHaveBeenCalled();
+    expect(filled.paths[0]!.fill).toBe('red');
+  });
+
+  it('restores after an overridden fill throws', () => {
+    vi.stubGlobal('Path2D', RecordingPath2D);
+    const context = fakeContext();
+    context.fill.mockImplementation(() => { throw new Error('paint failed'); });
+    expect(() => drawSketch(context as unknown as CanvasRenderingContext2D, filled, { fill: '#123456' })).toThrow('paint failed');
+    expect(context.restore).toHaveBeenCalledTimes(1);
+  });
   it('strokes an outline path and does not fill it', () => {
     vi.stubGlobal('Path2D', RecordingPath2D);
     const context = fakeContext();

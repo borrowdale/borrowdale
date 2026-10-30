@@ -1,3 +1,4 @@
+import { markerNode } from './symbols.js';
 import type { Point, Shape, SketchStyle } from '@borrowdale/core';
 import type { TextAnchor, TextBaseline } from '@borrowdale/text';
 import type { CheckedFormat, CheckedLinearAxis } from './check-axis.js';
@@ -66,6 +67,7 @@ interface Spoke {
 
 interface PolarContext {
   drawing: Drawing;
+  rect: Rect;
   frame: PolarFrame;
   /** Angles, in degrees clockwise from the top. */
   angle: PolarScale;
@@ -284,6 +286,7 @@ export function layoutPolar(drawing: Drawing, chart: CheckedPolarChart, rect: Re
     (entry) => ('stack' in entry ? stackGroup(entry, 'polar') : `#${entry.index}`),
   );
   const context: PolarContext = {
+    rect,
     drawing,
     frame,
     angle,
@@ -545,12 +548,14 @@ function drawPolarPoints(
   entry.data.forEach(([a, r], i) => {
     const [cx, cy] = frame.point(linearOf(angle).at(a), linearOf(radius).at(r));
     drawing.mark(`${entry.name}: ${formatValue(a, formats.angle)}, ${formatValue(r, formats.radius)}`, [
-      drawing.shape(
-        { kind: 'circle', cx, cy, diameter: POINT_SIZE },
+      markerNode(
+        drawing, entry.symbol, [cx, cy], POINT_SIZE,
         solid(paint.color),
         [entry.name, i],
         entry.style,
       ),
+      ...(entry.dataLabels ? [drawing.label(formatValue(r, formats.radius), cx, cy,
+        context.rect, `${entry.path}.dataLabels`)] : []),
     ]);
   });
 }

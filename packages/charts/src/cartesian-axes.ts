@@ -240,7 +240,7 @@ export function drawGuide(
     const nth = every(bands!.step);
     labels.forEach((name, i) => {
       if (i % nth === 0) {
-        drawing.push(drawing.text(name, label(bands!.start(i) + bands!.bandwidth / 2)));
+        drawing.push(drawing.text(name, label(bands!.start(i) + bands!.width(i) / 2)));
       }
     });
   }
@@ -275,10 +275,10 @@ export function fitBandEnds(plot: Rect, guide: Guide, rect: Rect, chart: { width
   let fitted = plot;
   for (let refit = 0; refit <= MAX_REFITS; refit++) {
     assertRoom(fitted, chart.width, chart.height);
-    const bands = bandScale(labels.length, [fitted[start], fitted[end]], BAND_PADDING);
+    const bands = bandScale(labels.length, [fitted[start], fitted[end]], BAND_PADDING, axis.weights);
     const every = labelEvery(room, bands.step);
     const last = Math.floor((labels.length - 1) / every) * every;
-    const center = (i: number): number => bands.start(i) + bands.bandwidth / 2;
+    const center = (i: number): number => bands.start(i) + bands.width(i) / 2;
     const before = rect[start] - (center(0) - halves[0]!);
     const after = center(last) + halves[last]! - rect[end];
     if (before <= LABEL_ROUNDING && after <= LABEL_ROUNDING) {

@@ -4,6 +4,7 @@ import { INK } from './palette.js';
 import { fail } from './read.js';
 import type { ChartNode } from './types.js';
 import type { CheckedChart } from './validate.js';
+import type { Rect } from './frame.js';
 
 // Bounds the stroke engine's work for the whole chart: twice what one `sketch` call may do. Measured,
 // a work unit takes 0.4 to 2.3 µs depending on the fill, so this stays under about a second; 200
@@ -115,6 +116,19 @@ export class Drawing {
       this.#missing.add(missing);
     }
     return { kind: 'text', text: layout, fill: INK };
+  }
+
+  /** A centred data label, fitted and kept inside the supplied plotting rectangle. */
+  label(text: string, x: number, y: number, rect: Rect, path: string): ChartNode {
+    const fitted = this.fit(text, rect.right - rect.left, path);
+    const options = { anchor: 'middle', baseline: 'middle' } as const;
+    const extent = this.extent(fitted, options);
+    if (extent.up + extent.down > rect.bottom - rect.top) fail(path, 'has no vertical room for its label');
+    return this.text(fitted, {
+      ...options,
+      x: Math.max(rect.left + extent.left, Math.min(rect.right - extent.right, x)),
+      y: Math.max(rect.top + extent.up, Math.min(rect.bottom - extent.down, y)),
+    });
   }
 
   push(...nodes: ChartNode[]): void {

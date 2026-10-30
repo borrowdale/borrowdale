@@ -41,8 +41,8 @@ cannot share a chart:
 
 | Series types | Axes |
 |---|---|
-| `bar`, `line`, `area`, `rangeArea`, in any mix | `x` and `y`, one of them `band` |
-| `scatter`, `bubble` | `x` and `y`, both `linear` |
+| `bar`, `line`, `area`, `rangeArea`, `interval`, in any mix | `x` and `y`, one of them `band` |
+| `scatter`, `bubble`, `xyLine`, `xyArea`, in any mix | `x` and `y`, both `linear` |
 | `radar`, `rose`, `polarLine`, `polarArea`, in any mix | `angle` (`band`), and optionally `radius` (`linear`) |
 | `radialBar` | `angle` (`linear`) and `radius` (`band`) |
 | `polarScatter` | `angle` and `radius`, both `linear` |
@@ -55,6 +55,9 @@ cannot share a chart:
 | `line` | a value or `null` (a gap) per category | `curve`, `dash` (dash and gap lengths, for the line and its legend swatch: `style.strokeLineDash` for short), `axis: 'y2'` |
 | `area` | a value or `null` per category | `stack`, `curve`, `axis: 'y2'`. Stacked values must not be negative. Areas of one stack share a `curve` |
 | `rangeArea` | a `[low, high]` pair or `null` per category, high not below low | `curve`, `axis: 'y2'` |
+| `interval` | a `[from, to]` pair or `null` per category | `display`, `width`, `overlay`, endpoint symbols, `shape`, `dataLabels`, `axis: 'y2'`; see [additional marks](#additional-cartesian-marks) |
+| `xyLine` | numeric `[x, y]` pairs or `null` between runs | `symbol`, `dash`, `dataLabels`, `segments`, `widths`, `gradient`; see [widths and colours](#widths-crossings-and-colours) |
+| `xyArea` | `[x, low, high]` intervals or `null` between runs, x increasing within each run | `difference` permits crossing boundaries; see [widths and colours](#widths-crossings-and-colours) |
 | `scatter` | `[x, y]` points | |
 | `bubble` | `[x, y, size]` points: the size sets the area, and is not negative | |
 | `pie` | `{ name, value, color?, offset?, radius? }` slices | `innerRadius` (0 to 0.95: 0.5 is a donut) and `outerRadius` (0.05 to 1), `startAngle` and `endAngle`, `padAngle` (0 to 10 degrees between slices), `cornerRadius` (0 to 1,000 units). Values must not be negative, and one must be above 0 |
@@ -254,6 +257,153 @@ categories. Straight and stepped lines cost the same for each point however they
 height fits only about 160 points.
 Hachure fills are what costs most: about 7 KB of SVG for a 40 × 300 bar, against 0.6 KB with
 `style: { fillStyle: 'solid' }`.
+
+## Additional Cartesian marks
+
+`interval` draws one `[from, to]` pair per category. Endpoints may descend; `null`
+omits a category. It uses the same `axis` and horizontal/vertical orientation as a
+bar. Its `display` is `bar` (default), `line`, `error` (stem and caps), or `points`.
+`fromSymbol` and `toSymbol` add endpoint markers. `width` is a fraction of its slot,
+0.05 to 1 (default 0.8). `overlay: true` puts it at the category centre instead of
+reserving a grouped slot. Intervals do not stack automatically: supply their actual
+endpoints when composing cumulative or overlapping marks.
+
+```js
+const series = [
+  { type: 'interval', name: 'Change', data: [[2, 7], [8, 3]],
+    display: 'line', fromSymbol: 'square', toSymbol: 'circle' },
+];
+```
+
+Use `[0, value]` with `display: 'line'` and `toSymbol` for lollipops; use two markers
+for dumbbells. Supply `[estimate - lowerError, estimate + upperError]` for error
+bars, choosing equal errors for symmetric bars. A single endpoint marker on
+`[value, value]` makes a Cleveland dot. `error` on equal endpoints makes a target
+cap for a bullet chart.
+
+`xyLine` takes numeric `[x, y]` pairs, with `null` between runs. It connects points
+in their given order, including descending x and loops, and needs two linear axes.
+`symbol` adds markers, and `dash` controls the line. A lone point remains visible.
+`xyArea` takes `[x, low, high]` intervals; x increases strictly within each run.
+Use it for supplied confidence bands, with an `xyLine` for the estimate. Statistical
+fitting and function evaluation stay with the caller; specs contain data only.
+
+### Symbols and labels
+
+`symbol` on scatter, bubble, polar scatter, line and `xyLine` supports `circle`,
+`square`, `diamond`, `triangle`, `cross`, `star`, `wye` and `tick`. Point symbols fit
+inside a six-unit square; bubble symbols keep the bubble's computed diameter.
+The area of equally shaped bubbles remains proportional to their size value.
+A tick is a vertical stroke. New symbol choices are also shown in point legends.
+
+`dataLabels: true` adds values to bars, intervals, lines, numeric lines, scatter,
+bubbles and polar scatter; pies show slice names and values. Defaults stay off.
+Labels use the relevant value-axis format where available, retain raw values for
+percent bars, fit the plotting rectangle, and can overlap in dense charts. Pie
+labels use each actual slice's offset and radius. A label that cannot fit even
+with an ellipsis produces an error. This is explicit placement, not collision
+avoidance or an interactive tooltip system.
+
+Image markers use `symbol: { image: 'name' }` (or an endpoint symbol). Layout
+contains only asset names and dimensions. Supply trusted assets to the renderer:
+
+```js
+const images = new Map([
+  ['logo', { dataUrl: logoPngDataUrl, source: alreadyDecodedImage }],
+]);
+const svg = toSvgChart(layout, { images });
+appendChart(parent, layout, { images });
+drawChart(context, layout, { images });
+```
+
+`dataUrl` must be a base64 PNG, JPEG, GIF or WebP raster. SVG export needs only
+those bytes; Canvas additionally needs the caller's preloaded `CanvasImageSource`.
+The bytes and source must represent the same image. The package never fetches
+URLs or decodes assets. Images fill the marker square; supply square assets to
+preserve their proportions. Missing assets are rejected before rendering begins.
+SVG output embeds each referenced raster once and positions it through references.
+
+### Annotations
+
+Cartesian `annotations` accept up to 100 entries. Coordinates are numbers on
+linear axes or category names on band axes. Numeric annotation coordinates
+contribute to automatic domains, and values beyond fixed bounds are errors.
+Bands on category axes extend between category centres.
+
+```js
+const annotations = [
+  { type: 'line', axis: 'y', value: 20, label: 'Target' },
+  { type: 'band', axis: 'x', from: 'Feb', to: 'Apr' },
+  { type: 'region', from: ['Feb', 10], to: ['Apr', 15] },
+  { type: 'arrow', from: ['Feb', 25], to: ['Apr', 20] },
+  { type: 'label', at: ['Apr', 20], text: 'Reached' },
+];
+```
+
+Line/band axes are `x`, `y` or `y2`. Region, arrow and label entries use `axis: 'y2'`
+for their second coordinate when needed. `color` sets the shape paint; annotation
+text keeps the chart's text ink. `layer` is `back` or `front`; bands and regions
+start behind the grid, other annotations above the data. Labels stay inside the
+plot. Polar and pie annotations are not supported.
+
+### Widths, crossings and colours
+
+Cartesian band axes accept `weights`, one positive relative width per category
+(each from 0.000001 to 1000000). All category centres, marks, labels and annotations
+use that allocation: this makes a variwide chart. Bars and bar intervals accept
+`shape: 'rounded'` or `'pyramid'`; rounded corners have a radius of at most six
+units, and pyramids taper from their first endpoint to the second.
+
+An `xyLine` can supply `segments`, one entry per adjacent pair of data slots.
+Each entry is `null` or `{ color?, width?, dash? }`; an edge touching a null point
+is absent. Segment overrides take precedence over the series and chart style.
+For threshold lines, insert the exact crossing as a point, then choose the colour
+of each resulting segment. For endpoints `[x0,y0]`, `[x1,y1]`, the crossing of `t`
+is `[x0 + (x1-x0)*(t-y0)/(y1-y0), t]` when `t` lies strictly between their values.
+
+`gradient: { axis: 'x', stops: [{ offset: 0, color: '#0072b2' },
+{ offset: 1, color: '#d55e00' }] }` gives a true continuous SVG/Canvas gradient.
+Use `axis: 'y'` for bottom-to-top paint. There are 2–32 strictly increasing stops,
+starting at 0 and ending at 1. The gradient covers the plot and replaces the
+path's paints; separately added point markers retain their normal paints.
+Stop colours must be 3, 4, 6 or 8-digit hex codes, so validation can reject
+unsupported paints consistently before SVG or Canvas rendering.
+When combining exported SVG strings in one document, pass a unique `idPrefix` to
+`toSvgChart`. `appendChart` chooses an unused prefix in the destination document.
+
+`widths`, one value from 0 to 100 per point slot, makes a tapered trail, with round
+joins and caps. Increase widths along the route for a comet. Widths are in display
+units, so they do not affect numeric domains. Gaps break the trail. Gradients can
+colour a trail; `segments` cannot be combined with either `widths` or `gradient`.
+
+An `xyArea` with `difference: { positive: '#009e73', negative: '#d55e00' }` permits
+its two boundaries to cross. It inserts crossings and fills each side according
+to whether the second boundary is above the first. A constant first boundary
+makes a threshold area. Numeric paths and bands use straight segments; categorical
+lines and range areas retain their existing curve options.
+
+### Chart compositions
+
+The repository's `apps/examples/cartesian-cases.json` contains 33 complete specs;
+run `node apps/examples/cartesian.mjs` after building to render each one.
+
+| Chart | Preparation and composition |
+|---|---|
+| Slope | A categorical line over two categories, with symbols and labels |
+| Waterfall | Starting at a running total, convert each signed change to `[total, total + change]`, then advance the total; a total/subtotal is `[0, total]` without advancing it |
+| Stacked waterfall | Accumulate each step's components in their given order and overlay their interval series at the same category centre |
+| Bullet/range bullet | Overlay qualitative interval bars at full width, the measured value/range at a narrower width, and an equal-endpoint error cap for the target |
+| Pareto | Stable-sort nonnegative counts descending, then add a cumulative percentage line on `y2` with fixed 0–100 bounds and `format: { suffix: '%' }`; reject a zero total before dividing |
+| Population pyramid | Horizontal signed bar stacks, negative for one population and positive for the other |
+| Centred Likert | Centre the neutral interval on zero; place negative responses to its left and positive responses to its right, using overlaid interval series |
+| Strip/barcode | Scatter points on a constant y, with circle or tick symbols |
+| Index/change line | For a chosen nonzero base `b`, plot `100 * value / b` for an index, or `value - b` for absolute change; retain null gaps |
+| Function plot | Sample the function into numeric `[x,y]` data outside the spec and draw an `xyLine` |
+
+Apply the same category order to every composed series. Horizontal interval
+charts put categories on y; vertical ones put categories on x. For a stacked
+waterfall, component order is meaningful: opposite-signed components accumulate
+sequentially rather than independently from zero.
 
 ## License
 

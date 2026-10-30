@@ -7,7 +7,8 @@ import { layoutGauge } from './gauge.js';
 import { layoutPie } from './pie.js';
 import { layoutPolar, polarLegendOf } from './polar.js';
 import { fail } from './read.js';
-import type { ChartLayout, ChartOptions, ChartSpec, LegendPosition } from './types.js';
+import { markerNode } from './symbols.js';
+import type { ChartLayout, ChartOptions, ChartSpec, LegendPosition, Marker } from './types.js';
 import { checkChart, type CheckedChart } from './validate.js';
 
 const SWATCH = 10;
@@ -25,6 +26,7 @@ interface LegendEntry {
   line: boolean;
   dash: number[] | undefined;
   style: SketchStyle;
+  symbol?: Marker | undefined;
 }
 
 /**
@@ -114,7 +116,8 @@ function legendEntries(chart: CheckedChart): LegendEntry[] {
   return paints(series).map((paint, i) => {
     const entry = series[i]!;
     const dash = 'dash' in entry ? entry.dash : undefined;
-    return { name: entry.name, path: `${entry.path}.name`, paint, line: lines[i]!, dash, style: entry.style };
+    const symbol = 'symbol' in entry && entry.symbol !== 'circle' ? entry.symbol : undefined;
+    return { name: entry.name, path: `${entry.path}.name`, paint, line: lines[i]!, dash, style: entry.style, symbol };
   });
 }
 
@@ -183,7 +186,10 @@ function drawEntry(drawing: Drawing, entry: LegendEntry, name: string, left: num
         key,
         entry.style,
       )
-    : drawing.shape(
+    : entry.symbol
+      ? markerNode(drawing, entry.symbol, [left + SWATCH / 2, middle], SWATCH,
+          { ...hatched(entry.paint), hachureGap: 2.5 }, key, entry.style)
+      : drawing.shape(
         { kind: 'rectangle', x: left, y: middle - SWATCH / 2, width: SWATCH, height: SWATCH },
         { ...hatched(entry.paint), hachureGap: 2.5 },
         key,
