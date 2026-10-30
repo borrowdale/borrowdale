@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { SketchPath } from '@borrowdale/core';
-import { layoutChart, type ChartLayout, type ChartSpec } from '@borrowdale/charts';
+import { InvalidChartError, layoutChart, type ChartLayout, type ChartSpec } from '@borrowdale/charts';
 import { textBounds } from '@borrowdale/text';
 import { PAD } from '../src/frame.js';
 import { handFont } from '../../text/test/support/hand-font.js';
@@ -402,7 +402,6 @@ describe('layoutChart', () => {
     expect(mark(layoutChart(reseeded), 'Paper, Jan: €7')).not.toEqual(mark(layoutChart(revenue), 'Paper, Jan: €7'));
   });
 
-
   it('gives each bar a tooltip with its series, category and value, in the axis format', () => {
     expect(titles(layoutChart(revenue))).toEqual(['Pencils, Jan: €12', 'Pencils, Feb: €15', 'Paper, Jan: €7', 'Paper, Feb: €8']);
   });
@@ -669,7 +668,9 @@ describe('layoutChart', () => {
   });
 
   it('names a chart too small for the labels of its radius axis', () => {
-    expect(() => layoutChart(crampedTicks)).toThrow('Invalid chart: a 160 × 160 chart leaves no room for the labels of axes.radius');
+    expect(() => layoutChart(crampedTicks)).toThrow(
+      new InvalidChartError('', 'a 160 × 160 chart leaves no room for the labels of axes.radius'),
+    );
   });
 
   it('draws as many gauge bars as fit, and names one more as too many', () => {
@@ -678,7 +679,9 @@ describe('layoutChart', () => {
   });
 
   it('names a dial too small for its ticks, with no bars', () => {
-    expect(() => layoutChart(tinyDial)).toThrow("Invalid chart: a 60 × 60 chart leaves no room for the dial's ticks around its hub");
+    expect(() => layoutChart(tinyDial)).toThrow(
+      new InvalidChartError('', "a 60 × 60 chart leaves no room for the dial's ticks around its hub"),
+    );
   });
 
   it('draws a dial too small for ticks when it hides them', () => {

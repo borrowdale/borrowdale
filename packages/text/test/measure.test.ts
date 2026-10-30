@@ -387,7 +387,8 @@ describe('fitText', () => {
   });
 
   it('drops the spaces before the cut', () => {
-    expect(fitText('abc def', 30, { fontSize: 12 })).toBe('abc…');
+    // "abc …" fits in 34 too, but ends in a space.
+    expect(fitText('abc def', 34, { fontSize: 12 })).toBe('abc…');
   });
 
   it('keeps a flag whole, or leaves it out', () => {

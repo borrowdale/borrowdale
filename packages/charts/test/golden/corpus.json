@@ -3508,5 +3508,172 @@
     }
    ]
   }
+ },
+ {
+  "name": "line-horizontal-steps",
+  "spec": {
+   "width": 260,
+   "height": 220,
+   "axes": {
+    "x": {
+     "type": "linear"
+    },
+    "y": {
+     "type": "band",
+     "categories": [
+      "top",
+      "middle",
+      "bottom"
+     ]
+    }
+   },
+   "series": [
+    {
+     "type": "line",
+     "name": "Depth",
+     "curve": "step",
+     "data": [
+      3,
+      9,
+      4
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "area-horizontal-linear",
+  "spec": {
+   "width": 260,
+   "height": 220,
+   "axes": {
+    "x": {
+     "type": "linear"
+    },
+    "y": {
+     "type": "band",
+     "categories": [
+      "top",
+      "middle",
+      "bottom",
+      "floor"
+     ]
+    }
+   },
+   "series": [
+    {
+     "type": "area",
+     "name": "Depth",
+     "data": [
+      3,
+      9,
+      4,
+      6
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "title-and-legend-cut-short",
+  "spec": {
+   "width": 200,
+   "height": 200,
+   "title": "Revenue from every region and channel",
+   "axes": {
+    "x": {
+     "type": "band",
+     "categories": [
+      "a"
+     ]
+    },
+    "y": {
+     "type": "linear"
+    }
+   },
+   "series": [
+    {
+     "type": "bar",
+     "name": "Revenue from every region and channel",
+     "data": [
+      1
+     ]
+    },
+    {
+     "type": "bar",
+     "name": "B",
+     "data": [
+      2
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "band-end-labels-narrowed",
+  "spec": {
+   "width": 300,
+   "height": 200,
+   "axes": {
+    "x": {
+     "type": "band",
+     "categories": [
+      "A rather long first category",
+      "b",
+      "A rather long last category"
+     ]
+    },
+    "y": {
+     "type": "linear"
+    }
+   },
+   "series": [
+    {
+     "type": "bar",
+     "name": "S",
+     "data": [
+      1,
+      2,
+      3
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "bubbles-at-fixed-ends",
+  "spec": {
+   "width": 300,
+   "height": 300,
+   "axes": {
+    "x": {
+     "type": "linear",
+     "min": 0,
+     "max": 10
+    },
+    "y": {
+     "type": "linear",
+     "min": 0
+    }
+   },
+   "series": [
+    {
+     "type": "bubble",
+     "name": "B",
+     "data": [
+      [
+       0,
+       0,
+       1
+      ],
+      [
+       10,
+       10,
+       60
+      ]
+     ]
+    }
+   ]
+  }
  }
 ]

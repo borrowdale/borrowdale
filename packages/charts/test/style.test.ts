@@ -30,7 +30,8 @@ const filledLines: ChartSpec = {
   series: [
     { type: 'line', name: 'Straight', data: [10, 20] },
     { type: 'line', name: 'Smooth', curve: 'monotone', data: [20, 10] },
-    { type: 'rangeArea', name: 'Range', data: [[1, 2], [3, 5]] },
+    // Bending, so its edges are paths, which core would fill: straight ones are linear paths, which it never fills.
+    { type: 'rangeArea', name: 'Range', curve: 'monotone', data: [[1, 2], [3, 5]] },
   ],
 };
 const filledRadarLine: ChartSpec = {
@@ -103,5 +104,4 @@ describe('chart strokes and fills', () => {
   it('draws other strokes for names that join to the same text', () => {
     expect(shapesOf(layoutChart(pipedName), 'a|b, Jan: €12')).not.toEqual(shapesOf(layoutChart(pipedSeed), 'b, Jan: €12'));
   });
-
 });
