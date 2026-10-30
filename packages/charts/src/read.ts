@@ -19,9 +19,25 @@ export const MAX_DECIMALS = 20;
 /** Reads a value at `path`, returning it checked, or throws. */
 export type Check<T> = (path: string, value: unknown) => T;
 
-/** Throws the error every spec problem becomes: "Invalid chart: <path> <problem>". */
+/**
+ * What every spec problem throws. Its message is "Invalid chart: <path> <problem>"; `path` is the
+ * place in the spec, such as `series[2].data[5]`, or `''` for the spec itself.
+ */
+export class InvalidChartError extends Error {
+  override readonly name = 'InvalidChartError';
+  readonly path: string;
+  readonly problem: string;
+
+  constructor(path: string, problem: string) {
+    super(`Invalid chart: ${path === '' ? '' : `${path} `}${problem}`);
+    this.path = path;
+    this.problem = problem;
+  }
+}
+
+/** Throws an `InvalidChartError` for the spec at `path`. */
 export function fail(path: string, problem: string): never {
-  throw new Error(`Invalid chart: ${path === '' ? '' : `${path} `}${problem}`);
+  throw new InvalidChartError(path, problem);
 }
 
 /**
@@ -190,4 +206,15 @@ export function probe(path: string, check: () => unknown): void {
     const short = `${message.slice(0, MAX_MESSAGE).replace(/[\ud800-\udbff]$/, '')}…`;
     fail(path, `is not valid: ${message.length > MAX_MESSAGE ? short : message}`);
   }
+}
+
+/** Throws at the first name that repeats one before it. */
+export function unique(names: readonly string[], pathOf: (index: number) => string): void {
+  const seen = new Set<string>();
+  names.forEach((name, i) => {
+    if (seen.has(name)) {
+      fail(pathOf(i), `repeats ${show(name)}`);
+    }
+    seen.add(name);
+  });
 }

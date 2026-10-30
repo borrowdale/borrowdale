@@ -20,6 +20,6 @@ export interface Rect {
 /** Throws when titles, legends and labels have left no room for the plot itself. */
 export function assertRoom({ left, top, right, bottom }: Rect, width: number, height: number): void {
   if (right - left < 1 || bottom - top < 1) {
-    fail(`a ${width} × ${height} chart`, 'leaves no room for the plot after its title, legend and labels');
+    fail('', `a ${width} × ${height} chart leaves no room for the plot after its title, legend and labels`);
   }
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { layoutChart, toSvgChart, type ChartSpec } from '@borrowdale/charts';
+import { InvalidChartError, layoutChart, toSvgChart, type ChartSpec } from '@borrowdale/charts';
 
 const bands = { x: { type: 'band', categories: ['a', 'b'] }, y: { type: 'linear' } };
 const longKey = 'k'.repeat(101);
@@ -265,7 +265,29 @@ describe('chart validation', () => {
 
   it('repeats a message from core of exactly 200 characters in full', () => {
     expect(() => layoutChart(fillStyleOf200 as ChartSpec)).toThrow(
-      new Error(`Invalid chart: style is not valid: Unknown fill style: ${'a'.repeat(180)}`),
+      new InvalidChartError('style', `is not valid: Unknown fill style: ${'a'.repeat(180)}`),
     );
+  });
+
+  it('throws an InvalidChartError that names the place in the spec apart from the problem', () => {
+    const spec = { ...bars, series: [{ type: 'bar', name: 'A', data: [1, '2'] }] };
+
+    expect(() => layoutChart(spec as ChartSpec)).toThrow(
+      expect.objectContaining({
+        name: 'InvalidChartError',
+        path: 'series[0].data[1]',
+        problem: 'must be a number from -1e15 to 1e15 or null, got "2"',
+      }),
+    );
+  });
+
+  it('throws an InvalidChartError with an empty path for the spec itself', () => {
+    expect(() => layoutChart({ ...bars, colour: 'red' } as ChartSpec)).toThrow(
+      expect.objectContaining({ path: '', problem: 'unknown key "colour"' }),
+    );
+  });
+
+  it('throws an instance of the exported class', () => {
+    expect(() => layoutChart({ ...bars, width: 0 } as ChartSpec)).toThrow(InvalidChartError);
   });
 });

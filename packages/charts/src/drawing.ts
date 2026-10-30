@@ -1,6 +1,7 @@
 import { Budget, sketch, type Shape, type SketchStyle } from '@borrowdale/core';
-import { layoutText, measureText, textBounds, type LayoutOptions } from '@borrowdale/text';
+import { fitText, layoutText, measureText, textBounds, type LayoutOptions } from '@borrowdale/text';
 import { INK } from './palette.js';
+import { fail } from './read.js';
 import type { ChartNode } from './types.js';
 import type { CheckedChart } from './validate.js';
 
@@ -18,6 +19,9 @@ export interface Extent {
 }
 
 type TextOptions = Omit<LayoutOptions, 'font' | 'fontSize'> & { fontSize?: number | undefined };
+
+/** What tells one mark's strokes from another's: its series, category, part and the like. */
+export type SeedKey = readonly (string | number)[];
 
 /** Draws shapes and text for one chart, with one budget, and keeps every label it laid out. */
 export class Drawing {
@@ -59,13 +63,34 @@ export class Drawing {
   }
 
   /**
-   * A shape in its `defaults` style, then the chart's style, then its series' `own` style, seeded
-   * from the chart seed and `key`, so a mark keeps its strokes when other marks change.
+   * `text` whole if it is at most `room` wide, else cut short with an ellipsis to fit. Throws for the
+   * spec at `path` when not even the ellipsis fits.
    */
-  shape(shape: Shape, defaults: SketchStyle, key: string, own: SketchStyle = {}): ChartNode {
-    const seed = `${this.#chart.seed}|${key}`;
-    const style = { ...defaults, ...this.#chart.style, ...own, seed };
-    return { kind: 'sketch', sketch: sketch(shape, style, this.#budget) };
+  fit(text: string, room: number, path: string, fontSize = this.#chart.fontSize): string {
+    const fitted = fitText(text, Math.max(0, room), { font: this.#chart.font, fontSize });
+    return fitted ?? fail(path, `does not fit even cut short: there are ${Math.max(0, Math.floor(room))} units for it`);
+  }
+
+  /**
+   * A shape in its `defaults` style, then the chart's style, then its series' `own` style, seeded
+   * from the chart seed and `key`, so a mark keeps its strokes when other marks change. Each part is
+   * written with its length, so a separator inside a name never makes two keys alike.
+   */
+  shape(shape: Shape, defaults: SketchStyle, key: SeedKey, own: SketchStyle = {}): ChartNode {
+    return this.#sketch(shape, { ...defaults, ...this.#chart.style, ...own }, key);
+  }
+
+  #sketch(shape: Shape, style: SketchStyle, key: SeedKey): ChartNode {
+    const seed = [this.#chart.seed, ...key].map((part) => `${String(part).length}:${part}`).join('');
+    return { kind: 'sketch', sketch: sketch(shape, { ...style, seed }, this.#budget) };
+  }
+
+  /**
+   * A shape drawn as an outline only, as `shape` draws it but never filled, whatever fill the chart's
+   * or the series' style gives: lines, the edges of areas, gridlines, axes, ticks and tracks.
+   */
+  outline(shape: Shape, defaults: SketchStyle, key: SeedKey, own: SketchStyle = {}): ChartNode {
+    return this.#sketch(shape, { ...defaults, ...this.#chart.style, ...own, fill: 'none' }, key);
   }
 
   /**

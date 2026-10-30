@@ -1,6 +1,6 @@
 // Marks every coordinate system draws alike.
 import type { Point, SketchStyle } from '@borrowdale/core';
-import type { Drawing } from './drawing.js';
+import type { Drawing, SeedKey } from './drawing.js';
 import type { ChartNode } from './types.js';
 
 /** The diameter of a scatter point. */
@@ -14,7 +14,7 @@ export function solid(color: string): { stroke: string; fill: string; fillStyle:
 }
 
 /** A line's lone point, a run of one between gaps, as a dot in the line's colour. */
-export function loneDot(drawing: Drawing, [cx, cy]: Point, stroke: string, key: string, own: SketchStyle): ChartNode {
+export function loneDot(drawing: Drawing, [cx, cy]: Point, stroke: string, key: SeedKey, own: SketchStyle): ChartNode {
   return drawing.shape({ kind: 'circle', cx, cy, diameter: LONE_DOT }, solid(stroke), key, own);
 }
 
@@ -37,4 +37,19 @@ export function runsOf<T>(entries: readonly (T | null)[], cuts?: ReadonlySet<num
     }
   }
   return current.length > 0 ? [...runs, current] : runs;
+}
+
+/**
+ * The runs between nulls, each cut at `cuts` as `runsOf` cuts them, and numbered by the run it was
+ * cut from and its place in that run. So a cut in one run never renumbers the pieces of another.
+ */
+export function piecesOf<T>(
+  entries: readonly (T | null)[],
+  cuts: ReadonlySet<number> | undefined,
+): { points: T[]; run: number; piece: number }[] {
+  const indexed = entries.map((entry, index) => (entry === null ? null : { entry, index }));
+  return runsOf(indexed).flatMap((run, r) => {
+    const at = new Set(run.flatMap(({ index }, k) => (cuts?.has(index) ? [k] : [])));
+    return runsOf(run, at).map((piece, p) => ({ points: piece.map(({ entry }) => entry), run: r, piece: p }));
+  });
 }

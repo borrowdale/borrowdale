@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { bandScale, formatNumber, formatValue, linearScale, place } from '../src/scale.js';
-import type { CheckedFormat, CheckedLinearAxis } from '../src/validate.js';
+import type { CheckedFormat, CheckedLinearAxis } from '../src/check-axis.js';
 
 const plain: CheckedFormat = { decimals: undefined, thousands: ',', decimal: '.', prefix: '', suffix: '' };
 

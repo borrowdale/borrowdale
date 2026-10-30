@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { SketchPath } from '@borrowdale/core';
-import { layoutChart, type ChartLayout, type ChartNode, type ChartSpec } from '@borrowdale/charts';
+import { InvalidChartError, layoutChart, type ChartLayout, type ChartSpec } from '@borrowdale/charts';
 import { textBounds } from '@borrowdale/text';
 import { PAD } from '../src/frame.js';
 import { handFont } from '../../text/test/support/hand-font.js';
+import { labelsOutside, mark, pointsOnCurves, pointsOutside, texts, titles } from './support/layout.js';
 
 const months = { type: 'band', categories: ['Jan', 'Feb'] } as const;
 const revenue: ChartSpec = {
@@ -341,15 +342,6 @@ const pulledLoneSlice: ChartSpec = {
   series: [{ type: 'pie', name: 'P', data: [{ name: 'a', value: 1, offset: 0.3 }, { name: 'b', value: 0 }] }],
 };
 
-/** The mark whose tooltip is `title`. */
-function mark(layout: ChartLayout, title: string): ChartNode {
-  const found = layout.nodes.find((node) => node.kind === 'mark' && node.title === title);
-  if (!found) {
-    throw new Error(`No mark titled ${title}`);
-  }
-  return found;
-}
-
 /** The outline of a mark's first shape: its last path. */
 function outline(layout: ChartLayout, title: string): SketchPath {
   const group = mark(layout, title);
@@ -376,25 +368,6 @@ function lowestEdge(layout: ChartLayout, text: string): number {
   return y + height;
 }
 
-/**
- * The points the drawn shapes pass through: each path's starting points, line ends and the end of
- * each curve, not a curve's control points, which lie off the curve.
- */
-function pointsOnCurves(layout: ChartLayout): [number, number][] {
-  const ds = layout.nodes.flatMap((node) => (node.kind === 'mark' ? node.nodes : [node]));
-  const paths = ds.flatMap((node) => (node.kind === 'sketch' ? node.sketch.paths.map((path) => path.d) : []));
-  const onCurve = /(?:[ML]|C[^,]*,[^,]*,)\s*(-?[\d.]+)[ ,](-?[\d.]+)/g;
-  return paths.flatMap((d) =>
-    [...d.matchAll(onCurve)].map((match): [number, number] => [Number(match[1]), Number(match[2])]),
-  );
-}
-
-/** How many of those points lie outside the chart, or within `margin` of its edges. */
-function pointsOutside(layout: ChartLayout, margin = 0): number {
-  const [right, bottom] = [layout.width - margin, layout.height - margin];
-  return pointsOnCurves(layout).filter(([px, py]) => px < margin || py < margin || px > right || py > bottom).length;
-}
-
 /** The box around those points, `[left, top, right, bottom]`, rounded. */
 function extentOf(layout: ChartLayout): number[] {
   const points = pointsOnCurves(layout);
@@ -414,22 +387,6 @@ function labelY(layout: ChartLayout, text: string): number {
     throw new Error(`No label ${text}`);
   }
   return found.text.y;
-}
-
-/** How many labels reach outside the chart's padding. */
-function labelsOutside(layout: ChartLayout): number {
-  const labels = layout.nodes.flatMap((node) => (node.kind === 'text' ? [textBounds(node.text)] : []));
-  const [low, right, bottom] = [PAD - 0.01, layout.width - PAD + 0.01, layout.height - PAD + 0.01];
-  return labels.filter((box) => box.x < low || box.y < low || box.x + box.width > right || box.y + box.height > bottom)
-    .length;
-}
-
-function titles(layout: ChartLayout): string[] {
-  return layout.nodes.flatMap((node) => (node.kind === 'mark' ? [node.title] : []));
-}
-
-function texts(layout: ChartLayout): string[] {
-  return layout.nodes.flatMap((node) => (node.kind === 'text' ? [node.text.text] : []));
 }
 
 describe('layoutChart', () => {
@@ -711,7 +668,9 @@ describe('layoutChart', () => {
   });
 
   it('names a chart too small for the labels of its radius axis', () => {
-    expect(() => layoutChart(crampedTicks)).toThrow('Invalid chart: a 160 × 160 chart leaves no room for the labels of axes.radius');
+    expect(() => layoutChart(crampedTicks)).toThrow(
+      new InvalidChartError('', 'a 160 × 160 chart leaves no room for the labels of axes.radius'),
+    );
   });
 
   it('draws as many gauge bars as fit, and names one more as too many', () => {
@@ -720,7 +679,9 @@ describe('layoutChart', () => {
   });
 
   it('names a dial too small for its ticks, with no bars', () => {
-    expect(() => layoutChart(tinyDial)).toThrow("Invalid chart: a 60 × 60 chart leaves no room for the dial's ticks around its hub");
+    expect(() => layoutChart(tinyDial)).toThrow(
+      new InvalidChartError('', "a 60 × 60 chart leaves no room for the dial's ticks around its hub"),
+    );
   });
 
   it('draws a dial too small for ticks when it hides them', () => {
