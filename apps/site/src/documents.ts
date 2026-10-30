@@ -17,6 +17,9 @@ import mit from '../../../LICENSE?raw';
 import ofl from '../../../packages/text/OFL.txt?raw';
 import coreNotices from '../../../packages/core/THIRD_PARTY_NOTICES.md?raw';
 import chartNotices from '../../../packages/charts/THIRD_PARTY_NOTICES.md?raw';
+import siteNotices from '../THIRD_PARTY_NOTICES.md?raw';
+// Each notices file opens with its own "# Third-party notices"; the license page supplies that heading once.
+const notices = [coreNotices, chartNotices, siteNotices].map((n) => n.replace(/^# .*\n/, '')).join('\n');
 export const docs = [
   {
     url: '/docs/',
@@ -78,7 +81,12 @@ export const docs = [
 export function documentPage(path: string) {
   const page = docs.find((d) => d.url === path)!;
   const headings: { id: string; text: string }[] = [];
-  const used = new Map<string, number>();
+  // The license page writes its own section headings, so their ids are taken before any Markdown heading.
+  const used = new Map<string, number>(
+    path === '/license/' ? ['mit-license', 'font-license', 'third-party-notices'].map((id) => [id, 1]) : [],
+  );
+  // Headings of the embedded notices sit one level below the page's "Third-party notices" section.
+  let shift = 0;
   const markdown = new Marked({
     gfm: true,
     renderer: {
@@ -92,8 +100,13 @@ export function documentPage(path: string) {
         const count = used.get(slug) ?? 0;
         used.set(slug, count + 1);
         const id = slug + (count ? `-${count}` : '');
-        if (depth === 2) headings.push({ id, text });
-        return `<h${depth} id="${id}">${text}</h${depth}>`;
+        const level = Math.min(depth + shift, 6);
+        if (level === 2) headings.push({ id, text });
+        return `<h${level} id="${id}">${text}</h${level}>`;
+      },
+      // The Markdown is trusted repository content, but raw HTML in it is shown as text, never as markup.
+      html({ text }) {
+        return escape(text);
       },
       code({ text }) {
         return codeBlock(text);
@@ -120,21 +133,28 @@ export function documentPage(path: string) {
   };
   if (related[path])
     body += `<p class="docs-playground"><a href="${related[path]}">Try these APIs in the playground ↗</a></p>`;
-  if (path === '/license/')
-    body += `<h2 id="mit-license">MIT license</h2><pre class="license-text">${escape(mit)}</pre><h2 id="font-license">Font license</h2><pre class="license-text">${escape(ofl)}</pre><h2 id="third-party-notices">Third-party notices</h2>${markdown.parse(coreNotices + '\n' + chartNotices, { async: false })}`;
+  if (path === '/license/') {
+    headings.push(
+      { id: 'mit-license', text: 'MIT license' },
+      { id: 'font-license', text: 'Font license' },
+      { id: 'third-party-notices', text: 'Third-party notices' },
+    );
+    shift = 1;
+    body += `<h2 id="mit-license">MIT license</h2><pre class="license-text">${escape(mit)}</pre><h2 id="font-license">Font license</h2><pre class="license-text">${escape(ofl)}</pre><h2 id="third-party-notices">Third-party notices</h2>${markdown.parse(notices, { async: false })}`;
+  }
   const sidebar = [...new Set(docs.map((d) => d.group))]
     .map(
       (group) =>
-        `<section><h2>${group}</h2>${docs
+        `<section><p class="docs-group">${group}</p>${docs
           .filter((d) => d.group === group)
           .map(
             (d) =>
-              `<a data-doc-link href="${d.url}" ${d === page ? 'aria-current="page"' : ''}>${escape(d.title)}</a>`,
+              `<a data-doc-link="${d.url}" href="${d.url}" ${d === page ? 'aria-current="page"' : ''}>${escape(d.title)}</a>`,
           )
           .join('')}</section>`,
     )
     .join('');
-  return `<div class="docs-layout"><aside class="docs-sidebar"><label for="docs-search">Find a topic</label><input id="docs-search" type="search" placeholder="Search documentation…"><nav aria-label="Documentation">${sidebar}</nav><p id="docs-no-results" hidden>No matching pages.</p></aside><article class="docs-article"><p class="eyebrow">BORROWDALEJS / ${page.group.toUpperCase()}</p>${body}<div class="docs-source"><a href="https://github.com/borrowdale/borrowdale/blob/main/${page.source}">View Markdown on GitHub ↗</a><a href="https://github.com/borrowdale/borrowdale/edit/main/${page.source}">Edit this page ↗</a></div></article><aside class="docs-toc"><p>ON THIS PAGE</p>${headings.map((h) => `<a href="#${h.id}">${h.text}</a>`).join('')}</aside></div>`;
+  return `<div class="docs-layout"><aside class="docs-sidebar" aria-label="Documentation pages"><label for="docs-search">Find a topic</label><input id="docs-search" type="search" placeholder="Search documentation…"><nav aria-label="Documentation">${sidebar}</nav><p id="docs-no-results" role="status"></p></aside><article class="docs-article"><p class="eyebrow">BORROWDALEJS / ${page.group.toUpperCase()}</p>${body}<div class="docs-source"><a href="https://github.com/borrowdale/borrowdale/blob/main/${page.source}">View Markdown on GitHub ↗</a><a href="https://github.com/borrowdale/borrowdale/edit/main/${page.source}">Edit this page ↗</a></div></article><nav class="docs-toc" aria-labelledby="docs-toc-title"><p id="docs-toc-title">ON THIS PAGE</p>${headings.map((h) => `<a href="#${h.id}">${h.text}</a>`).join('')}</nav></div>`;
 }
 export function bindDocuments() {
   const input = document.getElementById('docs-search') as HTMLInputElement | null;
@@ -142,10 +162,15 @@ export function bindDocuments() {
   input.oninput = () => {
     const term = input.value.toLowerCase().trim();
     let count = 0;
-    document.querySelectorAll<HTMLAnchorElement>('[data-doc-link]').forEach((a, i) => {
-      a.hidden = !`${docs[i].title} ${docs[i].body}`.toLowerCase().includes(term);
+    document.querySelectorAll<HTMLAnchorElement>('[data-doc-link]').forEach((a) => {
+      const doc = docs.find((d) => d.url === a.dataset.docLink)!;
+      a.hidden = !`${doc.title} ${doc.body}`.toLowerCase().includes(term);
       if (!a.hidden) count++;
     });
-    document.getElementById('docs-no-results')!.hidden = count > 0;
+    // A group whose pages are all filtered out loses its label too.
+    document.querySelectorAll<HTMLElement>('.docs-sidebar section').forEach((section) => {
+      section.hidden = !section.querySelector('[data-doc-link]:not([hidden])');
+    });
+    document.getElementById('docs-no-results')!.textContent = count ? '' : 'No matching pages.';
   };
 }

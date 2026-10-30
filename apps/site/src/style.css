@@ -2025,7 +2025,7 @@ a.example-card:focus-visible {
   font: inherit;
   font-size: 12px;
 }
-.docs-sidebar h2 {
+.docs-sidebar .docs-group {
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 1.2px;
@@ -2192,7 +2192,7 @@ a.example-card:focus-visible {
   .docs-sidebar nav section {
     min-width: 160px;
   }
-  .docs-sidebar h2 {
+  .docs-sidebar .docs-group {
     margin-top: 15px;
   }
   .docs-article h1 {
