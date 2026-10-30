@@ -1,5 +1,5 @@
 import { applyMetadata } from './metadata';
-import { pageHtml, route as resolveRoute } from './pages';
+import { pageHtml, route as resolveRoute, loadDashboards, loadedDashboards, isDashboard } from './pages';
 import { legacyPath, siteUrl, scrollToFragment } from './routing';
 import { bindDocuments } from './documents';
 import { bindEditor, stopEditor } from './editor';
@@ -8,12 +8,13 @@ import { fontFaceCss, loadFont } from '@borrowdale/text';
 import { excalifontFiles } from '@borrowdale/text/excalifont-files';
 import { escape, hydrateDrawings, reseed, download, textSvg, seed } from './drawing';
 import { galleryState, categories, codeBlock } from './gallery';
-import { dashboardState } from './dashboards';
-import { world, climate, quakes } from './data';
 const app = document.querySelector<HTMLDivElement>('#app')!;
-const fontStyle = document.createElement('style');
-fontStyle.textContent = fontFaceCss(excalifontFiles);
-document.head.append(fontStyle);
+// Prerendered pages link the font stylesheet; only the development server needs it added here.
+if (!document.querySelector('link[data-font-css]')) {
+  const fontStyle = document.createElement('style');
+  fontStyle.textContent = fontFaceCss(excalifontFiles);
+  document.head.append(fontStyle);
+}
 await loadFont(document.fonts, excalifontFiles);
 const route = () => resolveRoute(location.pathname);
 // The toast and the announcer live outside #app, so a re-render never replaces a live region mid-message.
@@ -131,10 +132,14 @@ function bind() {
     galleryState.page = 0;
   });
   change('gallery-renderer', (v) => (galleryState.renderer = v as 'svg' | 'canvas'));
-  change('world-year', (v) => (dashboardState.year = Number(v)));
-  change('world-country', (v) => (dashboardState.country = v));
-  change('climate-since', (v) => (dashboardState.since = Number(v)));
-  change('quake-magnitude', (v) => (dashboardState.magnitude = Number(v)));
+  const dashboards = loadedDashboards();
+  if (dashboards) {
+    const state = dashboards.dashboardState;
+    change('world-year', (v) => (state.year = Number(v)));
+    change('world-country', (v) => (state.country = v));
+    change('climate-since', (v) => (state.since = Number(v)));
+    change('quake-magnitude', (v) => (state.magnitude = Number(v)));
+  }
   document.querySelectorAll<HTMLButtonElement>('[data-page]').forEach(
     (b) =>
       (b.onclick = () => {
@@ -152,8 +157,9 @@ function bind() {
       document.getElementById('gallery-search')?.focus();
     };
   const dataButton = document.getElementById('download-data');
-  if (dataButton)
+  if (dataButton && dashboards)
     dataButton.onclick = () => {
+      const { world, climate, quakes } = dashboards;
       const r = route();
       download(
         `borrowdale-${r}-snapshot.json`,
@@ -186,7 +192,8 @@ app.addEventListener('click', async (event) => {
 });
 // The page currently rendered, so a Back or Forward that only changes the fragment just scrolls.
 let shown = '';
-function navigate(fromHistory = false) {
+async function navigate(fromHistory = false) {
+  if (isDashboard(route())) await loadDashboards();
   const params = new URLSearchParams(location.search.slice(1));
   const category = params.get('category');
   // Back and Forward keep the gallery as the reader left it; only a followed link or a fresh load picks
@@ -224,17 +231,17 @@ app.addEventListener('click', (event) => {
     return;
   }
   history.pushState(null, '', url);
-  navigate();
-  if (!url.hash) focusPage();
+  void navigate().then(() => {
+    if (!url.hash) focusPage();
+  });
 });
 window.addEventListener('popstate', () => {
   if (location.pathname + location.search === shown) {
     scrollToFragment(location.hash);
     return;
   }
-  navigate(true);
-  focusPage();
+  void navigate(true).then(focusPage);
 });
 const old = legacyPath(location.hash);
 if (old) history.replaceState(null, '', siteUrl(old));
-navigate();
+await navigate();

@@ -3,7 +3,18 @@ import { chart, chartSpec, shapeSvg, scribble, patternSvg, escape, decorative } 
 // Every drawing on these pages is ornament: the text beside it carries the meaning.
 const ornament = (...args: Parameters<typeof shapeSvg>) => decorative(shapeSvg(...args));
 import { gallery, examples, codeBlock, chartCode } from './gallery';
-import { worldDashboard, climateDashboard, quakeDashboard } from './dashboards';
+// The dashboards and their datasets are most of the site's code, so they load only on the pages that
+// show them: call loadDashboards before rendering one.
+let dashboardsModule: typeof import('./dashboards') | undefined;
+export async function loadDashboards() {
+  return (dashboardsModule ??= await import('./dashboards'));
+}
+export const loadedDashboards = () => dashboardsModule;
+export const isDashboard = (r: string) => ['world', 'climate', 'earthquakes'].includes(r);
+function dashboards() {
+  if (!dashboardsModule) throw new Error('Call loadDashboards() before rendering a dashboard.');
+  return dashboardsModule;
+}
 import { editorPage, findExample } from './editor';
 import { docs, documentPage } from './documents';
 import { localPath, siteUrl, rewriteLinks, examplePath } from './routing';
@@ -223,11 +234,11 @@ export function pageHtml(path: string) {
         : r === 'example'
           ? editorPage(path)
           : r === 'world'
-            ? worldDashboard()
+            ? dashboards().worldDashboard()
             : r === 'climate'
-              ? climateDashboard()
+              ? dashboards().climateDashboard()
               : r === 'earthquakes'
-                ? quakeDashboard()
+                ? dashboards().quakeDashboard()
                 : r === 'docs'
                   ? documentPage(localPath(path))
                   : r === 'examples'

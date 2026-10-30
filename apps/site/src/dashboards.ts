@@ -16,6 +16,7 @@ import {
 import { chart, chartSpec, colors, escape } from './drawing';
 import { codeBlock, chartCode } from './gallery';
 import type { ChartSpec } from '@borrowdale/charts';
+export { world, climate, quakes } from './data';
 export const dashboardState = { year: 2023, country: 'HUN', since: 1970, magnitude: 4.5 };
 const number = (value: number) => value.toLocaleString('en', { maximumFractionDigits: 2 });
 // The categories a series of plain values is drawn against, from whichever axis is the band axis.
