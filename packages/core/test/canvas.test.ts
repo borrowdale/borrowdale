@@ -21,7 +21,8 @@ beforeAll(async () => {
       const { drawSketch } = (globalThis as unknown as {
         borrowdale: { drawSketch: typeof DrawSketch };
       }).borrowdale;
-      const path = { d: 'M20 60 L50 20 L55 60', stroke: '#000', strokeWidth: 12, fill: 'none' };
+      // The wider join keeps its miter at 4; the narrow join bevels at 4 but not at 10.
+      const path = { d: 'M20 60 L50 20 L55 60 M65 80 L75 40 L85 80', stroke: '#000', strokeWidth: 12, fill: 'none' };
       function context() {
         const canvas = document.createElement('canvas');
         canvas.width = canvas.height = 100;
