@@ -120,9 +120,11 @@ export function bindEditor() {
       let output: string = event.data.output;
       // Core sketches contain cubic paths. Bound their control points conservatively without
       // executing or inserting user markup into the parent document.
-      const parsed = new DOMParser().parseFromString(output, 'image/svg+xml');
-      const svg = parsed.documentElement;
-      if (svg.localName === 'svg' && svg.hasAttribute('data-fit')) {
+      // Parsed as HTML, as the preview will show it: the examples' markup, like most hand-written SVG
+      // in a page, has no xmlns and bare attributes, which an XML parse rejects.
+      const parsed = new DOMParser().parseFromString(output, 'text/html');
+      const svg = parsed.body.firstElementChild;
+      if (parsed.body.childElementCount === 1 && svg?.localName === 'svg' && svg.hasAttribute('data-fit')) {
         const xs: number[] = [],
           ys: number[] = [];
         for (const path of svg.querySelectorAll('path')) {
@@ -143,7 +145,7 @@ export function bindEditor() {
             'viewBox',
             `${loX - 8} ${loY - 8} ${Math.max(16, hiX - loX + 16)} ${Math.max(16, hiY - loY + 16)}`,
           );
-          output = new XMLSerializer().serializeToString(svg);
+          output = svg.outerHTML;
         }
       }
       (document.getElementById('editor-preview') as HTMLIFrameElement).srcdoc = previewDocument(output);
