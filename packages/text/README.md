@@ -58,6 +58,15 @@ Both return the text exactly as it will be drawn, which is the text that was mea
 `textBounds(layout)` returns the upright box that holds a rotated layout: its `box` turned by
 `rotate` around the `pivot`, for keeping rotated labels clear of each other and of the edges.
 
+`fitText(text, maxWidth, { fontSize?, font? })` returns the text as it will be drawn, whole if it is
+at most `maxWidth` wide, or else as much of it as fits followed by "…" ("..." in a font that has dots
+but no ellipsis), without the spaces before the cut. It cuts only between whole characters as they
+are drawn: never inside a surrogate pair, between a letter and its marks, inside an emoji sequence
+joined by zero-width joiners or with a skin tone, or between the two halves of a flag. It returns
+`undefined` when not even the ellipsis fits, and throws for a `maxWidth` that is not a number from 0
+to 2,000,000. Which characters count as marks follows the Unicode version of the JavaScript engine,
+so a mark newer than an engine's Unicode tables may be cut differently there.
+
 A character the font does not cover is measured as 1 em wide and listed in `missing`, with any
 combining marks after it (below); `missing` lists each such piece of text once. The browser still
 draws it, usually in a fallback font at that font's width (an accented letter may

@@ -19,9 +19,25 @@ export const MAX_DECIMALS = 20;
 /** Reads a value at `path`, returning it checked, or throws. */
 export type Check<T> = (path: string, value: unknown) => T;
 
-/** Throws the error every spec problem becomes: "Invalid chart: <path> <problem>". */
+/**
+ * What every spec problem throws. Its message is "Invalid chart: <path> <problem>"; `path` is the
+ * place in the spec, such as `series[2].data[5]`, or `''` for the spec itself.
+ */
+export class InvalidChartError extends Error {
+  override readonly name = 'InvalidChartError';
+  readonly path: string;
+  readonly problem: string;
+
+  constructor(path: string, problem: string) {
+    super(`Invalid chart: ${path === '' ? '' : `${path} `}${problem}`);
+    this.path = path;
+    this.problem = problem;
+  }
+}
+
+/** Throws an `InvalidChartError` for the spec at `path`. */
 export function fail(path: string, problem: string): never {
-  throw new Error(`Invalid chart: ${path === '' ? '' : `${path} `}${problem}`);
+  throw new InvalidChartError(path, problem);
 }
 
 /**
@@ -89,21 +105,24 @@ function join(path: string, key: string): string {
 
 /**
  * An array of `min` to `max` entries, read by index, so a hole is undefined and is rejected. Each
- * entry's check also gets its index.
+ * entry's check also gets its index. `reserve` receives the validated length before allocation.
  */
 export function list<T>(
   min: number,
   max: number,
   entry: (path: string, value: unknown, index: number) => T,
+  reserve?: (count: number) => void,
 ): Check<T[]> {
   return (path, value) => {
     if (!Array.isArray(value)) {
       fail(path, `must be an array, got ${show(value)}`);
     }
-    if (value.length < min || value.length > max) {
-      fail(path, `must have ${min === max ? min : `${min} to ${max}`} entries, got ${value.length}`);
+    const length = value.length;
+    if (!Number.isInteger(length) || length < min || length > max) {
+      fail(path, `must have ${min === max ? min : `${min} to ${max}`} entries, got ${show(length)}`);
     }
-    return Array.from({ length: value.length }, (_, i) => entry(`${path}[${i}]`, value[i] as unknown, i));
+    reserve?.(length);
+    return Array.from({ length }, (_, i) => entry(`${path}[${i}]`, value[i] as unknown, i));
   };
 }
 
@@ -190,4 +209,15 @@ export function probe(path: string, check: () => unknown): void {
     const short = `${message.slice(0, MAX_MESSAGE).replace(/[\ud800-\udbff]$/, '')}…`;
     fail(path, `is not valid: ${message.length > MAX_MESSAGE ? short : message}`);
   }
+}
+
+/** Throws at the first name that repeats one before it. */
+export function unique(names: readonly string[], pathOf: (index: number) => string): void {
+  const seen = new Set<string>();
+  names.forEach((name, i) => {
+    if (seen.has(name)) {
+      fail(pathOf(i), `repeats ${show(name)}`);
+    }
+    seen.add(name);
+  });
 }

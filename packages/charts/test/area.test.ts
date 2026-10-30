@@ -88,6 +88,26 @@ function sharedEdges(layout: ChartLayout, expected: number, lower = 'lower', upp
   expect(checked.size).toBe(expected);
 }
 
+/** The last `count` shapes the series `title` draws. */
+function lastShapes(layout: ChartLayout, title: string, count: number): ChartNode[] {
+  const found = series(layout, title);
+  return found.kind === 'mark' ? found.nodes.slice(-count) : [];
+}
+
+// A lower layer with two runs, under an upper layer that does or does not stop at C: the upper
+// layer's gap cuts the lower layer's first run, and must not change the strokes of its second.
+function twoRuns(upper: (number | null)[]): ChartSpec {
+  const categories = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
+  return {
+    width: 600, height: 400, legend: 'none',
+    axes: { x: { type: 'band', categories }, y: { type: 'linear', min: 0, max: 4 } },
+    series: [
+      { type: 'area', name: 'lower', stack: 's', curve: 'monotone', data: [1, 2, 1, 2, null, 1, 2] },
+      { type: 'area', name: 'upper', stack: 's', curve: 'monotone', data: upper },
+    ],
+  };
+}
+
 // A middle layer missing two categories, over a bottom layer that keeps rising, so the edge the top
 // layer shares with the bottom one over the gap has tangents that are not 0.
 const gapInTheMiddle: ChartSpec = {
@@ -237,5 +257,13 @@ describe('stacked area boundaries', () => {
     ] });
     expect(series(after, 'lower')).toEqual(series(before, 'lower'));
     expect(series(after, 'upper')).toEqual(series(before, 'upper'));
+  });
+
+  it('keeps the strokes of a run that a gap in another layer does not cut', () => {
+    const whole = layoutChart(twoRuns([1, 1, 1, 1, 1, 1, 1]));
+    const gapped = layoutChart(twoRuns([1, 1, null, 1, 1, 1, 1]));
+
+    expect(nodesOf(gapped, 'lower')).toBe(nodesOf(whole, 'lower') + 2);
+    expect(lastShapes(gapped, 'lower', 2)).toEqual(lastShapes(whole, 'lower', 2));
   });
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { layoutChart, toSvgChart, type ChartSpec } from '@borrowdale/charts';
+import { InvalidChartError, layoutChart, toSvgChart, type ChartSpec } from '@borrowdale/charts';
 
 const bands = { x: { type: 'band', categories: ['a', 'b'] }, y: { type: 'linear' } };
 const longKey = 'k'.repeat(101);
@@ -75,7 +75,7 @@ describe('chart validation', () => {
     ['a style with a seed', { ...bars, style: { seed: 3 } }, 'Invalid chart: style.seed is not allowed: each mark gets its own seed from the chart seed'],
     ['no series', { ...bars, series: [] }, 'Invalid chart: series must have 1 to 100 entries, got 0'],
     ['series that are not an array', { ...bars, series: {} }, 'Invalid chart: series must be an array, got an object'],
-    ['an unknown series type', { ...bars, series: [{ type: 'pyramid', name: 'A', data: [] }] }, 'Invalid chart: series[0].type must be a series type (bar, line, area, rangeArea, scatter, bubble, pie, radar, rose, radialBar, polarLine, polarArea, polarScatter, gauge), got "pyramid"'],
+    ['an unknown series type', { ...bars, series: [{ type: 'pyramid', name: 'A', data: [] }] }, 'Invalid chart: series[0].type must be a series type (bar, line, area, rangeArea, interval, xyLine, xyArea, scatter, bubble, pie, radar, rose, radialBar, polarLine, polarArea, polarScatter, gauge), got "pyramid"'],
     ['an unknown series key', { ...bars, series: [{ type: 'bar', name: 'A', data: [1, 2], colour: 'red' }] }, 'Invalid chart: series[0] has an unknown key, "colour"'],
     ['a key of another series type', { ...bars, series: [{ type: 'bar', name: 'A', data: [1, 2], curve: 'step' }] }, 'Invalid chart: series[0] has an unknown key, "curve"'],
     ['a missing name', { ...bars, series: [{ type: 'bar', data: [1, 2] }] }, 'Invalid chart: series[0].name is missing'],
@@ -84,7 +84,7 @@ describe('chart validation', () => {
     ['a value past 1e15', { ...bars, series: [{ type: 'bar', name: 'A', data: [1, 2e15] }] }, 'Invalid chart: series[0].data[1] must be a number from -1e15 to 1e15 or null, got 2000000000000000'],
     ['a hole in the data', { ...bars, series: [{ type: 'bar', name: 'A', data: [1, , 2] }] }, 'Invalid chart: series[0].data[1] must be a number from -1e15 to 1e15 or null, got undefined'],
     ['data one value short', { ...bars, series: [{ type: 'bar', name: 'A', data: [1] }] }, 'Invalid chart: series[0].data has 1 values, but axes.x.categories has 2'],
-    ['too many data points in all', { ...bars, axes: xy, series: [{ type: 'scatter', name: 'A', data: Array(60000).fill([1, 1]) }, { type: 'scatter', name: 'B', data: Array(60000).fill([1, 1]) }] }, 'Invalid chart: series hold 120000 data points in all, more than 100000'],
+    ['too many data points in all', { ...bars, axes: xy, series: [{ type: 'scatter', name: 'A', data: Array(60000).fill([1, 1]) }, { type: 'scatter', name: 'B', data: Array(60000).fill([1, 1]) }] }, 'Invalid chart: series hold at least 120000 data points in all, more than 100000'],
     ['an unknown curve', { ...bars, series: [{ type: 'line', name: 'A', data: [1, 2], curve: 'spline' }] }, 'Invalid chart: series[0].curve must be one of linear, monotone, step, step-before, step-after, got "spline"'],
     ['a dash core rejects', { ...bars, series: [{ type: 'line', name: 'A', data: [1, 2], dash: [0] }] }, 'Invalid chart: series[0].dash is not valid: Invalid style: strokeLineDash must be an array of 1 to 16 lengths from 0 to 1000000, adding up to at least 1, got 0'],
     ['a series style core rejects', { ...bars, series: [{ type: 'bar', name: 'A', data: [1, 2], style: { fillStyle: 'crayon' } }] }, 'Invalid chart: series[0].style is not valid: Unknown fill style: crayon'],
@@ -155,10 +155,10 @@ describe('chart validation', () => {
     ['101 series', oneSeriesTooMany, 'Invalid chart: series must have 1 to 100 entries, got 101'],
     ['1001 categories', oneCategoryTooMany, 'Invalid chart: axes.x.categories must have 1 to 1000 entries, got 1001'],
     ['1001 slices', oneSliceTooMany, 'Invalid chart: series[0].data must have 1 to 1000 entries, got 1001'],
-    ['100,001 data points in all', onePointTooMany, 'Invalid chart: series hold 100001 data points in all, more than 100000'],
+    ['100,001 data points in all', onePointTooMany, 'Invalid chart: series hold at least 100001 data points in all, more than 100000'],
     ['a stacked area value just below 0', { ...bars, series: [{ type: 'area', name: 'A', stack: 's', data: [1, -0.5] }] }, 'Invalid chart: series[0].data[1] is negative, -0.5, which a stacked area cannot show'],
-    ['the series type "constructor"', { ...bars, series: [{ type: 'constructor', name: 'A', data: [1, 2] }] }, 'Invalid chart: series[0].type must be a series type (bar, line, area, rangeArea, scatter, bubble, pie, radar, rose, radialBar, polarLine, polarArea, polarScatter, gauge), got "constructor"'],
-    ['the series type "toString"', { ...bars, series: [{ type: 'toString', name: 'A', data: [1, 2] }] }, 'Invalid chart: series[0].type must be a series type (bar, line, area, rangeArea, scatter, bubble, pie, radar, rose, radialBar, polarLine, polarArea, polarScatter, gauge), got "toString"'],
+    ['the series type "constructor"', { ...bars, series: [{ type: 'constructor', name: 'A', data: [1, 2] }] }, 'Invalid chart: series[0].type must be a series type (bar, line, area, rangeArea, interval, xyLine, xyArea, scatter, bubble, pie, radar, rose, radialBar, polarLine, polarArea, polarScatter, gauge), got "constructor"'],
+    ['the series type "toString"', { ...bars, series: [{ type: 'toString', name: 'A', data: [1, 2] }] }, 'Invalid chart: series[0].type must be a series type (bar, line, area, rangeArea, interval, xyLine, xyArea, scatter, bubble, pie, radar, rose, radialBar, polarLine, polarArea, polarScatter, gauge), got "toString"'],
     ['a series given as an array', { ...bars, series: [[1, 2]] }, 'Invalid chart: series[0] must be an object, got an array of 2'],
     ['a style given as an array', { ...bars, style: [] }, 'Invalid chart: style must be an object, got an array of 0'],
     ['axes given as an array', { ...bars, axes: [] }, 'Invalid chart: axes must be an object, got an array of 0'],
@@ -265,7 +265,29 @@ describe('chart validation', () => {
 
   it('repeats a message from core of exactly 200 characters in full', () => {
     expect(() => layoutChart(fillStyleOf200 as ChartSpec)).toThrow(
-      new Error(`Invalid chart: style is not valid: Unknown fill style: ${'a'.repeat(180)}`),
+      new InvalidChartError('style', `is not valid: Unknown fill style: ${'a'.repeat(180)}`),
     );
+  });
+
+  it('throws an InvalidChartError that names the place in the spec apart from the problem', () => {
+    const spec = { ...bars, series: [{ type: 'bar', name: 'A', data: [1, '2'] }] };
+
+    expect(() => layoutChart(spec as ChartSpec)).toThrow(
+      expect.objectContaining({
+        name: 'InvalidChartError',
+        path: 'series[0].data[1]',
+        problem: 'must be a number from -1e15 to 1e15 or null, got "2"',
+      }),
+    );
+  });
+
+  it('throws an InvalidChartError with an empty path for the spec itself', () => {
+    expect(() => layoutChart({ ...bars, colour: 'red' } as ChartSpec)).toThrow(
+      expect.objectContaining({ path: '', problem: 'unknown key "colour"' }),
+    );
+  });
+
+  it('throws an instance of the exported class', () => {
+    expect(() => layoutChart({ ...bars, width: 0 } as ChartSpec)).toThrow(InvalidChartError);
   });
 });

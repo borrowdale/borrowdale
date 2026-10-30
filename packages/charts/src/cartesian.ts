@@ -1,25 +1,30 @@
+import { drawXYLine, drawXYArea } from './cartesian-paths.js';
+import { barShape } from './bar-shape.js';
+import { annotationValues, drawAnnotations } from './annotations.js';
 import type { Point, Shape, SketchStyle } from '@borrowdale/core';
-import { cos, sin } from '@borrowdale/core/math';
-import type { TextAnchor, TextBaseline } from '@borrowdale/text';
-import { areaPath, linePath } from './curves.js';
-import type { Drawing, Extent } from './drawing.js';
-import { assertRoom, BAND_PADDING, GAP, TICK, type Rect } from './frame.js';
-import { loneDot, POINT_SIZE, runsOf, solid } from './marks.js';
-import { GRID, GRID_WIDTH, hatched, INK, LINE_WIDTH, type Paint } from './palette.js';
-import { stackGroup, stackSpans, type Span } from './stack.js';
-import { bandScale, formatValue, linearScale, place, type BandScale, type PlacedScale, type Scale } from './scale.js';
-import type { ChartNode, Curve } from './types.js';
 import {
-  isStacking,
-  type CheckedAxis,
-  type CheckedCartesianChart,
-  type CheckedLinearAxis,
-  type SeriesOf,
-} from './validate.js';
+  drawGrid,
+  drawGuide,
+  fitBandEnds,
+  guide,
+  reserveFor,
+  type AxisKey,
+  type Reserve,
+} from './cartesian-axes.js';
+import type { CheckedLinearAxis } from './check-axis.js';
+import { areaPath, linePath, straightPoints } from './curves.js';
+import type { Drawing, SeedKey } from './drawing.js';
+import { assertRoom, BAND_PADDING, type Rect } from './frame.js';
+import { loneDot, piecesOf, POINT_SIZE, runsOf, solid } from './marks.js';
+import { hatched, LINE_WIDTH, type Paint } from './palette.js';
+import { stackGroup, stackSpans, type Span } from './stack.js';
+import { bandScale, formatValue, formatAxisValue, linearScale, place, type BandScale, type PlacedScale } from './scale.js';
+import { markerNode } from './symbols.js';
+import type { ChartNode, Curve } from './types.js';
+import { isStacking, type CheckedCartesianChart, type SeriesOf } from './validate.js';
 
 type CartesianSeries = SeriesOf<'cartesian'>;
 type MarkType = CartesianSeries['type'];
-type AxisKey = 'x' | 'y' | 'y2';
 
 // The share of a bar's slot left as a gap between bars side by side.
 const BAR_GAP = 0.1;
@@ -33,17 +38,39 @@ interface Mark<S extends CartesianSeries> {
   slot: boolean;
   /** How the legend shows it. */
   legend: 'line' | 'box';
-  draw: (context: MarkContext, entry: S, paint: Paint) => void;
+  /**
+   * How far its marks may reach past the point of their value, on a plot whose shorter side is
+   * `plotSize` or less: the plot keeps that much room inside its edges.
+   */
+  reach: (plotSize: number, entry: S, chartStyle: SketchStyle) => number;
+  draw: (context: MarkContext, placed: Placed<S>, paint: Paint) => void;
 }
 
+const none = (): number => 0;
+
 const MARKS: { [K in MarkType]: Mark<Extract<CartesianSeries, { type: K }>> } = {
-  bar: { zero: true, slot: true, legend: 'box', draw: drawBars },
-  line: { zero: false, slot: false, legend: 'line', draw: drawLine },
-  area: { zero: true, slot: false, legend: 'box', draw: drawArea },
-  rangeArea: { zero: false, slot: false, legend: 'box', draw: drawArea },
-  scatter: { zero: false, slot: false, legend: 'box', draw: drawPoints },
-  bubble: { zero: false, slot: false, legend: 'box', draw: drawPoints },
+  bar: { zero: true, slot: true, legend: 'box', reach: none, draw: drawBars },
+  line: { zero: false, slot: false, legend: 'line', reach: (_size, entry) => entry.symbol ? POINT_SIZE / 2 : 0, draw: drawLine },
+  area: { zero: true, slot: false, legend: 'box', reach: none, draw: drawArea },
+  rangeArea: { zero: false, slot: false, legend: 'box', reach: none, draw: drawArea },
+  interval: { zero: false, slot: true, legend: 'box', reach: () => POINT_SIZE / 2, draw: drawIntervals },
+  xyLine: {
+    zero: false, slot: false, legend: 'line',
+    reach: (_size, entry, style) => Math.max(POINT_SIZE,
+      entry.widths?.reduce((max, width) => Math.max(max, width), 0) ?? 0,
+      entry.segments?.reduce((max, segment) => Math.max(max, segment?.width ?? 0), 0) ?? 0,
+      entry.style.strokeWidth ?? style.strokeWidth ?? LINE_WIDTH) / 2,
+    draw: drawXYLine,
+  },
+  xyArea: { zero: false, slot: false, legend: 'box', reach: none, draw: drawXYArea },
+  scatter: { zero: false, slot: false, legend: 'box', reach: () => POINT_SIZE / 2, draw: drawPoints },
+  bubble: { zero: false, slot: false, legend: 'box', reach: (size) => bubbleDiameter(size) / 2, draw: drawPoints },
 };
+
+/** The diameter of the largest bubble on a plot whose shorter side is `plotSize`. */
+function bubbleDiameter(plotSize: number): number {
+  return Math.min(MAX_BUBBLE, plotSize / 5);
+}
 
 // One cast: the entry for `entry.type` takes exactly that series, which TypeScript cannot follow
 // through a lookup by a union key.
@@ -72,15 +99,31 @@ export function layoutCartesian(drawing: Drawing, chart: CheckedCartesianChart, 
   // An axis with nothing drawn on it starts at its fixed end, or shows 0 to 1.
   const extentOf = (key: AxisKey): [number, number] => {
     const end = linear[key]?.min ?? linear[key]?.max ?? 0;
-    return extent(key, series, spans, valueAxisOf) ?? [end, end];
+    const data = extent(key, series, spans, valueAxisOf);
+    const values = chart.annotations.flatMap(annotationValues).filter((item) => item.axis === key && typeof item.value === 'number').map((item) => item.value as number);
+    if (values.length === 0) return data ?? [end, end];
+    return [Math.min(data?.[0] ?? Infinity, ...values), Math.max(data?.[1] ?? -Infinity, ...values)];
   };
 
   const line = drawing.lineHeight();
+  // Points and bubbles are centred on their values, so they reach past them: each end of x and y
+  // keeps that much room.
+  const reach = Math.max(
+    0,
+    ...series.map((entry) => markOf(entry).reach(
+      Math.min(rect.right - rect.left, rect.bottom - rect.top), entry, chart.style)),
+  );
+  const room: Record<keyof Rect, EndRoom> = {
+    left: endRoom(linear.x, 'min', reach),
+    right: endRoom(linear.x, 'max', reach),
+    bottom: endRoom(linear.y, 'min', reach),
+    top: endRoom(linear.y, 'max', reach),
+  };
   // The plot is what is left once the axes have their room: below it the x axis' labels and title,
   // above and below its ends the y axes' end labels, and beside it the y axes' labels and titles.
   const fitPlot = (reserve: Reserve) => {
-    const top = rect.top + reserve.up;
-    const bottom = rect.bottom - Math.max(reserve.bottom, reserve.down);
+    const top = rect.top + Math.max(reserve.up, room.top.outside);
+    const bottom = rect.bottom - Math.max(reserve.bottom, reserve.down, room.bottom.outside);
     assertRoom({ left: rect.left, top, right: rect.right, bottom }, chart.width, chart.height);
     const yScale = linear.y && linearScale(linear.y, extentOf('y'), bottom - top);
     const y2Scale = y2 && linearScale(y2, extentOf('y2'), bottom - top);
@@ -91,11 +134,20 @@ export function layoutCartesian(drawing: Drawing, chart: CheckedCartesianChart, 
     const xScale = linear.x && linearScale(linear.x, extentOf('x'), plotRight - plotLeft);
     const below = guide('bottom', 'x', x, xScale, drawing, line);
     // The first and last x labels reach past the ends of the axis.
-    plotLeft = Math.max(plotLeft, rect.left + below.ends.left);
-    plotRight = Math.min(plotRight, rect.right - below.ends.right);
-    const plot: Rect = { left: plotLeft, top, right: plotRight, bottom };
-    assertRoom(plot, chart.width, chart.height);
-    return { plot, scales: { x: xScale, y: yScale, y2: y2Scale }, guides: [below, left, ...(right ? [right] : [])] };
+    plotLeft = Math.max(plotLeft, rect.left + below.ends.left, rect.left + room.left.outside);
+    plotRight = Math.min(plotRight, rect.right - below.ends.right, rect.right - room.right.outside);
+    // The band axis, if there is one, is x below the plot or y beside it.
+    const plot = fitBandEnds({ left: plotLeft, top, right: plotRight, bottom }, band === x ? below : left, rect, chart);
+    // Where the values of x and y are placed: the plot, less the room kept inside it.
+    const data: Rect = {
+      left: plot.left + room.left.inside,
+      top: plot.top + room.top.inside,
+      right: plot.right - room.right.inside,
+      bottom: plot.bottom - room.bottom.inside,
+    };
+    assertRoom(data, chart.width, chart.height);
+    const guides = [below, left, ...(right ? [right] : [])];
+    return { plot, data, scales: { x: xScale, y: yScale, y2: y2Scale }, guides };
   };
   // A linear axis' labels are its ticks', and those depend on the plot's size. So room is reserved
   // for ticks over the whole chart first, then again, once, for the plot's own ticks should they
@@ -114,52 +166,94 @@ export function layoutCartesian(drawing: Drawing, chart: CheckedCartesianChart, 
       down: Math.max(first.down, needed.down),
     });
   }
-  const { plot, guides } = fitted;
+  const { plot, data, guides } = fitted;
   const [xScale, yScale, y2Scale] = [fitted.scales.x, fitted.scales.y, fitted.scales.y2];
 
   const scales: Record<AxisKey, PlacedScale | undefined> = {
-    x: xScale && place(xScale, [plot.left, plot.right]),
-    y: yScale && place(yScale, [plot.bottom, plot.top]),
-    y2: y2Scale && place(y2Scale, [plot.bottom, plot.top]),
+    x: xScale && place(xScale, [data.left, data.right]),
+    y: yScale && place(yScale, [data.bottom, data.top]),
+    y2: y2Scale && place(y2Scale, [data.bottom, data.top]),
   };
   const across: [number, number] = horizontal ? [plot.top, plot.bottom] : [plot.left, plot.right];
-  const bands = band && bandScale(band.categories.length, across, BAND_PADDING);
+  const bands = band && bandScale(band.categories.length, across, BAND_PADDING, band.weights);
   const frame = makeFrame(plot, horizontal, bands);
 
+  const annotationAt = (key: AxisKey, value: import('./types.js').ChartCoordinate): number => {
+    if (typeof value === 'number') return scales[key]!.at(value);
+    const index = band!.categories.indexOf(value);
+    return bands!.start(index) + bands!.width(index) / 2;
+  };
+  drawAnnotations(drawing, chart.annotations, 'back', plot, annotationAt);
   for (const entry of guides) {
     drawGrid(drawing, plot, entry, scales[entry.key]);
   }
+  const slots = slotsOf(series, valueAxisOf);
   const context: MarkContext = {
     drawing,
     frame,
     categories: band?.categories ?? [],
-    scaleOf: (entry) => scales[valueAxisOf(entry)]!,
-    axisOf: (entry) => linear[valueAxisOf(entry)]!,
-    spansOf: (entry) => spans.get(entry)!,
-    areaCutsOf: (entry) => entry.type === 'area' ? cuts.get(stackOf(entry, valueAxisOf)) : undefined,
-    slots: slotsOf(series, valueAxisOf),
+    slotCount: slots.count,
     x: scales.x,
     xAxis: linear.x,
     largestBubble: largestBubble(series),
   };
-  series.forEach((entry, i) => markOf(entry).draw(context, entry, paints[i]!));
+  series.forEach((entry, i) => {
+    const key = valueAxisOf(entry);
+    const placed: Placed = {
+      entry,
+      axis: linear[key]!,
+      scale: scales[key]!,
+      spans: spans.get(entry) ?? [],
+      slot: slots.slotOf(entry),
+      cuts: entry.type === 'area' ? cuts.get(stackOf(entry, valueAxisOf)) : undefined,
+    };
+    markOf(entry).draw(context, placed, paints[i]!);
+  });
+  drawAnnotations(drawing, chart.annotations, 'front', plot, annotationAt);
   for (const entry of guides) {
     drawGuide(drawing, plot, entry, scales[entry.key], bands, line);
   }
 }
 
+/** Room kept at one end of an axis, outside the plot or inside it. */
+interface EndRoom {
+  outside: number;
+  inside: number;
+}
+
+/**
+ * The room marks reaching `reach` past their values need at an end of a linear axis. A free end is
+ * widened, inside the plot, keeping its ticks; at an end fixed with `min` or `max` the plot keeps the
+ * room outside it instead, from the edge of the chart, so a mark there stays on the chart.
+ */
+function endRoom(axis: CheckedLinearAxis | undefined, end: 'min' | 'max', reach: number): EndRoom {
+  if (axis === undefined) {
+    return { outside: 0, inside: 0 };
+  }
+  return axis[end] === undefined ? { outside: 0, inside: reach } : { outside: reach, inside: 0 };
+}
+
+/** A series with everything resolved about where it is drawn, once, before it is drawn. */
+interface Placed<S extends CartesianSeries = CartesianSeries> {
+  entry: S;
+  /** The axis of its values, and its placed scale. */
+  axis: CheckedLinearAxis;
+  scale: PlacedScale;
+  /** Where each bar or area of each category starts and ends; empty for scatter and bubbles. */
+  spans: Span[];
+  /** Its slot beside other series in each band, as bars stand; -1 for a series without one. */
+  slot: number;
+  /** Where a stacked monotone area splits its runs (`areaCutsOf`); undefined for every other series. */
+  cuts: ReadonlySet<number> | undefined;
+}
+
+/** What every series of the chart is drawn in. */
 interface MarkContext {
   drawing: Drawing;
   frame: Frame;
   categories: readonly string[];
-  /** The placed scale of a series' values. */
-  scaleOf: (entry: CartesianSeries) => PlacedScale;
-  /** The axis of a series' values. */
-  axisOf: (entry: CartesianSeries) => CheckedLinearAxis;
-  spansOf: (entry: CartesianSeries) => Span[];
-  /** Where a stacked monotone area splits its runs (`areaCutsOf`); undefined for every other series. */
-  areaCutsOf: (entry: CartesianSeries) => ReadonlySet<number> | undefined;
-  slots: { slotOf: (entry: CartesianSeries) => number; count: number };
+  /** How many slots each band is split into. */
+  slotCount: number;
   /** The x scale and axis of a chart with two linear axes. */
   x: PlacedScale | undefined;
   xAxis: CheckedLinearAxis | undefined;
@@ -177,15 +271,17 @@ interface Frame {
   point: (position: Point) => Point;
   /** A rectangle from `along`, `thickness` wide, between two positions on the value axis. */
   box: (along: number, thickness: number, from: number, to: number) => Shape;
-  line: (points: readonly Point[], curve: Curve) => string;
-  area: (high: readonly Point[], low: readonly Point[], curve: Curve) => string;
+  /** A line through the points: straight segments as a linear path, a bending curve as a path. */
+  line: (points: readonly Point[], curve: Curve) => Shape;
+  /** The area between two lines over the same positions: a polygon, or a path for a bending curve. */
+  area: (high: readonly Point[], low: readonly Point[], curve: Curve) => Shape;
 }
 
 function makeFrame(plot: Rect, horizontal: boolean, bands: BandScale | undefined): Frame {
   return {
     plot,
-    center: (i) => bands!.start(i) + bands!.bandwidth / 2,
-    band: (i) => ({ start: bands!.start(i), width: bands!.bandwidth }),
+    center: (i) => bands!.start(i) + bands!.width(i) / 2,
+    band: (i) => ({ start: bands!.start(i), width: bands!.width(i) }),
     point: ([along, value]) => (horizontal ? [value, along] : [along, value]),
     box: (along, thickness, from, to) => {
       const [low, size] = [Math.min(from, to), Math.abs(to - from)];
@@ -193,8 +289,20 @@ function makeFrame(plot: Rect, horizontal: boolean, bands: BandScale | undefined
         ? { kind: 'rectangle', x: low, y: along, width: size, height: thickness }
         : { kind: 'rectangle', x: along, y: low, width: thickness, height: size };
     },
-    line: (points, curve) => linePath(points, curve, horizontal),
-    area: (high, low, curve) => areaPath(high, low, curve, horizontal),
+    // Straight segments cost the stroke engine work in proportion to their points; a path is
+    // simplified first, which costs more the more it turns.
+    line: (points, curve) => {
+      const corners = straightPoints(points, curve, horizontal);
+      return corners
+        ? { kind: 'linearPath', points: corners }
+        : { kind: 'path', d: linePath(points, curve, horizontal) };
+    },
+    area: (high, low, curve) => {
+      const [top, bottom] = [straightPoints(high, curve, horizontal), straightPoints(low, curve, horizontal)];
+      return top && bottom
+        ? { kind: 'polygon', points: [...top, ...bottom.reverse()] }
+        : { kind: 'path', d: areaPath(high, low, curve, horizontal) };
+    },
   };
 }
 
@@ -220,7 +328,7 @@ function spansOf(
         entry,
         entry.data.map((value) => (value === null ? null : [value, value])),
       );
-    } else if (entry.type === 'rangeArea') {
+    } else if (entry.type === 'rangeArea' || entry.type === 'interval') {
       spans.set(
         entry,
         entry.data.map((pair) => pair && [pair[0], pair[1]]),
@@ -295,9 +403,11 @@ function extent(
     high = Math.max(high, value);
   };
   for (const entry of series) {
-    if (entry.type === 'scatter' || entry.type === 'bubble') {
+    if (entry.type === 'scatter' || entry.type === 'bubble' || entry.type === 'xyLine' || entry.type === 'xyArea') {
       for (const point of key === 'y2' ? [] : entry.data) {
+        if (point === null) continue;
         take(key === 'x' ? point[0] : point[1]);
+        if (entry.type === 'xyArea' && key === 'y') take(point[2]!);
       }
       continue;
     }
@@ -324,7 +434,8 @@ function slotsOf(
 ): { slotOf: (entry: CartesianSeries) => number; count: number } {
   const keyOf = (entry: CartesianSeries): string =>
     'stack' in entry ? stackOf(entry, valueAxisOf) : `#${entry.index}`;
-  const keys = [...new Set(series.filter((entry) => markOf(entry).slot).map(keyOf))];
+  const keys = [...new Set(series.filter((entry) => markOf(entry).slot &&
+    !(entry.type === 'interval' && entry.overlay)).map(keyOf))];
   return { slotOf: (entry) => keys.indexOf(keyOf(entry)), count: keys.length };
 }
 
@@ -338,33 +449,85 @@ function largestBubble(series: readonly CartesianSeries[]): number {
   return largest;
 }
 
-function drawBars(context: MarkContext, entry: Extract<CartesianSeries, { type: 'bar' }>, paint: Paint): void {
-  const { drawing, frame, slots } = context;
-  const scale = context.scaleOf(entry);
-  const slot = slots.slotOf(entry);
-  context.spansOf(entry).forEach((span, i) => {
-    const value = entry.data[i];
-    if (!span || value === null || value === undefined || span[0] === span[1]) {
-      return;
-    }
+function drawIntervals(
+  { drawing, frame, slotCount, categories }: MarkContext,
+  { entry, scale, slot, axis }: Placed<Extract<CartesianSeries, { type: 'interval' }>>,
+  paint: Paint,
+): void {
+  entry.data.forEach((pair, i) => {
+    if (!pair) return;
     const band = frame.band(i);
-    const width = band.width / slots.count;
-    const along = band.start + slot * width + (width * BAR_GAP) / 2;
-    const category = context.categories[i]!;
-    drawing.mark(`${entry.name}, ${category}: ${valueText(value, context.axisOf(entry))}`, [
-      drawing.shape(
-        frame.box(along, width * (1 - BAR_GAP), scale.at(span[0]), scale.at(span[1])),
-        hatched(paint),
-        `${entry.name}|${category}|bar`,
-        entry.style,
-      ),
-    ]);
+    const slotWidth = band.width / (entry.overlay ? 1 : slotCount);
+    const center = entry.overlay ? frame.center(i) : band.start + (slot + 0.5) * slotWidth;
+    const width = slotWidth * entry.width;
+    const [from, to] = pair.map((value) => scale.at(value)) as [number, number];
+    const key = [entry.name, categories[i]!, 'interval'];
+    const outline = { stroke: paint.color, strokeWidth: LINE_WIDTH };
+    const nodes: ChartNode[] = [];
+    if (entry.display === 'bar') {
+      if (from !== to) nodes.push(drawing.shape(barShape(entry.shape, center - width / 2, width, from, to, frame.point, frame.box), hatched(paint), key, entry.style));
+    } else if (entry.display !== 'points') {
+      nodes.push(drawing.outline(frame.line([[center, from], [center, to]], 'linear'), outline, key, entry.style));
+      if (entry.display === 'error') {
+        for (const [end, value] of [from, to].entries()) {
+          nodes.push(drawing.outline(frame.line([[center - width / 2, value], [center + width / 2, value]], 'linear'),
+            outline, [...key, 'cap', end], entry.style));
+        }
+      }
+    }
+    const endpoints = [
+      { symbol: entry.fromSymbol ?? (entry.display === 'points' ? 'circle' : undefined), value: from },
+      { symbol: entry.toSymbol ?? (entry.display === 'points' ? 'circle' : undefined), value: to },
+    ] as const;
+    endpoints.forEach(({ symbol, value }, end) => {
+      if (symbol) nodes.push(markerNode(drawing, symbol, frame.point([center, value]), POINT_SIZE,
+        solid(paint.color), [...key, 'endpoint', end], entry.style));
+    });
+    if (entry.dataLabels) {
+      const [x, y] = frame.point([center, to]);
+      nodes.push(drawing.label(formatAxisValue(pair[1], axis), x, y, frame.plot, `${entry.path}.dataLabels`));
+    }
+    drawing.mark(`${entry.name}, ${categories[i]}: ${formatAxisValue(pair[0], axis)} to ${formatAxisValue(pair[1], axis)}`, nodes);
   });
 }
 
-function drawLine(context: MarkContext, entry: Extract<CartesianSeries, { type: 'line' }>, paint: Paint): void {
+function drawBars(
+  context: MarkContext,
+  placed: Placed<Extract<CartesianSeries, { type: 'bar' }>>,
+  paint: Paint,
+): void {
+  const { drawing, frame, slotCount } = context;
+  const { entry, scale, slot } = placed;
+  placed.spans.forEach((span, i) => {
+    const value = entry.data[i];
+    if (!span || value === null || value === undefined || (span[0] === span[1] && !entry.dataLabels)) {
+      return;
+    }
+    const band = frame.band(i);
+    const width = band.width / slotCount;
+    const along = band.start + slot * width + (width * BAR_GAP) / 2;
+    const category = context.categories[i]!;
+    const nodes: ChartNode[] = span[0] === span[1] ? [] : [drawing.shape(
+        barShape(entry.shape, along, width * (1 - BAR_GAP), scale.at(span[0]), scale.at(span[1]), frame.point, frame.box),
+        hatched(paint),
+        [entry.name, category, 'bar'],
+        entry.style,
+      )];
+    if (entry.dataLabels) {
+      const [x, y] = frame.point([along + width * (1 - BAR_GAP) / 2, scale.at((span[0] + span[1]) / 2)]);
+      nodes.push(drawing.label(formatAxisValue(value, placed.axis), x, y, frame.plot, `${entry.path}.dataLabels`));
+    }
+    drawing.mark(`${entry.name}, ${category}: ${formatAxisValue(value, placed.axis)}`, nodes);
+  });
+}
+
+function drawLine(
+  context: MarkContext,
+  placed: Placed<Extract<CartesianSeries, { type: 'line' }>>,
+  paint: Paint,
+): void {
   const { drawing, frame } = context;
-  const scale = context.scaleOf(entry);
+  const { entry, scale } = placed;
   const points = entry.data.map((value, i): Point | null =>
     value === null ? null : [frame.center(i), scale.at(value)],
   );
@@ -372,42 +535,49 @@ function drawLine(context: MarkContext, entry: Extract<CartesianSeries, { type: 
   const style = { stroke: paint.color, strokeWidth: LINE_WIDTH, ...(entry.dash ? { strokeLineDash: entry.dash } : {}) };
   drawing.mark(
     entry.name,
-    runs.map((run, r) => lineOrDot(drawing, frame, run, entry.curve, style, `${entry.name}|line|${r}`, entry.style)),
+    runs.map((run, r) => lineOrDot(drawing, frame, run, entry.curve, style, [entry.name, 'line', r], entry.style)),
   );
+  points.forEach((point, i) => {
+    if (!point) return;
+    const [x, y] = frame.point(point);
+    if (entry.symbol) drawing.push(markerNode(drawing, entry.symbol, [x, y], POINT_SIZE,
+      solid(paint.color), [entry.name, 'point', i], entry.style));
+    if (entry.dataLabels) drawing.push(drawing.label(formatAxisValue(entry.data[i]!, placed.axis), x, y,
+      frame.plot, `${entry.path}.dataLabels`));
+  });
 }
 
 function drawArea(
   context: MarkContext,
-  entry: Extract<CartesianSeries, { type: 'area' | 'rangeArea' }>,
+  placed: Placed<Extract<CartesianSeries, { type: 'area' | 'rangeArea' }>>,
   paint: Paint,
 ): void {
   const { drawing, frame } = context;
-  const scale = context.scaleOf(entry);
+  const { entry, scale } = placed;
   const outline = { stroke: paint.color, strokeWidth: LINE_WIDTH };
-  const edges = context.spansOf(entry).map((span, i) => {
+  const edges = placed.spans.map((span, i) => {
     const along = frame.center(i);
     return span && { from: [along, scale.at(span[0])] as Point, to: [along, scale.at(span[1])] as Point };
   });
-  const nodes = runsOf(edges, context.areaCutsOf(entry)).flatMap((run, r) => {
+  const nodes = piecesOf(edges, placed.cuts).flatMap(({ points: run, run: r, piece }) => {
     const to = run.map((edge) => edge.to);
     const from = run.map((edge) => edge.from);
-    const key = `${entry.name}|area|${r}`;
+    const key = [entry.name, 'area', r, piece];
     if (run.length === 1) {
       // A range at one category is the line from its low to its high value; a stacked area's lower
       // edge is the series below, so it shows as its top point, as a line would.
-      const range = { kind: 'path' as const, d: frame.line([from[0]!, to[0]!], 'linear') };
       return [
         entry.type === 'rangeArea'
-          ? drawing.shape(range, outline, key, entry.style)
+          ? drawing.outline(frame.line([from[0]!, to[0]!], 'linear'), outline, key, entry.style)
           : lineOrDot(drawing, frame, to, entry.curve, outline, key, entry.style),
       ];
     }
-    const fill = { kind: 'path' as const, d: frame.area(to, from, entry.curve) };
+    const fill = frame.area(to, from, entry.curve);
     return [
-      drawing.shape(fill, { ...hatched(paint), stroke: 'none' }, `${key}|fill`, entry.style),
-      drawing.shape({ kind: 'path', d: frame.line(to, entry.curve) }, outline, `${key}|high`, entry.style),
+      drawing.shape(fill, { ...hatched(paint), stroke: 'none' }, [...key, 'fill'], entry.style),
+      drawing.outline(frame.line(to, entry.curve), outline, [...key, 'high'], entry.style),
       ...(entry.type === 'rangeArea'
-        ? [drawing.shape({ kind: 'path', d: frame.line(from, entry.curve) }, outline, `${key}|low`, entry.style)]
+        ? [drawing.outline(frame.line(from, entry.curve), outline, [...key, 'low'], entry.style)]
         : []),
     ];
   });
@@ -416,15 +586,15 @@ function drawArea(
 
 function drawPoints(
   context: MarkContext,
-  entry: Extract<CartesianSeries, { type: 'scatter' | 'bubble' }>,
+  placed: Placed<Extract<CartesianSeries, { type: 'scatter' | 'bubble' }>>,
   paint: Paint,
 ): void {
   const { drawing, frame } = context;
+  const { entry, scale: y } = placed;
   const x = context.x!;
   const xAxis = context.xAxis!;
-  const y = context.scaleOf(entry);
   const plotSize = Math.min(frame.plot.right - frame.plot.left, frame.plot.bottom - frame.plot.top);
-  const maxDiameter = Math.min(MAX_BUBBLE, plotSize / 5);
+  const maxDiameter = bubbleDiameter(plotSize);
   entry.data.forEach((point, i) => {
     const [px, py] = point;
     const size = point[2];
@@ -437,8 +607,10 @@ function drawPoints(
     }
     const style: SketchStyle = size === undefined ? solid(paint.color) : hatched(paint);
     const sizeText = size === undefined ? '' : `, size ${formatValue(size)}`;
-    drawing.mark(`${entry.name}: ${valueText(px, xAxis)}, ${valueText(py, context.axisOf(entry))}${sizeText}`, [
-      drawing.shape({ kind: 'circle', cx: x.at(px), cy: y.at(py), diameter }, style, `${entry.name}|${i}`, entry.style),
+    drawing.mark(`${entry.name}: ${formatAxisValue(px, xAxis)}, ${formatAxisValue(py, placed.axis)}${sizeText}`, [
+      markerNode(drawing, entry.symbol, [x.at(px), y.at(py)], diameter, style, [entry.name, i], entry.style),
+      ...(entry.dataLabels ? [drawing.label(formatAxisValue(py, placed.axis), x.at(px), y.at(py), frame.plot,
+        `${entry.path}.dataLabels`)] : []),
     ]);
   });
 }
@@ -450,243 +622,11 @@ function lineOrDot(
   run: readonly Point[],
   curve: Curve,
   style: { stroke: string; strokeWidth: number },
-  key: string,
+  key: SeedKey,
   own: SketchStyle,
 ): ChartNode {
   if (run.length === 1) {
     return loneDot(drawing, frame.point(run[0]!), style.stroke, key, own);
   }
-  return drawing.shape({ kind: 'path', d: frame.line(run, curve) }, style, key, own);
-}
-
-/** A value in a tooltip, in its axis format; on a percent axis it is the value, not its share. */
-function valueText(value: number, axis: CheckedLinearAxis): string {
-  return formatValue(value, { ...axis.format, suffix: axis.percent ? '' : axis.format.suffix });
-}
-
-// Axes
-
-type Side = 'bottom' | 'left' | 'right';
-
-/** An axis as drawn at one side of the plot: its labels, measured once. */
-interface Guide {
-  side: Side;
-  key: AxisKey;
-  axis: CheckedAxis;
-  /** Tick labels of a linear axis, or the categories of a band axis. */
-  labels: readonly string[];
-  /** How far its labels reach out from the axis, beyond the tick and the gap. */
-  reach: number;
-  /** How much room a label needs along the axis, to thin out labels that would overlap. */
-  room: number;
-  /** How far its end labels reach past the ends of the axis: left and right, or up and down. */
-  ends: Extent;
-  /** How a label sits at its tick, over the side's own placing: rotated labels' anchor and turn. */
-  style: Partial<ReturnType<typeof labelStyle>>;
-  /** How far the axis reaches out from the plot: tick, gap, labels and title. */
-  depth: number;
-}
-
-/** The room an axis' labels need below the plot and above and below its ends. */
-interface Reserve {
-  bottom: number;
-  up: number;
-  down: number;
-}
-
-function reserveFor(guides: readonly Guide[]): Reserve {
-  const [below, ...sides] = guides;
-  const shown = sides.filter((side) => !side.axis.hidden);
-  return {
-    bottom: below!.axis.hidden ? 0 : below!.depth,
-    up: Math.max(0, ...shown.map((side) => side.ends.up)),
-    down: Math.max(0, ...shown.map((side) => side.ends.down)),
-  };
-}
-
-const NO_ENDS: Extent = { left: 0, right: 0, up: 0, down: 0 };
-
-/**
- * An axis at one side of the plot with its labels measured. Flat labels take one line below the plot
- * and the widest label's width beside it; a linear axis' end labels, centred on its end ticks, reach
- * half their width past the ends below the plot, and half a line beside it, while a band axis' sit
- * inside. Rotated labels take their rotated bounds. Every label's tick is within the plot, so the
- * plot leaves room past its ends for the furthest any label reaches either way: the most a label may
- * need, which leaves room to spare for all but the end ones.
- */
-function guide(
-  side: Side,
-  key: AxisKey,
-  axis: CheckedAxis,
-  scale: Scale | undefined,
-  drawing: Drawing,
-  line: number,
-): Guide {
-  const labels = axis.type === 'band' ? axis.categories : scale!.labels;
-  const angle = axis.labelAngle;
-  const [first, last] = [labels[0] ?? '', labels.at(-1) ?? ''];
-  const shown = (ends: Extent): Extent => (axis.hidden ? NO_ENDS : ends);
-  if (angle === 0) {
-    const widest = Math.max(0, ...labels.map((label) => drawing.width(label)));
-    const reach = side === 'bottom' ? line : widest;
-    const ends =
-      axis.type === 'band'
-        ? NO_ENDS
-        : side === 'bottom'
-          ? { ...NO_ENDS, left: drawing.width(first) / 2, right: drawing.width(last) / 2 }
-          : { ...NO_ENDS, up: line / 2, down: line / 2 };
-    const room = SIDES[side].room(widest, line);
-    return { side, key, axis, labels, reach, room, ends: shown(ends), style: {}, depth: depthOf(reach, axis, line) };
-  }
-  const style = labelStyle(side, angle);
-  const extents = labels.map((label) => drawing.extent(label, style));
-  const most = (of: (extent: Extent) => number): number => Math.max(0, ...extents.map(of));
-  const reach = most((extent) => (side === 'bottom' ? extent.down : side === 'left' ? extent.left : extent.right));
-  // Along the axis, a slanted label needs its line height divided by the sine of its slant to clear
-  // the next one, or its whole extent, whichever is less.
-  const radians = (angle * Math.PI) / 180;
-  const room =
-    side === 'bottom'
-      ? Math.min(
-          most((extent) => extent.left + extent.right),
-          line / Math.abs(sin(radians)),
-        ) + GAP
-      : Math.min(
-          most((extent) => extent.up + extent.down),
-          line / Math.abs(cos(radians)),
-        ) +
-        GAP / 2;
-  const ends =
-    side === 'bottom'
-      ? { ...NO_ENDS, left: most((extent) => extent.left), right: most((extent) => extent.right) }
-      : { ...NO_ENDS, up: most((extent) => extent.up), down: most((extent) => extent.down) };
-  return { side, key, axis, labels, reach, room, ends: shown(ends), style, depth: depthOf(reach, axis, line) };
-}
-
-/** How a rotated label is anchored at its tick: ending there on the left of it, starting there on the right. */
-function labelStyle(side: Side, angle: number): { anchor: TextAnchor; baseline: TextBaseline; rotate: number } {
-  switch (side) {
-    case 'bottom':
-      return { anchor: angle < 0 ? 'end' : 'start', baseline: 'top', rotate: angle };
-    case 'left':
-      return { anchor: 'end', baseline: 'middle', rotate: angle };
-    case 'right':
-      return { anchor: 'start', baseline: 'middle', rotate: angle };
-  }
-}
-
-// How far an axis reaches out from the plot: tick, gap, its labels' `reach` and its title.
-function depthOf(reach: number, axis: CheckedAxis, line: number): number {
-  return TICK + GAP + reach + titleDepth(axis, line);
-}
-
-function titleDepth(axis: CheckedAxis, line: number): number {
-  return axis.title === undefined ? 0 : GAP + line;
-}
-
-interface SideRules {
-  /** The axis line, along the plot's edge. */
-  edge: (plot: Rect) => [number, number, number, number];
-  /** A tick mark at position `at` on the axis. */
-  tick: (plot: Rect, at: number) => [number, number, number, number];
-  /** A gridline across the plot at `at`. */
-  grid: (plot: Rect, at: number) => [number, number, number, number];
-  /** Where a label goes, at position `at`. */
-  label: (plot: Rect, at: number) => { x: number; y: number; anchor: TextAnchor; baseline: TextBaseline };
-  /** How much room a label needs along the axis, to thin out labels that would overlap. */
-  room: (widest: number, line: number) => number;
-  /** Where the title goes, beyond the labels; side titles are rotated to read along the axis. */
-  title: (plot: Rect, reach: number, line: number) => { x: number; y: number; rotate: number };
-}
-
-const SIDES: Record<Side, SideRules> = {
-  bottom: {
-    edge: (p) => [p.left, p.bottom, p.right, p.bottom],
-    tick: (p, at) => [at, p.bottom, at, p.bottom + TICK],
-    grid: (p, at) => [at, p.bottom, at, p.top],
-    label: (p, at) => ({ x: at, y: p.bottom + TICK + GAP, anchor: 'middle', baseline: 'top' }),
-    room: (widest) => widest + GAP,
-    title: (p, reach) => ({ x: (p.left + p.right) / 2, y: p.bottom + TICK + GAP + reach + GAP, rotate: 0 }),
-  },
-  left: {
-    edge: (p) => [p.left, p.top, p.left, p.bottom],
-    tick: (p, at) => [p.left, at, p.left - TICK, at],
-    grid: (p, at) => [p.left, at, p.right, at],
-    label: (p, at) => ({ x: p.left - TICK - GAP, y: at, anchor: 'end', baseline: 'middle' }),
-    room: (_widest, line) => line + GAP / 2,
-    // Read from bottom to top; once rotated its line height is its width.
-    title: (p, reach, line) => ({
-      x: p.left - TICK - GAP - reach - GAP - line,
-      y: (p.top + p.bottom) / 2,
-      rotate: -90,
-    }),
-  },
-  right: {
-    edge: (p) => [p.right, p.top, p.right, p.bottom],
-    tick: (p, at) => [p.right, at, p.right + TICK, at],
-    grid: (p, at) => [p.left, at, p.right, at],
-    label: (p, at) => ({ x: p.right + TICK + GAP, y: at, anchor: 'start', baseline: 'middle' }),
-    room: (_widest, line) => line + GAP / 2,
-    title: (p, reach, line) => ({
-      x: p.right + TICK + GAP + reach + GAP + line,
-      y: (p.top + p.bottom) / 2,
-      rotate: 90,
-    }),
-  },
-};
-
-function lineShape([x1, y1, x2, y2]: [number, number, number, number]): Shape {
-  return { kind: 'line', x1, y1, x2, y2 };
-}
-
-function drawGrid(drawing: Drawing, plot: Rect, { side, key, axis }: Guide, scale: PlacedScale | undefined): void {
-  if (axis.type !== 'linear' || axis.hidden || !axis.grid) {
-    return;
-  }
-  for (const tick of scale!.ticks) {
-    const shape = lineShape(SIDES[side].grid(plot, scale!.at(tick)));
-    drawing.push(drawing.shape(shape, { stroke: GRID, strokeWidth: GRID_WIDTH }, `grid|${key}|${tick}`));
-  }
-}
-
-function drawGuide(
-  drawing: Drawing,
-  plot: Rect,
-  guide: Guide,
-  scale: PlacedScale | undefined,
-  bands: BandScale | undefined,
-  line: number,
-): void {
-  const { side, key, axis, labels, reach, room } = guide;
-  if (axis.hidden) {
-    return;
-  }
-  const rules = SIDES[side];
-  const ink = { stroke: INK, strokeWidth: 1 };
-  // How many labels `spacing` apart to step over, to keep one that does not overlap the last.
-  const every = (spacing: number): number => Math.max(1, Math.ceil(room / spacing));
-  const label = (at: number) => ({ ...rules.label(plot, at), ...guide.style });
-  drawing.push(drawing.shape(lineShape(rules.edge(plot)), ink, `axis|${key}`));
-  if (axis.type === 'linear') {
-    // Ticks are evenly spaced, and a lone tick has nothing to overlap.
-    const [first, second] = scale!.ticks;
-    const nth = every(second === undefined ? Infinity : Math.abs(scale!.at(second) - scale!.at(first!)));
-    scale!.ticks.forEach((tick, i) => {
-      const at = scale!.at(tick);
-      drawing.push(drawing.shape(lineShape(rules.tick(plot, at)), ink, `tick|${key}|${tick}`));
-      if (i % nth === 0) {
-        drawing.push(drawing.text(labels[i]!, label(at)));
-      }
-    });
-  } else {
-    const nth = every(bands!.step);
-    labels.forEach((name, i) => {
-      if (i % nth === 0) {
-        drawing.push(drawing.text(name, label(bands!.start(i) + bands!.bandwidth / 2)));
-      }
-    });
-  }
-  if (axis.title !== undefined) {
-    drawing.push(drawing.text(axis.title, { ...rules.title(plot, reach, line), anchor: 'middle', baseline: 'top' }));
-  }
+  return drawing.outline(frame.line(run, curve), style, key, own);
 }

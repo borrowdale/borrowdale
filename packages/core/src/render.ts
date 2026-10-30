@@ -73,23 +73,35 @@ export function appendSketch(parent: Element, sketch: Sketch): SVGPathElement[] 
 }
 
 /** Draws a sketch into a 2D canvas context. Requires `Path2D`. */
-export function drawSketch(context: CanvasRenderingContext2D, sketch: Sketch): void {
+export function drawSketch(
+  context: CanvasRenderingContext2D, sketch: Sketch,
+  paint: { stroke?: string | CanvasGradient | CanvasPattern; fill?: string | CanvasGradient | CanvasPattern } = {},
+): void {
   for (const path of sketch.paths) {
     const outline = new Path2D(path.d);
     context.save();
-    if (path.fill !== 'none') {
-      context.fillStyle = path.fill;
-      context.fill(outline, path.fillRule ?? 'nonzero');
+    try {
+      if (path.fill !== 'none') {
+        context.fillStyle = paint.fill ?? path.fill;
+        context.fill(outline, path.fillRule ?? 'nonzero');
+      }
+      if (path.stroke !== 'none' && path.strokeWidth !== 0) {
+        context.strokeStyle = paint.stroke ?? path.stroke;
+        context.lineWidth = path.strokeWidth;
+        context.lineCap = 'butt';
+        context.lineJoin = 'miter';
+        context.miterLimit = 4;
+        // Canvas ignores malformed numeric dash lists. Start solid so none can inherit a dash.
+        context.setLineDash([]);
+        if (path.strokeLineDash) {
+          context.setLineDash(path.strokeLineDash);
+        }
+        context.lineDashOffset = 0;
+        context.stroke(outline);
+      }
+    } finally {
+      context.restore();
     }
-    if (path.stroke !== 'none') {
-      context.strokeStyle = path.stroke;
-      context.lineWidth = path.strokeWidth;
-      // `||`, not `??`: a falsy dash on a hand-built sketch draws solid, as the SVG renderers draw it.
-      context.setLineDash(path.strokeLineDash || []);
-      context.lineDashOffset = 0;
-      context.stroke(outline);
-    }
-    context.restore();
   }
 }
 

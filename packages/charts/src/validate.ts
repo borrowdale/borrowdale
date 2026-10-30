@@ -1,12 +1,30 @@
+import { checkAnnotations, type CheckedAnnotation } from './annotations.js';
 import { sketch, type Seed, type SketchStyle } from '@borrowdale/core';
 import { excalifont, type Font } from '@borrowdale/text';
 import {
+  anyValue,
+  CARTESIAN_KEYS,
+  checkAngleAxis,
+  checkAxis,
+  checkLinearAxis,
+  checkRadiusAxis,
+  checkSweep,
+  LINEAR_KEYS,
+  MAX_CATEGORIES,
+  MAX_HOLE,
+  MAX_NAME,
+  type CheckedAngleAxis,
+  type CheckedAxis,
+  type CheckedBandAxis,
+  type CheckedLinearAxis,
+  type CheckedRadiusAxis,
+  type CheckedSweep,
+} from './check-axis.js';
+import {
   boolean,
   fail,
-  MAX_DECIMALS,
   MAX_VALUE,
   fields,
-  integer,
   list,
   nullable,
   number,
@@ -15,24 +33,20 @@ import {
   show,
   text,
   tuple,
+  unique,
   type Check,
   type Fields,
 } from './read.js';
-import { CURVES, LEGEND_POSITIONS, type ChartSpec, type LegendPosition, type SeriesType } from './types.js';
+import { CURVES, LEGEND_POSITIONS, MARKER_SYMBOLS, type ChartSpec, type Marker, type LegendPosition, type SeriesType } from './types.js';
 
 // Bounds on what a chart may ask for. The drawing work of everything within them is bounded again
 // by one Budget for the whole chart (see drawing.ts).
 const MAX_SIZE = 10_000;
 const MAX_SERIES = 100;
-const MAX_CATEGORIES = 1_000;
 const MAX_POINTS = 100_000;
 const MAX_FONT_SIZE = 200;
-// For a number format's separators, prefix and suffix.
-const MAX_FORMAT_TEXT = 10;
 // Every mark writes its colours into the output: a long one would multiply the size of the drawing.
 const MAX_COLOR = 100;
-// So does every mark's tooltip, with its series and category names.
-const MAX_NAME = 100;
 // What every renderer paints alike: hex codes, names, rgb() and hsl(). Anything else, like a
 // `url(…)`, would have an SVG fetch a file or paint with another part of the page.
 const COLOR = /^(?:#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})|[a-z]+|(?:rgba?|hsla?)\([\d .,%/+-]*\))$/i;
@@ -44,57 +58,14 @@ const MAX_STROKE_WIDTH = 100;
 const MIN_NEEDLE = 0.1;
 const DEFAULT_NEEDLE = 0.8;
 const MAX_BANDS = 100;
-const LINEAR_KEYS = ['type', 'title', 'min', 'max', 'percent', 'grid', 'hidden', 'format', 'labelAngle'];
-const MAX_LABEL_ANGLE = 90;
-
-/**
- * Degrees by which a sweep may pass a whole turn, or fall short of it, through rounding and still be
- * one: 152.2 to 512.2 is 360.00000000000006 degrees.
- */
-export const TURN_ROUNDING = 1e-9;
 
 export type System = 'cartesian' | 'polar' | 'pie' | 'gauge';
 
-export interface CheckedFormat {
-  /** Undefined means "from the tick step". */
-  decimals: number | undefined;
-  thousands: string;
-  decimal: string;
-  prefix: string;
-  suffix: string;
-}
-
-export interface CheckedBandAxis {
-  type: 'band';
-  path: string;
-  categories: string[];
-  title: string | undefined;
-  hidden: boolean;
-  /** 0 on an axis that cannot rotate its labels. */
-  labelAngle: number;
-}
-
-export interface CheckedLinearAxis {
-  type: 'linear';
-  path: string;
-  title: string | undefined;
-  min: number | undefined;
-  max: number | undefined;
-  percent: boolean;
-  grid: boolean;
-  hidden: boolean;
-  /** 0 on an axis that cannot rotate its labels. */
-  labelAngle: number;
-  format: CheckedFormat;
-}
-
-export type CheckedAxis = CheckedBandAxis | CheckedLinearAxis;
-
-const anyValue = number(-MAX_VALUE, MAX_VALUE);
-const categoryValues = list(0, MAX_POINTS, nullable(number(-MAX_VALUE, MAX_VALUE, 'or null')));
+type ReservePoints = (count: number) => void;
+const categoryValues = (reserve: ReservePoints) =>
+  list(0, MAX_POINTS, nullable(number(-MAX_VALUE, MAX_VALUE, 'or null')), reserve);
 const valueAxis = oneOf(['y', 'y2'] as const);
 const curve = oneOf(CURVES);
-const labelAngle = number(-MAX_LABEL_ANGLE, MAX_LABEL_ANGLE);
 
 const color: Check<string> = (path, value) => {
   const given = text(MAX_COLOR)(path, value);
@@ -104,17 +75,34 @@ const color: Check<string> = (path, value) => {
   return given;
 };
 
+// Canvas gradients reject invalid CSS colours rather than ignoring them. A hex-only stop
+// contract can be checked without a browser and gives every renderer the same accepted paints.
+const gradientColor: Check<string> = (path, value) => {
+  const given = text(MAX_COLOR)(path, value);
+  if (!/^#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(given)) {
+    fail(path, 'must be a 3, 4, 6 or 8-digit hex colour');
+  }
+  return given;
+};
+
 // Each field a series type may have, read the same way by every type that has it, so a cartesian
 // type and its polar twin take the same values.
 const readAxis = (r: Fields) => r.optional('axis', valueAxis) ?? 'y';
 const readStack = (r: Fields) => r.optional('stack', text());
 const readCurve = (r: Fields) => r.optional('curve', curve) ?? 'linear';
+const checkMarker: Check<Marker> = (path, value) => {
+  if (typeof value === 'string') return oneOf(MARKER_SYMBOLS)(path, value);
+  const r = fields(path, value);
+  r.allow(['image']);
+  return { image: r.required('image', text(MAX_NAME)) };
+};
+const readSymbol = (r: Fields) => r.optional('symbol', checkMarker) ?? 'circle';
 const readDash = (r: Fields) => r.optional('dash', checkDash);
-const readValues = (r: Fields) => r.required('data', categoryValues);
+const readValues = (r: Fields, reserve: ReservePoints) => r.required('data', categoryValues(reserve));
 const readPoints =
   <const N extends readonly [string, string]>(names: N) =>
-  (r: Fields) =>
-    r.required('data', list(0, MAX_POINTS, tuple(names)));
+  (r: Fields, reserve: ReservePoints) =>
+    r.required('data', list(0, MAX_POINTS, tuple(names), reserve));
 
 /** What a series type needs of a polar chart. */
 interface PolarNeeds {
@@ -143,47 +131,106 @@ const SERIES_RULES = {
   bar: {
     system: 'cartesian',
     band: true,
-    keys: ['axis', 'data', 'stack'],
-    read: (r: Fields) => ({ axis: readAxis(r), stack: readStack(r), data: readValues(r) }),
+    keys: ['shape', 'dataLabels', 'axis', 'data', 'stack'],
+    read: (r: Fields, _path: string, reserve: ReservePoints) => ({ shape: r.optional('shape', oneOf(['rectangle', 'rounded', 'pyramid'] as const)) ?? 'rectangle', axis: readAxis(r), stack: readStack(r), data: readValues(r, reserve) }),
   },
   line: {
     system: 'cartesian',
     band: true,
-    keys: ['axis', 'data', 'curve', 'dash'],
-    read: (r: Fields) => ({ axis: readAxis(r), curve: readCurve(r), dash: readDash(r), data: readValues(r) }),
+    keys: ['symbol', 'dataLabels', 'axis', 'data', 'curve', 'dash'],
+    read: (r: Fields, _path: string, reserve: ReservePoints) => ({ symbol: r.optional('symbol', checkMarker), axis: readAxis(r), curve: readCurve(r), dash: readDash(r), data: readValues(r, reserve) }),
   },
   area: {
     system: 'cartesian',
     band: true,
     keys: ['axis', 'data', 'stack', 'curve'],
-    read: (r: Fields) => ({ axis: readAxis(r), stack: readStack(r), curve: readCurve(r), data: readValues(r) }),
+    read: (r: Fields, _path: string, reserve: ReservePoints) => ({ axis: readAxis(r), stack: readStack(r), curve: readCurve(r), data: readValues(r, reserve) }),
   },
   rangeArea: {
     system: 'cartesian',
     band: true,
     keys: ['axis', 'data', 'curve'],
-    read: (r: Fields) => ({
+    read: (r: Fields, _path: string, reserve: ReservePoints) => ({
       axis: readAxis(r),
       curve: readCurve(r),
-      data: r.required('data', list(0, MAX_POINTS, nullable(checkRange))),
+      data: r.required('data', list(0, MAX_POINTS, nullable(checkRange), reserve)),
     }),
+  },
+  interval: {
+    system: 'cartesian',
+    band: true,
+    keys: ['shape', 'dataLabels', 'axis', 'data', 'display', 'width', 'overlay', 'fromSymbol', 'toSymbol'],
+    read: (r: Fields, _path: string, reserve: ReservePoints) => ({
+      shape: r.optional('shape', oneOf(['rectangle', 'rounded', 'pyramid'] as const)) ?? 'rectangle', axis: readAxis(r),
+      data: r.required('data', list(0, MAX_POINTS, nullable(tuple(['from', 'to'])), reserve)),
+      display: r.optional('display', oneOf(['bar', 'line', 'error', 'points'] as const)) ?? 'bar',
+      width: r.optional('width', number(0.05, 1)) ?? 0.8,
+      overlay: r.optional('overlay', boolean) ?? false,
+      fromSymbol: r.optional('fromSymbol', checkMarker),
+      toSymbol: r.optional('toSymbol', checkMarker),
+    }),
+  },
+  xyLine: {
+    system: 'cartesian', band: false,
+    keys: ['dataLabels', 'data', 'symbol', 'dash', 'segments', 'widths', 'gradient'],
+    read: (r: Fields, path: string, reserve: ReservePoints) => {
+      const data = r.required('data', list(0, MAX_POINTS, nullable(tuple(['x', 'y'])), reserve));
+      const segments = r.optional('segments', list(Math.max(0, data.length - 1), Math.max(0, data.length - 1), nullable((p, raw) => {
+        const segment = fields(p, raw);
+        segment.allow(['color', 'width', 'dash']);
+        return { color: segment.optional('color', color), width: segment.optional('width', number(0, 100)), dash: segment.optional('dash', checkDash) };
+      })));
+      const widths = r.optional('widths', list(data.length, data.length, number(0, 100)));
+      const gradient = r.optional('gradient', (p, raw) => {
+        const g = fields(p, raw); g.allow(['axis', 'stops']);
+        const axis = g.required('axis', oneOf(['x', 'y'] as const));
+        const stops = g.required('stops', list(2, 32, (p, raw) => {
+          const stop = fields(p, raw); stop.allow(['offset', 'color']);
+          return { offset: stop.required('offset', number(0, 1)), color: stop.required('color', gradientColor) };
+        }));
+        if (stops[0]!.offset !== 0 || stops.at(-1)!.offset !== 1 || stops.some((stop, i) => i > 0 && stop.offset <= stops[i - 1]!.offset)) fail(p, 'needs increasing stops from 0 to 1');
+        return { axis, stops };
+      });
+      if (segments && gradient) fail(path, 'cannot combine segments and gradient');
+      if (segments && widths) fail(path, 'cannot combine segments and tapered widths');
+      return { data, segments, widths, gradient, symbol: r.optional('symbol', checkMarker), dash: readDash(r) };
+    },
+  },
+  xyArea: {
+    system: 'cartesian',
+    band: false,
+    keys: ['data', 'difference'],
+    read: (r: Fields, path: string, reserve: ReservePoints) => {
+      const difference = r.optional('difference', (p, raw) => {
+        const d = fields(p, raw); d.allow(['positive', 'negative']);
+        return { positive: d.required('positive', color), negative: d.required('negative', color) };
+      });
+      const data = r.required('data', list(0, MAX_POINTS, nullable(tuple(['x', 'low', 'high'])), reserve));
+      data.forEach((point, i) => {
+        if (point === null) return;
+        if (!difference && point[2] < point[1]) fail(`${path}.data[${i}]`, 'has high below low');
+        const previous = data[i - 1];
+        if (previous && point[0] <= previous[0]) fail(`${path}.data[${i}][0]`, 'must increase within each run');
+      });
+      return { data, difference };
+    },
   },
   scatter: {
     system: 'cartesian',
     band: false,
-    keys: ['data'],
-    read: (r: Fields) => ({ data: readPoints(['x', 'y'])(r) }),
+    keys: ['dataLabels', 'data', 'symbol'],
+    read: (r: Fields, _path: string, reserve: ReservePoints) => ({ symbol: readSymbol(r), data: readPoints(['x', 'y'])(r, reserve) }),
   },
   bubble: {
     system: 'cartesian',
     band: false,
-    keys: ['data'],
-    read: (r: Fields) => ({ data: r.required('data', list(0, MAX_POINTS, checkBubble)) }),
+    keys: ['dataLabels', 'data', 'symbol'],
+    read: (r: Fields, _path: string, reserve: ReservePoints) => ({ symbol: readSymbol(r), data: r.required('data', list(0, MAX_POINTS, checkBubble, reserve)) }),
   },
   pie: {
     system: 'pie',
     band: false,
-    keys: ['data', 'innerRadius', 'outerRadius', 'startAngle', 'endAngle', 'padAngle', 'cornerRadius'],
+    keys: ['dataLabels', 'data', 'innerRadius', 'outerRadius', 'startAngle', 'endAngle', 'padAngle', 'cornerRadius'],
     read: checkPieSeries,
   },
   radar: {
@@ -191,7 +238,7 @@ const SERIES_RULES = {
     band: true,
     polar: { angle: 'band', radius: 'linear', outward: 'always', polygon: true },
     keys: ['data'],
-    read: (r: Fields, path: string) => checkRadarData(r, path),
+    read: checkRadarData,
   },
   // The polar twins of bar, line, area and scatter: the same fields, read by the same readers, less
   // what a polar chart has no use for (a second value axis, curves).
@@ -200,35 +247,35 @@ const SERIES_RULES = {
     band: true,
     polar: { angle: 'band', radius: 'linear', outward: 'always', polygon: false },
     keys: ['data', 'stack'],
-    read: (r: Fields) => ({ stack: readStack(r), data: readValues(r) }),
+    read: (r: Fields, _path: string, reserve: ReservePoints) => ({ stack: readStack(r), data: readValues(r, reserve) }),
   },
   radialBar: {
     system: 'polar',
     band: true,
     polar: { angle: 'linear', radius: 'band', outward: 'never', polygon: false },
     keys: ['data', 'stack'],
-    read: (r: Fields) => ({ stack: readStack(r), data: readValues(r) }),
+    read: (r: Fields, _path: string, reserve: ReservePoints) => ({ stack: readStack(r), data: readValues(r, reserve) }),
   },
   polarLine: {
     system: 'polar',
     band: true,
     polar: { angle: 'band', radius: 'linear', outward: 'never', polygon: false },
     keys: ['data', 'dash'],
-    read: (r: Fields) => ({ dash: readDash(r), data: readValues(r) }),
+    read: (r: Fields, _path: string, reserve: ReservePoints) => ({ dash: readDash(r), data: readValues(r, reserve) }),
   },
   polarArea: {
     system: 'polar',
     band: true,
     polar: { angle: 'band', radius: 'linear', outward: 'stacked', polygon: false },
     keys: ['data', 'stack'],
-    read: (r: Fields) => ({ stack: readStack(r), data: readValues(r) }),
+    read: (r: Fields, _path: string, reserve: ReservePoints) => ({ stack: readStack(r), data: readValues(r, reserve) }),
   },
   polarScatter: {
     system: 'polar',
     band: false,
     polar: { angle: 'linear', radius: 'linear', outward: 'never', polygon: false },
-    keys: ['data'],
-    read: (r: Fields) => ({ data: readPoints(['angle', 'radius'])(r) }),
+    keys: ['dataLabels', 'data', 'symbol'],
+    read: (r: Fields, _path: string, reserve: ReservePoints) => ({ symbol: readSymbol(r), data: readPoints(['angle', 'radius'])(r, reserve) }),
   },
   gauge: {
     system: 'gauge',
@@ -247,7 +294,7 @@ const SERIES_RULES = {
     band: boolean;
     polar?: PolarNeeds;
     keys: readonly string[];
-    read: (r: Fields, path: string) => object;
+    read: (r: Fields, path: string, reserve: ReservePoints) => object;
   }
 >;
 
@@ -265,6 +312,7 @@ const STACKING = (Object.keys(SERIES_RULES) as SeriesType[])
 
 /** The fields every series has, checked. */
 interface CheckedSeriesBase {
+  dataLabels: boolean;
   /** Its position in `series`. */
   index: number;
   path: string;
@@ -296,6 +344,7 @@ interface CheckedChartBase {
 
 export interface CheckedCartesianChart extends CheckedChartBase {
   system: 'cartesian';
+  annotations: CheckedAnnotation[];
   x: CheckedAxis;
   y: CheckedAxis;
   y2: CheckedLinearAxis | undefined;
@@ -303,19 +352,6 @@ export interface CheckedCartesianChart extends CheckedChartBase {
   band: CheckedBandAxis | undefined;
   series: SeriesOf<'cartesian'>[];
 }
-
-export interface CheckedSweep {
-  startAngle: number;
-  endAngle: number;
-}
-
-export type CheckedAngleAxis = (CheckedBandAxis | CheckedLinearAxis) & CheckedSweep;
-
-export type CheckedRadiusAxis = (CheckedBandAxis | CheckedLinearAxis) & {
-  /** As a share of the radius. */
-  innerRadius: number;
-  shape: 'polygon' | 'circle';
-};
 
 export interface CheckedPolarChart extends CheckedChartBase {
   system: 'polar';
@@ -357,7 +393,7 @@ export type CheckedChart = CheckedCartesianChart | CheckedPolarChart | CheckedPi
  */
 export function checkChart(spec: ChartSpec, font: Font = excalifont): CheckedChart {
   const r = fields('', spec);
-  r.allow(['width', 'height', 'title', 'seed', 'fontSize', 'legend', 'style', 'axes', 'series']);
+  r.allow(['width', 'height', 'title', 'seed', 'fontSize', 'legend', 'style', 'axes', 'series', 'annotations']);
   const width = r.required('width', number(1, MAX_SIZE));
   const height = r.required('height', number(1, MAX_SIZE));
   const fontSize = r.optional('fontSize', number(1, MAX_FONT_SIZE)) ?? 12;
@@ -371,14 +407,18 @@ export function checkChart(spec: ChartSpec, font: Font = excalifont): CheckedCha
     legend: r.optional('legend', oneOf(LEGEND_POSITIONS)),
     style: r.optional('style', checkStyle) ?? {},
   };
-  const series = r.required('series', list(1, MAX_SERIES, checkSeries));
+  let points = 0;
+  const reserve = (count: number): void => {
+    points += count;
+    if (points > MAX_POINTS) {
+      fail('series', `hold at least ${points} data points in all, more than ${MAX_POINTS}`);
+    }
+  };
+  const series = r.required('series', list(1, MAX_SERIES, (path, raw, index) => checkSeries(path, raw, index, reserve)));
   unique(series.map((entry) => entry.name), (i) => `series[${i}].name`);
-  const points = series.reduce((sum, entry) => sum + ('data' in entry ? entry.data.length : 1), 0);
-  if (points > MAX_POINTS) {
-    fail('series', `hold ${points} data points in all, more than ${MAX_POINTS}`);
-  }
   // The first series decides the coordinate system; every other series must draw in it.
   const system = SERIES_RULES[series[0]!.type].system;
+  if (system !== 'cartesian' && r.has('annotations')) fail('annotations', 'needs a Cartesian chart');
   switch (system) {
     case 'cartesian':
       return checkCartesianChart(r, base, seriesOf(series, 'cartesian'));
@@ -391,21 +431,25 @@ export function checkChart(spec: ChartSpec, font: Font = excalifont): CheckedCha
   }
 }
 
-function checkSeries(path: string, raw: unknown, index: number): CheckedSeries {
+function checkSeries(path: string, raw: unknown, index: number, reserve: ReservePoints): CheckedSeries {
   const r = fields(path, raw);
   const type = r.required('type', checkSeriesType);
   const rule = SERIES_RULES[type];
   r.allow(['type', 'name', 'color', 'style', ...rule.keys]);
   const base: CheckedSeriesBase = {
+    dataLabels: r.optional('dataLabels', boolean) ?? false,
     index,
     path,
     name: r.required('name', text(MAX_NAME)),
     color: r.optional('color', color),
     style: r.optional('style', checkStyle) ?? {},
   };
+  if (!rule.keys.some((key) => key === 'data')) {
+    reserve(1);
+  }
   // One cast: `rule.read`'s result matches `type` by construction of SERIES_RULES, which TypeScript
   // cannot follow through a lookup by a union key.
-  return { ...base, type, ...rule.read(r, path) } as CheckedSeries;
+  return { ...base, type, ...rule.read(r, path, reserve) } as CheckedSeries;
 }
 
 const checkSeriesType: Check<SeriesType> = (path, type) => {
@@ -489,30 +533,8 @@ function checkCartesianChart(
       stacked.set(`${entry.axis}|${entry.stack}`, first);
     }
   }
-  return { ...base, system: 'cartesian', x, y, y2, band, series };
+  return { ...base, system: 'cartesian', x, y, y2, band, series, annotations: checkAnnotations(r, { x, y, y2 }, color) };
 }
-
-const POLAR_LINEAR_KEYS = ['type', 'min', 'max', 'grid', 'hidden', 'format'];
-const POLAR_BAND_KEYS = ['type', 'categories', 'hidden'];
-const SWEEP_KEYS = ['startAngle', 'endAngle'];
-const HOLE_KEYS = ['innerRadius'];
-const MAX_HOLE = 0.95;
-
-/** The keys of a polar axis, band or linear, with `extra` added to both. */
-function polarKeys(extra: readonly string[]): { band: readonly string[]; linear: readonly string[] } {
-  return { band: [...POLAR_BAND_KEYS, ...extra], linear: [...POLAR_LINEAR_KEYS, ...extra] };
-}
-
-const checkAngleAxis = checkAxis(polarKeys(SWEEP_KEYS), true, (r, path) => checkSweep(r, path));
-
-const checkRadiusAxis = checkAxis(polarKeys([...HOLE_KEYS, 'shape']), true, (r, _path, type) => ({
-  innerRadius: r.optional('innerRadius', number(0, MAX_HOLE)) ?? 0,
-  // Resolved against the series once they are known.
-  shapeGiven:
-    type === 'band'
-      ? r.optional('shape', (shapePath) => fail(shapePath, 'is only for a linear radius axis'))
-      : r.optional('shape', oneOf(['polygon', 'circle'] as const)),
-}));
 
 function checkPolarChart(r: Fields, base: CheckedChartBase, series: SeriesOf<'polar'>[]): CheckedPolarChart {
   const axes = r.required('axes', fields);
@@ -575,20 +597,6 @@ function checkPolarChart(r: Fields, base: CheckedChartBase, series: SeriesOf<'po
     });
   }
   return { ...base, system: 'polar', angle, radius, series };
-}
-
-/**
- * `startAngle` and `endAngle` at `path`, by default `start` and `end`: `endAngle` greater, and at
- * most a whole turn past it.
- */
-function checkSweep(r: Fields, path: string, [start, end]: [number, number] = [0, 360]): CheckedSweep {
-  const startAngle = r.optional('startAngle', number(-360, 360)) ?? start;
-  const endAngle = r.optional('endAngle', number(-360, 720)) ?? end;
-  if (!(endAngle > startAngle && endAngle - startAngle <= 360 + TURN_ROUNDING)) {
-    const after = `greater than startAngle (${startAngle}) and at most 360 past it`;
-    fail(`${path}.endAngle`, `must be ${after}, got ${endAngle}`);
-  }
-  return { startAngle, endAngle };
 }
 
 const GAUGE_SWEEP: [number, number] = [-120, 120];
@@ -702,7 +710,7 @@ function checkPieChart(r: Fields, base: CheckedChartBase, series: SeriesOf<'pie'
   return { ...base, system: 'pie', series: rings };
 }
 
-function checkPieSeries(r: Fields, path: string) {
+function checkPieSeries(r: Fields, path: string, reserve: ReservePoints) {
   const data = r.required(
     'data',
     list(1, MAX_CATEGORIES, (slicePath, raw) => {
@@ -715,7 +723,7 @@ function checkPieSeries(r: Fields, path: string) {
         offset: slice.optional('offset', number(0, MAX_OFFSET)) ?? 0,
         radius: slice.optional('radius', number(0, MAX_VALUE)),
       };
-    }),
+    }, reserve),
   );
   unique(data.map((slice) => slice.name), (i) => `${path}.data[${i}].name`);
   if (!data.some((slice) => slice.value > 0)) {
@@ -739,101 +747,6 @@ function checkPieSeries(r: Fields, path: string) {
     endAngle,
     padAngle: r.optional('padAngle', number(0, MAX_PAD_ANGLE)) ?? 0,
     cornerRadius: r.optional('cornerRadius', number(0, MAX_CORNER_RADIUS)) ?? 0,
-  };
-}
-
-/** Reads an axis' own keys beyond the common ones, from the same fields, once those are checked. */
-type Extra<X> = (r: Fields, path: string, type: 'band' | 'linear') => X;
-
-const noExtra: Extra<object> = () => ({});
-
-/**
- * An axis, band or linear by its `type`, allowing `keys.band` or `keys.linear`. Gridlines of a
- * linear one default to `grid`; `extra` reads what the axis has beyond the common keys.
- */
-function checkAxis<X extends object = object>(
-  keys: { band: readonly string[]; linear: readonly string[] },
-  grid: boolean,
-  extra: Extra<X> = noExtra as Extra<X>,
-): Check<(CheckedBandAxis | CheckedLinearAxis) & X> {
-  return (path, raw) => {
-    const type = fields(path, raw).required('type', (typePath, given) =>
-      given === 'band' || given === 'linear' ? given : fail(typePath, `must be "band" or "linear", got ${show(given)}`),
-    );
-    return type === 'band'
-      ? checkBandAxis(keys.band, extra)(path, raw)
-      : checkLinearAxis(keys.linear, grid, extra)(path, raw);
-  };
-}
-
-const CARTESIAN_KEYS = { band: ['type', 'categories', 'title', 'hidden', 'labelAngle'], linear: LINEAR_KEYS };
-
-function checkBandAxis<X extends object = object>(
-  keys: readonly string[],
-  extra: Extra<X> = noExtra as Extra<X>,
-): Check<CheckedBandAxis & X> {
-  return (path, raw) => {
-    const r = fields(path, raw);
-    r.allow(keys);
-    r.required('type', (typePath, given) =>
-      given === 'band' ? given : fail(typePath, `must be "band", got ${show(given)}`),
-    );
-    const categories = r.required('categories', list(1, MAX_CATEGORIES, text(MAX_NAME)));
-    unique(categories, (i) => `${path}.categories[${i}]`);
-    const title = r.optional('title', text());
-    const hidden = r.optional('hidden', boolean) ?? false;
-    return {
-      type: 'band',
-      path,
-      categories,
-      title,
-      hidden,
-      labelAngle: r.optional('labelAngle', labelAngle) ?? 0,
-      ...extra(r, path, 'band'),
-    };
-  };
-}
-
-function checkLinearAxis<X extends object = object>(
-  keys: readonly string[],
-  grid: boolean,
-  extra: Extra<X> = noExtra as Extra<X>,
-): Check<CheckedLinearAxis & X> {
-  return (path, raw) => {
-    const r = fields(path, raw);
-    r.allow(keys);
-    r.required('type', (typePath, given) =>
-      given === 'linear' ? given : fail(typePath, `must be "linear", got ${show(given)}`),
-    );
-    const min = r.optional('min', anyValue);
-    const max = r.optional('max', anyValue);
-    if (min !== undefined && max !== undefined && !(max > min)) {
-      fail(`${path}.max`, `must be greater than min (${min}), got ${max}`);
-    }
-    const percent = r.optional('percent', boolean) ?? false;
-    const format = r.optional('format', fields);
-    format?.allow(['decimals', 'thousands', 'decimal', 'prefix', 'suffix']);
-    const formatText = (key: string, fallback: string): string =>
-      format?.optional(key, text(MAX_FORMAT_TEXT)) ?? fallback;
-    return {
-      type: 'linear',
-      path,
-      title: r.optional('title', text()),
-      min,
-      max,
-      percent,
-      grid: r.optional('grid', boolean) ?? grid,
-      hidden: r.optional('hidden', boolean) ?? false,
-      labelAngle: r.optional('labelAngle', labelAngle) ?? 0,
-      format: {
-        decimals: format?.optional('decimals', integer(0, MAX_DECIMALS)),
-        thousands: formatText('thousands', ','),
-        decimal: formatText('decimal', '.'),
-        prefix: formatText('prefix', ''),
-        suffix: formatText('suffix', percent ? '%' : ''),
-      },
-      ...extra(r, path, 'linear'),
-    };
   };
 }
 
@@ -863,11 +776,11 @@ function checkDash(path: string, dash: unknown): number[] {
 }
 
 /** A radar's values: a number per spoke, or a `[low, high]` pair per spoke for a range radar. */
-function checkRadarData(r: Fields, path: string): { data: number[] } | { data: [number, number][] } {
+function checkRadarData(r: Fields, path: string, reserve: ReservePoints): { data: number[] } | { data: [number, number][] } {
   const value = number(0, MAX_VALUE);
   const entry = (entryPath: string, raw: unknown): number | [number, number] =>
     Array.isArray(raw) ? checkRange(entryPath, raw) : value(entryPath, raw);
-  const data = r.required('data', list(0, MAX_POINTS, entry));
+  const data = r.required('data', list(0, MAX_POINTS, entry, reserve));
   const ranges = data.filter((item): item is [number, number] => Array.isArray(item));
   const values = data.filter((item): item is number => !Array.isArray(item));
   if (ranges.length > 0 && values.length > 0) {
@@ -906,12 +819,3 @@ function checkSeed(path: string, raw: unknown): Seed {
   return raw as Seed;
 }
 
-function unique(names: readonly string[], pathOf: (index: number) => string): void {
-  const seen = new Set<string>();
-  names.forEach((name, i) => {
-    if (seen.has(name)) {
-      fail(pathOf(i), `repeats ${show(name)}`);
-    }
-    seen.add(name);
-  });
-}
