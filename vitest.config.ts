@@ -9,6 +9,11 @@ export default defineConfig({
   resolve: { conditions: [source, ...defaultClientConditions] },
   ssr: { resolve: { conditions: [source, ...defaultServerConditions] } },
   test: {
-    include: ['packages/*/test/**/*.test.ts'],
+    // The website's tests run here too, with its own config: it renders the packages' READMEs and
+    // golden corpora, so a package change can break it.
+    projects: [
+      { extends: true, test: { name: 'packages', include: ['packages/*/test/**/*.test.ts'] } },
+      'apps/site/vitest.config.ts',
+    ],
   },
 });

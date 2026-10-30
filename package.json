@@ -8,7 +8,7 @@
   ],
   "scripts": {
     "build": "tsc -b",
-    "typecheck": "tsc -b && tsc -p tsconfig.test.json",
+    "typecheck": "tsc -b && tsc -p tsconfig.test.json && tsc -p apps/site/tsconfig.json",
     "test": "vitest run",
     "example": "node apps/examples/core-and-fills.mjs",
     "example:text": "node apps/examples/text.mjs",

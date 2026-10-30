@@ -5,5 +5,5 @@ export default defineConfig({
   root: fileURLToPath(new URL('.', import.meta.url)),
   resolve: { conditions: ['@borrowdale/source', ...defaultClientConditions] },
   ssr: { resolve: { conditions: ['@borrowdale/source', ...defaultServerConditions] } },
-  test: { include: ['test/**/*.test.ts'] },
+  test: { name: 'site', include: ['test/**/*.test.ts'] },
 });

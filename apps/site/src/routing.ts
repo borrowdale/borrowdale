@@ -14,7 +14,7 @@ export function siteUrl(path: string) {
   return import.meta.env.BASE_URL + path.replace(/^\//, '');
 }
 export function legacyPath(hash: string): string | undefined {
-  const [key, query] = hash.replace(/^#/, '').split('?');
+  const [key = '', query] = hash.replace(/^#/, '').split('?');
   const path =
     key === 'home'
       ? '/'
@@ -51,7 +51,7 @@ export function scrollToFragment(hash: string): boolean {
 }
 
 function legacyExample(value: string) {
-  const [category, ...name] = value.split('/');
+  const [category = '', ...name] = value.split('/');
   try {
     return examplePath({ category, name: decodeURIComponent(name.join('/')) });
   } catch {

@@ -15,7 +15,7 @@ npm test
 npm run typecheck
 ```
 
-The browser download is needed for parity tests. For website work, run `npm run site`, `npm run site:build` and `npm test --workspace @borrowdale/site`.
+The browser download is needed for parity tests. `npm test` and `npm run typecheck` cover the website too. For website work, run `npm run site` to preview it and `npm run site:build` to build and check the static pages.
 
 ## Report a bug
 

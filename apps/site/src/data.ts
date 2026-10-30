@@ -22,7 +22,7 @@ export function worldAt(year: number) {
 export function median(values: number[]) {
   const sorted = [...values].sort((a, b) => a - b);
   const n = sorted.length;
-  return n ? (sorted[Math.floor((n - 1) / 2)] + sorted[Math.floor(n / 2)]) / 2 : null;
+  return n ? (sorted[Math.floor((n - 1) / 2)]! + sorted[Math.floor(n / 2)]!) / 2 : null;
 }
 export const completedYears = climate.rows.filter((x) => x.annual !== null);
 export const pretty = (n: number | null, digits = 1) =>

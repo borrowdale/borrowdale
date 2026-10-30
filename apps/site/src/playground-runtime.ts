@@ -28,7 +28,7 @@ export function executeExample(code: string): string {
       if (binding.type !== 'ImportSpecifier') throw new Error('Use named imports in the playground.');
       const imported =
         binding.imported.type === 'Identifier' ? binding.imported.name : String(binding.imported.value);
-      if (!Object.hasOwn(modules[module], imported)) throw new Error(`Unknown import: ${imported}`);
+      if (!Object.hasOwn(modules[module]!, imported)) throw new Error(`Unknown import: ${imported}`);
       return `${JSON.stringify(imported)}: ${binding.local.name}`;
     });
     imports.unshift(`const { ${names.join(', ')} } = ${moduleArgument}[${JSON.stringify(module)}];`);

@@ -144,8 +144,8 @@ export function bindEditor() {
           const n =
             (path.getAttribute('d') ?? '').match(/-?\d+(?:\.\d+)?(?:e[+-]?\d+)?/gi)?.map(Number) ?? [];
           for (let i = 0; i + 1 < n.length; i += 2) {
-            xs.push(n[i]);
-            ys.push(n[i + 1]);
+            xs.push(n[i]!);
+            ys.push(n[i + 1]!);
           }
         }
         if (xs.length) {

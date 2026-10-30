@@ -200,7 +200,7 @@ export function route(path: string): string {
   if (clean.startsWith('/playground/')) return findExample(path) ? 'example' : '404';
   if (clean === '/examples/') return 'examples';
   const match = clean.match(/^\/examples\/(world|climate|earthquakes)\/$/);
-  if (match) return match[1];
+  if (match) return match[1]!;
   if (docs.some((d) => d.url === clean)) return 'docs';
   return '404';
 }

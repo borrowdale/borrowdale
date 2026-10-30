@@ -20,7 +20,7 @@ export const dashboardState = { year: 2023, country: 'HUN', since: 1970, magnitu
 const number = (value: number) => value.toLocaleString('en', { maximumFractionDigits: 2 });
 // The categories a series of plain values is drawn against, from whichever axis is the band axis.
 function categoriesOf(spec: ChartSpec): readonly string[] {
-  const axes = (spec as { axes?: Record<string, { type?: string; categories?: readonly string[] }> }).axes ?? {};
+  const axes = (spec as unknown as { axes?: Record<string, { type?: string; categories?: readonly string[] }> }).axes ?? {};
   return Object.values(axes).find((axis) => axis.type === 'band')?.categories ?? [];
 }
 // One row per drawn value, so the numbers behind a chart can be read without seeing it.
@@ -169,9 +169,9 @@ export function climateDashboard() {
   const since = dashboardState.since,
     rows = completedYears.filter((x) => x.year >= since),
     latest = completedYears.at(-1)!;
-  const earliest = rows[0],
+  const earliest = rows[0]!,
     change = latest.annual! - earliest.annual!;
-  const warmest = [...completedYears].sort((a, b) => b.annual! - a.annual!)[0];
+  const warmest = [...completedYears].sort((a, b) => b.annual! - a.annual!)[0]!;
   const recent = completedYears.slice(-3),
     months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const decs = [...new Set(rows.map((r) => Math.floor(r.year / 10) * 10))];
@@ -209,7 +209,7 @@ export function climateDashboard() {
     series: recent.map((r, i) => ({
       type: i === 0 ? 'polarArea' : 'polarLine',
       name: String(r.year),
-      color: colors[[1, 0, 3][i]],
+      color: colors[[1, 0, 3][i]!],
       data: r.months,
     })),
   };
