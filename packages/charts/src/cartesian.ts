@@ -28,7 +28,7 @@ interface Mark<S extends CartesianSeries> {
   slot: boolean;
   /** How the legend shows it. */
   legend: 'line' | 'box';
-  draw: (context: MarkContext, entry: S, paint: Paint) => void;
+  draw: (context: MarkContext, placed: Placed<S>, paint: Paint) => void;
 }
 
 const MARKS: { [K in MarkType]: Mark<Extract<CartesianSeries, { type: K }>> } = {
@@ -124,37 +124,54 @@ export function layoutCartesian(drawing: Drawing, chart: CheckedCartesianChart, 
   for (const entry of guides) {
     drawGrid(drawing, plot, entry, scales[entry.key]);
   }
+  const slots = slotsOf(series, valueAxisOf);
   const context: MarkContext = {
     drawing,
     frame,
     categories: band?.categories ?? [],
-    scaleOf: (entry) => scales[valueAxisOf(entry)]!,
-    axisOf: (entry) => linear[valueAxisOf(entry)]!,
-    spansOf: (entry) => spans.get(entry)!,
-    areaCutsOf: (entry) => entry.type === 'area' ? cuts.get(stackOf(entry, valueAxisOf)) : undefined,
-    slots: slotsOf(series, valueAxisOf),
+    slotCount: slots.count,
     x: scales.x,
     xAxis: linear.x,
     largestBubble: largestBubble(series),
   };
-  series.forEach((entry, i) => markOf(entry).draw(context, entry, paints[i]!));
+  series.forEach((entry, i) => {
+    const key = valueAxisOf(entry);
+    const placed: Placed = {
+      entry,
+      axis: linear[key]!,
+      scale: scales[key]!,
+      spans: spans.get(entry) ?? [],
+      slot: slots.slotOf(entry),
+      cuts: entry.type === 'area' ? cuts.get(stackOf(entry, valueAxisOf)) : undefined,
+    };
+    markOf(entry).draw(context, placed, paints[i]!);
+  });
   for (const entry of guides) {
     drawGuide(drawing, plot, entry, scales[entry.key], bands, line);
   }
 }
 
+/** A series with everything resolved about where it is drawn, once, before it is drawn. */
+interface Placed<S extends CartesianSeries = CartesianSeries> {
+  entry: S;
+  /** The axis of its values, and its placed scale. */
+  axis: CheckedLinearAxis;
+  scale: PlacedScale;
+  /** Where each bar or area of each category starts and ends; empty for scatter and bubbles. */
+  spans: Span[];
+  /** Its slot beside other series in each band, as bars stand; -1 for a series without one. */
+  slot: number;
+  /** Where a stacked monotone area splits its runs (`areaCutsOf`); undefined for every other series. */
+  cuts: ReadonlySet<number> | undefined;
+}
+
+/** What every series of the chart is drawn in. */
 interface MarkContext {
   drawing: Drawing;
   frame: Frame;
   categories: readonly string[];
-  /** The placed scale of a series' values. */
-  scaleOf: (entry: CartesianSeries) => PlacedScale;
-  /** The axis of a series' values. */
-  axisOf: (entry: CartesianSeries) => CheckedLinearAxis;
-  spansOf: (entry: CartesianSeries) => Span[];
-  /** Where a stacked monotone area splits its runs (`areaCutsOf`); undefined for every other series. */
-  areaCutsOf: (entry: CartesianSeries) => ReadonlySet<number> | undefined;
-  slots: { slotOf: (entry: CartesianSeries) => number; count: number };
+  /** How many slots each band is split into. */
+  slotCount: number;
   /** The x scale and axis of a chart with two linear axes. */
   x: PlacedScale | undefined;
   xAxis: CheckedLinearAxis | undefined;
@@ -333,20 +350,23 @@ function largestBubble(series: readonly CartesianSeries[]): number {
   return largest;
 }
 
-function drawBars(context: MarkContext, entry: Extract<CartesianSeries, { type: 'bar' }>, paint: Paint): void {
-  const { drawing, frame, slots } = context;
-  const scale = context.scaleOf(entry);
-  const slot = slots.slotOf(entry);
-  context.spansOf(entry).forEach((span, i) => {
+function drawBars(
+  context: MarkContext,
+  placed: Placed<Extract<CartesianSeries, { type: 'bar' }>>,
+  paint: Paint,
+): void {
+  const { drawing, frame, slotCount } = context;
+  const { entry, scale, slot } = placed;
+  placed.spans.forEach((span, i) => {
     const value = entry.data[i];
     if (!span || value === null || value === undefined || span[0] === span[1]) {
       return;
     }
     const band = frame.band(i);
-    const width = band.width / slots.count;
+    const width = band.width / slotCount;
     const along = band.start + slot * width + (width * BAR_GAP) / 2;
     const category = context.categories[i]!;
-    drawing.mark(`${entry.name}, ${category}: ${valueText(value, context.axisOf(entry))}`, [
+    drawing.mark(`${entry.name}, ${category}: ${valueText(value, placed.axis)}`, [
       drawing.shape(
         frame.box(along, width * (1 - BAR_GAP), scale.at(span[0]), scale.at(span[1])),
         hatched(paint),
@@ -357,9 +377,13 @@ function drawBars(context: MarkContext, entry: Extract<CartesianSeries, { type: 
   });
 }
 
-function drawLine(context: MarkContext, entry: Extract<CartesianSeries, { type: 'line' }>, paint: Paint): void {
+function drawLine(
+  context: MarkContext,
+  placed: Placed<Extract<CartesianSeries, { type: 'line' }>>,
+  paint: Paint,
+): void {
   const { drawing, frame } = context;
-  const scale = context.scaleOf(entry);
+  const { entry, scale } = placed;
   const points = entry.data.map((value, i): Point | null =>
     value === null ? null : [frame.center(i), scale.at(value)],
   );
@@ -373,17 +397,17 @@ function drawLine(context: MarkContext, entry: Extract<CartesianSeries, { type: 
 
 function drawArea(
   context: MarkContext,
-  entry: Extract<CartesianSeries, { type: 'area' | 'rangeArea' }>,
+  placed: Placed<Extract<CartesianSeries, { type: 'area' | 'rangeArea' }>>,
   paint: Paint,
 ): void {
   const { drawing, frame } = context;
-  const scale = context.scaleOf(entry);
+  const { entry, scale } = placed;
   const outline = { stroke: paint.color, strokeWidth: LINE_WIDTH };
-  const edges = context.spansOf(entry).map((span, i) => {
+  const edges = placed.spans.map((span, i) => {
     const along = frame.center(i);
     return span && { from: [along, scale.at(span[0])] as Point, to: [along, scale.at(span[1])] as Point };
   });
-  const nodes = runsOf(edges, context.areaCutsOf(entry)).flatMap((run, r) => {
+  const nodes = runsOf(edges, placed.cuts).flatMap((run, r) => {
     const to = run.map((edge) => edge.to);
     const from = run.map((edge) => edge.from);
     const key = `${entry.name}|area|${r}`;
@@ -411,13 +435,13 @@ function drawArea(
 
 function drawPoints(
   context: MarkContext,
-  entry: Extract<CartesianSeries, { type: 'scatter' | 'bubble' }>,
+  placed: Placed<Extract<CartesianSeries, { type: 'scatter' | 'bubble' }>>,
   paint: Paint,
 ): void {
   const { drawing, frame } = context;
+  const { entry, scale: y } = placed;
   const x = context.x!;
   const xAxis = context.xAxis!;
-  const y = context.scaleOf(entry);
   const plotSize = Math.min(frame.plot.right - frame.plot.left, frame.plot.bottom - frame.plot.top);
   const maxDiameter = Math.min(MAX_BUBBLE, plotSize / 5);
   entry.data.forEach((point, i) => {
@@ -432,7 +456,7 @@ function drawPoints(
     }
     const style: SketchStyle = size === undefined ? solid(paint.color) : hatched(paint);
     const sizeText = size === undefined ? '' : `, size ${formatValue(size)}`;
-    drawing.mark(`${entry.name}: ${valueText(px, xAxis)}, ${valueText(py, context.axisOf(entry))}${sizeText}`, [
+    drawing.mark(`${entry.name}: ${valueText(px, xAxis)}, ${valueText(py, placed.axis)}${sizeText}`, [
       drawing.shape({ kind: 'circle', cx: x.at(px), cy: y.at(py), diameter }, style, `${entry.name}|${i}`, entry.style),
     ]);
   });
