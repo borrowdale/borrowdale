@@ -7,7 +7,7 @@ import { examples, recipes, chartExamples, type Example } from './gallery';
 import coreCases from '../../../packages/core/test/golden/corpus.json';
 import textCases from '../../../packages/text/test/golden/corpus.json';
 import fillCases from '../../../packages/fills/test/golden/corpus.json';
-import { escape, seed } from './drawing';
+import { escape, seed, exampleSeed } from './drawing';
 export const exampleLink = (example: Example) => siteUrl(examplePath(example));
 const drafts = new Map<string, string>();
 let worker: Worker | undefined;
@@ -39,7 +39,7 @@ export function editorCode(e: Example) {
   }
   if (e.category === 'shapes') {
     const entry = coreCases.find((x) => x.name === e.name)!;
-    return `import { sketch, toSvgPaths } from '@borrowdale/core';\n\nconst shape = ${json(entry.shape)};\nconst options = ${json({ seed, ...entry.options })};\n\nconst drawing = sketch(shape, options);\nrender(\`<svg data-fit viewBox="0 0 300 240">\${toSvgPaths(drawing)}</svg>\`);\n// data-fit fits the preview to the drawn strokes.`;
+    return `import { sketch, toSvgPaths } from '@borrowdale/core';\n\nconst shape = ${json(entry.shape)};\nconst options = ${json({ ...entry.options, seed: exampleSeed(entry.options.seed) })};\n\nconst drawing = sketch(shape, options);\nrender(\`<svg data-fit viewBox="0 0 300 240">\${toSvgPaths(drawing)}</svg>\`);\n// data-fit fits the preview to the drawn strokes.`;
   }
   if (e.category === 'text') {
     const entry = textCases.find((x) => x.name === e.name)!;
@@ -47,7 +47,7 @@ export function editorCode(e: Example) {
   }
   if (e.category === 'patterns') {
     const entry = fillCases.find((x) => x.name === e.name)!;
-    return `import { pattern } from '@borrowdale/fills';\n\nconst options = ${json(entry.options)};\nconst tile = pattern(options);\n\nrender(\`<svg viewBox="0 0 300 200"><defs>\${tile.def}</defs>\n  <rect width="300" height="200" fill="\${tile.fill}"/>\n</svg>\`);`;
+    return `import { pattern } from '@borrowdale/fills';\n\nconst options = ${json({ ...entry.options, seed: exampleSeed(entry.options.seed) })};\nconst tile = pattern(options);\n\nrender(\`<svg viewBox="0 0 300 200"><defs>\${tile.def}</defs>\n  <rect width="300" height="200" fill="\${tile.fill}"/>\n</svg>\`);`;
   }
   return componentCode(e);
 }

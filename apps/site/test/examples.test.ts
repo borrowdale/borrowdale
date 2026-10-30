@@ -1,10 +1,11 @@
 import { afterEach, describe, it, expect } from 'vitest';
 import { examples, categories, gallery, galleryState } from '../src/gallery';
 import { editorCode } from '../src/editor';
+import { pageHtml } from '../src/pages';
 import { executeExample } from '../src/playground-runtime';
 import { worldAt, countryValue, world, climate, quakes, median, dailyCounts } from '../src/data';
 import { dashboardState, worldDashboard, climateDashboard, quakeDashboard } from '../src/dashboards';
-import { chart, chartSpec } from '../src/drawing';
+import { chart, chartSpec, reseed } from '../src/drawing';
 import cartesianCases from '../../examples/cartesian-cases.json';
 import type { ChartSpec } from '@borrowdale/charts';
 
@@ -17,6 +18,27 @@ afterEach(() => {
 });
 
 describe('gallery coverage and actual rendering', () => {
+  it.each([['shapes', 'rectangle/outline/a'], ['patterns', 'lines/a']])('re-sketches %s fixtures and keeps their editable code in sync', (category, name) => {
+    const shape = examples.find((example) => example.category === category && example.name === name)!;
+    const beforePreview = shape.render('svg');
+    const beforeCode = executeExample(editorCode(shape));
+    reseed();
+    const afterPreview = shape.render('svg');
+    const afterCode = executeExample(editorCode(shape));
+    const paths = (svg: string) => [...svg.matchAll(/<path[^>]* d="([^"]+)"/g)].map((match) => match[1]);
+    expect(paths(beforePreview).length).toBeGreaterThan(0);
+    expect(paths(afterPreview)).not.toEqual(paths(beforePreview));
+    expect(paths(afterCode)).not.toEqual(paths(beforeCode));
+    expect(paths(afterCode)).toEqual(paths(afterPreview));
+  });
+
+  it('hides Re-sketch for fixed text glyphs but offers it for shapes', () => {
+    galleryState.category = 'text';
+    expect(pageHtml('/playground/')).toMatch(/<button hidden id="resketch"/);
+    galleryState.category = 'shapes';
+    expect(pageHtml('/playground/')).not.toMatch(/<button hidden id="resketch"/);
+  });
+
   it('includes every Cartesian composition in the editable gallery', () => {
     for (const entry of cartesianCases) {
       const matches = examples.filter((example) => example.category === 'charts' && example.name === entry.name);

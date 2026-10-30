@@ -13,8 +13,9 @@ export let seed = 7;
 export function reseed() {
   seed += 1;
 }
+export const exampleSeed = (original?: string | number) => original === undefined ? seed : `${seed}:${original}`;
 export function shapeSvg(shape: Shape, options: SketchOptions = {}, width = 300, height = 180, fit = false) {
-  return `<svg ${fit ? 'data-fit' : ''} viewBox="0 0 ${width} ${height}" role="img" aria-label="${escape(shape.kind)} drawing">${toSvgPaths(sketch(shape, { seed, stroke: '#263b33', ...options }))}</svg>`;
+  return `<svg ${fit ? 'data-fit' : ''} viewBox="0 0 ${width} ${height}" role="img" aria-label="${escape(shape.kind)} drawing">${toSvgPaths(sketch(shape, { stroke: '#263b33', ...options, seed: exampleSeed(options.seed) }))}</svg>`;
 }
 // Hides an ornamental drawing from assistive technology, so it adds nothing to the name of the link or
 // button around it.
@@ -40,7 +41,7 @@ export function textSvg(text: string, options: LayoutOptions) {
   };
 }
 export function patternSvg(options: PatternOptions) {
-  const p = pattern(options);
+  const p = pattern({ ...options, seed: exampleSeed(options.seed) });
   return `<svg viewBox="0 0 300 160" role="img" aria-label="${escape(options.kind)} pattern"><defs>${p.def}</defs><rect width="300" height="160" fill="${p.fill}"/></svg>`;
 }
 const pending = new Map<string, ChartSpec>();
