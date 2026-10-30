@@ -202,6 +202,10 @@ main h1:focus {
   background: transparent;
   padding: 10px 12px;
 }
+.site-header .resketch[hidden] {
+  display: inline-block !important;
+  visibility: hidden;
+}
 .hero {
   display: grid;
   grid-template-columns: 1fr 1fr;
