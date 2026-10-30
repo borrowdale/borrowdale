@@ -13,7 +13,7 @@ import { bandScale, type BandScale, type PlacedScale, type Scale } from './scale
 /** A cartesian chart's axes: the x axis, the y axis and the second y axis. */
 export type AxisKey = 'x' | 'y' | 'y2';
 
-export type Side = 'bottom' | 'left' | 'right';
+type Side = 'bottom' | 'left' | 'right';
 
 /** An axis as drawn at one side of the plot: its labels, measured once. */
 export interface Guide {
@@ -28,6 +28,8 @@ export interface Guide {
   room: number;
   /** How far its end labels reach past the ends of the axis: left and right, or up and down. */
   ends: Extent;
+  /** How far each label reaches along the axis from its tick, the further way. */
+  halves: readonly number[];
   /** How a label sits at its tick, over the side's own placing: rotated labels' anchor and turn. */
   style: Partial<ReturnType<typeof labelStyle>>;
   /** How far the axis reaches out from the plot: tick, gap, labels and title. */
@@ -83,7 +85,9 @@ export function guide(
           ? { ...NO_ENDS, left: drawing.width(first) / 2, right: drawing.width(last) / 2 }
           : { ...NO_ENDS, up: line / 2, down: line / 2 };
     const room = SIDES[side].room(widest, line);
-    return { side, key, axis, labels, reach, room, ends: shown(ends), style: {}, depth: depthOf(reach, axis, line) };
+    const halves = labels.map((label) => (side === 'bottom' ? drawing.width(label) / 2 : line / 2));
+    const depth = depthOf(reach, axis, line);
+    return { side, key, axis, labels, reach, room, ends: shown(ends), halves, style: {}, depth };
   }
   const style = labelStyle(side, angle);
   const extents = labels.map((label) => drawing.extent(label, style));
@@ -107,7 +111,10 @@ export function guide(
     side === 'bottom'
       ? { ...NO_ENDS, left: most((extent) => extent.left), right: most((extent) => extent.right) }
       : { ...NO_ENDS, up: most((extent) => extent.up), down: most((extent) => extent.down) };
-  return { side, key, axis, labels, reach, room, ends: shown(ends), style, depth: depthOf(reach, axis, line) };
+  const halves = extents.map((extent) =>
+    side === 'bottom' ? Math.max(extent.left, extent.right) : Math.max(extent.up, extent.down),
+  );
+  return { side, key, axis, labels, reach, room, ends: shown(ends), halves, style, depth: depthOf(reach, axis, line) };
 }
 
 /** How a rotated label is anchored at its tick: ending there on the left of it, starting there on the right. */
@@ -252,23 +259,17 @@ const MAX_REFITS = 20;
 const LABEL_ROUNDING = 0.005;
 
 /**
- * The plot narrowed so that the end labels of its flat band axis stay inside `rect`. Band labels are
+ * The plot narrowed so that the end labels of `guide`, a flat band axis, stay inside `rect`. Band labels are
  * centred on their bands, so the first and last shown can reach past the ends of the axis. Each time
  * the plot is narrowed by what they still reach out, which narrows the bands and moves the labels out
  * again, but by less, until they fit. A lone label wider than the chart never fits, and throws.
  */
-export function fitBandEnds(
-  plot: Rect,
-  guides: readonly Guide[],
-  rect: Rect,
-  halfOf: (label: string, side: Side) => number,
-  chart: { width: number; height: number },
-): Rect {
-  const guide = guides.find(({ axis }) => axis.type === 'band' && !axis.hidden && axis.labelAngle === 0);
-  if (!guide) {
+export function fitBandEnds(plot: Rect, guide: Guide, rect: Rect, chart: { width: number; height: number }): Rect {
+  const { axis, labels, halves, room, side } = guide;
+  // Rotated labels already reserve their whole reach past the ends, as `ends`.
+  if (axis.type !== 'band' || axis.hidden || axis.labelAngle !== 0) {
     return plot;
   }
-  const { labels, room, side } = guide;
   const [start, end] = side === 'bottom' ? (['left', 'right'] as const) : (['top', 'bottom'] as const);
   let fitted = plot;
   for (let refit = 0; refit <= MAX_REFITS; refit++) {
@@ -277,14 +278,14 @@ export function fitBandEnds(
     const every = labelEvery(room, bands.step);
     const last = Math.floor((labels.length - 1) / every) * every;
     const center = (i: number): number => bands.start(i) + bands.bandwidth / 2;
-    const before = rect[start] - (center(0) - halfOf(labels[0]!, side));
-    const after = center(last) + halfOf(labels[last]!, side) - rect[end];
+    const before = rect[start] - (center(0) - halves[0]!);
+    const after = center(last) + halves[last]! - rect[end];
     if (before <= LABEL_ROUNDING && after <= LABEL_ROUNDING) {
       return fitted;
     }
     fitted = { ...fitted, [start]: fitted[start] + Math.max(0, before), [end]: fitted[end] - Math.max(0, after) };
   }
-  return fail(`a ${chart.width} × ${chart.height} chart`, `leaves no room for the end labels of ${guide.axis.path}`);
+  return fail(`a ${chart.width} × ${chart.height} chart`, `leaves no room for the end labels of ${axis.path}`);
 }
 
 /** How many labels `spacing` apart to step over, to keep one that does not overlap the last. */

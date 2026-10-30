@@ -117,13 +117,8 @@ export function layoutCartesian(drawing: Drawing, chart: CheckedCartesianChart, 
     // The first and last x labels reach past the ends of the axis.
     plotLeft = Math.max(plotLeft, rect.left + below.ends.left, rect.left + fixed('x', 'min'));
     plotRight = Math.min(plotRight, rect.right - below.ends.right, rect.right - fixed('x', 'max'));
-    const plot = fitBandEnds(
-      { left: plotLeft, top, right: plotRight, bottom },
-      [below, left],
-      rect,
-      (label, side) => (side === 'bottom' ? drawing.width(label) / 2 : line / 2),
-      chart,
-    );
+    // The band axis, if there is one, is x below the plot or y beside it.
+    const plot = fitBandEnds({ left: plotLeft, top, right: plotRight, bottom }, band === x ? below : left, rect, chart);
     assertRoom(
       {
         left: plot.left + widened('x', 'min'),
