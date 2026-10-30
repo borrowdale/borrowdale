@@ -56,6 +56,35 @@ const share: ChartSpec = {
 // One bar, seeded "1|a" and named "b", or seeded "1" and named "a|b": the same parts joined with "|".
 const pipedSeed: ChartSpec = { ...revenue, title: undefined, seed: '1|a', series: [{ type: 'bar', name: 'b', data: [12, 15] }] };
 const pipedName: ChartSpec = { ...pipedSeed, seed: '1', series: [{ type: 'bar', name: 'a|b', data: [12, 15] }] };
+// A line through every one of the most categories a chart may have, from the bottom of the plot to the
+// top at every point: the most a line can turn.
+const thousand = Array.from({ length: 1000 }, (_, i) => `c${i}`);
+const zigzag = Array.from({ length: 1000 }, (_, i) => (i % 2 === 0 ? 0 : 100));
+const zigzags = (curve: 'linear' | 'step', count: number): ChartSpec => ({
+  width: 600,
+  height: 400,
+  legend: 'none',
+  axes: { x: { type: 'band', categories: thousand }, y: { type: 'linear' } },
+  series: Array.from({ length: count }, (_, k) => ({ type: 'line', name: `L${k}`, curve, data: zigzag })),
+});
+// A chart style with a fill, which lines and the edges of areas must not take.
+const filledStyle = { fill: '#f00', fillStyle: 'solid' } as const;
+const filledLines: ChartSpec = {
+  ...revenue,
+  style: filledStyle,
+  series: [
+    { type: 'line', name: 'Straight', data: [10, 20] },
+    { type: 'line', name: 'Smooth', curve: 'monotone', data: [20, 10] },
+    { type: 'rangeArea', name: 'Range', data: [[1, 2], [3, 5]] },
+  ],
+};
+const filledRadarLine: ChartSpec = {
+  width: 300,
+  height: 300,
+  style: filledStyle,
+  axes: { angle: { type: 'band', categories: ['a', 'b', 'c'] } },
+  series: [{ type: 'polarLine', name: 'Loop', data: [1, 2, 3] }],
+};
 const dashed: ChartSpec = { ...revenue, series: [{ type: 'line', name: 'Goal', dash: [6, 4], data: [10, 20] }] };
 const coloured: ChartSpec = { ...revenue, series: [{ type: 'bar', name: 'Pencils', color: '#123456', data: [12, 15] }] };
 const unsetStroke: ChartSpec = { ...revenue, series: [{ type: 'bar', name: 'Pencils', style: { stroke: undefined }, data: [12, 15] }] };
@@ -359,6 +388,18 @@ function shapesOf(layout: ChartLayout, title: string): ChartNode[] {
   return found.kind === 'mark' ? found.nodes : [];
 }
 
+/** Every fill the paths of a mark are painted with, each once. */
+function fillsOf(layout: ChartLayout, title: string): string[] {
+  const paths = shapesOf(layout, title).flatMap((node) => (node.kind === 'sketch' ? node.sketch.paths : []));
+  return [...new Set(paths.map((path) => path.fill))];
+}
+
+/** How many paths of a mark are filled. */
+function filledPathsOf(layout: ChartLayout, title: string): number {
+  const paths = shapesOf(layout, title).flatMap((node) => (node.kind === 'sketch' ? node.sketch.paths : []));
+  return paths.filter((path) => path.fill !== 'none').length;
+}
+
 /** The outline of a mark's first shape: its last path. */
 function outline(layout: ChartLayout, title: string): SketchPath {
   const group = mark(layout, title);
@@ -452,6 +493,27 @@ describe('layoutChart', () => {
 
   it('draws a mark with other strokes under another chart seed', () => {
     expect(mark(layoutChart(reseeded), 'Paper, Jan: €7')).not.toEqual(mark(layoutChart(revenue), 'Paper, Jan: €7'));
+  });
+
+  it('draws a straight line through 1,000 categories that turns at every one', () => {
+    expect(layoutChart(zigzags('linear', 1)).nodes.length).toBeGreaterThan(0);
+  });
+
+  it('draws 20 such straight lines, and 10 such step lines, within the budget', () => {
+    expect(layoutChart(zigzags('linear', 20)).nodes.length).toBeGreaterThan(0);
+    expect(layoutChart(zigzags('step', 10)).nodes.length).toBeGreaterThan(0);
+  });
+
+  it.each(['Straight', 'Smooth'])('fills no part of the %s line under a chart style with a fill', (title) => {
+    expect(fillsOf(layoutChart(filledLines), title)).toEqual(['none']);
+  });
+
+  it('fills a range area under a chart style with a fill, but not its edges', () => {
+    expect(filledPathsOf(layoutChart(filledLines), 'Range')).toBe(1);
+  });
+
+  it('fills no part of a closed polar line under a chart style with a fill', () => {
+    expect(fillsOf(layoutChart(filledRadarLine), 'Loop')).toEqual(['none']);
   });
 
   it('draws other strokes for names that join to the same text', () => {

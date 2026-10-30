@@ -583,7 +583,7 @@ function polyline(
     return loneDot(drawing, points[0]!, style.stroke, key, own);
   }
   const shape: Shape = closed ? { kind: 'polygon', points } : { kind: 'linearPath', points };
-  return drawing.shape(shape, closed ? { ...style, fill: 'none' } : style, key, own);
+  return drawing.outline(shape, style, key, own);
 }
 
 function pathThrough(points: readonly Point[]): string {

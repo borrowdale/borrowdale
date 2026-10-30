@@ -2,7 +2,7 @@ import type { Point, Shape, SketchStyle } from '@borrowdale/core';
 import { cos, sin } from '@borrowdale/core/math';
 import type { TextAnchor, TextBaseline } from '@borrowdale/text';
 import type { CheckedAxis, CheckedLinearAxis } from './check-axis.js';
-import { areaPath, linePath } from './curves.js';
+import { areaPath, linePath, straightPoints } from './curves.js';
 import type { Drawing, Extent, SeedKey } from './drawing.js';
 import { assertRoom, BAND_PADDING, GAP, TICK, type Rect } from './frame.js';
 import { loneDot, piecesOf, POINT_SIZE, runsOf, solid } from './marks.js';
@@ -189,8 +189,10 @@ interface Frame {
   point: (position: Point) => Point;
   /** A rectangle from `along`, `thickness` wide, between two positions on the value axis. */
   box: (along: number, thickness: number, from: number, to: number) => Shape;
-  line: (points: readonly Point[], curve: Curve) => string;
-  area: (high: readonly Point[], low: readonly Point[], curve: Curve) => string;
+  /** A line through the points: straight segments as a linear path, a bending curve as a path. */
+  line: (points: readonly Point[], curve: Curve) => Shape;
+  /** The area between two lines over the same positions: a polygon, or a path for a bending curve. */
+  area: (high: readonly Point[], low: readonly Point[], curve: Curve) => Shape;
 }
 
 function makeFrame(plot: Rect, horizontal: boolean, bands: BandScale | undefined): Frame {
@@ -205,8 +207,20 @@ function makeFrame(plot: Rect, horizontal: boolean, bands: BandScale | undefined
         ? { kind: 'rectangle', x: low, y: along, width: size, height: thickness }
         : { kind: 'rectangle', x: along, y: low, width: thickness, height: size };
     },
-    line: (points, curve) => linePath(points, curve, horizontal),
-    area: (high, low, curve) => areaPath(high, low, curve, horizontal),
+    // Straight segments cost the stroke engine work in proportion to their points; a path is
+    // simplified first, which costs more the more it turns.
+    line: (points, curve) => {
+      const corners = straightPoints(points, curve, horizontal);
+      return corners
+        ? { kind: 'linearPath', points: corners }
+        : { kind: 'path', d: linePath(points, curve, horizontal) };
+    },
+    area: (high, low, curve) => {
+      const [top, bottom] = [straightPoints(high, curve, horizontal), straightPoints(low, curve, horizontal)];
+      return top && bottom
+        ? { kind: 'polygon', points: [...top, ...bottom.reverse()] }
+        : { kind: 'path', d: areaPath(high, low, curve, horizontal) };
+    },
   };
 }
 
@@ -414,19 +428,18 @@ function drawArea(
     if (run.length === 1) {
       // A range at one category is the line from its low to its high value; a stacked area's lower
       // edge is the series below, so it shows as its top point, as a line would.
-      const range = { kind: 'path' as const, d: frame.line([from[0]!, to[0]!], 'linear') };
       return [
         entry.type === 'rangeArea'
-          ? drawing.shape(range, outline, key, entry.style)
+          ? drawing.outline(frame.line([from[0]!, to[0]!], 'linear'), outline, key, entry.style)
           : lineOrDot(drawing, frame, to, entry.curve, outline, key, entry.style),
       ];
     }
-    const fill = { kind: 'path' as const, d: frame.area(to, from, entry.curve) };
+    const fill = frame.area(to, from, entry.curve);
     return [
       drawing.shape(fill, { ...hatched(paint), stroke: 'none' }, [...key, 'fill'], entry.style),
-      drawing.shape({ kind: 'path', d: frame.line(to, entry.curve) }, outline, [...key, 'high'], entry.style),
+      drawing.outline(frame.line(to, entry.curve), outline, [...key, 'high'], entry.style),
       ...(entry.type === 'rangeArea'
-        ? [drawing.shape({ kind: 'path', d: frame.line(from, entry.curve) }, outline, [...key, 'low'], entry.style)]
+        ? [drawing.outline(frame.line(from, entry.curve), outline, [...key, 'low'], entry.style)]
         : []),
     ];
   });
@@ -475,7 +488,7 @@ function lineOrDot(
   if (run.length === 1) {
     return loneDot(drawing, frame.point(run[0]!), style.stroke, key, own);
   }
-  return drawing.shape({ kind: 'path', d: frame.line(run, curve) }, style, key, own);
+  return drawing.outline(frame.line(run, curve), style, key, own);
 }
 
 /** A value in a tooltip, in its axis format; on a percent axis it is the value, not its share. */

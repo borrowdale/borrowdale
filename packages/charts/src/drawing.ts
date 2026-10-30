@@ -67,9 +67,20 @@ export class Drawing {
    * written with its length, so names holding any character never make two keys alike.
    */
   shape(shape: Shape, defaults: SketchStyle, key: SeedKey, own: SketchStyle = {}): ChartNode {
+    return this.#sketch(shape, { ...defaults, ...this.#chart.style, ...own }, key);
+  }
+
+  #sketch(shape: Shape, style: SketchStyle, key: SeedKey): ChartNode {
     const seed = [this.#chart.seed, ...key].map((part) => `${String(part).length}:${part}`).join('');
-    const style = { ...defaults, ...this.#chart.style, ...own, seed };
-    return { kind: 'sketch', sketch: sketch(shape, style, this.#budget) };
+    return { kind: 'sketch', sketch: sketch(shape, { ...style, seed }, this.#budget) };
+  }
+
+  /**
+   * A shape drawn as an outline only, as `shape` draws it but never filled, whatever fill the chart's
+   * or the series' style gives: lines and the edges of areas.
+   */
+  outline(shape: Shape, defaults: SketchStyle, key: SeedKey, own: SketchStyle = {}): ChartNode {
+    return this.#sketch(shape, { ...defaults, ...this.#chart.style, ...own, fill: 'none' }, key);
   }
 
   /**
