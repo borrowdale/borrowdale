@@ -18,7 +18,7 @@ The collection includes 328 reference examples: 85 charts, 196 shapes, 31 text e
 
 Click anywhere on an example card to open its own URL. Edit JavaScript on the left and see the SVG or HTML preview on the right. Run, automatic execution, Reset, Copy, and Command/Control+Enter are supported. Drafts remain in memory while navigating and are lost on reload. The collection can also preview charts using Canvas; the interactive editor uses SVG/HTML output.
 
-The playground accepts named imports from the four local packages and `@borrowdale/text/excalifont-files`. Call `render(markup)` synchronously to display output. Execution runs in a fresh worker with a three-second timeout; markup appears in a sandboxed iframe with external resources blocked. The worker is not a security boundary for untrusted code: only run code you trust. The preview supplies Excalifont and the site stylesheet, including the UI recipe styles.
+The playground accepts named imports from the four local packages and `@borrowdale/text/excalifont-files`. Call `render(markup)` synchronously to display output. Execution runs in a fresh worker with a three-second timeout; markup appears in a sandboxed iframe that cannot run scripts or fetch subresources. The worker is not a security boundary for untrusted code: only run code you trust. The preview supplies Excalifont and the site stylesheet, including the UI recipe styles.
 
 ## Open-data dashboards
 

@@ -76,13 +76,13 @@ export function editorPage(path = location.pathname) {
   if (!e)
     return '<section class="empty"><h1>Example not found.</h1><a href="#gallery">Back to the collection →</a></section>';
   return `<section class="editor-heading"><div><a class="eyebrow" href="#gallery?category=${e.category}">← BACK TO ${e.category.toUpperCase()}</a><h1>${escape(e.name.replaceAll('-', ' '))}</h1><p>Edit the JavaScript. Run it. See your drawing take shape.</p></div><span class="editor-family">${escape(e.tag)}</span></section>
-  <div class="playground"><section class="editor-code-panel" aria-label="Code editor"><header><span>JAVASCRIPT</span><div><button id="editor-reset">Reset</button><button id="editor-copy">Copy</button><button id="editor-run" class="run-button">Run ↗</button></div></header><textarea id="editor-source" aria-label="Example JavaScript code" spellcheck="false" autocapitalize="off" autocorrect="off">${escape(drafts.get(exampleLink(e)) ?? editorCode(e))}</textarea><footer><label><input type="checkbox" id="editor-auto" checked> Auto-run</label><span>⌘ / Ctrl + Enter to run · + ] to indent</span></footer></section>
-  <section class="editor-preview-panel" aria-label="Live preview"><header><span>LIVE PREVIEW</span><span id="editor-status" role="status">Preparing…</span></header><iframe id="editor-preview" title="BorrowdaleJS live drawing" sandbox=""></iframe><pre id="editor-error" role="alert" hidden></pre><footer>Rendered by the local BorrowdaleJS packages</footer></section></div>
+  <div class="playground"><section class="editor-code-panel" aria-label="Code editor"><header><span>JAVASCRIPT</span><div><button id="editor-reset">Reset</button><button id="editor-copy">Copy</button><button id="editor-run" class="run-button">Run ↗</button></div></header><textarea id="editor-source" aria-label="Example JavaScript code" spellcheck="false" autocapitalize="off" autocorrect="off">${escape(drafts.get(exampleLink(e)) ?? editorCode(e))}</textarea><footer><label><input type="checkbox" id="editor-auto" checked> Auto-run</label><span>⌘ or Ctrl + Enter to run · ⌘ or Ctrl + ] to indent</span></footer></section>
+  <section class="editor-preview-panel" aria-label="Live preview"><header><span>LIVE PREVIEW</span><span id="editor-status">Preparing…</span><span id="editor-announcer" class="visually-hidden" role="status"></span></header><iframe id="editor-preview" title="Live preview of ${escape(e.name.replaceAll('-', ' '))}" sandbox=""></iframe><pre id="editor-error" role="alert" hidden></pre><footer>Rendered by the local BorrowdaleJS packages</footer></section></div>
   <p class="editor-help">Named imports from the four BorrowdaleJS packages are available. Call <code>render(svg)</code> to show the result. The preview loads Excalifont. In your app, put the SVG in a container. Drafts stay in memory while you browse; Reset restores the example. Execution stops after 3 seconds.</p>`;
 }
 function previewDocument(output: string) {
-  // The iframe has no script, same-origin, form, navigation or popup permissions.
-  // CSP also prevents network access from arbitrary markup produced by edited code.
+  // The iframe cannot run scripts, submit forms, open popups or navigate the page around it, and the CSP
+  // stops it fetching subresources. A link in the output can still navigate the frame itself.
   return `<!doctype html><html><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; font-src data:; img-src data:; base-uri 'none'; form-action 'none'"><style>${fontFaceCss(excalifontFiles)}${style}\nhtml,body{margin:0;width:100%;height:100%;background:#fffefa}body{display:grid;place-items:center;padding:25px;overflow:auto}body>svg{width:100%;height:100%;max-height:100%;min-width:0}body>.recipe-note{max-width:340px}</style></head><body>${output}</body></html>`;
 }
 export function bindEditor() {
@@ -90,7 +90,14 @@ export function bindEditor() {
   const example = findExample();
   if (!source || !example) return;
   const status = document.getElementById('editor-status')!;
+  const announcer = document.getElementById('editor-announcer')!;
   const error = document.getElementById('editor-error')!;
+  // The visible status changes on every run; only the outcome is announced, so screen readers are not
+  // told "Drawing…" each time the reader pauses typing.
+  const settle = (message: string) => {
+    status.textContent = message;
+    announcer.textContent = message;
+  };
   const run = () => {
     stopEditor();
     drafts.set(exampleLink(example), source.value);
@@ -99,19 +106,26 @@ export function bindEditor() {
     worker = new Worker(new URL('./playground.worker.ts', import.meta.url), { type: 'module' });
     const current = worker;
     const fail = (message: string) => {
+      if (worker !== current) return;
       current.terminate();
       clearTimeout(timeout);
       status.textContent = 'Check your code';
       error.textContent = message;
       error.hidden = false;
     };
-    timeout = setTimeout(
-      () =>
-        fail('Execution stopped after 3 seconds. Check for an infinite loop or reduce the drawing workload.'),
-      3000,
-    );
-    current.onerror = (event) => fail(event.message);
+    timeout = setTimeout(() => fail('The playground could not start. Reload the page and try again.'), 20000);
+    current.onerror = (event) => fail(event.message || 'The playground could not start.');
     current.onmessage = (event) => {
+      if (worker !== current) return;
+      if (event.data.ready) {
+        clearTimeout(timeout);
+        timeout = setTimeout(
+          () =>
+            fail('Execution stopped after 3 seconds. Check for an infinite loop or reduce the drawing workload.'),
+          3000,
+        );
+        return;
+      }
       current.terminate();
       clearTimeout(timeout);
       if (!event.data.ok) {
@@ -148,7 +162,7 @@ export function bindEditor() {
         }
       }
       (document.getElementById('editor-preview') as HTMLIFrameElement).srcdoc = previewDocument(output);
-      status.textContent = 'Up to date';
+      settle('Up to date');
     };
     current.postMessage({ code: source.value });
   };
@@ -160,10 +174,10 @@ export function bindEditor() {
   document.getElementById('editor-copy')!.onclick = async () => {
     try {
       await navigator.clipboard.writeText(source.value);
-      status.textContent = 'Code copied';
+      settle('Code copied');
     } catch {
       source.select();
-      status.textContent = 'Select and copy the code';
+      settle('Select and copy the code');
     }
   };
   const auto = document.getElementById('editor-auto') as HTMLInputElement;
@@ -175,7 +189,7 @@ export function bindEditor() {
   source.oninput = () => {
     drafts.set(exampleLink(example), source.value);
     clearTimeout(debounce);
-    if ((document.getElementById('editor-auto') as HTMLInputElement).checked)
+    if (auto.checked)
       debounce = setTimeout(() => {
         if (auto.checked) run();
       }, 650);
