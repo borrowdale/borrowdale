@@ -83,3 +83,13 @@ it('routes and links under a project base path', () => {
   expect(route('/borrowdale/playground/charts/bars-grouped/')).toBe('example');
   expect(pageHtml('/borrowdale/')).toContain('href="/borrowdale/docs/"');
 });
+
+it('keeps documentation example links local under project-path hosting', () => {
+  vi.stubEnv('BASE_URL', '/borrowdale/');
+  for (const page of ['/docs/cartesian/', '/docs/rendering/']) {
+    const html = pageHtml(`/borrowdale${page}`);
+    expect(html).toContain('href="/borrowdale/playground/charts/image-markers/"');
+    expect(html).not.toContain('blob/main/playground/');
+  }
+  expect(pageHtml('/borrowdale/docs/cartesian/')).toContain('href="/borrowdale/playground/charts/data-labels/"');
+});

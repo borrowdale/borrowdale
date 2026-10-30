@@ -44,6 +44,8 @@ Drafts survive navigation in the current tab but are lost on reload. The collect
 
 ## Image assets
 
+Try the permanent [image markers playground](/playground/charts/image-markers/) with a bundled PNG asset. Its synchronous SVG example supplies raster bytes directly; Canvas gallery previews decode the same asset before drawing.
+
 Image markers refer to a name such as `symbol: { image: 'logo' }`. Your application supplies trusted raster bytes and, for Canvas, a decoded source:
 
 ```js

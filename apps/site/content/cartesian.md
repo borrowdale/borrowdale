@@ -79,3 +79,5 @@ See [Rendering and fonts](rendering.md#image-assets) for a complete loading exam
 The playground includes vertical/horizontal waterfalls and bullets, stacked waterfalls, Pareto, population pyramids, Likert charts, Cleveland dots, confidence bands, difference/threshold areas, segment/gradient lines, trails, comets, shaped bars and function plots. Each example shows explicit input data and editable code.
 
 The [chart reference](../../../packages/charts/README.md) gives the exact type and validation contracts. The [example catalogue](../../examples/cartesian-cases.json) contains the same composition specs used by the playground.
+
+Try the dedicated [data labels playground](/playground/charts/data-labels/) or [image markers playground](/playground/charts/image-markers/). Both are permanent examples with editable code.

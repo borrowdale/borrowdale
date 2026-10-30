@@ -1,5 +1,4 @@
 import { localPath, siteUrl, examplePath, exampleSlug } from './routing';
-import type { ChartSpec } from '@borrowdale/charts';
 import { fontFaceCss } from '@borrowdale/text';
 import { excalifontFiles } from '@borrowdale/text/excalifont-files';
 import style from './style.css?inline';
@@ -34,8 +33,9 @@ export function findExample(path = location.pathname) {
 const json = (x: unknown) => JSON.stringify(x, null, 2);
 export function editorCode(e: Example) {
   if (e.category === 'charts') {
-    const spec = chartExamples.find((x) => x.name === e.name)!.spec as ChartSpec;
-    return `import { layoutChart, toSvgChart } from '@borrowdale/charts';\nimport { excalifontFiles } from '@borrowdale/text/excalifont-files';\n\nconst spec = ${json({ ...spec, seed })};\n\nconst svg = toSvgChart(layoutChart(spec), { fontFiles: excalifontFiles });\nrender(svg);`;
+    const { spec, images } = chartExamples.find((x) => x.name === e.name)!;
+    const assets = images ? `const images = new Map(Object.entries(${json(images)}).map(([name, dataUrl]) => [name, { dataUrl }]));\n\n` : '';
+    return `import { layoutChart, toSvgChart } from '@borrowdale/charts';\nimport { excalifontFiles } from '@borrowdale/text/excalifont-files';\n\n${assets}const spec = ${json({ ...spec, seed })};\n\nconst svg = toSvgChart(layoutChart(spec), { ${images ? 'images, ' : ''}fontFiles: excalifontFiles });\nrender(svg);`;
   }
   if (e.category === 'shapes') {
     const entry = coreCases.find((x) => x.name === e.name)!;

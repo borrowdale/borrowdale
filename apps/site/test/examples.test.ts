@@ -47,6 +47,23 @@ describe('gallery coverage and actual rendering', () => {
     }
   });
 
+  it('ships image markers with embedded raster assets in gallery and editable code', () => {
+    const example = examples.find((e) => e.name === 'image-markers')!;
+    for (const svg of [example.render('svg'), executeExample(editorCode(example))]) {
+      expect(svg).toContain('data:image/png;base64,');
+      expect(svg.match(/<use /g)).toHaveLength(3);
+    }
+    expect(pageHtml('/playground/charts/image-markers/')).toContain('image markers');
+  });
+
+  it('renders data labels beyond the axis tick labels', () => {
+    const example = examples.find((e) => e.name === 'data-labels')!;
+    for (const svg of [example.render('svg'), executeExample(editorCode(example))]) {
+      for (const value of [12, 24, 18, 9]) expect(svg).toContain(`>${value}</text>`);
+    }
+    expect(pageHtml('/playground/charts/data-labels/')).toContain('data labels');
+  });
+
   it('isolates gradient references when multiple chart previews share a document', () => {
     const spec = cartesianCases.find((entry) => entry.name === 'gradient-line')!.spec as ChartSpec;
     const first = chart(spec), second = chart(spec);

@@ -1,6 +1,7 @@
 import { Marked } from 'marked';
 import { escape } from './drawing';
-import { codeBlock } from './gallery';
+import { codeBlock, examples } from './gallery';
+import { examplePath } from './routing';
 import introduction from '../content/README.md?raw';
 import gettingStarted from '../content/getting-started.md?raw';
 import rendering from '../content/rendering.md?raw';
@@ -131,6 +132,10 @@ export function documentPage(path: string) {
       if (/^(https?:|mailto:|#)/.test(token.href)) return;
       const url = new URL(token.href, `https://repo.invalid/${page.source}`);
       const source = url.pathname.slice(1);
+      if (examples.some((example) => examplePath(example) === url.pathname)) {
+        token.href = url.pathname + url.search + url.hash;
+        return;
+      }
       const internal = docs.find((d) => d.source === source);
       token.href = internal
         ? internal.url + url.hash

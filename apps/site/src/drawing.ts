@@ -1,5 +1,5 @@
 import { sketch, toSvgPaths, type Shape, type SketchOptions } from '@borrowdale/core';
-import { layoutChart, toSvgChart, drawChart, type ChartSpec } from '@borrowdale/charts';
+import { layoutChart, toSvgChart, drawChart, type ChartSpec, type ChartImage } from '@borrowdale/charts';
 import { pattern, type PatternOptions } from '@borrowdale/fills';
 import { layoutText, textBounds, toSvgText, type LayoutOptions } from '@borrowdale/text';
 
@@ -44,25 +44,42 @@ export function patternSvg(options: PatternOptions) {
   const p = pattern({ ...options, seed: exampleSeed(options.seed) });
   return `<svg viewBox="0 0 300 160" role="img" aria-label="${escape(options.kind)} pattern"><defs>${p.def}</defs><rect width="300" height="160" fill="${p.fill}"/></svg>`;
 }
-const pending = new Map<string, ChartSpec>();
+const pending = new Map<string, { spec: ChartSpec; images: Map<string, ChartImage> }>();
 let chartId = 0;
-export function chart(spec: ChartSpec, renderer: 'svg' | 'canvas' = 'svg') {
+export function chart(spec: ChartSpec, renderer: 'svg' | 'canvas' = 'svg', assets: Record<string, string> = {}) {
+  const images = new Map(Object.entries(assets).map(([name, dataUrl]) => [name, { dataUrl }]));
   const resolved = { ...spec, seed };
   if (renderer === 'canvas') {
     const id = `chart-${++chartId}`;
-    pending.set(id, resolved);
+    pending.set(id, { spec: resolved, images });
     return `<canvas id="${id}" width="${spec.width * 2}" height="${spec.height * 2}" role="img" aria-label="${escape(spec.title ?? 'Chart preview')}"></canvas>`;
   }
-  return toSvgChart(layoutChart(resolved), { idPrefix: `site-chart-${++chartId}` });
+  return toSvgChart(layoutChart(resolved), { images, idPrefix: `site-chart-${++chartId}` });
 }
 export function hydrateDrawings() {
-  for (const [id, spec] of pending) {
+  for (const [id, { spec, images }] of pending) {
     const canvas = document.getElementById(id) as HTMLCanvasElement | null;
-    if (canvas) {
-      const context = canvas.getContext('2d')!;
+    if (!canvas) continue;
+    const draw = async () => {
+      for (const asset of images.values()) {
+        const source = new Image();
+        source.src = asset.dataUrl;
+        await source.decode();
+        asset.source = source;
+      }
+      if (!canvas.isConnected) return;
+      const context = canvas.getContext('2d');
+      if (!context) throw new Error('Canvas rendering is unavailable.');
       context.scale(2, 2);
-      drawChart(context, layoutChart({ ...spec, seed }));
-    }
+      drawChart(context, layoutChart(spec), { images });
+    };
+    void draw().catch(() => {
+      if (!canvas.isConnected) return;
+      const message = document.createElement('p');
+      message.className = 'render-error';
+      message.textContent = 'Could not render this Canvas preview. Try SVG or reload to retry.';
+      canvas.replaceWith(message);
+    });
   }
   pending.clear();
   document.querySelectorAll<SVGSVGElement>('svg[data-fit]').forEach((svg) => {
