@@ -3,8 +3,7 @@ import type { ChartSpec } from '@borrowdale/charts';
 import { fontFaceCss } from '@borrowdale/text';
 import { excalifontFiles } from '@borrowdale/text/excalifont-files';
 import style from './style.css?inline';
-import { examples, recipes, type Example } from './gallery';
-import chartCases from '../../../packages/charts/test/golden/corpus.json';
+import { examples, recipes, chartExamples, type Example } from './gallery';
 import coreCases from '../../../packages/core/test/golden/corpus.json';
 import textCases from '../../../packages/text/test/golden/corpus.json';
 import fillCases from '../../../packages/fills/test/golden/corpus.json';
@@ -35,7 +34,7 @@ export function findExample(path = location.pathname) {
 const json = (x: unknown) => JSON.stringify(x, null, 2);
 export function editorCode(e: Example) {
   if (e.category === 'charts') {
-    const spec = chartCases.find((x) => x.name === e.name)!.spec as ChartSpec;
+    const spec = chartExamples.find((x) => x.name === e.name)!.spec as ChartSpec;
     return `import { layoutChart, toSvgChart } from '@borrowdale/charts';\nimport { excalifontFiles } from '@borrowdale/text/excalifont-files';\n\nconst spec = ${json({ ...spec, seed })};\n\nconst svg = toSvgChart(layoutChart(spec), { fontFiles: excalifontFiles });\nrender(svg);`;
   }
   if (e.category === 'shapes') {

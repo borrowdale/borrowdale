@@ -7,6 +7,7 @@ The packages are in early development and are not yet published. Start with the 
 ## Start here
 
 - [Getting started](getting-started.md): Node 24, workspace setup and your first chart.
+- [Cartesian charts and annotations](cartesian.md): intervals, numeric paths, markers, labels, gradients and chart compositions.
 - [Rendering and fonts](rendering.md): SVG, Canvas, font loading and deterministic seeds.
 - [Accessibility and limitations](accessibility.md): descriptions, alternatives and supported behavior.
 

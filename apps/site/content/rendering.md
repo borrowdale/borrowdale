@@ -41,3 +41,27 @@ Excalifont is bundled under its own font license. Layout and measurement do not 
 The editor supports synchronous JavaScript with named imports from the local packages. Call `render()` with SVG or HTML. A fresh worker executes each run and is stopped after three seconds. The preview iframe cannot run scripts or load external resources. The worker itself is not a security boundary for untrusted JavaScript; run code you trust.
 
 Drafts survive navigation in the current tab but are lost on reload. The collection can show Canvas previews; the code editor renders SVG or HTML.
+
+## Image assets
+
+Image markers refer to a name such as `symbol: { image: 'logo' }`. Your application supplies trusted raster bytes and, for Canvas, a decoded source:
+
+```js
+import { layoutChart, toSvgChart, drawChart } from '@borrowdale/charts';
+import { loadFont } from '@borrowdale/text';
+import { excalifontFiles } from '@borrowdale/text/excalifont-files';
+
+// Supply your own base64 PNG, JPEG, GIF or WebP data URL.
+const logoDataUrl = trustedLogoDataUrl;
+const source = new Image();
+source.src = logoDataUrl;
+await source.decode();
+await loadFont(document.fonts, excalifontFiles);
+
+const images = new Map([['logo', { dataUrl: logoDataUrl, source }]]);
+const layout = layoutChart(spec);
+const svg = toSvgChart(layout, { images, idPrefix: 'sales-chart' });
+drawChart(canvas.getContext('2d'), layout, { images });
+```
+
+Here `spec` contains a marker named `logo`, and `canvas` has drawing dimensions matching the spec. SVG export only needs the raster bytes; the decoded source is required for Canvas. The chart package does not load URLs. Use distinct `idPrefix` values for multiple exported SVGs in one document; `appendChart` chooses a prefix automatically. The asynchronous loading example runs in your application, not the synchronous playground worker.

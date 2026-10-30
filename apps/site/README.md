@@ -14,7 +14,7 @@ Open http://127.0.0.1:5173/. The server binds to loopback only. `npm run site:bu
 
 ## Collection and playgrounds
 
-The collection includes every case of the packages' golden corpora, plus composed UI recipes. These cover the supported families and reference edge cases, rather than every possible combination of options. UI recipes combine native HTML with BorrowdaleJS primitives; they are not a separate component package.
+The collection includes every case of the packages' golden corpora, the 33 Cartesian composition examples, plus composed UI recipes. These cover the supported families and reference edge cases, rather than every possible combination of options. UI recipes combine native HTML with BorrowdaleJS primitives; they are not a separate component package.
 
 Click anywhere on an example card to open its own URL. Edit JavaScript on the left and see the SVG or HTML preview on the right. Run, automatic execution, Reset, Copy, and Command/Control+Enter are supported. Drafts remain in memory while navigating and are lost on reload. The collection can also preview charts using Canvas; the interactive editor uses SVG/HTML output.
 

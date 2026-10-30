@@ -52,7 +52,7 @@ export function chart(spec: ChartSpec, renderer: 'svg' | 'canvas' = 'svg') {
     pending.set(id, resolved);
     return `<canvas id="${id}" width="${spec.width * 2}" height="${spec.height * 2}" role="img" aria-label="${escape(spec.title ?? 'Chart preview')}"></canvas>`;
   }
-  return toSvgChart(layoutChart(resolved));
+  return toSvgChart(layoutChart(resolved), { idPrefix: `site-chart-${++chartId}` });
 }
 export function hydrateDrawings() {
   for (const [id, spec] of pending) {

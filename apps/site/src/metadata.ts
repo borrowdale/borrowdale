@@ -12,6 +12,8 @@ const descriptions: Record<string, string> = {
     'Set up BorrowdaleJS locally with Node.js 24 and create your first hand-drawn chart from a JavaScript spec.',
   '/docs/rendering/':
     'Render BorrowdaleJS drawings as SVG or Canvas, load Excalifont, use repeatable seeds and work with the live playground.',
+  '/docs/cartesian/':
+    'Build interval and numeric charts with BorrowdaleJS: markers, labels, annotations, gradients, weighted bars and editable chart compositions.',
   '/docs/accessibility/':
     'Make BorrowdaleJS charts understandable with accessible descriptions, data alternatives and clear labels. Learn the current limitations.',
   '/docs/charts/':

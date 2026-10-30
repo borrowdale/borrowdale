@@ -4,7 +4,9 @@ import { editorCode } from '../src/editor';
 import { executeExample } from '../src/playground-runtime';
 import { worldAt, countryValue, world, climate, quakes, median, dailyCounts } from '../src/data';
 import { dashboardState, worldDashboard, climateDashboard, quakeDashboard } from '../src/dashboards';
-import { chartSpec } from '../src/drawing';
+import { chart, chartSpec } from '../src/drawing';
+import cartesianCases from '../../examples/cartesian-cases.json';
+import type { ChartSpec } from '@borrowdale/charts';
 
 // Tests change the shared dashboard and gallery state; each starts from the state the site loads with.
 const initialDashboard = { ...dashboardState };
@@ -15,6 +17,26 @@ afterEach(() => {
 });
 
 describe('gallery coverage and actual rendering', () => {
+  it('includes every Cartesian composition in the editable gallery', () => {
+    for (const entry of cartesianCases) {
+      const matches = examples.filter((example) => example.category === 'charts' && example.name === entry.name);
+      expect(matches).toHaveLength(1);
+      expect(executeExample(editorCode(matches[0]!))).toContain('<svg');
+    }
+  });
+
+  it('isolates gradient references when multiple chart previews share a document', () => {
+    const spec = cartesianCases.find((entry) => entry.name === 'gradient-line')!.spec as ChartSpec;
+    const first = chart(spec), second = chart(spec);
+    const ids = [first, second].map((svg) => [...svg.matchAll(/<linearGradient id="([^"]+)"/g)].map((match) => match[1]!));
+    expect(ids[0]!.length).toBeGreaterThan(0);
+    expect(ids[1]!.length).toBeGreaterThan(0);
+    expect(new Set(ids.flat()).size).toBe(ids.flat().length);
+    for (const [index, svg] of [first, second].entries()) {
+      for (const id of ids[index]!) expect(svg).toContain(`url(#${id})`);
+    }
+  });
+
   it.each(examples)('$category: $name renders and has copyable code', (example) => {
     const output = example.render('svg');
     expect(output).not.toMatch(/NaN|Infinity|undefined/);
@@ -33,6 +55,9 @@ describe('gallery coverage and actual rendering', () => {
         'bubble',
         'gauge',
         'line',
+        'interval',
+        'xyLine',
+        'xyArea',
         'pie',
         'polarArea',
         'polarLine',
