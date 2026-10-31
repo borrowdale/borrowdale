@@ -142,17 +142,33 @@ function integersBetween(first: number, last: number): number[] {
 export interface BandScale {
   /** Where each category's band starts. */
   start: (index: number) => number;
-  /** The width of every band. */
+  /** The smallest band width; every band has this width when weights are omitted. */
   bandwidth: number;
-  /** The distance from one band's start to the next. */
+  width: (index: number) => number;
+  /** The smallest distance from one band's start to the next, used for conservative label thinning. */
   step: number;
 }
 
-/** Equal bands across `from` to `to`, with a gap of `padding` × step between them and at each end. */
-export function bandScale(count: number, [from, to]: [number, number], padding: number): BandScale {
+/** Bands across the range: equal by default, or proportional to weights, with equal inner and outer gaps. */
+export function bandScale(count: number, [from, to]: [number, number], padding: number, weights?: readonly number[]): BandScale {
+  if (weights && !weights.every((weight) => weight === weights[0])) {
+    const sum = weights.reduce((total, value) => total + value, 0);
+    const unit = (to - from) / (sum * (1 + padding / count));
+    const gap = unit * sum / count * padding;
+    const offset = from + gap;
+    let position = offset;
+    const starts = weights.map((weight) => {
+      const start = position;
+      position += weight * unit * (1 - padding) + gap;
+      return start;
+    });
+    const bandwidth = Math.min(...weights) * unit * (1 - padding);
+    return { start: (i) => starts[i]!, width: (i) => weights[i]! * unit * (1 - padding),
+      bandwidth, step: bandwidth + gap };
+  }
   const step = (to - from) / (count + padding);
   const offset = from + step * padding;
-  return { start: (index) => offset + index * step, bandwidth: step * (1 - padding), step };
+  return { start: (index) => offset + index * step, bandwidth: step * (1 - padding), width: () => step * (1 - padding), step };
 }
 
 /** Writes a number with fixed decimals, the format's separators and affixes, and no locale data. */
@@ -173,4 +189,9 @@ export function formatValue(value: number, format: CheckedFormat = PLAIN_FORMAT)
   const [mantissa = '', exponent] = String(Math.abs(value)).split('e');
   const decimals = Math.min(MAX_DECIMALS, Math.max(0, (mantissa.split('.')[1]?.length ?? 0) - Number(exponent ?? 0)));
   return formatNumber(value, format.decimals ?? decimals, format);
+}
+
+/** Raw data values keep the value axis' format, without a percent-stack suffix. */
+export function formatAxisValue(value: number, axis: CheckedLinearAxis): string {
+  return formatValue(value, { ...axis.format, suffix: axis.percent ? '' : axis.format.suffix });
 }

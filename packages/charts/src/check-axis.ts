@@ -48,6 +48,7 @@ export interface CheckedBandAxis {
   type: 'band';
   path: string;
   categories: string[];
+  weights?: number[] | undefined;
   title: string | undefined;
   hidden: boolean;
   /** 0 on an axis that cannot rotate its labels. */
@@ -110,7 +111,7 @@ export function checkAxis<X extends object = object>(
   };
 }
 
-export const CARTESIAN_KEYS = { band: ['type', 'categories', 'title', 'hidden', 'labelAngle'], linear: LINEAR_KEYS };
+export const CARTESIAN_KEYS = { band: ['type', 'categories', 'weights', 'title', 'hidden', 'labelAngle'], linear: LINEAR_KEYS };
 
 function checkBandAxis<X extends object = object>(
   keys: readonly string[],
@@ -124,12 +125,14 @@ function checkBandAxis<X extends object = object>(
     );
     const categories = r.required('categories', list(1, MAX_CATEGORIES, text(MAX_NAME)));
     unique(categories, (i) => `${path}.categories[${i}]`);
+    const weights = r.optional('weights', list(categories.length, categories.length, number(0.000001, 1000000)));
     const title = r.optional('title', text());
     const hidden = r.optional('hidden', boolean) ?? false;
     return {
       type: 'band',
       path,
       categories,
+      ...(weights ? { weights } : {}),
       title,
       hidden,
       labelAngle: r.optional('labelAngle', labelAngle) ?? 0,

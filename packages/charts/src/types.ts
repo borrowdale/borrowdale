@@ -29,8 +29,24 @@ export interface ChartSpec {
    */
   style?: SketchStyle | undefined;
   axes?: CartesianAxes | PolarAxes | GaugeAxes | undefined;
+  /** Up to 100 Cartesian annotations. Numeric coordinates contribute to automatic domains. */
+  annotations?: readonly Annotation[] | undefined;
   series: readonly Series[];
 }
+
+export type ChartCoordinate = number | string;
+export type ChartPosition = readonly [x: ChartCoordinate, y: ChartCoordinate];
+interface AnnotationStyle {
+  color?: string | undefined;
+  layer?: 'back' | 'front' | undefined;
+}
+export type Annotation = AnnotationStyle & (
+  | { type: 'line'; axis: 'x' | 'y' | 'y2'; value: ChartCoordinate; label?: string | undefined }
+  | { type: 'band'; axis: 'x' | 'y' | 'y2'; from: ChartCoordinate; to: ChartCoordinate }
+  | { type: 'region'; from: ChartPosition; to: ChartPosition; axis?: 'y' | 'y2' | undefined }
+  | { type: 'arrow'; from: ChartPosition; to: ChartPosition; axis?: 'y' | 'y2' | undefined }
+  | { type: 'label'; at: ChartPosition; text: string; axis?: 'y' | 'y2' | undefined }
+);
 
 /** What the caller, not the spec, decides: trusted, so never taken from chart data. */
 export interface ChartOptions {
@@ -74,7 +90,7 @@ export interface Sweep {
  * Categories around the circle: the spokes of a radar chart, the wedges of a rose. On a whole turn
  * the first is at `startAngle`; on part of one each takes an equal share, centred in it.
  */
-export interface AngleBandAxis extends Omit<BandAxis, 'title' | 'labelAngle'>, Sweep {}
+export interface AngleBandAxis extends Omit<BandAxis, 'title' | 'labelAngle' | 'weights'>, Sweep {}
 
 /** Values around the circle, from the start of the sweep to its end. */
 export interface AngleLinearAxis extends Omit<LinearAxis, 'title' | 'percent' | 'labelAngle'>, Sweep {}
@@ -94,7 +110,7 @@ export interface RadiusLinearAxis extends Omit<LinearAxis, 'title' | 'percent' |
 }
 
 /** Categories out from the centre, as rings, the first outermost. */
-export interface RadiusBandAxis extends Omit<BandAxis, 'title' | 'labelAngle'>, Hole {}
+export interface RadiusBandAxis extends Omit<BandAxis, 'title' | 'labelAngle' | 'weights'>, Hole {}
 
 /** The dial of a gauge. Defaults to 0 to 100 over -120 to 120 degrees. */
 export interface GaugeAxes {
@@ -128,6 +144,8 @@ export interface BandAxis {
   type: 'band';
   /** 1 to 1,000 names, each unique and at most 100 characters. */
   categories: readonly string[];
+  /** Relative Cartesian category widths, one per category, each from 0.000001 to 1000000. */
+  weights?: readonly number[] | undefined;
   title?: string | undefined;
   /** Draws neither the axis nor its labels, as in a sparkline. */
   hidden?: boolean | undefined;
@@ -189,6 +207,14 @@ export const CURVES = ['linear', 'monotone', 'step', 'step-before', 'step-after'
  */
 export type Curve = (typeof CURVES)[number];
 
+export const MARKER_SYMBOLS = ['circle', 'square', 'diamond', 'triangle', 'cross', 'star', 'wye', 'tick'] as const;
+
+/** A point's shape, fitted inside its diameter. */
+export type MarkerSymbol = (typeof MARKER_SYMBOLS)[number];
+
+/** A geometric symbol or the name of a trusted image supplied to the renderer. */
+export type Marker = MarkerSymbol | { image: string };
+
 interface SeriesBase {
   /**
    * Unique in the chart, at most 100 characters. Names the series in the legend and in tooltips.
@@ -215,14 +241,20 @@ interface ValueSeries extends SeriesBase {
 
 export interface BarSeries extends ValueSeries {
   type: 'bar';
+  /** Show fitted values at marks. Labels can overlap in dense charts. */
+  dataLabels?: boolean | undefined;
   /** One value per category; `null` draws no bar. */
   data: readonly (number | null)[];
   /** Bars of series with the same stack name stack; other series stand side by side. */
   stack?: string | undefined;
+  shape?: 'rectangle' | 'rounded' | 'pyramid' | undefined;
 }
 
 export interface LineSeries extends ValueSeries {
   type: 'line';
+  symbol?: Marker | undefined;
+  /** Show fitted values at marks. Labels can overlap in dense charts. */
+  dataLabels?: boolean | undefined;
   /** One value per category; `null` leaves a gap. */
   data: readonly (number | null)[];
   curve?: Curve | undefined;
@@ -250,14 +282,69 @@ export interface RangeAreaSeries extends ValueSeries {
   curve?: Curve | undefined;
 }
 
+/** An interval per category: floating bars, stems, error bars or endpoint dots. */
+export interface IntervalSeries extends ValueSeries {
+  type: 'interval';
+  /** Show fitted values at marks. Labels can overlap in dense charts. */
+  dataLabels?: boolean | undefined;
+  /** Endpoints retain their order, including descending intervals; null omits the mark. */
+  data: readonly (readonly [from: number, to: number] | null)[];
+  display?: 'bar' | 'line' | 'error' | 'points' | undefined;
+  shape?: 'rectangle' | 'rounded' | 'pyramid' | undefined;
+  /** Fraction of the category slot, from 0.05 to 1. Defaults to 0.8. */
+  width?: number | undefined;
+  /** Overlay the category centre instead of reserving a grouped slot. Defaults to false. */
+  overlay?: boolean | undefined;
+  fromSymbol?: Marker | undefined;
+  toSymbol?: Marker | undefined;
+}
+
+/** Numeric points joined in their supplied order, including loops and descending x. */
+export interface XYLineSeries extends SeriesBase {
+  type: 'xyLine';
+  /** Show fitted values at marks. Labels can overlap in dense charts. */
+  dataLabels?: boolean | undefined;
+  data: readonly (readonly [x: number, y: number] | null)[];
+  /** Draw a symbol at every supplied point; omitted by default. */
+  symbol?: Marker | undefined;
+  dash?: readonly number[] | undefined;
+  /** Per-edge overrides, one per pair of adjacent slots; null keeps the series style. */
+  segments?: readonly ({ color?: string | undefined; width?: number | undefined; dash?: readonly number[] | undefined } | null)[] | undefined;
+  /** Width at each point in user units, 0 to 100. Draws a tapered path with round joins/caps. */
+  widths?: readonly number[] | undefined;
+  /** A continuous paint across the plot, from left to right or bottom to top. */
+  gradient?: LinearGradient | undefined;
+}
+
+export interface LinearGradient {
+  axis: 'x' | 'y';
+  /** 2 to 32 stops in strictly increasing order, from 0 to 1; colours are 3, 4, 6 or 8-digit hex codes. */
+  stops: readonly { offset: number; color: string }[];
+}
+
+/** Supplied numeric confidence intervals, joined by straight edges. */
+export interface XYAreaSeries extends SeriesBase {
+  type: 'xyArea';
+  /** X must increase strictly within each run; null starts a new run. */
+  data: readonly (readonly [x: number, low: number, high: number] | null)[];
+  /** Allow crossing boundaries and colour by whether the second boundary is above the first. */
+  difference?: { positive: string; negative: string } | undefined;
+}
+
 export interface ScatterSeries extends SeriesBase {
   type: 'scatter';
+  /** Show fitted values at marks. Labels can overlap in dense charts. */
+  dataLabels?: boolean | undefined;
+  symbol?: Marker | undefined;
   /** Needs both axes to be linear. */
   data: readonly (readonly [x: number, y: number])[];
 }
 
 export interface BubbleSeries extends SeriesBase {
   type: 'bubble';
+  /** Show fitted values at marks. Labels can overlap in dense charts. */
+  dataLabels?: boolean | undefined;
+  symbol?: Marker | undefined;
   /** The size sets each bubble's area and must not be negative. Needs both axes to be linear. */
   data: readonly (readonly [x: number, y: number, size: number])[];
 }
@@ -291,6 +378,8 @@ export interface PieSlice {
  */
 export interface PieSeries extends SeriesBase {
   type: 'pie';
+  /** Show fitted values at marks. Labels can overlap in dense charts. */
+  dataLabels?: boolean | undefined;
   /** 1 to 1,000 slices. */
   data: readonly PieSlice[];
   /**
@@ -370,6 +459,9 @@ export interface PolarAreaSeries extends SeriesBase {
 /** Points by angle and radius. Needs both axes to be linear. */
 export interface PolarScatterSeries extends SeriesBase {
   type: 'polarScatter';
+  /** Show fitted values at marks. Labels can overlap in dense charts. */
+  dataLabels?: boolean | undefined;
+  symbol?: Marker | undefined;
   data: readonly (readonly [angle: number, radius: number])[];
 }
 
@@ -391,6 +483,9 @@ export type Series =
   | LineSeries
   | AreaSeries
   | RangeAreaSeries
+  | IntervalSeries
+  | XYLineSeries
+  | XYAreaSeries
   | ScatterSeries
   | BubbleSeries
   | PieSeries
@@ -424,6 +519,8 @@ export interface ChartLayout {
 }
 
 export type ChartNode =
+  | { kind: 'gradient'; sketch: Sketch; from: readonly [number, number]; to: readonly [number, number]; stops: LinearGradient['stops'] }
+  | { kind: 'image'; asset: string; x: number; y: number; width: number; height: number }
   | { kind: 'sketch'; sketch: Sketch }
   | { kind: 'text'; text: TextLayout; fill: string }
   | {

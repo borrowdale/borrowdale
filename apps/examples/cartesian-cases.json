@@ -1,0 +1,1985 @@
+[
+  {
+    "name": "lollipop-vertical",
+    "spec": {
+      "width": 640,
+      "height": 400,
+      "title": "Lollipop Vertical",
+      "axes": {
+        "x": {
+          "type": "band",
+          "categories": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        "y": {
+          "type": "linear"
+        }
+      },
+      "series": [
+        {
+          "type": "interval",
+          "name": "Sales",
+          "data": [
+            [
+              0,
+              8
+            ],
+            [
+              0,
+              -3
+            ],
+            [
+              0,
+              5
+            ]
+          ],
+          "display": "line",
+          "toSymbol": "circle",
+          "dataLabels": true
+        }
+      ]
+    }
+  },
+  {
+    "name": "lollipop-horizontal",
+    "spec": {
+      "width": 640,
+      "height": 400,
+      "title": "Lollipop Horizontal",
+      "axes": {
+        "x": {
+          "type": "linear"
+        },
+        "y": {
+          "type": "band",
+          "categories": [
+            "A",
+            "B",
+            "C"
+          ]
+        }
+      },
+      "series": [
+        {
+          "type": "interval",
+          "name": "Sales",
+          "data": [
+            [
+              0,
+              8
+            ],
+            [
+              0,
+              -3
+            ],
+            [
+              0,
+              5
+            ]
+          ],
+          "display": "line",
+          "toSymbol": "circle",
+          "dataLabels": true
+        }
+      ]
+    }
+  },
+  {
+    "name": "dumbbell",
+    "spec": {
+      "width": 640,
+      "height": 400,
+      "title": "Dumbbell",
+      "axes": {
+        "x": {
+          "type": "linear"
+        },
+        "y": {
+          "type": "band",
+          "categories": [
+            "A",
+            "B",
+            "C"
+          ]
+        }
+      },
+      "series": [
+        {
+          "type": "interval",
+          "name": "Before / after",
+          "data": [
+            [
+              2,
+              7
+            ],
+            [
+              8,
+              3
+            ],
+            [
+              4,
+              6
+            ]
+          ],
+          "display": "line",
+          "fromSymbol": "square",
+          "toSymbol": "circle"
+        }
+      ]
+    }
+  },
+  {
+    "name": "slope",
+    "spec": {
+      "width": 640,
+      "height": 400,
+      "title": "Slope",
+      "axes": {
+        "x": {
+          "type": "band",
+          "categories": [
+            "Before",
+            "After"
+          ]
+        },
+        "y": {
+          "type": "linear"
+        }
+      },
+      "series": [
+        {
+          "type": "line",
+          "name": "North",
+          "data": [
+            3,
+            8
+          ],
+          "symbol": "circle",
+          "dataLabels": true
+        },
+        {
+          "type": "line",
+          "name": "South",
+          "data": [
+            7,
+            4
+          ],
+          "symbol": "circle",
+          "dataLabels": true
+        }
+      ]
+    }
+  },
+  {
+    "name": "connected-scatter",
+    "spec": {
+      "width": 640,
+      "height": 400,
+      "title": "Connected Scatter",
+      "axes": {
+        "x": {
+          "type": "linear"
+        },
+        "y": {
+          "type": "linear"
+        }
+      },
+      "series": [
+        {
+          "type": "xyLine",
+          "name": "Route",
+          "data": [
+            [
+              1,
+              2
+            ],
+            [
+              4,
+              7
+            ],
+            [
+              2,
+              8
+            ],
+            [
+              7,
+              4
+            ]
+          ],
+          "symbol": "diamond",
+          "dataLabels": true
+        }
+      ]
+    }
+  },
+  {
+    "name": "error-bars",
+    "spec": {
+      "width": 640,
+      "height": 400,
+      "title": "Error Bars",
+      "axes": {
+        "x": {
+          "type": "band",
+          "categories": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        "y": {
+          "type": "linear"
+        }
+      },
+      "series": [
+        {
+          "type": "interval",
+          "name": "Symmetric",
+          "data": [
+            [
+              2,
+              6
+            ],
+            [
+              4,
+              8
+            ],
+            [
+              1,
+              5
+            ]
+          ],
+          "display": "error"
+        },
+        {
+          "type": "interval",
+          "name": "Asymmetric",
+          "data": [
+            [
+              1,
+              7
+            ],
+            [
+              5,
+              8
+            ],
+            [
+              2,
+              4
+            ]
+          ],
+          "display": "error",
+          "toSymbol": "triangle"
+        }
+      ]
+    }
+  },
+  {
+    "name": "confidence-band",
+    "spec": {
+      "width": 640,
+      "height": 400,
+      "title": "Confidence Band",
+      "axes": {
+        "x": {
+          "type": "linear"
+        },
+        "y": {
+          "type": "linear"
+        }
+      },
+      "series": [
+        {
+          "type": "xyArea",
+          "name": "Confidence",
+          "data": [
+            [
+              0,
+              1,
+              3
+            ],
+            [
+              1,
+              2,
+              5
+            ],
+            [
+              3,
+              2,
+              6
+            ],
+            [
+              5,
+              4,
+              7
+            ]
+          ]
+        },
+        {
+          "type": "xyLine",
+          "name": "Estimate",
+          "data": [
+            [
+              0,
+              2
+            ],
+            [
+              1,
+              3
+            ],
+            [
+              3,
+              4
+            ],
+            [
+              5,
+              5
+            ]
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "waterfall-vertical",
+    "spec": {
+      "width": 640,
+      "height": 400,
+      "title": "Waterfall Vertical",
+      "axes": {
+        "x": {
+          "type": "band",
+          "categories": [
+            "Start",
+            "Cost",
+            "Sales",
+            "Fees",
+            "Total"
+          ]
+        },
+        "y": {
+          "type": "linear"
+        }
+      },
+      "series": [
+        {
+          "type": "interval",
+          "name": "Balance",
+          "data": [
+            [
+              0,
+              8
+            ],
+            [
+              8,
+              5
+            ],
+            [
+              5,
+              10
+            ],
+            [
+              10,
+              8
+            ],
+            [
+              0,
+              8
+            ]
+          ],
+          "dataLabels": true
+        }
+      ]
+    }
+  },
+  {
+    "name": "waterfall-horizontal",
+    "spec": {
+      "width": 640,
+      "height": 400,
+      "title": "Waterfall Horizontal",
+      "axes": {
+        "x": {
+          "type": "linear"
+        },
+        "y": {
+          "type": "band",
+          "categories": [
+            "Start",
+            "Cost",
+            "Sales",
+            "Fees",
+            "Total"
+          ]
+        }
+      },
+      "series": [
+        {
+          "type": "interval",
+          "name": "Balance",
+          "data": [
+            [
+              0,
+              8
+            ],
+            [
+              8,
+              5
+            ],
+            [
+              5,
+              10
+            ],
+            [
+              10,
+              8
+            ],
+            [
+              0,
+              8
+            ]
+          ],
+          "dataLabels": true
+        }
+      ]
+    }
+  },
+  {
+    "name": "stacked-waterfall",
+    "spec": {
+      "width": 640,
+      "height": 400,
+      "title": "Stacked Waterfall",
+      "axes": {
+        "x": {
+          "type": "band",
+          "categories": [
+            "Jan",
+            "Feb",
+            "Mar"
+          ]
+        },
+        "y": {
+          "type": "linear"
+        }
+      },
+      "series": [
+        {
+          "type": "interval",
+          "name": "Product",
+          "data": [
+            [
+              0,
+              5
+            ],
+            [
+              7,
+              10
+            ],
+            [
+              9,
+              7
+            ]
+          ],
+          "overlay": true
+        },
+        {
+          "type": "interval",
+          "name": "Service",
+          "data": [
+            [
+              5,
+              7
+            ],
+            [
+              10,
+              9
+            ],
+            [
+              7,
+              6
+            ]
+          ],
+          "overlay": true
+        }
+      ]
+    }
+  },
+  {
+    "name": "bullet-vertical",
+    "spec": {
+      "width": 640,
+      "height": 400,
+      "title": "Bullet Vertical",
+      "axes": {
+        "x": {
+          "type": "band",
+          "categories": [
+            "North",
+            "South"
+          ]
+        },
+        "y": {
+          "type": "linear"
+        }
+      },
+      "series": [
+        {
+          "type": "interval",
+          "name": "Acceptable",
+          "data": [
+            [
+              0,
+              100
+            ],
+            [
+              0,
+              100
+            ]
+          ],
+          "overlay": true,
+          "width": 1,
+          "color": "#ddd",
+          "style": {
+            "fillStyle": "solid"
+          }
+        },
+        {
+          "type": "interval",
+          "name": "Good",
+          "data": [
+            [
+              0,
+              80
+            ],
+            [
+              0,
+              80
+            ]
+          ],
+          "overlay": true,
+          "width": 1,
+          "color": "#bbb",
+          "style": {
+            "fillStyle": "solid"
+          }
+        },
+        {
+          "type": "interval",
+          "name": "Excellent",
+          "data": [
+            [
+              0,
+              60
+            ],
+            [
+              0,
+              60
+            ]
+          ],
+          "overlay": true,
+          "width": 1,
+          "color": "#999",
+          "style": {
+            "fillStyle": "solid"
+          }
+        },
+        {
+          "type": "interval",
+          "name": "Measure",
+          "data": [
+            [
+              0,
+              75
+            ],
+            [
+              0,
+              85
+            ]
+          ],
+          "overlay": true,
+          "width": 0.35,
+          "color": "#0072b2",
+          "style": {
+            "fillStyle": "solid"
+          }
+        },
+        {
+          "type": "interval",
+          "name": "Target",
+          "data": [
+            [
+              80,
+              80
+            ],
+            [
+              90,
+              90
+            ]
+          ],
+          "overlay": true,
+          "width": 0.7,
+          "display": "error",
+          "color": "#000"
+        }
+      ]
+    }
+  },
+  {
+    "name": "bullet-vertical-range",
+    "spec": {
+      "width": 640,
+      "height": 400,
+      "title": "Bullet Vertical Range",
+      "axes": {
+        "x": {
+          "type": "band",
+          "categories": [
+            "North",
+            "South"
+          ]
+        },
+        "y": {
+          "type": "linear"
+        }
+      },
+      "series": [
+        {
+          "type": "interval",
+          "name": "Acceptable",
+          "data": [
+            [
+              0,
+              100
+            ],
+            [
+              0,
+              100
+            ]
+          ],
+          "overlay": true,
+          "width": 1,
+          "color": "#ddd",
+          "style": {
+            "fillStyle": "solid"
+          }
+        },
+        {
+          "type": "interval",
+          "name": "Good",
+          "data": [
+            [
+              0,
+              80
+            ],
+            [
+              0,
+              80
+            ]
+          ],
+          "overlay": true,
+          "width": 1,
+          "color": "#bbb",
+          "style": {
+            "fillStyle": "solid"
+          }
+        },
+        {
+          "type": "interval",
+          "name": "Excellent",
+          "data": [
+            [
+              0,
+              60
+            ],
+            [
+              0,
+              60
+            ]
+          ],
+          "overlay": true,
+          "width": 1,
+          "color": "#999",
+          "style": {
+            "fillStyle": "solid"
+          }
+        },
+        {
+          "type": "interval",
+          "name": "Measure",
+          "data": [
+            [
+              30,
+              75
+            ],
+            [
+              40,
+              85
+            ]
+          ],
+          "overlay": true,
+          "width": 0.35,
+          "color": "#0072b2",
+          "style": {
+            "fillStyle": "solid"
+          }
+        },
+        {
+          "type": "interval",
+          "name": "Target",
+          "data": [
+            [
+              80,
+              80
+            ],
+            [
+              90,
+              90
+            ]
+          ],
+          "overlay": true,
+          "width": 0.7,
+          "display": "error",
+          "color": "#000"
+        }
+      ]
+    }
+  },
+  {
+    "name": "bullet-horizontal",
+    "spec": {
+      "width": 640,
+      "height": 400,
+      "title": "Bullet Horizontal",
+      "axes": {
+        "x": {
+          "type": "linear"
+        },
+        "y": {
+          "type": "band",
+          "categories": [
+            "North",
+            "South"
+          ]
+        }
+      },
+      "series": [
+        {
+          "type": "interval",
+          "name": "Acceptable",
+          "data": [
+            [
+              0,
+              100
+            ],
+            [
+              0,
+              100
+            ]
+          ],
+          "overlay": true,
+          "width": 1,
+          "color": "#ddd",
+          "style": {
+            "fillStyle": "solid"
+          }
+        },
+        {
+          "type": "interval",
+          "name": "Good",
+          "data": [
+            [
+              0,
+              80
+            ],
+            [
+              0,
+              80
+            ]
+          ],
+          "overlay": true,
+          "width": 1,
+          "color": "#bbb",
+          "style": {
+            "fillStyle": "solid"
+          }
+        },
+        {
+          "type": "interval",
+          "name": "Excellent",
+          "data": [
+            [
+              0,
+              60
+            ],
+            [
+              0,
+              60
+            ]
+          ],
+          "overlay": true,
+          "width": 1,
+          "color": "#999",
+          "style": {
+            "fillStyle": "solid"
+          }
+        },
+        {
+          "type": "interval",
+          "name": "Measure",
+          "data": [
+            [
+              0,
+              75
+            ],
+            [
+              0,
+              85
+            ]
+          ],
+          "overlay": true,
+          "width": 0.35,
+          "color": "#0072b2",
+          "style": {
+            "fillStyle": "solid"
+          }
+        },
+        {
+          "type": "interval",
+          "name": "Target",
+          "data": [
+            [
+              80,
+              80
+            ],
+            [
+              90,
+              90
+            ]
+          ],
+          "overlay": true,
+          "width": 0.7,
+          "display": "error",
+          "color": "#000"
+        }
+      ]
+    }
+  },
+  {
+    "name": "bullet-horizontal-range",
+    "spec": {
+      "width": 640,
+      "height": 400,
+      "title": "Bullet Horizontal Range",
+      "axes": {
+        "x": {
+          "type": "linear"
+        },
+        "y": {
+          "type": "band",
+          "categories": [
+            "North",
+            "South"
+          ]
+        }
+      },
+      "series": [
+        {
+          "type": "interval",
+          "name": "Acceptable",
+          "data": [
+            [
+              0,
+              100
+            ],
+            [
+              0,
+              100
+            ]
+          ],
+          "overlay": true,
+          "width": 1,
+          "color": "#ddd",
+          "style": {
+            "fillStyle": "solid"
+          }
+        },
+        {
+          "type": "interval",
+          "name": "Good",
+          "data": [
+            [
+              0,
+              80
+            ],
+            [
+              0,
+              80
+            ]
+          ],
+          "overlay": true,
+          "width": 1,
+          "color": "#bbb",
+          "style": {
+            "fillStyle": "solid"
+          }
+        },
+        {
+          "type": "interval",
+          "name": "Excellent",
+          "data": [
+            [
+              0,
+              60
+            ],
+            [
+              0,
+              60
+            ]
+          ],
+          "overlay": true,
+          "width": 1,
+          "color": "#999",
+          "style": {
+            "fillStyle": "solid"
+          }
+        },
+        {
+          "type": "interval",
+          "name": "Measure",
+          "data": [
+            [
+              30,
+              75
+            ],
+            [
+              40,
+              85
+            ]
+          ],
+          "overlay": true,
+          "width": 0.35,
+          "color": "#0072b2",
+          "style": {
+            "fillStyle": "solid"
+          }
+        },
+        {
+          "type": "interval",
+          "name": "Target",
+          "data": [
+            [
+              80,
+              80
+            ],
+            [
+              90,
+              90
+            ]
+          ],
+          "overlay": true,
+          "width": 0.7,
+          "display": "error",
+          "color": "#000"
+        }
+      ]
+    }
+  },
+  {
+    "name": "pareto",
+    "spec": {
+      "width": 640,
+      "height": 400,
+      "title": "Pareto",
+      "axes": {
+        "x": {
+          "type": "band",
+          "categories": [
+            "C",
+            "A",
+            "B",
+            "D"
+          ]
+        },
+        "y": {
+          "type": "linear"
+        },
+        "y2": {
+          "type": "linear",
+          "min": 0,
+          "max": 100,
+          "format": {
+            "suffix": "%"
+          }
+        }
+      },
+      "series": [
+        {
+          "type": "bar",
+          "name": "Count",
+          "data": [
+            25,
+            12,
+            8,
+            5
+          ]
+        },
+        {
+          "type": "line",
+          "name": "Cumulative",
+          "axis": "y2",
+          "data": [
+            50.0,
+            74.0,
+            90.0,
+            100.0
+          ],
+          "symbol": "circle"
+        }
+      ]
+    }
+  },
+  {
+    "name": "population-pyramid",
+    "spec": {
+      "width": 640,
+      "height": 400,
+      "title": "Population Pyramid",
+      "axes": {
+        "x": {
+          "type": "linear"
+        },
+        "y": {
+          "type": "band",
+          "categories": [
+            "Young",
+            "Middle",
+            "Older"
+          ]
+        }
+      },
+      "series": [
+        {
+          "type": "bar",
+          "name": "Group A",
+          "stack": "all",
+          "data": [
+            -6,
+            -9,
+            -4
+          ]
+        },
+        {
+          "type": "bar",
+          "name": "Group B",
+          "stack": "all",
+          "data": [
+            7,
+            8,
+            3
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "likert",
+    "spec": {
+      "width": 640,
+      "height": 400,
+      "title": "Likert",
+      "axes": {
+        "x": {
+          "type": "linear"
+        },
+        "y": {
+          "type": "band",
+          "categories": [
+            "Question A",
+            "Question B"
+          ]
+        }
+      },
+      "series": [
+        {
+          "type": "interval",
+          "name": "Disagree",
+          "data": [
+            [
+              -45,
+              -10
+            ],
+            [
+              -30,
+              -15
+            ]
+          ],
+          "overlay": true,
+          "color": "#d55e00"
+        },
+        {
+          "type": "interval",
+          "name": "Neutral",
+          "data": [
+            [
+              -10,
+              10
+            ],
+            [
+              -15,
+              15
+            ]
+          ],
+          "overlay": true,
+          "color": "#999"
+        },
+        {
+          "type": "interval",
+          "name": "Agree",
+          "data": [
+            [
+              10,
+              55
+            ],
+            [
+              15,
+              55
+            ]
+          ],
+          "overlay": true,
+          "color": "#009e73"
+        }
+      ]
+    }
+  },
+  {
+    "name": "barcode",
+    "spec": {
+      "width": 640,
+      "height": 400,
+      "title": "Barcode",
+      "axes": {
+        "x": {
+          "type": "linear"
+        },
+        "y": {
+          "type": "linear"
+        }
+      },
+      "series": [
+        {
+          "type": "scatter",
+          "name": "Events",
+          "data": [
+            [
+              1,
+              0
+            ],
+            [
+              1.5,
+              0
+            ],
+            [
+              2,
+              0
+            ],
+            [
+              3.2,
+              0
+            ],
+            [
+              3.5,
+              0
+            ],
+            [
+              4.1,
+              0
+            ],
+            [
+              6,
+              0
+            ],
+            [
+              7,
+              0
+            ],
+            [
+              7.2,
+              0
+            ]
+          ],
+          "symbol": "tick"
+        }
+      ]
+    }
+  },
+  {
+    "name": "cleveland-dot",
+    "spec": {
+      "width": 640,
+      "height": 400,
+      "title": "Cleveland Dot",
+      "axes": {
+        "x": {
+          "type": "linear"
+        },
+        "y": {
+          "type": "band",
+          "categories": [
+            "A",
+            "B",
+            "C"
+          ]
+        }
+      },
+      "series": [
+        {
+          "type": "interval",
+          "name": "Score",
+          "data": [
+            [
+              2,
+              2
+            ],
+            [
+              7,
+              7
+            ],
+            [
+              5,
+              5
+            ]
+          ],
+          "display": "line",
+          "toSymbol": "circle",
+          "dataLabels": true
+        }
+      ]
+    }
+  },
+  {
+    "name": "difference-area",
+    "spec": {
+      "width": 640,
+      "height": 400,
+      "title": "Difference Area",
+      "axes": {
+        "x": {
+          "type": "linear"
+        },
+        "y": {
+          "type": "linear"
+        }
+      },
+      "series": [
+        {
+          "type": "xyArea",
+          "name": "Difference",
+          "data": [
+            [
+              0,
+              3,
+              1
+            ],
+            [
+              1,
+              2,
+              4
+            ],
+            [
+              2,
+              4,
+              2
+            ],
+            [
+              4,
+              2,
+              5
+            ]
+          ],
+          "difference": {
+            "positive": "#009e73",
+            "negative": "#d55e00"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "threshold-area",
+    "spec": {
+      "width": 640,
+      "height": 400,
+      "title": "Threshold Area",
+      "axes": {
+        "x": {
+          "type": "linear"
+        },
+        "y": {
+          "type": "linear"
+        }
+      },
+      "series": [
+        {
+          "type": "xyArea",
+          "name": "Above / below 3",
+          "data": [
+            [
+              0,
+              3,
+              1
+            ],
+            [
+              1,
+              3,
+              5
+            ],
+            [
+              2,
+              3,
+              2
+            ],
+            [
+              4,
+              3,
+              4
+            ]
+          ],
+          "difference": {
+            "positive": "#009e73",
+            "negative": "#d55e00"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "segment-styles",
+    "spec": {
+      "width": 640,
+      "height": 400,
+      "title": "Segment Styles",
+      "axes": {
+        "x": {
+          "type": "linear"
+        },
+        "y": {
+          "type": "linear"
+        }
+      },
+      "series": [
+        {
+          "type": "xyLine",
+          "name": "Trend",
+          "data": [
+            [
+              0,
+              1
+            ],
+            [
+              1,
+              3
+            ],
+            [
+              2,
+              2
+            ],
+            [
+              3,
+              4
+            ]
+          ],
+          "segments": [
+            {
+              "color": "#0072b2"
+            },
+            {
+              "color": "#d55e00",
+              "dash": [
+                4,
+                3
+              ]
+            },
+            {
+              "color": "#009e73",
+              "width": 5
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "threshold-line",
+    "spec": {
+      "width": 640,
+      "height": 400,
+      "title": "Threshold Line",
+      "axes": {
+        "x": {
+          "type": "linear"
+        },
+        "y": {
+          "type": "linear"
+        }
+      },
+      "series": [
+        {
+          "type": "xyLine",
+          "name": "Threshold",
+          "data": [
+            [
+              0,
+              1
+            ],
+            [
+              0.5,
+              3
+            ],
+            [
+              1,
+              5
+            ],
+            [
+              1.6666666666666665,
+              3
+            ],
+            [
+              2,
+              2
+            ],
+            [
+              2.5,
+              3
+            ],
+            [
+              3,
+              4
+            ]
+          ],
+          "segments": [
+            {
+              "color": "#d55e00"
+            },
+            {
+              "color": "#009e73"
+            },
+            {
+              "color": "#009e73"
+            },
+            {
+              "color": "#d55e00"
+            },
+            {
+              "color": "#d55e00"
+            },
+            {
+              "color": "#009e73"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "gradient-line",
+    "spec": {
+      "width": 640,
+      "height": 400,
+      "title": "Gradient Line",
+      "axes": {
+        "x": {
+          "type": "linear"
+        },
+        "y": {
+          "type": "linear"
+        }
+      },
+      "series": [
+        {
+          "type": "xyLine",
+          "name": "Temperature",
+          "data": [
+            [
+              0,
+              1
+            ],
+            [
+              1,
+              3
+            ],
+            [
+              2,
+              2
+            ],
+            [
+              3,
+              4
+            ]
+          ],
+          "gradient": {
+            "axis": "x",
+            "stops": [
+              {
+                "offset": 0,
+                "color": "#0072b2"
+              },
+              {
+                "offset": 1,
+                "color": "#d55e00"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "trail",
+    "spec": {
+      "width": 640,
+      "height": 400,
+      "title": "Trail",
+      "axes": {
+        "x": {
+          "type": "linear"
+        },
+        "y": {
+          "type": "linear"
+        }
+      },
+      "series": [
+        {
+          "type": "xyLine",
+          "name": "Path",
+          "data": [
+            [
+              0,
+              1
+            ],
+            [
+              1,
+              3
+            ],
+            [
+              2,
+              2
+            ],
+            [
+              3,
+              4
+            ]
+          ],
+          "widths": [
+            3,
+            14,
+            6,
+            20
+          ],
+          "style": {
+            "roughness": 0
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "comet",
+    "spec": {
+      "width": 640,
+      "height": 400,
+      "title": "Comet",
+      "axes": {
+        "x": {
+          "type": "linear"
+        },
+        "y": {
+          "type": "linear"
+        }
+      },
+      "series": [
+        {
+          "type": "xyLine",
+          "name": "Path",
+          "data": [
+            [
+              0,
+              1
+            ],
+            [
+              1,
+              3
+            ],
+            [
+              2,
+              2
+            ],
+            [
+              3,
+              4
+            ]
+          ],
+          "widths": [
+            0,
+            3,
+            8,
+            20
+          ],
+          "style": {
+            "roughness": 0
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "rounded-bars",
+    "spec": {
+      "width": 640,
+      "height": 400,
+      "title": "Rounded Bars",
+      "axes": {
+        "x": {
+          "type": "band",
+          "categories": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        "y": {
+          "type": "linear"
+        }
+      },
+      "series": [
+        {
+          "type": "bar",
+          "name": "Value",
+          "data": [
+            5,
+            -3,
+            8
+          ],
+          "shape": "rounded",
+          "dataLabels": true
+        }
+      ]
+    }
+  },
+  {
+    "name": "pyramid-bars",
+    "spec": {
+      "width": 640,
+      "height": 400,
+      "title": "Pyramid Bars",
+      "axes": {
+        "x": {
+          "type": "band",
+          "categories": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        "y": {
+          "type": "linear"
+        }
+      },
+      "series": [
+        {
+          "type": "bar",
+          "name": "Value",
+          "data": [
+            5,
+            -3,
+            8
+          ],
+          "shape": "pyramid",
+          "dataLabels": true
+        }
+      ]
+    }
+  },
+  {
+    "name": "variwide",
+    "spec": {
+      "width": 640,
+      "height": 400,
+      "title": "Variwide",
+      "axes": {
+        "x": {
+          "type": "band",
+          "categories": [
+            "A",
+            "B",
+            "C"
+          ],
+          "weights": [
+            1,
+            3,
+            2
+          ]
+        },
+        "y": {
+          "type": "linear"
+        }
+      },
+      "series": [
+        {
+          "type": "bar",
+          "name": "Value",
+          "data": [
+            5,
+            3,
+            8
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "index-line",
+    "spec": {
+      "width": 640,
+      "height": 400,
+      "title": "Index Line",
+      "axes": {
+        "x": {
+          "type": "band",
+          "categories": [
+            "Start",
+            "Feb",
+            "Mar",
+            "Apr"
+          ]
+        },
+        "y": {
+          "type": "linear"
+        }
+      },
+      "series": [
+        {
+          "type": "line",
+          "name": "Index",
+          "data": [
+            100,
+            120,
+            90,
+            150
+          ],
+          "symbol": "circle"
+        }
+      ]
+    }
+  },
+  {
+    "name": "change-line",
+    "spec": {
+      "width": 640,
+      "height": 400,
+      "title": "Change Line",
+      "axes": {
+        "x": {
+          "type": "band",
+          "categories": [
+            "Start",
+            "Feb",
+            "Mar",
+            "Apr"
+          ]
+        },
+        "y": {
+          "type": "linear"
+        }
+      },
+      "series": [
+        {
+          "type": "line",
+          "name": "Change",
+          "data": [
+            0,
+            2,
+            -1,
+            5
+          ],
+          "symbol": "circle"
+        }
+      ]
+    }
+  },
+  {
+    "name": "function-plot",
+    "spec": {
+      "width": 640,
+      "height": 400,
+      "title": "Function Plot",
+      "axes": {
+        "x": {
+          "type": "linear"
+        },
+        "y": {
+          "type": "linear"
+        }
+      },
+      "series": [
+        {
+          "type": "xyLine",
+          "name": "y = x\u00b2",
+          "data": [
+            [
+              -2.0,
+              4.0
+            ],
+            [
+              -1.75,
+              3.0625
+            ],
+            [
+              -1.5,
+              2.25
+            ],
+            [
+              -1.25,
+              1.5625
+            ],
+            [
+              -1.0,
+              1.0
+            ],
+            [
+              -0.75,
+              0.5625
+            ],
+            [
+              -0.5,
+              0.25
+            ],
+            [
+              -0.25,
+              0.0625
+            ],
+            [
+              0.0,
+              0.0
+            ],
+            [
+              0.25,
+              0.0625
+            ],
+            [
+              0.5,
+              0.25
+            ],
+            [
+              0.75,
+              0.5625
+            ],
+            [
+              1.0,
+              1.0
+            ],
+            [
+              1.25,
+              1.5625
+            ],
+            [
+              1.5,
+              2.25
+            ],
+            [
+              1.75,
+              3.0625
+            ],
+            [
+              2.0,
+              4.0
+            ]
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "annotations",
+    "spec": {
+      "width": 640,
+      "height": 400,
+      "title": "Annotations",
+      "axes": {
+        "x": {
+          "type": "linear"
+        },
+        "y": {
+          "type": "linear"
+        }
+      },
+      "series": [
+        {
+          "type": "scatter",
+          "name": "Samples",
+          "data": [
+            [
+              0,
+              1
+            ],
+            [
+              2,
+              3
+            ],
+            [
+              4,
+              2
+            ]
+          ]
+        }
+      ],
+      "annotations": [
+        {
+          "type": "line",
+          "axis": "y",
+          "value": 2,
+          "label": "Reference"
+        },
+        {
+          "type": "band",
+          "axis": "x",
+          "from": 1,
+          "to": 2
+        },
+        {
+          "type": "region",
+          "from": [
+            2,
+            0
+          ],
+          "to": [
+            3,
+            1
+          ]
+        },
+        {
+          "type": "arrow",
+          "from": [
+            3,
+            3
+          ],
+          "to": [
+            2,
+            3
+          ]
+        },
+        {
+          "type": "label",
+          "at": [
+            3,
+            3
+          ],
+          "text": "Peak"
+        }
+      ]
+    }
+  }
+]
