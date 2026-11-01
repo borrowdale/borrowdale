@@ -18,7 +18,7 @@ import { assertRoom, BAND_PADDING, type Rect } from './frame.js';
 import { loneDot, piecesOf, POINT_SIZE, runsOf, solid } from './marks.js';
 import { hatched, LINE_WIDTH, type Paint } from './palette.js';
 import { stackGroup, stackSpans, type Span } from './stack.js';
-import { bandScale, formatValue, formatAxisValue, linearScale, place, type BandScale, type PlacedScale } from './scale.js';
+import { bandScale, formatValue, formatAxisValue, place, scaleOf, type BandScale, type PlacedScale } from './scale.js';
 import { markerNode } from './symbols.js';
 import type { ChartNode, Curve } from './types.js';
 import { isStacking, type CheckedCartesianChart, type SeriesOf } from './validate.js';
@@ -96,9 +96,9 @@ export function layoutCartesian(drawing: Drawing, chart: CheckedCartesianChart, 
     'axis' in entry && entry.axis === 'y2' ? 'y2' : horizontal ? 'x' : 'y';
   const spans = spansOf(series, valueAxisOf, linear);
   const cuts = areaCutsOf(series, valueAxisOf);
-  // An axis with nothing drawn on it starts at its fixed end, or shows 0 to 1.
+  // An axis with nothing drawn on it starts at its fixed end, or at 0, or 1 on a log axis.
   const extentOf = (key: AxisKey): [number, number] => {
-    const end = linear[key]?.min ?? linear[key]?.max ?? 0;
+    const end = linear[key]?.min ?? linear[key]?.max ?? (linear[key]?.kind === 'log' ? 1 : 0);
     const data = extent(key, series, spans, valueAxisOf);
     const values = chart.annotations.flatMap(annotationValues).filter((item) => item.axis === key && typeof item.value === 'number').map((item) => item.value as number);
     if (values.length === 0) return data ?? [end, end];
@@ -125,13 +125,13 @@ export function layoutCartesian(drawing: Drawing, chart: CheckedCartesianChart, 
     const top = rect.top + Math.max(reserve.up, room.top.outside);
     const bottom = rect.bottom - Math.max(reserve.bottom, reserve.down, room.bottom.outside);
     assertRoom({ left: rect.left, top, right: rect.right, bottom }, chart.width, chart.height);
-    const yScale = linear.y && linearScale(linear.y, extentOf('y'), bottom - top);
-    const y2Scale = y2 && linearScale(y2, extentOf('y2'), bottom - top);
+    const yScale = linear.y && scaleOf(linear.y, extentOf('y'), bottom - top);
+    const y2Scale = y2 && scaleOf(y2, extentOf('y2'), bottom - top);
     const left = guide('left', 'y', y, yScale, drawing, line);
     const right = y2 && guide('right', 'y2', y2, y2Scale, drawing, line);
     let plotLeft = rect.left + (y.hidden ? 0 : left.depth);
     let plotRight = rect.right - (!right || right.axis.hidden ? 0 : right.depth);
-    const xScale = linear.x && linearScale(linear.x, extentOf('x'), plotRight - plotLeft);
+    const xScale = linear.x && scaleOf(linear.x, extentOf('x'), plotRight - plotLeft);
     const below = guide('bottom', 'x', x, xScale, drawing, line);
     // The first and last x labels reach past the ends of the axis.
     plotLeft = Math.max(plotLeft, rect.left + below.ends.left, rect.left + room.left.outside);
@@ -153,9 +153,9 @@ export function layoutCartesian(drawing: Drawing, chart: CheckedCartesianChart, 
   // for ticks over the whole chart first, then again, once, for the plot's own ticks should they
   // reach further, which only rotated labels can.
   const first = reserveFor([
-    guide('bottom', 'x', x, linear.x && linearScale(linear.x, extentOf('x'), rect.right - rect.left), drawing, line),
-    guide('left', 'y', y, linear.y && linearScale(linear.y, extentOf('y'), rect.bottom - rect.top), drawing, line),
-    ...(y2 ? [guide('right', 'y2', y2, linearScale(y2, extentOf('y2'), rect.bottom - rect.top), drawing, line)] : []),
+    guide('bottom', 'x', x, linear.x && scaleOf(linear.x, extentOf('x'), rect.right - rect.left), drawing, line),
+    guide('left', 'y', y, linear.y && scaleOf(linear.y, extentOf('y'), rect.bottom - rect.top), drawing, line),
+    ...(y2 ? [guide('right', 'y2', y2, scaleOf(y2, extentOf('y2'), rect.bottom - rect.top), drawing, line)] : []),
   ]);
   let fitted = fitPlot(first);
   const needed = reserveFor(fitted.guides);

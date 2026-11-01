@@ -11,6 +11,10 @@ const MAX_MESSAGE = 200;
 export const MAX_VALUE = 1e15;
 /** The most decimals a number is written with. */
 export const MAX_DECIMALS = 20;
+/** The most ticks an axis may have, whether listed in `ticks` or made by its `step`. */
+export const MAX_TICKS = 1_000;
+// The longest string read where a time may be given: "2026-11-01T09:30:15.250+01:00" is 29.
+const MAX_TIME_TEXT = 40;
 
 export { show };
 
@@ -168,6 +172,25 @@ export function tuple<const N extends readonly string[]>(names: N): Check<{ [K i
       fail(path, `must be a [${names.join(', ')}] array, got ${show(value)}`);
     }
     return names.map((_, i) => entry(`${path}[${i}]`, value[i] as unknown)) as { [K in keyof N]: number };
+  };
+}
+
+/**
+ * Like `tuple`, but an entry may also be a string: a time, for a value on a time axis. The strings
+ * are carried as they are until the axes are known, when each is read as a time or rejected
+ * (`resolveValues` in validate.ts); the type says number because nothing reads them before then.
+ */
+export function coordinates<const N extends readonly string[]>(names: N): Check<{ [K in keyof N]: number }> {
+  const entry = number(-MAX_VALUE, MAX_VALUE);
+  const timeText = text(MAX_TIME_TEXT);
+  return (path, value) => {
+    if (!Array.isArray(value) || value.length !== names.length) {
+      fail(path, `must be a [${names.join(', ')}] array, got ${show(value)}`);
+    }
+    return names.map((_, i) => {
+      const raw = value[i] as unknown;
+      return typeof raw === 'string' ? (timeText(`${path}[${i}]`, raw) as unknown as number) : entry(`${path}[${i}]`, raw);
+    }) as { [K in keyof N]: number };
   };
 }
 

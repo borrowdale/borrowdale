@@ -7,17 +7,20 @@ const plain: CheckedFormat = { decimals: undefined, thousands: ',', decimal: '.'
 // A scale asks for about one tick per 50 units of axis, so a length of 250 asks for 5.
 const axis: CheckedLinearAxis = {
   type: 'linear',
+  kind: 'linear',
   path: 'axes.y',
   title: undefined,
   min: undefined,
   max: undefined,
   step: undefined,
+  interval: undefined,
   ticks: undefined,
   percent: false,
   grid: true,
   hidden: false,
   labelAngle: 0,
   format: plain,
+  months: [],
 };
 
 // The ticks a scale labels when its labels must be `every` tick spacings apart: placed one unit

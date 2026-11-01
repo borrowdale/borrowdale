@@ -9,7 +9,7 @@ import {
   checkLinearAxis,
   checkRadiusAxis,
   checkSweep,
-  LINEAR_KEYS,
+  checkY2Axis,
   MAX_CATEGORIES,
   MAX_HOLE,
   MAX_NAME,
@@ -19,9 +19,11 @@ import {
   type CheckedLinearAxis,
   type CheckedRadiusAxis,
   type CheckedSweep,
+  valueReader,
 } from './check-axis.js';
 import {
   boolean,
+  coordinates,
   fail,
   MAX_VALUE,
   fields,
@@ -102,7 +104,7 @@ const readValues = (r: Fields, reserve: ReservePoints) => r.required('data', cat
 const readPoints =
   <const N extends readonly [string, string]>(names: N) =>
   (r: Fields, reserve: ReservePoints) =>
-    r.required('data', list(0, MAX_POINTS, tuple(names), reserve));
+    r.required('data', list(0, MAX_POINTS, coordinates(names), reserve));
 
 /** What a series type needs of a polar chart. */
 interface PolarNeeds {
@@ -162,7 +164,7 @@ const SERIES_RULES = {
     keys: ['shape', 'dataLabels', 'axis', 'data', 'display', 'width', 'overlay', 'fromSymbol', 'toSymbol'],
     read: (r: Fields, _path: string, reserve: ReservePoints) => ({
       shape: r.optional('shape', oneOf(['rectangle', 'rounded', 'pyramid'] as const)) ?? 'rectangle', axis: readAxis(r),
-      data: r.required('data', list(0, MAX_POINTS, nullable(tuple(['from', 'to'])), reserve)),
+      data: r.required('data', list(0, MAX_POINTS, nullable(coordinates(['from', 'to'])), reserve)),
       display: r.optional('display', oneOf(['bar', 'line', 'error', 'points'] as const)) ?? 'bar',
       width: r.optional('width', number(0.05, 1)) ?? 0.8,
       overlay: r.optional('overlay', boolean) ?? false,
@@ -174,7 +176,7 @@ const SERIES_RULES = {
     system: 'cartesian', band: false,
     keys: ['dataLabels', 'data', 'symbol', 'dash', 'segments', 'widths', 'gradient'],
     read: (r: Fields, path: string, reserve: ReservePoints) => {
-      const data = r.required('data', list(0, MAX_POINTS, nullable(tuple(['x', 'y'])), reserve));
+      const data = r.required('data', list(0, MAX_POINTS, nullable(coordinates(['x', 'y'])), reserve));
       const segments = r.optional('segments', list(Math.max(0, data.length - 1), Math.max(0, data.length - 1), nullable((p, raw) => {
         const segment = fields(p, raw);
         segment.allow(['color', 'width', 'dash']);
@@ -205,13 +207,8 @@ const SERIES_RULES = {
         const d = fields(p, raw); d.allow(['positive', 'negative']);
         return { positive: d.required('positive', color), negative: d.required('negative', color) };
       });
-      const data = r.required('data', list(0, MAX_POINTS, nullable(tuple(['x', 'low', 'high'])), reserve));
-      data.forEach((point, i) => {
-        if (point === null) return;
-        if (!difference && point[2] < point[1]) fail(`${path}.data[${i}]`, 'has high below low');
-        const previous = data[i - 1];
-        if (previous && point[0] <= previous[0]) fail(`${path}.data[${i}][0]`, 'must increase within each run');
-      });
+      // Its order and bounds are checked once its times are read (resolveValues).
+      const data = r.required('data', list(0, MAX_POINTS, nullable(coordinates(['x', 'low', 'high'])), reserve));
       return { data, difference };
     },
   },
@@ -481,7 +478,7 @@ function checkCartesianChart(
   axes.allow(['x', 'y', 'y2']);
   const x = axes.required('x', checkAxis(CARTESIAN_KEYS, true));
   const y = axes.required('y', checkAxis(CARTESIAN_KEYS, true));
-  const y2 = axes.optional('y2', checkLinearAxis(LINEAR_KEYS, false));
+  const y2 = axes.optional('y2', checkY2Axis);
   if (x.type === 'band' && y.type === 'band') {
     fail('axes', 'has two band axes; one of x and y must be linear');
   }
@@ -533,7 +530,86 @@ function checkCartesianChart(
       stacked.set(`${entry.axis}|${entry.stack}`, first);
     }
   }
+  resolveValues(series, { x, y, y2 }, band);
   return { ...base, system: 'cartesian', x, y, y2, band, series, annotations: checkAnnotations(r, { x, y, y2 }, color) };
+}
+
+/**
+ * Reads every value of every series against the axis it is drawn on, once the axes are known: a
+ * string as a time on a time axis, a number as milliseconds there, and on a log axis only a value the
+ * axis can show. A series a kind of axis cannot draw is rejected. Values are replaced in place, in the
+ * lists validation copied.
+ */
+function resolveValues(
+  series: readonly SeriesOf<'cartesian'>[],
+  axes: { x: CheckedAxis; y: CheckedAxis; y2: CheckedLinearAxis | undefined },
+  band: CheckedBandAxis | undefined,
+): void {
+  const reader = (axis: CheckedAxis): Check<number> =>
+    axis.type === 'band' ? anyValue : axis.kind === 'time' ? valueReader('time') : numberOn(axis);
+  for (const entry of series) {
+    if (!('axis' in entry)) {
+      // Both axes are continuous: each coordinate is read by the axis it is on.
+      const [x, y] = [reader(axes.x), reader(axes.y)];
+      const readers = entry.type === 'bubble' ? [x, y, anyValue] : entry.type === 'xyArea' ? [x, y, y] : [x, y];
+      readEach(entry.data, `${entry.path}.data`, readers);
+      if (entry.type === 'xyArea') {
+        checkArea(entry);
+      }
+      continue;
+    }
+    const axis = (entry.axis === 'y2' ? axes.y2 : band === axes.x ? axes.y : axes.x) as CheckedLinearAxis;
+    if (axis.kind === 'time' && entry.type !== 'interval') {
+      fail(entry.path, `is a ${entry.type} series on ${axis.path}, a time axis, which only interval series can use`);
+    }
+    if (axis.kind === 'log' && (entry.type === 'bar' || entry.type === 'area')) {
+      fail(entry.path, `is a ${entry.type} series on ${axis.path}, a log axis, which cannot show the 0 it stands on`);
+    }
+    const value = reader(axis);
+    if (entry.type === 'interval' || entry.type === 'rangeArea') {
+      readEach(entry.data, `${entry.path}.data`, [value, value]);
+    } else {
+      entry.data.forEach((point, i) => {
+        if (point !== null) {
+          value(`${entry.path}.data[${i}]`, point);
+        }
+      });
+    }
+  }
+}
+
+// A number on a continuous axis that is not a time axis: a string is a mistake there, and a log axis
+// takes only what it can show.
+function numberOn(axis: CheckedLinearAxis): Check<number> {
+  const value = valueReader(axis.kind);
+  return (path, raw) => {
+    if (typeof raw === 'string') {
+      fail(path, `must be a number, since ${axis.path} is not a time axis, got ${show(raw)}`);
+    }
+    return value(path, raw);
+  };
+}
+
+// Each entry of each point, read in place by the reader for its position. The points are the arrays
+// `coordinates` made, so writing them changes nothing of the caller's.
+function readEach(points: readonly (readonly number[] | null)[], path: string, readers: readonly Check<number>[]): void {
+  points.forEach((point, i) => {
+    const entries = point as number[] | null;
+    entries?.forEach((raw, k) => {
+      entries[k] = readers[k]!(`${path}[${i}][${k}]`, raw);
+    });
+  });
+}
+
+// An xyArea's high value is not below its low one, unless it shows their difference, and x increases
+// within each run.
+function checkArea(entry: Extract<SeriesOf<'cartesian'>, { type: 'xyArea' }>): void {
+  entry.data.forEach((point, i) => {
+    if (point === null) return;
+    if (!entry.difference && point[2] < point[1]) fail(`${entry.path}.data[${i}]`, 'has high below low');
+    const previous = entry.data[i - 1];
+    if (previous && point[0] <= previous[0]) fail(`${entry.path}.data[${i}][0]`, 'must increase within each run');
+  });
 }
 
 function checkPolarChart(r: Fields, base: CheckedChartBase, series: SeriesOf<'polar'>[]): CheckedPolarChart {
@@ -804,7 +880,8 @@ function checkRange(path: string, raw: unknown): [number, number] {
 }
 
 function checkBubble(path: string, raw: unknown): [number, number, number] {
-  const [x, y, size] = tuple(['x', 'y', 'size'])(path, raw);
+  const [x, y, size] = coordinates(['x', 'y', 'size'])(path, raw);
+  anyValue(`${path}[2]`, size);
   if (size < 0) {
     fail(path, `has a negative size, ${size}`);
   }

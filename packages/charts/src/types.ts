@@ -34,7 +34,13 @@ export interface ChartSpec {
   series: readonly Series[];
 }
 
+/**
+ * A place on an axis: a number on a continuous axis, an ISO 8601 time or milliseconds on a time axis,
+ * or a category name on a band axis.
+ */
 export type ChartCoordinate = number | string;
+/** A value on a continuous axis: a number, or on a time axis an ISO 8601 string or milliseconds. */
+export type ChartValue = number | string;
 export type ChartPosition = readonly [x: ChartCoordinate, y: ChartCoordinate];
 interface AnnotationStyle {
   color?: string | undefined;
@@ -62,8 +68,11 @@ export type LegendPosition = (typeof LEGEND_POSITIONS)[number];
 export interface CartesianAxes {
   x: Axis;
   y: Axis;
-  /** A second value axis on the right, for series with `axis: 'y2'`. Needs `x` to be the band axis. */
-  y2?: LinearAxis | undefined;
+  /**
+   * A second value axis on the right, for series with `axis: 'y2'`: linear, log or square-root. Needs
+   * `x` to be the band axis.
+   */
+  y2?: LinearAxis | LogAxis | SqrtAxis | undefined;
 }
 
 /**
@@ -138,7 +147,8 @@ export interface GaugeBand {
   color: string;
 }
 
-export type Axis = BandAxis | LinearAxis;
+/** A cartesian axis. Polar and gauge axes are band or linear only. */
+export type Axis = BandAxis | LinearAxis | TimeAxis | LogAxis | SqrtAxis;
 
 export interface BandAxis {
   type: 'band';
@@ -191,6 +201,51 @@ export interface LinearAxis {
    */
   labelAngle?: number | undefined;
   format?: NumberFormat | undefined;
+}
+
+/**
+ * Values spaced by their base-10 logarithm, so each power of ten takes the same length: for data
+ * that spans several of them. Only values above 0 can be shown, from 1e-20 up; bars, areas and percent
+ * stacks stand on 0, so a log axis cannot hold them. Free ends round out to powers of ten. Ticks are at
+ * 1, 2 and 5 times the powers of ten, or every one to nine times, or the powers alone, as the length
+ * allows; it takes no `step` or `percent`.
+ */
+export interface LogAxis extends Omit<LinearAxis, 'type' | 'step' | 'percent'> {
+  type: 'log';
+}
+
+/**
+ * Values spaced by their square root, signed so negative values mirror positive ones: the area of a
+ * bubble or bar grows with its value. Ticks are a linear axis' ticks. It takes no `percent`.
+ */
+export interface SqrtAxis extends Omit<LinearAxis, 'type' | 'percent'> {
+  type: 'sqrt';
+}
+
+/** A calendar unit of a time axis' step. */
+export type TimeUnit = 'millisecond' | 'second' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'year';
+
+/**
+ * Times, in UTC, as ISO 8601 strings ("2026-11-01", "2026-11-01T09:30Z", "2026-11-01T09:30+01:00")
+ * or milliseconds since 1970-01-01T00:00Z, from year 0000 to 9999. A date and time must end in `Z`
+ * or an offset, since one without would be local time. Ticks fall on calendar boundaries in UTC, weeks
+ * starting on Monday, and are labelled without locale data at the coarsest level each falls on:
+ * "2026", "Nov", "3 Nov", "09:30". Free ends round out to those boundaries.
+ */
+export interface TimeAxis {
+  type: 'time';
+  title?: string | undefined;
+  min?: ChartValue | undefined;
+  max?: ChartValue | undefined;
+  /** A tick on every boundary of `every` (default 1) of `unit`, in place of the automatic choice. */
+  step?: { unit: TimeUnit; every?: number | undefined } | undefined;
+  /** Ticks exactly at these times, increasing: each a time, or `{ value, label }`. Not with `step`. */
+  ticks?: readonly (ChartValue | { value: ChartValue; label?: string | undefined })[] | undefined;
+  grid?: boolean | undefined;
+  hidden?: boolean | undefined;
+  labelAngle?: number | undefined;
+  /** `months`: the 12 names its labels give the months, each at most 20 characters. English by default. */
+  format?: { months?: readonly string[] | undefined } | undefined;
 }
 
 /** A tick at `value` labelled `label` rather than its value. */
@@ -306,7 +361,7 @@ export interface IntervalSeries extends ValueSeries {
   /** Show fitted values at marks. Labels can overlap in dense charts. */
   dataLabels?: boolean | undefined;
   /** Endpoints retain their order, including descending intervals; null omits the mark. */
-  data: readonly (readonly [from: number, to: number] | null)[];
+  data: readonly (readonly [from: ChartValue, to: ChartValue] | null)[];
   display?: 'bar' | 'line' | 'error' | 'points' | undefined;
   shape?: 'rectangle' | 'rounded' | 'pyramid' | undefined;
   /** Fraction of the category slot, from 0.05 to 1. Defaults to 0.8. */
@@ -322,7 +377,7 @@ export interface XYLineSeries extends SeriesBase {
   type: 'xyLine';
   /** Show fitted values at marks. Labels can overlap in dense charts. */
   dataLabels?: boolean | undefined;
-  data: readonly (readonly [x: number, y: number] | null)[];
+  data: readonly (readonly [x: ChartValue, y: ChartValue] | null)[];
   /** Draw a symbol at every supplied point; omitted by default. */
   symbol?: Marker | undefined;
   dash?: readonly number[] | undefined;
@@ -344,7 +399,7 @@ export interface LinearGradient {
 export interface XYAreaSeries extends SeriesBase {
   type: 'xyArea';
   /** X must increase strictly within each run; null starts a new run. */
-  data: readonly (readonly [x: number, low: number, high: number] | null)[];
+  data: readonly (readonly [x: ChartValue, low: ChartValue, high: ChartValue] | null)[];
   /** Allow crossing boundaries and colour by whether the second boundary is above the first. */
   difference?: { positive: string; negative: string } | undefined;
 }
@@ -355,7 +410,7 @@ export interface ScatterSeries extends SeriesBase {
   dataLabels?: boolean | undefined;
   symbol?: Marker | undefined;
   /** Needs both axes to be linear. */
-  data: readonly (readonly [x: number, y: number])[];
+  data: readonly (readonly [x: ChartValue, y: ChartValue])[];
 }
 
 export interface BubbleSeries extends SeriesBase {
@@ -364,7 +419,7 @@ export interface BubbleSeries extends SeriesBase {
   dataLabels?: boolean | undefined;
   symbol?: Marker | undefined;
   /** The size sets each bubble's area and must not be negative. Needs both axes to be linear. */
-  data: readonly (readonly [x: number, y: number, size: number])[];
+  data: readonly (readonly [x: ChartValue, y: ChartValue, size: number])[];
 }
 
 export interface PieSlice {

@@ -91,7 +91,10 @@ export function drawXYArea({ drawing, x }: Context, { entry, scale }: Placed<XYA
               [entry.name, 'difference', i, j, part], entry.style));
           };
           if ((da < 0 && db > 0) || (da > 0 && db < 0)) {
-            const t = da / (da - db);
+            // Where the edges cross on the plot, from their placed heights: exact on any scale, where
+            // the values' own differences are so only on a linear one.
+            const [pa, pb] = [high[j]![1] - low[j]![1], high[j + 1]![1] - low[j + 1]![1]];
+            const t = pa / (pa - pb);
             const crossing: Point = [low[j]![0] + (low[j + 1]![0] - low[j]![0]) * t,
               low[j]![1] + (low[j + 1]![1] - low[j]![1]) * t];
             fill([low[j]!, high[j]!, crossing], da > 0, 0);

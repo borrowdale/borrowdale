@@ -2,7 +2,9 @@
 // engine's date parser, and calendar arithmetic in UTC from whole numbers only, so a time axis is the
 // same in every JavaScript engine and every time zone. The calendar is the proleptic Gregorian one;
 // weeks start on Monday, as in ISO 8601.
-import { fail, show, type Check } from './read.js';
+import type { CheckedLinearAxis } from './check-axis.js';
+import { fail, MAX_TICKS, show, type Check } from './read.js';
+import { keptApart, listedTicks, type Scale } from './scale.js';
 
 const SECOND = 1000;
 const MINUTE = 60 * SECOND;
@@ -213,6 +215,67 @@ export const INTERVALS: readonly TimeInterval[] = [
   ...[1, 3].map((every) => interval('month', every)),
   ...[1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000].map((every) => interval('year', every)),
 ];
+
+// About one tick per this many units of axis, as on a linear axis.
+const TICK_SPACING = 50;
+
+/**
+ * A time scale over the data's extent: free ends rounded out to the boundaries of the interval that
+ * gives about one tick per 50 units of `length` without passing that, or of the axis' own `step`.
+ * Ticks are the interval's boundaries, labelled at the coarsest level each falls on; where labels
+ * would overlap, only the ticks on a coarser interval's boundaries are labelled.
+ */
+export function timeScale(axis: CheckedLinearAxis, [lo, hi]: [number, number], length: number): Scale {
+  if (axis.min !== undefined && lo < axis.min) {
+    fail(`${axis.path}.min`, `is ${formatTime(axis.min)}, but the data reach ${formatTime(lo)}`);
+  }
+  if (axis.max !== undefined && hi > axis.max) {
+    fail(`${axis.path}.max`, `is ${formatTime(axis.max)}, but the data reach ${formatTime(hi)}`);
+  }
+  if (axis.ticks) {
+    return listedTicks(axis, axis.ticks, [lo, hi]);
+  }
+  const [low, high] = [axis.min ?? lo, axis.max ?? hi];
+  const count = Math.max(2, Math.floor(length / TICK_SPACING));
+  // One moment alone, or a fixed end it equals, shows the day it falls in.
+  const span = high > low ? high - low : DAY;
+  const step = axis.interval ?? INTERVALS.find((candidate) => candidate.length * count >= span) ?? INTERVALS.at(-1)!;
+  let domain: [number, number] = [axis.min ?? step.floor(low), axis.max ?? ceiling(step, high)];
+  if (!(domain[1] > domain[0])) {
+    domain = axis.max === undefined ? [domain[0], step.next(step.floor(domain[0]))] : [step.floor(domain[1] - 1), domain[1]];
+  }
+  const ticks: number[] = [];
+  for (let at = ceiling(step, domain[0]); at <= domain[1]; at = step.next(at)) {
+    if (ticks.length === MAX_TICKS) {
+      fail(`${axis.path}.step`, `gives more than ${MAX_TICKS} ticks from ${formatTime(domain[0])} to ${formatTime(domain[1])}`);
+    }
+    ticks.push(at);
+  }
+  const spanShown = domain[1] - domain[0];
+  // The intervals at or above this one, to label only the ticks on their boundaries.
+  const coarser = INTERVALS.filter((candidate) => candidate.length >= step.length);
+  return {
+    domain,
+    ticks,
+    labels: ticks.map((tick) => formatTick(tick, axis.months)),
+    fraction: (value) => (value - domain[0]) / spanShown,
+    labelled: (room, at) => {
+      for (const candidate of coarser) {
+        const shown = ticks.flatMap((tick, i) => (candidate.floor(tick) === tick ? [i] : []));
+        if (shown.length > 0 && keptApart(shown.map((i) => ticks[i]!), room, at).length === shown.length) {
+          return shown;
+        }
+      }
+      return keptApart(ticks, room, at);
+    },
+  };
+}
+
+// The first boundary at or after `at`.
+function ceiling(step: TimeInterval, at: number): number {
+  const floor = step.floor(at);
+  return floor === at ? at : step.next(floor);
+}
 
 /**
  * A tick label: the time at the coarsest level it falls on, "2026" on a year, "Nov" on a month,

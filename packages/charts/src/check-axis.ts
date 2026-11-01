@@ -1,5 +1,6 @@
-// Reading the axes of a chart spec: band and linear axes, their number formats and sweeps, and the
-// keys each coordinate system allows on them. Independent of series, which validate.ts reads.
+// Reading the axes of a chart spec: band axes and the continuous ones (linear, log, square-root and
+// time), their formats and sweeps, and the keys each coordinate system allows on them. Independent
+// of series, which validate.ts reads.
 import { decimalsOf } from './decimals.js';
 import {
   boolean,
@@ -8,6 +9,7 @@ import {
   integer,
   list,
   MAX_DECIMALS,
+  MAX_TICKS,
   MAX_VALUE,
   number,
   oneOf,
@@ -17,6 +19,7 @@ import {
   type Check,
   type Fields,
 } from './read.js';
+import { ENGLISH_MONTHS, formatTime, interval, time, TIME_UNITS, type TimeInterval } from './time.js';
 
 export const MAX_CATEGORIES = 1_000;
 // Every mark's tooltip repeats its series and category names, so a long one multiplies the size of
@@ -24,11 +27,18 @@ export const MAX_CATEGORIES = 1_000;
 export const MAX_NAME = 100;
 // For a number format's separators, prefix and suffix.
 const MAX_FORMAT_TEXT = 10;
+// For the name of a month on a time axis.
+const MAX_MONTH = 20;
 
 export const LINEAR_KEYS = ['type', 'title', 'min', 'max', 'step', 'ticks', 'percent', 'grid', 'hidden', 'format', 'labelAngle'];
+const SQRT_KEYS = ['type', 'title', 'min', 'max', 'step', 'ticks', 'grid', 'hidden', 'format', 'labelAngle'];
+const LOG_KEYS = ['type', 'title', 'min', 'max', 'ticks', 'grid', 'hidden', 'format', 'labelAngle'];
+const TIME_KEYS = ['type', 'title', 'min', 'max', 'step', 'ticks', 'grid', 'hidden', 'format', 'labelAngle'];
 const MAX_LABEL_ANGLE = 90;
-/** The most ticks an axis may have, whether listed in `ticks` or made by its `step`. */
-export const MAX_TICKS = 1_000;
+/** The smallest value a log axis shows: its ticks are written down to this power of ten. */
+export const MIN_LOG = 1e-20;
+// The most of a time unit one step of a time axis may take.
+const MAX_EVERY = 1_000;
 // The largest hole in a radius axis or a pie, as a share of the radius.
 export const MAX_HOLE = 0.95;
 
@@ -64,14 +74,27 @@ export interface CheckedTick {
   label: string | undefined;
 }
 
+/**
+ * How a continuous axis spaces its values: evenly, by their logarithms, by their square roots (signed,
+ * so negative values mirror positive ones), or as times in milliseconds since the epoch.
+ */
+export type AxisKind = 'linear' | 'log' | 'sqrt' | 'time';
+
+/**
+ * A continuous axis, whatever its kind: `type` names the family, `kind` how it spaces values. Time
+ * values are milliseconds since the epoch from here on.
+ */
 export interface CheckedLinearAxis {
   type: 'linear';
+  kind: AxisKind;
   path: string;
   title: string | undefined;
   min: number | undefined;
   max: number | undefined;
   /** A tick at every multiple of this, counted from zero. */
   step: number | undefined;
+  /** On a time axis, a tick on every boundary of this interval. */
+  interval: TimeInterval | undefined;
   /** Exactly these ticks, increasing. */
   ticks: CheckedTick[] | undefined;
   percent: boolean;
@@ -80,6 +103,8 @@ export interface CheckedLinearAxis {
   /** 0 on an axis that cannot rotate its labels. */
   labelAngle: number;
   format: CheckedFormat;
+  /** The names of the months, for a time axis' labels. */
+  months: readonly string[];
 }
 
 export type CheckedAxis = CheckedBandAxis | CheckedLinearAxis;
@@ -101,30 +126,56 @@ export const anyValue = number(-MAX_VALUE, MAX_VALUE);
 const labelAngle = number(-MAX_LABEL_ANGLE, MAX_LABEL_ANGLE);
 
 /** Reads an axis' own keys beyond the common ones, from the same fields, once those are checked. */
-type Extra<X> = (r: Fields, path: string, type: 'band' | 'linear') => X;
+type Extra<X> = (r: Fields, path: string, type: 'band' | AxisKind) => X;
 
 const noExtra: Extra<object> = () => ({});
 
+/** The keys each axis type a context accepts allows, by type. */
+type AxisKeys = { band: readonly string[] } & Partial<Record<AxisKind, readonly string[]>>;
+
 /**
- * An axis, band or linear by its `type`, allowing `keys.band` or `keys.linear`. Gridlines of a
- * linear one default to `grid`; `extra` reads what the axis has beyond the common keys.
+ * An axis of one of the types `keys` lists, allowing that type's keys. Gridlines of a continuous one
+ * default to `grid`; `extra` reads what the axis has beyond the common keys.
  */
 export function checkAxis<X extends object = object>(
-  keys: { band: readonly string[]; linear: readonly string[] },
+  keys: AxisKeys,
   grid: boolean,
   extra: Extra<X> = noExtra as Extra<X>,
 ): Check<(CheckedBandAxis | CheckedLinearAxis) & X> {
   return (path, raw) => {
-    const type = fields(path, raw).required('type', (typePath, given) =>
-      given === 'band' || given === 'linear' ? given : fail(typePath, `must be "band" or "linear", got ${show(given)}`),
-    );
+    const type = readType(path, raw, Object.keys(keys));
     return type === 'band'
       ? checkBandAxis(keys.band, extra)(path, raw)
-      : checkLinearAxis(keys.linear, grid, extra)(path, raw);
+      : checkLinearAxis(keys[type as AxisKind]!, grid, extra, type as AxisKind)(path, raw);
   };
 }
 
-export const CARTESIAN_KEYS = { band: ['type', 'categories', 'weights', 'title', 'hidden', 'labelAngle'], linear: LINEAR_KEYS };
+/** A continuous axis of one of the kinds `keys` lists, allowing that kind's keys. */
+export function checkContinuousAxis(keys: Partial<Record<AxisKind, readonly string[]>>, grid: boolean): Check<CheckedLinearAxis> {
+  return (path, raw) => {
+    const kind = readType(path, raw, Object.keys(keys)) as AxisKind;
+    return checkLinearAxis(keys[kind]!, grid, noExtra, kind)(path, raw);
+  };
+}
+
+// An axis' type, one of `types`, read once here and checked again by the reader of its keys.
+function readType(path: string, raw: unknown, types: readonly string[]): string {
+  return fields(path, raw).required('type', (typePath, given) => {
+    if (typeof given === 'string' && types.includes(given)) {
+      return given;
+    }
+    const quoted = types.map((type) => `"${type}"`);
+    const choices = quoted.length === 2 ? quoted.join(' or ') : `${quoted.slice(0, -1).join(', ')} or ${quoted.at(-1)}`;
+    return fail(typePath, `must be ${choices}, got ${show(given)}`);
+  });
+}
+
+const CONTINUOUS_KEYS = { linear: LINEAR_KEYS, time: TIME_KEYS, log: LOG_KEYS, sqrt: SQRT_KEYS };
+
+export const CARTESIAN_KEYS = { band: ['type', 'categories', 'weights', 'title', 'hidden', 'labelAngle'], ...CONTINUOUS_KEYS };
+
+/** The second value axis, on the right: continuous, but never time. */
+export const checkY2Axis = checkContinuousAxis({ linear: LINEAR_KEYS, log: LOG_KEYS, sqrt: SQRT_KEYS }, false);
 
 function checkBandAxis<X extends object = object>(
   keys: readonly string[],
@@ -158,59 +209,82 @@ export function checkLinearAxis<X extends object = object>(
   keys: readonly string[],
   grid: boolean,
   extra: Extra<X> = noExtra as Extra<X>,
+  kind: AxisKind = 'linear',
 ): Check<CheckedLinearAxis & X> {
+  const value = valueReader(kind);
+  // How a value of this kind is written in a message.
+  const written = (at: number): string => (kind === 'time' ? formatTime(at) : String(at));
   return (path, raw) => {
     const r = fields(path, raw);
     r.allow(keys);
     r.required('type', (typePath, given) =>
-      given === 'linear' ? given : fail(typePath, `must be "linear", got ${show(given)}`),
+      given === kind ? given : fail(typePath, `must be "${kind}", got ${show(given)}`),
     );
-    const min = r.optional('min', anyValue);
-    const max = r.optional('max', anyValue);
+    const min = r.optional('min', value);
+    const max = r.optional('max', value);
     if (min !== undefined && max !== undefined && !(max > min)) {
-      fail(`${path}.max`, `must be greater than min (${min}), got ${max}`);
+      fail(`${path}.max`, `must be greater than min (${written(min)}), got ${written(max)}`);
     }
-    const step = r.optional('step', checkStep);
-    const ticks = r.optional('ticks', list(1, MAX_TICKS, checkTick));
-    if (step !== undefined && ticks !== undefined) {
+    const step = kind === 'time' ? undefined : r.optional('step', checkStep);
+    const every = kind === 'time' ? r.optional('step', checkInterval) : undefined;
+    const ticks = r.optional('ticks', list(1, MAX_TICKS, tickReader(value)));
+    if ((step !== undefined || every !== undefined) && ticks !== undefined) {
       fail(`${path}.ticks`, 'cannot be given with step');
     }
-    ticks?.forEach(({ value }, i) => {
+    ticks?.forEach((tick, i) => {
       const at = `${path}.ticks[${i}]`;
-      if (i > 0 && !(value > ticks[i - 1]!.value)) {
-        fail(at, `must be greater than the tick before it (${ticks[i - 1]!.value}), got ${value}`);
+      if (i > 0 && !(tick.value > ticks[i - 1]!.value)) {
+        fail(at, `must be greater than the tick before it (${written(ticks[i - 1]!.value)}), got ${written(tick.value)}`);
       }
-      if ((min !== undefined && value < min) || (max !== undefined && value > max)) {
-        fail(at, `must be within the axis' fixed ends, got ${value}`);
+      if ((min !== undefined && tick.value < min) || (max !== undefined && tick.value > max)) {
+        fail(at, `must be within the axis' fixed ends, got ${written(tick.value)}`);
       }
     });
     const percent = r.optional('percent', boolean) ?? false;
     const format = r.optional('format', fields);
-    format?.allow(['decimals', 'thousands', 'decimal', 'prefix', 'suffix']);
+    format?.allow(kind === 'time' ? ['months'] : ['decimals', 'thousands', 'decimal', 'prefix', 'suffix']);
     const formatText = (key: string, fallback: string): string =>
       format?.optional(key, text(MAX_FORMAT_TEXT)) ?? fallback;
     return {
       type: 'linear',
+      kind,
       path,
       title: r.optional('title', text()),
       min,
       max,
       step,
+      interval: every,
       ticks,
       percent,
       grid: r.optional('grid', boolean) ?? grid,
       hidden: r.optional('hidden', boolean) ?? false,
       labelAngle: r.optional('labelAngle', labelAngle) ?? 0,
       format: {
-        decimals: format?.optional('decimals', integer(0, MAX_DECIMALS)),
-        thousands: formatText('thousands', ','),
-        decimal: formatText('decimal', '.'),
-        prefix: formatText('prefix', ''),
-        suffix: formatText('suffix', percent ? '%' : ''),
+        decimals: kind === 'time' ? undefined : format?.optional('decimals', integer(0, MAX_DECIMALS)),
+        thousands: kind === 'time' ? ',' : formatText('thousands', ','),
+        decimal: kind === 'time' ? '.' : formatText('decimal', '.'),
+        prefix: kind === 'time' ? '' : formatText('prefix', ''),
+        suffix: kind === 'time' ? '' : formatText('suffix', percent ? '%' : ''),
       },
-      ...extra(r, path, 'linear'),
+      months: (kind === 'time' ? format?.optional('months', list(12, 12, text(MAX_MONTH))) : undefined) ?? ENGLISH_MONTHS,
+      ...extra(r, path, kind),
     };
   };
+}
+
+/**
+ * How an axis of `kind` reads one of its values: a number on a linear or square-root axis, a number
+ * a log axis can show, or a time.
+ */
+export function valueReader(kind: AxisKind): Check<number> {
+  switch (kind) {
+    case 'time':
+      return time;
+    case 'log':
+      return number(MIN_LOG, MAX_VALUE, 'on a log axis');
+    default:
+      return anyValue;
+  }
 }
 
 const POLAR_LINEAR_KEYS = ['type', 'min', 'max', 'step', 'ticks', 'grid', 'hidden', 'format'];
@@ -260,11 +334,20 @@ const checkStep: Check<number> = (path, value) => {
 };
 
 // A value, or a value with its own label.
-const checkTick: Check<CheckedTick> = (path, value) => {
-  if (typeof value === 'number') {
-    return { value: anyValue(path, value), label: undefined };
-  }
-  const r = fields(path, value);
-  r.allow(['value', 'label']);
-  return { value: r.required('value', anyValue), label: r.optional('label', text(MAX_NAME)) };
+function tickReader(value: Check<number>): Check<CheckedTick> {
+  return (path, raw) => {
+    if (typeof raw === 'number' || typeof raw === 'string') {
+      return { value: value(path, raw), label: undefined };
+    }
+    const r = fields(path, raw);
+    r.allow(['value', 'label']);
+    return { value: r.required('value', value), label: r.optional('label', text(MAX_NAME)) };
+  };
+}
+
+// A time axis' step: a unit, and how many of it, 1 by default.
+const checkInterval: Check<TimeInterval> = (path, raw) => {
+  const r = fields(path, raw);
+  r.allow(['unit', 'every']);
+  return interval(r.required('unit', oneOf(TIME_UNITS)), r.optional('every', integer(1, MAX_EVERY)) ?? 1);
 };

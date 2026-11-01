@@ -4,6 +4,7 @@ export { appendChart, drawChart, toSvgChart, type SvgChartOptions } from './rend
 export type {
   Annotation,
   ChartCoordinate,
+  ChartValue,
   ChartPosition,
   AngleBandAxis,
   AngleLinearAxis,
@@ -25,6 +26,7 @@ export type {
   GaugeSeries,
   LegendPosition,
   LinearAxis,
+  LogAxis,
   LineSeries,
   LinearGradient,
   MarkerSymbol,
@@ -46,9 +48,12 @@ export type {
   XYAreaSeries,
   RoseSeries,
   ScatterSeries,
+  SqrtAxis,
   Series,
   SeriesType,
   Sweep,
+  TimeAxis,
+  TimeUnit,
 } from './types.js';
 
 export type { ChartImage, ChartRenderOptions } from './images.js';

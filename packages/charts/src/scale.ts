@@ -1,6 +1,8 @@
-import { MAX_TICKS, type CheckedFormat, type CheckedLinearAxis, type CheckedTick } from './check-axis.js';
+import { log } from '@borrowdale/core/math';
+import type { CheckedFormat, CheckedLinearAxis, CheckedTick } from './check-axis.js';
 import { decimalsOf } from './decimals.js';
-import { fail, MAX_DECIMALS } from './read.js';
+import { fail, MAX_DECIMALS, MAX_TICKS } from './read.js';
+import { formatTick, formatTime, timeScale } from './time.js';
 
 // Powers of ten as literals, which are correctly rounded, rather than `10 ** n` or `Math.pow`, which
 // may differ in the last bit between JavaScript engines. Index i holds 10^(i - 20).
@@ -41,6 +43,20 @@ export interface Scale {
   fraction: (value: number) => number;
   /** The indices of the ticks to label when their centres must be `room` apart where `at` puts them. */
   labelled: (room: number, at: (value: number) => number) => number[];
+}
+
+/** The scale of a continuous axis, by its kind, over the data's extent, for an axis `length` long. */
+export function scaleOf(axis: CheckedLinearAxis, extent: [number, number], length: number): Scale {
+  switch (axis.kind) {
+    case 'linear':
+      return linearScale(axis, extent, length);
+    case 'sqrt':
+      return sqrtScale(axis, extent, length);
+    case 'log':
+      return logScale(axis, extent, length);
+    case 'time':
+      return timeScale(axis, extent, length);
+  }
 }
 
 /** A scale with a place: `at` maps a value to a position. */
@@ -124,37 +140,177 @@ export function linearScale(axis: CheckedLinearAxis, [lo, hi]: [number, number],
   };
 }
 
-// An axis with listed ticks: its free ends reach the outermost tick or value, and each tick has its
-// own label or its value in the axis format.
-function listedTicks(axis: CheckedLinearAxis, listed: readonly CheckedTick[], [lo, hi]: [number, number]): Scale {
+/**
+ * An axis with listed ticks: its free ends reach the outermost tick or value, and each tick has its
+ * own label or its value in the axis format. `fraction` places values between the ends, linearly
+ * unless another is given.
+ */
+export function listedTicks(
+  axis: CheckedLinearAxis,
+  listed: readonly CheckedTick[],
+  [lo, hi]: [number, number],
+  spacing: (domain: [number, number]) => (value: number) => number = linearFraction,
+): Scale {
   const ticks = listed.map(({ value }) => value);
   const domain: [number, number] = [axis.min ?? Math.min(lo, ticks[0]!), axis.max ?? Math.max(hi, ticks.at(-1)!)];
   if (!(domain[1] > domain[0])) {
-    fail(`${axis.path}.ticks`, `and the data all equal ${domain[0]}: give a min, a max or another tick`);
+    fail(`${axis.path}.ticks`, `and the data all equal ${tickText(axis, domain[0])}: give a min, a max or another tick`);
   }
-  const span = domain[1] - domain[0];
   return {
     domain,
     ticks,
-    labels: listed.map(({ value, label }) => label ?? formatValue(value, axis.format)),
-    fraction: (value) => (value - domain[0]) / span,
-    labelled: (room, at) => {
-      // Unevenly spaced: each label at least `room` past the last one kept.
-      const shown = [0];
-      for (let i = 1; i < ticks.length; i++) {
-        if (Math.abs(at(ticks[i]!) - at(ticks[shown.at(-1)!]!)) >= room) {
-          shown.push(i);
-        }
-      }
-      return shown;
-    },
+    labels: listed.map(({ value, label }) => label ?? tickText(axis, value)),
+    fraction: spacing(domain),
+    labelled: (room, at) => keptApart(ticks, room, at),
   };
 }
 
-// How many tick spacings apart evenly spaced labels must be to keep their centres `room` apart.
+// A listed tick's value, written as the axis writes its ticks.
+function tickText(axis: CheckedLinearAxis, value: number): string {
+  return axis.kind === 'time' ? formatTick(value, axis.months) : formatValue(value, axis.format);
+}
+
+/** Unevenly spaced ticks to label: the first, then each at least `room` past the last one kept. */
+export function keptApart(ticks: readonly number[], room: number, at: (value: number) => number): number[] {
+  const shown = ticks.length > 0 ? [0] : [];
+  for (let i = 1; i < ticks.length; i++) {
+    if (Math.abs(at(ticks[i]!) - at(ticks[shown.at(-1)!]!)) >= room) {
+      shown.push(i);
+    }
+  }
+  return shown;
+}
+
+function linearFraction([from, to]: [number, number]): (value: number) => number {
+  const span = to - from;
+  return (value) => (value - from) / span;
+}
+
+/**
+ * A square-root scale: the ticks of a linear one, placed by the signed square root of each value, so
+ * a value's distance from zero grows with its square root and negative values mirror positive ones.
+ */
+function sqrtScale(axis: CheckedLinearAxis, extent: [number, number], length: number): Scale {
+  const spacing = ([from, to]: [number, number]) => {
+    const [start, end] = [signedRoot(from), signedRoot(to)];
+    return (value: number) => (signedRoot(value) - start) / (end - start);
+  };
+  if (axis.ticks) {
+    return listedTicks(axis, axis.ticks, extent, spacing);
+  }
+  const scale = linearScale(axis, extent, length);
+  return { ...scale, fraction: spacing(scale.domain) };
+}
+
+// Square roots are correctly rounded, so the same in every engine.
+function signedRoot(value: number): number {
+  return value < 0 ? -Math.sqrt(-value) : Math.sqrt(value);
+}
+
+// The mantissas of a log axis' ticks in each decade, densest first.
+const DECADE_TICKS = [[1, 2, 3, 4, 5, 6, 7, 8, 9], [1, 2, 5], [1]] as const;
+
+/**
+ * A base-10 log scale: free ends rounded out to powers of ten, and ticks at 1, 2 and 5 times a power
+ * of ten, or every one to nine times, or only the powers, whichever gives about one tick per 50 units
+ * without passing that; a range within one power of ten gets linear ticks. Values must be at least
+ * MIN_LOG. Positions come from the portable logarithm, so they are the same in every engine.
+ */
+function logScale(axis: CheckedLinearAxis, [lo, hi]: [number, number], length: number): Scale {
+  if (axis.min !== undefined && lo < axis.min) {
+    fail(`${axis.path}.min`, `is ${axis.min}, but the data reach ${lo}`);
+  }
+  if (axis.max !== undefined && hi > axis.max) {
+    fail(`${axis.path}.max`, `is ${axis.max}, but the data reach ${hi}`);
+  }
+  const spacing = ([from, to]: [number, number]) => {
+    const [start, end] = [log(from), log(to)];
+    return (value: number) => (log(value) - start) / (end - start);
+  };
+  if (axis.ticks) {
+    return listedTicks(axis, axis.ticks, [lo, hi], spacing);
+  }
+  // Free ends round out to powers of ten; one value alone shows the power of ten it lies in.
+  let domain: [number, number] = [axis.min ?? POWERS[decadeOf(lo) + EXPONENT_OFFSET]!, axis.max ?? powerAtOrAbove(hi)];
+  if (!(domain[1] > domain[0])) {
+    domain = axis.max === undefined ? [domain[0], POWERS[decadeOf(domain[0]) + EXPONENT_OFFSET + 1]!] : [POWERS[decadeOf(domain[1]) + EXPONENT_OFFSET - 1]!, domain[1]];
+  }
+  const count = Math.max(2, Math.floor(length / TICK_SPACING));
+  const exponents = integersBetween(decadeOf(domain[0]), decadeOf(domain[1]));
+  const candidates = DECADE_TICKS.map((mantissas) =>
+    exponents
+      .flatMap((exponent) => mantissas.map((mantissa): DecadeTick => ({ mantissa, exponent, value: decimal(mantissa, exponent) })))
+      .filter(({ value }) => value >= domain[0] && value <= domain[1]),
+  );
+  const fitting = candidates.find((ticks) => ticks.length >= 2 && ticks.length <= count + 1);
+  const fraction = spacing(domain);
+  if (!fitting && candidates[0]!.length < 2) {
+    // Within one power of ten: a linear axis' ticks, placed by their logarithms.
+    const linear = linearScale(axis, domain, length);
+    return { ...linear, fraction, labelled: (room, at) => keptApart(linear.ticks, room, at) };
+  }
+  const chosen = fitting ?? candidates[2]!;
+  const ticks = chosen.map(({ value }) => value);
+  return {
+    domain,
+    ticks,
+    labels: ticks.map((tick) => formatNumber(tick, axis.format.decimals ?? Math.min(MAX_DECIMALS, decimalsOf(tick)), axis.format)),
+    fraction,
+    labelled: (room, at) => labelledDecades(chosen, room, at),
+  };
+}
+
+interface DecadeTick {
+  mantissa: number;
+  exponent: number;
+  value: number;
+}
+
+// The power of ten at or below a value of a log axis, as an exponent; exact, by comparing with the
+// powers themselves.
+function decadeOf(value: number): number {
+  let exponent = -EXPONENT_OFFSET;
+  while (exponent + EXPONENT_OFFSET + 1 < POWERS.length && POWERS[exponent + EXPONENT_OFFSET + 1]! <= value) {
+    exponent++;
+  }
+  return exponent;
+}
+
+function powerAtOrAbove(value: number): number {
+  const exponent = decadeOf(value);
+  return POWERS[exponent + EXPONENT_OFFSET]! === value ? value : POWERS[exponent + EXPONENT_OFFSET + 1]!;
+}
+
+// m × 10^exponent as the nearest double to that decimal: an integer times a power, or over one.
+function decimal(mantissa: number, exponent: number): number {
+  return exponent < 0 ? mantissa / POWERS[EXPONENT_OFFSET - exponent]! : mantissa * POWERS[EXPONENT_OFFSET + exponent]!;
+}
+
+// The densest of: every tick, the 1, 2 and 5 multiples, the powers of ten, or every k-th power of
+// ten counted from 10^0 with k a nice number, whose labels are all `room` apart.
+function labelledDecades(ticks: readonly DecadeTick[], room: number, at: (value: number) => number): number[] {
+  const indices = ticks.map((_, i) => i);
+  const apart = (shown: readonly number[]): boolean =>
+    shown.every((index, i) => i === 0 || Math.abs(at(ticks[index]!.value) - at(ticks[shown[i - 1]!]!.value)) >= room);
+  const powers = indices.filter((i) => ticks[i]!.mantissa === 1);
+  const subsets = [
+    indices,
+    indices.filter((i) => [1, 2, 5].includes(ticks[i]!.mantissa)),
+    powers,
+    ...[2, 5, 10, 20].map((k) => powers.filter((i) => ticks[i]!.exponent % k === 0)),
+  ];
+  return subsets.find((shown) => shown.length > 0 && apart(shown)) ?? [0];
+}
+
+// How many tick spacings apart labels must be to keep their centres `room` apart, by the narrowest
+// spacing: the ticks of a linear axis are evenly spaced, and those of a square-root one closer the
+// further they are from zero.
 function everyFor(room: number, ticks: readonly number[], at: (value: number) => number): number {
-  const [first, second] = ticks;
-  return second === undefined ? 1 : Math.max(1, Math.ceil(room / Math.abs(at(second) - at(first!))));
+  let narrowest = Infinity;
+  for (let i = 1; i < ticks.length; i++) {
+    narrowest = Math.min(narrowest, Math.abs(at(ticks[i]!) - at(ticks[i - 1]!)));
+  }
+  return Math.max(1, Math.ceil(room / narrowest));
 }
 
 /** Gives a scale its place, from `from` at the start of the domain to `to` at its end. */
@@ -327,7 +483,7 @@ export function formatValue(value: number, format: CheckedFormat = PLAIN_FORMAT)
   return formatNumber(value, format.decimals ?? Math.min(MAX_DECIMALS, decimalsOf(value)), format);
 }
 
-/** Raw data values keep the value axis' format, without a percent-stack suffix. */
+/** Raw data values keep the value axis' format, without a percent-stack suffix; times are dates. */
 export function formatAxisValue(value: number, axis: CheckedLinearAxis): string {
-  return formatValue(value, { ...axis.format, suffix: axis.percent ? '' : axis.format.suffix });
+  return axis.kind === 'time' ? formatTime(value) : formatValue(value, { ...axis.format, suffix: axis.percent ? '' : axis.format.suffix });
 }
