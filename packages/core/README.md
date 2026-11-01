@@ -28,11 +28,9 @@ the shape itself.
 
 The engine never calls `Math.random`, and computes sine, cosine and arctangent with plain
 arithmetic instead of `Math.sin` and friends, whose last bit can differ between JavaScript engines.
-The test suite draws every reference drawing of this package in Node.js and in Chromium and
-requires identical output. Both run V8, so the test checks the build and the browser environment
-rather than a different JavaScript engine; for Firefox and Safari the guarantee rests on the engine
-using only exactly specified arithmetic. Coordinates are rounded to two decimals, which keeps the
-markup small.
+The test suite draws every reference drawing of this package in Node.js and in Chromium, Firefox
+and WebKit, so in the V8, SpiderMonkey and JavaScriptCore engines, and requires identical output.
+Coordinates are rounded to two decimals, which keeps the markup small.
 
 The drawing depends on the exact version of the stroke engine, which ships inside this package.
 Use the same `@borrowdale/core` version on the server and in the browser.

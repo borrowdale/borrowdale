@@ -25,7 +25,7 @@ or select Node 24 through your version manager, before installing dependencies.
 
 ```sh
 npm ci
-npx playwright-core install chromium-headless-shell   # once: the parity tests render in Chromium
+npx playwright-core install chromium-headless-shell firefox webkit   # once: the parity tests render in all three
 npm run build
 npm test
 npm run typecheck
@@ -37,10 +37,10 @@ npm run fonts     # regenerate the bundled font modules from the font files
 ```
 
 `npm test` includes parity tests that draw every `@borrowdale/core`, `@borrowdale/text` and
-`@borrowdale/charts` golden in headless Chromium and require the output to match Node's byte for
-byte. For text they also require the width Chromium draws to match the measured width. They fail,
-rather than skip, when Chromium is not installed. Node and Chromium both run V8, so this does not
-exercise another JavaScript engine.
+`@borrowdale/charts` golden in headless Chromium, Firefox and WebKit and require the output to match
+Node's byte for byte, so each golden is checked in V8, SpiderMonkey and JavaScriptCore. For text
+they also require the width each browser draws to match the measured width. They fail, rather than
+skip, when a browser is not installed.
 
 ## License
 
