@@ -128,6 +128,9 @@ const labelAngle = number(-MAX_LABEL_ANGLE, MAX_LABEL_ANGLE);
 /** Reads an axis' own keys beyond the common ones, from the same fields, once those are checked. */
 type Extra<X> = (r: Fields, path: string, type: 'band' | AxisKind) => X;
 
+// An extra may return no key that every axis has: spread in last, it would replace that key.
+type Beyond<X> = [Extract<keyof X, keyof CheckedBandAxis | keyof CheckedLinearAxis>] extends [never] ? unknown : never;
+
 const noExtra: Extra<object> = () => ({});
 
 /** The keys each axis type a context accepts allows, by type. */
@@ -140,7 +143,7 @@ type AxisKeys = { band: readonly string[] } & Partial<Record<AxisKind, readonly 
 export function checkAxis<X extends object = object>(
   keys: AxisKeys,
   grid: boolean,
-  extra: Extra<X> = noExtra as Extra<X>,
+  extra: Extra<X> & Beyond<X> = noExtra as Extra<X> & Beyond<X>,
 ): Check<(CheckedBandAxis | CheckedLinearAxis) & X> {
   return (path, raw) => {
     const type = readType(path, raw, Object.keys(keys));
@@ -154,7 +157,7 @@ export function checkAxis<X extends object = object>(
 export function checkContinuousAxis<X extends object = object>(
   keys: Partial<Record<AxisKind, readonly string[]>>,
   grid: boolean,
-  extra: Extra<X> = noExtra as Extra<X>,
+  extra: Extra<X> & Beyond<X> = noExtra as Extra<X> & Beyond<X>,
 ): Check<CheckedLinearAxis & X> {
   return (path, raw) => {
     const kind = readType(path, raw, Object.keys(keys)) as AxisKind;
@@ -183,7 +186,7 @@ export const checkY2Axis = checkContinuousAxis({ linear: LINEAR_KEYS, log: LOG_K
 
 function checkBandAxis<X extends object = object>(
   keys: readonly string[],
-  extra: Extra<X> = noExtra as Extra<X>,
+  extra: Extra<X> & Beyond<X> = noExtra as Extra<X> & Beyond<X>,
 ): Check<CheckedBandAxis & X> {
   return (path, raw) => {
     const r = fields(path, raw);
@@ -212,7 +215,7 @@ function checkBandAxis<X extends object = object>(
 export function checkLinearAxis<X extends object = object>(
   keys: readonly string[],
   grid: boolean,
-  extra: Extra<X> = noExtra as Extra<X>,
+  extra: Extra<X> & Beyond<X> = noExtra as Extra<X> & Beyond<X>,
   kind: AxisKind = 'linear',
 ): Check<CheckedLinearAxis & X> {
   const value = valueReader(kind);

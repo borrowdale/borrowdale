@@ -60,6 +60,8 @@ describe('a timeline', () => {
     ['a key of another track', timeline({ type: 'line', rows: 2 }), 'Invalid chart: axes.time.path has an unknown key, "rows"'],
     ['a period that ends before it starts', timeline(undefined, [460, 160], [{ at: '2000-01-01', to: '1999-01-01' }]), 'Invalid chart: series[0].data[0].to must be after at; leave it out for a moment'],
     ['an event without a time', timeline(undefined, [460, 160], [{ label: 'x' }]), 'Invalid chart: series[0].data[0].at is missing'],
+    ['a min after the earliest event', { ...timeline(undefined), axes: { time: { type: 'time', min: '2000-01-01' } } } as ChartSpec, 'Invalid chart: axes.time.min is 2000-01-01, but the data reach 1969-07-20'],
+    ['times on a linear axis', { ...timeline(undefined), axes: { time: { type: 'linear' } } } as ChartSpec, 'Invalid chart: series[0].data[0].at must be a number, since axes.time is not a time axis, got "1969-07-20"'],
     ['a band axis', { ...timeline(undefined), axes: { time: { type: 'band', categories: ['a'] } } } as unknown as ChartSpec, 'Invalid chart: axes.time.type must be "time" or "linear", got "band"'],
     ['a title on its axis', { ...timeline(undefined), axes: { time: { type: 'time', title: 'Year' } } } as ChartSpec, 'Invalid chart: axes.time has an unknown key, "title"'],
     ['a timeline beside a cartesian series', { ...timeline(undefined), series: [{ type: 'timeline', name: 'T', data: [] }, { type: 'scatter', name: 'S', data: [] }] } as ChartSpec, 'Invalid chart: series[1] is a scatter series, which cannot share a chart with series[0], a timeline series'],

@@ -10,7 +10,7 @@ import { INK, type Paint } from './palette.js';
 import { formatAxisValue, scaleOf } from './scale.js';
 import { markerNode } from './symbols.js';
 import type { ChartNode } from './types.js';
-import type { CheckedTimelineChart, CheckedTimelinePath } from './validate.js';
+import type { CheckedTimelineChart } from './validate.js';
 
 // Points per half turn of a serpentine, and per whole turn of a spiral.
 const HALF_TURN_POINTS = 16;
@@ -38,7 +38,7 @@ export function layoutTimeline(drawing: Drawing, chart: CheckedTimelineChart, re
   const margin = line + TICK + GAP;
   const area: Rect = { left: rect.left + margin, top: rect.top + margin, right: rect.right - margin, bottom: rect.bottom - margin };
   assertRoom(area, chart.width, chart.height);
-  const track = trackOf(axis.path, area, 2 * margin, chart);
+  const track = trackOf(axis, area, 2 * margin, chart);
   let [low, high] = [Infinity, -Infinity];
   for (const entry of series) {
     for (const event of entry.data) {
@@ -101,8 +101,9 @@ export function layoutTimeline(drawing: Drawing, chart: CheckedTimelineChart, re
   });
 }
 
-/** The points of the track in `area`, earliest first. A serpentine's rows must be `rowSpacing` apart. */
-function trackOf(path: CheckedTimelinePath, area: Rect, rowSpacing: number, chart: CheckedTimelineChart): Track {
+/** The points of the axis' track in `area`, earliest first. A serpentine's rows must be `rowSpacing` apart. */
+function trackOf(axis: CheckedTimelineChart['axis'], area: Rect, rowSpacing: number, chart: CheckedTimelineChart): Track {
+  const path = axis.track;
   const [width, height] = [area.right - area.left, area.bottom - area.top];
   switch (path.type) {
     case 'line': {
@@ -119,7 +120,7 @@ function trackOf(path: CheckedTimelinePath, area: Rect, rowSpacing: number, char
       const spacing = height / (path.rows - 1);
       if (spacing < rowSpacing) {
         const room = Math.max(1, Math.floor(height / rowSpacing) + 1);
-        return fail('axes.time.path.rows', `is ${path.rows}, but a ${chart.width} × ${chart.height} chart has room for ${room}`);
+        return fail(`${axis.path}.path.rows`, `is ${path.rows}, but a ${chart.width} × ${chart.height} chart has room for ${room}`);
       }
       const radius = spacing / 2;
       const points: Point[] = [];
@@ -155,7 +156,7 @@ function trackOf(path: CheckedTimelinePath, area: Rect, rowSpacing: number, char
     case 'curve': {
       const track = measured(path.points.map(([x, y]): Point => [area.left + x * width, area.top + y * height]));
       if (track.length < 1) {
-        fail('axes.time.path.points', `must be spread out: on a ${chart.width} × ${chart.height} chart they make a track shorter than 1`);
+        fail(`${axis.path}.path.points`, `must be spread out: on a ${chart.width} × ${chart.height} chart they make a track shorter than 1`);
       }
       return track;
     }

@@ -410,7 +410,7 @@ export type CheckedTimelinePath =
 
 export interface CheckedTimelineChart extends CheckedChartBase {
   system: 'timeline';
-  axis: CheckedLinearAxis & { path: CheckedTimelinePath };
+  axis: CheckedLinearAxis & { track: CheckedTimelinePath };
   series: SeriesOf<'timeline'>[];
 }
 
@@ -470,7 +470,7 @@ const MAX_ROWS = 20;
 const MAX_TURNS = 20;
 const MAX_TRACK_POINTS = 100;
 
-const checkTimelineAxis = checkContinuousAxis(TIMELINE_KEYS, false, (r) => ({ path: r.optional('path', checkTrack) ?? { type: 'line' as const } }));
+const checkTimelineAxis = checkContinuousAxis(TIMELINE_KEYS, false, (r) => ({ track: r.optional('path', checkTrack) ?? { type: 'line' as const } }));
 
 function checkTimelineChart(r: Fields, base: CheckedChartBase, series: SeriesOf<'timeline'>[]): CheckedTimelineChart {
   const axes = r.optional('axes', fields);
