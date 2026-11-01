@@ -11,6 +11,8 @@ const axis: CheckedLinearAxis = {
   title: undefined,
   min: undefined,
   max: undefined,
+  step: undefined,
+  ticks: undefined,
   percent: false,
   grid: true,
   hidden: false,
@@ -18,8 +20,10 @@ const axis: CheckedLinearAxis = {
   format: plain,
 };
 
-// The ticks a scale labels when its labels must be `every` tick spacings apart.
-const labelledTicks = (scale: Scale, every: number): number[] => scale.labelled(every).map((i) => scale.ticks[i]!);
+// The ticks a scale labels when its labels must be `every` tick spacings apart: placed one unit
+// apart, so the room is that many units.
+const labelledTicks = (scale: Scale, every: number): number[] =>
+  scale.labelled(every, (value) => scale.ticks.indexOf(value)).map((i) => scale.ticks[i]!);
 
 describe('linearScale', () => {
   it.each<[string, [number, number], number, [number, number], string[]]>([

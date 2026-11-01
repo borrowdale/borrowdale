@@ -166,6 +166,18 @@ export interface LinearAxis {
   min?: number | undefined;
   max?: number | undefined;
   /**
+   * Puts a tick at every multiple of this, counted from zero, and rounds free ends out to one, in
+   * place of the automatic nice step. A number above 0 with at most 20 decimals that gives at most
+   * 1,000 ticks. Not with `ticks`.
+   */
+  step?: number | undefined;
+  /**
+   * Puts ticks exactly at these values, increasing and within any fixed end: a number is labelled in
+   * the axis format, `{ value, label }` with its own label of at most 100 characters. Free ends reach
+   * the outermost tick or value. 1 to 1,000 ticks. Not with `step`.
+   */
+  ticks?: readonly (number | AxisTick)[] | undefined;
+  /**
    * Stacks on this axis show each value as its share of the stack's total. Only bar and area series
    * may use it, on a chart with a band axis.
    */
@@ -179,6 +191,12 @@ export interface LinearAxis {
    */
   labelAngle?: number | undefined;
   format?: NumberFormat | undefined;
+}
+
+/** A tick at `value` labelled `label` rather than its value. */
+export interface AxisTick {
+  value: number;
+  label?: string | undefined;
 }
 
 /** How tick labels and tooltips write numbers. Never locale-dependent, so every engine agrees. */

@@ -5658,5 +5658,136 @@
     }
    ]
   }
+ },
+ {
+  "name": "gauge-clock-hours",
+  "spec": {
+   "width": 260,
+   "height": 260,
+   "legend": "none",
+   "axes": {
+    "angle": {
+     "type": "linear",
+     "min": 0,
+     "max": 12,
+     "startAngle": 0,
+     "endAngle": 360,
+     "step": 1
+    }
+   },
+   "series": [
+    {
+     "type": "gauge",
+     "name": "Hour",
+     "value": 10.2,
+     "length": 0.5
+    },
+    {
+     "type": "gauge",
+     "name": "Minute",
+     "value": 2,
+     "length": 0.85
+    }
+   ]
+  }
+ },
+ {
+  "name": "gauge-compass",
+  "spec": {
+   "width": 260,
+   "height": 260,
+   "legend": "none",
+   "axes": {
+    "angle": {
+     "type": "linear",
+     "min": 0,
+     "max": 360,
+     "startAngle": 0,
+     "endAngle": 360,
+     "ticks": [
+      {
+       "value": 0,
+       "label": "N"
+      },
+      {
+       "value": 90,
+       "label": "E"
+      },
+      {
+       "value": 180,
+       "label": "S"
+      },
+      {
+       "value": 270,
+       "label": "W"
+      }
+     ]
+    }
+   },
+   "series": [
+    {
+     "type": "gauge",
+     "name": "Heading",
+     "value": 225
+    }
+   ]
+  }
+ },
+ {
+  "name": "line-listed-ticks",
+  "spec": {
+   "width": 400,
+   "height": 260,
+   "title": "Stations",
+   "axes": {
+    "x": {
+     "type": "linear",
+     "title": "km",
+     "ticks": [
+      0,
+      {
+       "value": 42,
+       "label": "Ely"
+      },
+      {
+       "value": 96,
+       "label": "York"
+      },
+      {
+       "value": 150,
+       "label": "Leeds"
+      }
+     ]
+    },
+    "y": {
+     "type": "linear",
+     "step": 25
+    }
+   },
+   "series": [
+    {
+     "type": "xyLine",
+     "name": "Climb",
+     "data": [
+      [
+       0,
+       10
+      ],
+      [
+       42,
+       60
+      ],
+      [
+       96,
+       35
+      ],
+      [
+       150,
+       90
+      ]
+     ]
+    }
+   ]
+  }
  }
 ]

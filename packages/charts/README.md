@@ -112,10 +112,17 @@ With `y` as the band axis, bars and lines run horizontally. A sparkline is a sma
 | `type: 'linear'` | rounded out from the data to ticks of 1, 2 or 5 × 10ⁿ, about one per 50 units |
 | `y2` | a second linear axis on the right, for series with `axis: 'y2'`. Only when `x` is the band axis |
 | `min`, `max` | fix an end of a linear axis; `max` must be above `min`, and data outside them is an error |
+| `step` | a tick at every multiple of it, counted from zero, with free ends rounded out to one: a number above 0 with at most 20 decimals, giving at most 1,000 ticks |
+| `ticks` | ticks exactly at these values, increasing and within any fixed end: a number, written in the axis format, or `{ value, label }`. Free ends reach the outermost tick or value. 1 to 1,000; not with `step` |
 | `percent` | stacks on the axis show each value as its share of the stack's total. Only bar and area series may use it, on a chart with a band axis |
 | `grid` | gridlines at the ticks; on by default, except on `y2` |
 | `title`, `hidden` | |
 | `format` | `decimals` (0 to 20; by default tick labels get the fewest that tell the ticks apart, and tooltips every decimal a value has), `thousands` (default `,`), `decimal` (default `.`), `prefix`, `suffix` (default `%` on a percent axis), each text at most 10 characters |
+
+Where tick labels would overlap, an axis labels fewer of its ticks and keeps every tick and
+gridline. Evenly spaced ticks are labelled on multiples of a nice number of steps counted from zero,
+so a crowded axis with a step of 2 shows 0, 10, 20; listed ticks keep each label that clears the one
+before it.
 
 Numbers are never formatted with the locale data of the JavaScript engine, which differs between
 engines; set `thousands` and `decimal` to write them for another language. Bars and areas always
@@ -148,18 +155,20 @@ default:
 | `radius`: `type: 'band'`, `categories` | rings, the first outermost, labelled beside the start of the angle axis |
 | `radius`: `innerRadius` | a hole in the middle, 0 to 0.95 of the radius |
 | `radius`: `shape` | `polygon` gridlines through the spokes (the default when every series is a radar; needs a band angle axis of at least 3 categories), or `circle` |
-| `min`, `max`, `grid`, `hidden`, `format` | as on a cartesian axis |
+| `min`, `max`, `step`, `ticks`, `grid`, `hidden`, `format` | as on a cartesian axis |
 
 Polar axes take no `title`, `percent` or `labelAngle`. The radius axis' labels run along the start of
 the sweep, wherever it points, and the circle shrinks to keep them on the chart; a chart too small for
 them throws an error naming `axes.radius`.
 
 A gauge's dial is its `angle` axis: by default 0 to 100 over −120 to 120 degrees. It takes `min`,
-`max`, `hidden`, `format`, `startAngle`, `endAngle`, and `bands`: up to 100 `{ from, to, color }`
+`max`, `step`, `ticks`, `hidden`, `format`, `startAngle`, `endAngle`, and `bands`: up to 100 `{ from, to, color }`
 stretches, in order and not overlapping. Without `min` and `max` it reaches from 0 to the values
 and bands; it shows 0 unless `min` or `max` leaves it out. Ticks and labels are inside the rim; bars
 take rings inside the track, or the track itself when there are no bands, and a dial holds as many
-rings as fit outside its hub; a lone gauge writes its value under the centre.
+rings as fit outside its hub; a lone gauge writes its value under the centre. A clock dial labelled
+every hour is `min: 0, max: 12, step: 1` over a whole turn; a compass is `min: 0, max: 360` with
+`ticks` labelled N, E, S and W.
 
 ## Chart options
 

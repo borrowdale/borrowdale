@@ -601,7 +601,7 @@ function checkPolarChart(r: Fields, base: CheckedChartBase, series: SeriesOf<'po
 
 const GAUGE_SWEEP: [number, number] = [-120, 120];
 const DEFAULT_DIAL: [number, number] = [0, 100];
-const GAUGE_KEYS = ['type', 'min', 'max', 'hidden', 'format', 'startAngle', 'endAngle', 'bands'];
+const GAUGE_KEYS = ['type', 'min', 'max', 'step', 'ticks', 'hidden', 'format', 'startAngle', 'endAngle', 'bands'];
 
 function checkGaugeChart(r: Fields, base: CheckedChartBase, series: SeriesOf<'gauge'>[]): CheckedGaugeChart {
   const axes = r.optional('axes', fields);

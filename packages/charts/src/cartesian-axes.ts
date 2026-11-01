@@ -222,15 +222,10 @@ export function drawGuide(
   }
   const rules = SIDES[side];
   const ink = { stroke: INK, strokeWidth: 1 };
-  const every = (spacing: number): number => labelEvery(room, spacing);
   const label = (at: number) => ({ ...rules.label(plot, at), ...guide.style });
   drawing.push(drawing.outline(lineShape(rules.edge(plot)), ink, ['axis', key]));
   if (axis.type === 'linear') {
-    // Ticks are evenly spaced, and a lone tick has nothing to overlap.
-    const [first, second] = scale!.ticks;
-    const shown = new Set(
-      scale!.labelled(every(second === undefined ? Infinity : Math.abs(scale!.at(second) - scale!.at(first!)))),
-    );
+    const shown = new Set(scale!.labelled(room, scale!.at));
     scale!.ticks.forEach((tick, i) => {
       const at = scale!.at(tick);
       drawing.push(drawing.outline(lineShape(rules.tick(plot, at)), ink, ['tick', key, tick]));

@@ -9,6 +9,7 @@ export type {
   AngleLinearAxis,
   AreaSeries,
   Axis,
+  AxisTick,
   BandAxis,
   BarSeries,
   BubbleSeries,

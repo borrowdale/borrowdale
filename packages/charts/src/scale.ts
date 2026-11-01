@@ -1,4 +1,5 @@
-import type { CheckedFormat, CheckedLinearAxis } from './check-axis.js';
+import { MAX_TICKS, type CheckedFormat, type CheckedLinearAxis, type CheckedTick } from './check-axis.js';
+import { decimalsOf } from './decimals.js';
 import { fail, MAX_DECIMALS } from './read.js';
 
 // Powers of ten as literals, which are correctly rounded, rather than `10 ** n` or `Math.pow`, which
@@ -38,8 +39,8 @@ export interface Scale {
   labels: string[];
   /** Where a value lies along the domain: 0 at its start, 1 at its end. */
   fraction: (value: number) => number;
-  /** The indices of the ticks to label when labels must be at least `every` tick spacings apart. */
-  labelled: (every: number) => number[];
+  /** The indices of the ticks to label when their centres must be `room` apart where `at` puts them. */
+  labelled: (room: number, at: (value: number) => number) => number[];
 }
 
 /** A scale with a place: `at` maps a value to a position. */
@@ -49,8 +50,9 @@ export interface PlacedScale extends Scale {
 
 /**
  * A scale for the axis over the data's extent, rounded out to "nice" ticks (1, 2 or 5 times a power
- * of ten) about one per 50 units of its `length`. A fixed `min` or `max` is an end instead, and data
- * beyond it is an error. Only + − × ÷ and exact rounding.
+ * of ten) about one per 50 units of its `length`, or to multiples of the axis' `step`, or reaching
+ * its listed `ticks`. A fixed `min` or `max` is an end instead, and data beyond it is an error. Only
+ * + − × ÷ and exact rounding.
  */
 export function linearScale(axis: CheckedLinearAxis, [lo, hi]: [number, number], length: number): Scale {
   if (axis.min !== undefined && lo < axis.min) {
@@ -58,6 +60,9 @@ export function linearScale(axis: CheckedLinearAxis, [lo, hi]: [number, number],
   }
   if (axis.max !== undefined && hi > axis.max) {
     fail(`${axis.path}.max`, `is ${axis.max}, but the data reach ${hi}`);
+  }
+  if (axis.ticks) {
+    return listedTicks(axis, axis.ticks, [lo, hi]);
   }
   let [low, high] = [axis.min ?? lo, axis.max ?? hi];
   // An axis fixed at both ends shows exactly them, however close together; validation has made sure
@@ -72,7 +77,7 @@ export function linearScale(axis: CheckedLinearAxis, [lo, hi]: [number, number],
     fail(axis.path, `has values that differ by ${high - low}, less than the smallest tick step, ${POWERS[0]}`);
   }
   const count = Math.max(2, Math.floor(length / TICK_SPACING));
-  let step = tickStep(low, high, count);
+  let step = axis.step === undefined ? tickStep(low, high, count) : givenStep(axis.step);
   let domain: [number, number] = [axis.min ?? step.tick(step.floor(low)), axis.max ?? step.tick(step.ceil(high))];
   if (!(domain[1] > domain[0])) {
     // A fixed end met data that all equal it: the free end moves one tick outward.
@@ -81,12 +86,16 @@ export function linearScale(axis: CheckedLinearAxis, [lo, hi]: [number, number],
         ? [domain[0], step.tick(step.ceil(domain[0]) + 1)]
         : [step.tick(step.floor(domain[1]) - 1), domain[1]];
   }
-  if (flat && (axis.min !== undefined || axis.max !== undefined)) {
+  if (flat && (axis.min !== undefined || axis.max !== undefined) && axis.step === undefined) {
     // Against a fixed end, the step of flat data came from the range widened against zero, not the
     // range shown: it is chosen again for that range, which then gets as many ticks as any axis of
     // its length, and the free end is rounded out to it.
     step = tickStep(domain[0], domain[1], count);
     domain = axis.max === undefined ? [domain[0], step.tick(step.ceil(domain[1]))] : [step.tick(step.floor(domain[0])), domain[1]];
+  }
+  const tickCount = step.floor(domain[1]) - step.ceil(domain[0]) + 1;
+  if (tickCount > MAX_TICKS) {
+    fail(`${axis.path}.step`, `gives ${tickCount} ticks from ${domain[0]} to ${domain[1]}, more than ${MAX_TICKS}`);
   }
   const numbers = integersBetween(step.ceil(domain[0]), step.floor(domain[1]));
   const ticks = numbers.map(step.tick);
@@ -102,7 +111,7 @@ export function linearScale(axis: CheckedLinearAxis, [lo, hi]: [number, number],
       ticks: [...domain],
       labels: domain.map((end) => formatNumber(end, decimals, axis.format)),
       fraction,
-      labelled: (every) => (every <= 1 ? [0, 1] : [0]),
+      labelled: (room, at) => (Math.abs(at(domain[1]) - at(domain[0])) >= room ? [0, 1] : [0]),
     };
   }
   const decimals = axis.format.decimals ?? step.decimals;
@@ -111,8 +120,41 @@ export function linearScale(axis: CheckedLinearAxis, [lo, hi]: [number, number],
     ticks,
     labels: ticks.map((tick) => formatNumber(tick, decimals, axis.format)),
     fraction,
-    labelled: (every) => labelledEvery(numbers, step.factor, every),
+    labelled: (room, at) => labelledEvery(numbers, step.factor, everyFor(room, ticks, at)),
   };
+}
+
+// An axis with listed ticks: its free ends reach the outermost tick or value, and each tick has its
+// own label or its value in the axis format.
+function listedTicks(axis: CheckedLinearAxis, listed: readonly CheckedTick[], [lo, hi]: [number, number]): Scale {
+  const ticks = listed.map(({ value }) => value);
+  const domain: [number, number] = [axis.min ?? Math.min(lo, ticks[0]!), axis.max ?? Math.max(hi, ticks.at(-1)!)];
+  if (!(domain[1] > domain[0])) {
+    fail(`${axis.path}.ticks`, `and the data all equal ${domain[0]}: give a min, a max or another tick`);
+  }
+  const span = domain[1] - domain[0];
+  return {
+    domain,
+    ticks,
+    labels: listed.map(({ value, label }) => label ?? formatValue(value, axis.format)),
+    fraction: (value) => (value - domain[0]) / span,
+    labelled: (room, at) => {
+      // Unevenly spaced: each label at least `room` past the last one kept.
+      const shown = [0];
+      for (let i = 1; i < ticks.length; i++) {
+        if (Math.abs(at(ticks[i]!) - at(ticks[shown.at(-1)!]!)) >= room) {
+          shown.push(i);
+        }
+      }
+      return shown;
+    },
+  };
+}
+
+// How many tick spacings apart evenly spaced labels must be to keep their centres `room` apart.
+function everyFor(room: number, ticks: readonly number[], at: (value: number) => number): number {
+  const [first, second] = ticks;
+  return second === undefined ? 1 : Math.max(1, Math.ceil(room / Math.abs(at(second) - at(first!))));
 }
 
 /** Gives a scale its place, from `from` at the start of the domain to `to` at its end. */
@@ -162,6 +204,28 @@ function tickStep(lo: number, hi: number, count: number): TickStep {
     },
     decimals: exponent < 0 ? Math.max(0, -exponent - (factor === 10 ? 1 : 0)) : 0,
     factor,
+  };
+}
+
+/** Multiples of a step a caller gave, as exact decimals: the multiples of its digits over a power of ten. */
+function givenStep(step: number): TickStep {
+  const decimals = decimalsOf(step);
+  const power = POWERS[EXPONENT_OFFSET + decimals]!;
+  const units = Math.round(step * power);
+  const tick = (i: number): number => (i * units) / power;
+  const nearest = (value: number): number => Math.round((value * power) / units);
+  return {
+    tick,
+    floor: (value) => {
+      const i = nearest(value);
+      return tick(i) > value ? i - 1 : i;
+    },
+    ceil: (value) => {
+      const i = nearest(value);
+      return tick(i) < value ? i + 1 : i;
+    },
+    decimals,
+    factor: 1,
   };
 }
 
@@ -260,9 +324,7 @@ export function formatNumber(value: number, decimals: number, format: CheckedFor
 
 /** A value in a tooltip: all the decimals it has (at most MAX_DECIMALS), unless the format fixes them. */
 export function formatValue(value: number, format: CheckedFormat = PLAIN_FORMAT): string {
-  const [mantissa = '', exponent] = String(Math.abs(value)).split('e');
-  const decimals = Math.min(MAX_DECIMALS, Math.max(0, (mantissa.split('.')[1]?.length ?? 0) - Number(exponent ?? 0)));
-  return formatNumber(value, format.decimals ?? decimals, format);
+  return formatNumber(value, format.decimals ?? Math.min(MAX_DECIMALS, decimalsOf(value)), format);
 }
 
 /** Raw data values keep the value axis' format, without a percent-stack suffix. */

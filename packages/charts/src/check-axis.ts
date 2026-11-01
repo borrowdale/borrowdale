@@ -1,5 +1,6 @@
 // Reading the axes of a chart spec: band and linear axes, their number formats and sweeps, and the
 // keys each coordinate system allows on them. Independent of series, which validate.ts reads.
+import { decimalsOf } from './decimals.js';
 import {
   boolean,
   fail,
@@ -24,8 +25,10 @@ export const MAX_NAME = 100;
 // For a number format's separators, prefix and suffix.
 const MAX_FORMAT_TEXT = 10;
 
-export const LINEAR_KEYS = ['type', 'title', 'min', 'max', 'percent', 'grid', 'hidden', 'format', 'labelAngle'];
+export const LINEAR_KEYS = ['type', 'title', 'min', 'max', 'step', 'ticks', 'percent', 'grid', 'hidden', 'format', 'labelAngle'];
 const MAX_LABEL_ANGLE = 90;
+/** The most ticks an axis may have, whether listed in `ticks` or made by its `step`. */
+export const MAX_TICKS = 1_000;
 // The largest hole in a radius axis or a pie, as a share of the radius.
 export const MAX_HOLE = 0.95;
 
@@ -55,12 +58,22 @@ export interface CheckedBandAxis {
   labelAngle: number;
 }
 
+/** A tick given in an axis' `ticks`, with the label it has instead of its formatted value. */
+export interface CheckedTick {
+  value: number;
+  label: string | undefined;
+}
+
 export interface CheckedLinearAxis {
   type: 'linear';
   path: string;
   title: string | undefined;
   min: number | undefined;
   max: number | undefined;
+  /** A tick at every multiple of this, counted from zero. */
+  step: number | undefined;
+  /** Exactly these ticks, increasing. */
+  ticks: CheckedTick[] | undefined;
   percent: boolean;
   grid: boolean;
   hidden: boolean;
@@ -157,6 +170,20 @@ export function checkLinearAxis<X extends object = object>(
     if (min !== undefined && max !== undefined && !(max > min)) {
       fail(`${path}.max`, `must be greater than min (${min}), got ${max}`);
     }
+    const step = r.optional('step', checkStep);
+    const ticks = r.optional('ticks', list(1, MAX_TICKS, checkTick));
+    if (step !== undefined && ticks !== undefined) {
+      fail(`${path}.ticks`, 'cannot be given with step');
+    }
+    ticks?.forEach(({ value }, i) => {
+      const at = `${path}.ticks[${i}]`;
+      if (i > 0 && !(value > ticks[i - 1]!.value)) {
+        fail(at, `must be greater than the tick before it (${ticks[i - 1]!.value}), got ${value}`);
+      }
+      if ((min !== undefined && value < min) || (max !== undefined && value > max)) {
+        fail(at, `must be within the axis' fixed ends, got ${value}`);
+      }
+    });
     const percent = r.optional('percent', boolean) ?? false;
     const format = r.optional('format', fields);
     format?.allow(['decimals', 'thousands', 'decimal', 'prefix', 'suffix']);
@@ -168,6 +195,8 @@ export function checkLinearAxis<X extends object = object>(
       title: r.optional('title', text()),
       min,
       max,
+      step,
+      ticks,
       percent,
       grid: r.optional('grid', boolean) ?? grid,
       hidden: r.optional('hidden', boolean) ?? false,
@@ -184,7 +213,7 @@ export function checkLinearAxis<X extends object = object>(
   };
 }
 
-const POLAR_LINEAR_KEYS = ['type', 'min', 'max', 'grid', 'hidden', 'format'];
+const POLAR_LINEAR_KEYS = ['type', 'min', 'max', 'step', 'ticks', 'grid', 'hidden', 'format'];
 const POLAR_BAND_KEYS = ['type', 'categories', 'hidden'];
 const SWEEP_KEYS = ['startAngle', 'endAngle'];
 const HOLE_KEYS = ['innerRadius'];
@@ -218,3 +247,24 @@ export function checkSweep(r: Fields, path: string, [start, end]: [number, numbe
   }
   return { startAngle, endAngle };
 }
+
+// A positive step whose decimals a format can write, so its ticks are exact decimals.
+const checkStep: Check<number> = (path, value) => {
+  if (typeof value !== 'number' || !(value > 0 && value <= MAX_VALUE)) {
+    fail(path, `must be a number above 0 and at most 1e15, got ${show(value)}`);
+  }
+  if (decimalsOf(value) > MAX_DECIMALS) {
+    fail(path, `must have at most ${MAX_DECIMALS} decimals, got ${value}`);
+  }
+  return value;
+};
+
+// A value, or a value with its own label.
+const checkTick: Check<CheckedTick> = (path, value) => {
+  if (typeof value === 'number') {
+    return { value: anyValue(path, value), label: undefined };
+  }
+  const r = fields(path, value);
+  r.allow(['value', 'label']);
+  return { value: r.required('value', anyValue), label: r.optional('label', text(MAX_NAME)) };
+};
