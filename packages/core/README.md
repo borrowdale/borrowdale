@@ -153,7 +153,9 @@ exported as `MAX_ANGLE`; not far past that range the result would be wrong witho
 
 `@borrowdale/core/show` exports `show(value)`, which every `@borrowdale` package uses to write a
 rejected value into an error message: strings quoted and escaped, a short array in brackets, and
-anything that could throw or run code when converted named by its kind.
+anything that could throw or run code when converted named by its kind. It also exports
+`escaped(message)`, which writes every character of a message that could break or disguise a line of
+a log, such as a line break or a bidirectional override, as its `\u` escape.
 
 ## Rendering
 

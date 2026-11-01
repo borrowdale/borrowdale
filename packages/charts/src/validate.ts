@@ -401,7 +401,6 @@ export interface CheckedGaugeChart extends CheckedChartBase {
   series: SeriesOf<'gauge'>[];
 }
 
-/** A chart, checked: one shape per coordinate system, each with only its own axes and series. */
 /** The track of a timeline, with its defaults filled in. */
 export type CheckedTimelinePath =
   | { type: 'line' }
@@ -415,6 +414,7 @@ export interface CheckedTimelineChart extends CheckedChartBase {
   series: SeriesOf<'timeline'>[];
 }
 
+/** A chart, checked: one shape per coordinate system, each with only its own axes and series. */
 export type CheckedChart = CheckedCartesianChart | CheckedPolarChart | CheckedPieChart | CheckedGaugeChart | CheckedTimelineChart;
 
 /**

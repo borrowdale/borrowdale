@@ -5,7 +5,8 @@ import type { Font, TextLayout } from '@borrowdale/text';
  * A chart, as plain data that can come from JSON. Its series' type picks its coordinate system, and
  * every series must draw in the same one, with that system's axes: `x` and `y` for cartesian
  * series, `angle` (and optionally `radius`) for polar series (radar, rose, radial bar, polar line,
- * area and scatter), optionally `angle` for a gauge, none for a pie.
+ * area and scatter), optionally `angle` for a gauge, optionally `time` for a timeline, none for a
+ * pie.
  */
 export interface ChartSpec {
   width: number;
