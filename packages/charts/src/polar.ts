@@ -354,7 +354,7 @@ function startLabels(
     // The start is not labelled, so when it is all thinning leaves, the outermost tick is instead.
     const past = scale.labelled(room, scale.at).filter((i) => scale.ticks[i]! > scale.domain[0]);
     const last = scale.ticks.length - 1;
-    const shown = past.length > 0 || !(scale.ticks[last]! > scale.domain[0]) ? past : [last];
+    const shown = past.length > 0 || last < 0 || !(scale.ticks[last]! > scale.domain[0]) ? past : [last];
     return shown.map((i) => {
       const [px, py] = frame.point(startAngle, scale.at(scale.ticks[i]!));
       return { text: scale.labels[i]!, x: px + GAP / 2, y: py, anchor: 'start', baseline: 'middle' };

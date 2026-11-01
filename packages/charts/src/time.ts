@@ -231,7 +231,14 @@ export function timeScale(axis: CheckedLinearAxis, [lo, hi]: [number, number], l
   const step = axis.interval ?? INTERVALS.find((candidate) => candidate.length * count >= span) ?? INTERVALS.at(-1)!;
   let domain: [number, number] = [axis.min ?? step.floor(low), axis.max ?? ceiling(step, high)];
   if (!(domain[1] > domain[0])) {
-    domain = axis.max === undefined ? [domain[0], step.next(step.floor(domain[0]))] : [step.floor(domain[1] - 1), domain[1]];
+    // A fixed end the data all equal: the free end moves one step out from it, if there is room.
+    if (axis.max === undefined) {
+      domain = [domain[0], step.next(step.floor(domain[0]))];
+    } else if (domain[1] > MIN_TIME) {
+      domain = [Math.max(MIN_TIME, step.floor(domain[1] - 1)), domain[1]];
+    } else {
+      fail(`${axis.path}.max`, `is ${formatTime(domain[1])}, the earliest a time axis shows, which leaves no room before it`);
+    }
   }
   const ticks: number[] = [];
   for (let at = ceiling(step, domain[0]); at <= domain[1]; at = step.next(at)) {
@@ -239,6 +246,9 @@ export function timeScale(axis: CheckedLinearAxis, [lo, hi]: [number, number], l
       fail(axis.interval === undefined ? axis.path : `${axis.path}.step`, `gives more than ${MAX_TICKS} ticks from ${formatTime(domain[0])} to ${formatTime(domain[1])}`);
     }
     ticks.push(at);
+  }
+  if (ticks.length === 0 && axis.interval !== undefined) {
+    fail(`${axis.path}.step`, `puts no tick between ${formatTime(domain[0])} and ${formatTime(domain[1])}`);
   }
   const spanShown = domain[1] - domain[0];
   // The step itself, then the longer intervals, to label only the ticks on their boundaries.

@@ -20,6 +20,7 @@ const timeline = (path: object | undefined, size: [number, number] = [460, 260],
   }) as ChartSpec;
 const labels = (spec: ChartSpec): string[] => layoutChart(spec).labels;
 const names = events.map(({ label }) => label);
+const svg = (spec: ChartSpec): string => toSvgChart(layoutChart(spec));
 
 describe('a timeline', () => {
   it.each<[string, object | undefined, [number, number], string[]]>([
@@ -41,6 +42,10 @@ describe('a timeline', () => {
   it('lays a long spiral out without asking for more ticks than an axis may have', () => {
     const long = { ...timeline(undefined, [1000, 1000], [{ at: 0 }, { at: 2100 }]), axes: { time: { type: 'linear', path: { type: 'spiral', turns: 20 } } } } as ChartSpec;
     expect(laying(long)).not.toThrow();
+  });
+
+  it('draws a curve with a repeated point as the curve without it', () => {
+    expect(svg(timeline({ type: 'curve', points: [[0, 1], [0.5, 0.2], [1, 0], [1, 0]] }))).toBe(svg(timeline({ type: 'curve', points: [[0, 1], [0.5, 0.2], [1, 0]] })));
   });
 
   it('writes moments and periods in tooltips', () => {

@@ -117,6 +117,9 @@ function linearScale(axis: CheckedLinearAxis, [lo, hi]: [number, number], length
   if (tickCount > MAX_TICKS) {
     fail(axis.step === undefined ? axis.path : `${axis.path}.step`, `gives ${tickCount} ticks from ${domain[0]} to ${domain[1]}, more than ${MAX_TICKS}`);
   }
+  if (tickCount < 1) {
+    fail(`${axis.path}.step`, `puts no tick between ${domain[0]} and ${domain[1]}`);
+  }
   const numbers = integersBetween(step.ceil(domain[0]), step.floor(domain[1]));
   const ticks = numbers.map(step.tick);
   const span = domain[1] - domain[0];

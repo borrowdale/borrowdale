@@ -92,6 +92,7 @@ describe('step and ticks', () => {
     ['a step given as a string', bars({ step: '1' }), 'Invalid chart: axes.y.step must be a number above 0 and at most 1e15, got "1"'],
     ['a step with more decimals than a format writes', bars({ step: 1e-21 }), 'Invalid chart: axes.y.step must have at most 20 decimals, got 1e-21'],
     ['a step that gives too many ticks', bars({ step: 0.001 }), 'Invalid chart: axes.y.step gives 2001 ticks from 0 to 2, more than 1000'],
+    ['a step with no multiple between fixed ends', points({ min: 4.5, max: 5.5, step: 2 }), 'Invalid chart: axes.x.step puts no tick between 4.5 and 5.5'],
     ['both step and ticks', bars({ step: 1, ticks: [0, 1] }), 'Invalid chart: axes.y cannot combine step and ticks'],
     ['ticks out of order', bars({ ticks: [0, 2, 1] }), 'Invalid chart: axes.y.ticks[2] must be greater than the tick before it (2), got 1'],
     ['a repeated tick', bars({ ticks: [1, 1] }), 'Invalid chart: axes.y.ticks[1] must be greater than the tick before it (1), got 1'],

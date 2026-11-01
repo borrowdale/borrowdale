@@ -83,6 +83,8 @@ describe('a time axis', () => {
     ['eleven month names', onTime({ format: { months: Array.from({ length: 11 }, () => 'm') } }, [['2026-01-01', 1]]), 'Invalid chart: axes.x.format.months must have 12 entries, got 11'],
     ['a number format on a time axis', onTime({ format: { decimals: 2 } }, [['2026-01-01', 1]]), 'Invalid chart: axes.x.format has an unknown key, "decimals"'],
     ['a max before the min', onTime({ min: '2026-02-01', max: '2026-01-01' }, [['2026-01-01', 1]]), 'Invalid chart: axes.x.max must be greater than min (2026-02-01), got 2026-01-01'],
+    ['a step with no boundary between fixed ends', onTime({ min: '2026-01-05', max: '2026-01-20', step: { unit: 'month' } }, [['2026-01-06', 1]]), 'Invalid chart: axes.x.step puts no tick between 2026-01-05 and 2026-01-20'],
+    ['a max at the earliest time it shows, with the data there too', onTime({ max: '0000-01-01' }, [['0000-01-01', 1]]), 'Invalid chart: axes.x.max is 0000-01-01, the earliest a time axis shows, which leaves no room before it'],
     ['data before a fixed min', onTime({ min: '2026-02-01' }, [['2026-01-01', 1]]), 'Invalid chart: axes.x.min is 2026-02-01, but the data reach 2026-01-01'],
     ['an xyArea whose times go back', xy({ type: 'time' }, linearY, [['2026-01-02', 1, 2], ['2026-01-01', 1, 3]], 'xyArea'), 'Invalid chart: series[0].data[1][0] must increase within each run'],
     ['a time axis on y2', { width: 400, height: 200, axes: { x: { type: 'band', categories: ['a'] }, y: linearY, y2: { type: 'time' } }, series: [{ type: 'bar', name: 'B', data: [1] }] } as unknown as ChartSpec, 'Invalid chart: axes.y2.type must be "linear", "log" or "sqrt", got "time"'],

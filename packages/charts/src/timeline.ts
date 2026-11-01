@@ -165,7 +165,9 @@ function trackOf(axis: CheckedTimelineChart['axis'], area: Rect, rowSpacing: num
       return measured(points);
     }
     case 'curve': {
-      const track = measured(path.points.map(([x, y]): Point => [area.left + x * width, area.top + y * height]));
+      // A point repeating the one before it adds no length, and no direction for a tick there.
+      const distinct = path.points.filter(([x, y], i) => i === 0 || x !== path.points[i - 1]![0] || y !== path.points[i - 1]![1]);
+      const track = measured(distinct.map(([x, y]): Point => [area.left + x * width, area.top + y * height]));
       if (track.length < 1) {
         fail(`${axis.path}.path.points`, `must be spread out: on a ${chart.width} × ${chart.height} chart they make a track shorter than 1`);
       }
