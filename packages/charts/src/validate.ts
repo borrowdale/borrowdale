@@ -578,7 +578,7 @@ function checkCartesianChart(
       fail(entry.path, `is a ${entry.type} series, which needs one band axis`);
     }
     if (!rule.band && band) {
-      fail(entry.path, `is a ${entry.type} series, which needs both axes linear`);
+      fail(entry.path, `is a ${entry.type} series, which needs both axes continuous: linear, time, log or sqrt`);
     }
     const onAxis = roles.band && valueAxisOf(entry, roles);
     if (onAxis && onAxis.percent && !isStacking(entry)) {
@@ -642,7 +642,7 @@ type AxisRoles =
 
 function rolesOf(x: CheckedAxis, y: CheckedAxis, y2: CheckedLinearAxis | undefined): AxisRoles {
   if (x.type === 'band') {
-    return y.type === 'band' ? fail('axes', 'has two band axes; one of x and y must be linear') : { band: x, value: y, y2 };
+    return y.type === 'band' ? fail('axes', 'has two band axes; one of x and y must be continuous: linear, time, log or sqrt') : { band: x, value: y, y2 };
   }
   if (y2) {
     fail('axes.y2', 'needs x to be the band axis');
