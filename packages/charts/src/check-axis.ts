@@ -4,6 +4,7 @@
 import { decimalsOf } from './decimals.js';
 import {
   boolean,
+  bound,
   fail,
   fields,
   integer,
@@ -173,7 +174,7 @@ function readType(path: string, raw: unknown, types: readonly string[]): string 
       return given;
     }
     const quoted = types.map((type) => `"${type}"`);
-    const choices = quoted.length === 2 ? quoted.join(' or ') : `${quoted.slice(0, -1).join(', ')} or ${quoted.at(-1)}`;
+    const choices = quoted.length < 3 ? quoted.join(' or ') : `${quoted.slice(0, -1).join(', ')} or ${quoted.at(-1)}`;
     return fail(typePath, `must be ${choices}, got ${show(given)}`);
   });
 }
@@ -236,7 +237,7 @@ export function checkLinearAxis<X extends object = object>(
     const every = kind === 'time' ? r.optional('step', checkInterval) : undefined;
     const ticks = r.optional('ticks', list(1, MAX_TICKS, tickReader(value)));
     if ((step !== undefined || every !== undefined) && ticks !== undefined) {
-      fail(`${path}.ticks`, 'cannot be given with step');
+      fail(path, 'cannot combine step and ticks');
     }
     ticks?.forEach((tick, i) => {
       const at = `${path}.ticks[${i}]`;
@@ -332,10 +333,10 @@ export function checkSweep(r: Fields, path: string, [start, end]: [number, numbe
 // A positive step whose decimals a format can write, so its ticks are exact decimals.
 const checkStep: Check<number> = (path, value) => {
   if (typeof value !== 'number' || !(value > 0 && value <= MAX_VALUE)) {
-    fail(path, `must be a number above 0 and at most 1e15, got ${show(value)}`);
+    fail(path, `must be a number above 0 and at most ${bound(MAX_VALUE)}, got ${show(value)}`);
   }
   if (decimalsOf(value) > MAX_DECIMALS) {
-    fail(path, `must have at most ${MAX_DECIMALS} decimals, got ${value}`);
+    fail(path, `must have at most ${MAX_DECIMALS} decimals, got ${show(value)}`);
   }
   return value;
 };

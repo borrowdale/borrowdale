@@ -317,7 +317,7 @@ describe('font files', () => {
   });
 
   it('rejects labels given as one string rather than a list', () => {
-    expect(embedding(handFiles, 'Zürich')).toThrow('Labels must be an array, got string');
+    expect(embedding(handFiles, 'Zürich')).toThrow('Labels must be an array, got "Zürich"');
   });
 
   it('rejects a label that is not a string', () => {

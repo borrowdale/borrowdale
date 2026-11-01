@@ -115,8 +115,8 @@ export function number(min: number, max: number, alternative = ''): Check<number
   };
 }
 
-// ±MAX_VALUE written the way a reader writes it.
-function bound(value: number): string {
+/** A bound in a message, ±MAX_VALUE written the way a reader writes it. */
+export function bound(value: number): string {
   return Math.abs(value) === MAX_VALUE ? `${value < 0 ? '-' : ''}1e15` : String(value);
 }
 
