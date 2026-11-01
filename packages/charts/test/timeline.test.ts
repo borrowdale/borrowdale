@@ -53,6 +53,7 @@ describe('a timeline', () => {
     ['more than 20 rows', timeline({ type: 'serpentine', rows: 21 }), 'Invalid chart: axes.time.path.rows must be an integer from 1 to 20, got 21'],
     ['more than 20 turns', timeline({ type: 'spiral', turns: 21 }), 'Invalid chart: axes.time.path.turns must be a number from 1 to 20, got 21'],
     ['a curve of one point', timeline({ type: 'curve', points: [[0, 0]] }), 'Invalid chart: axes.time.path.points must have 2 to 100 entries, got 1'],
+    ['a curve with no length', timeline({ type: 'curve', points: [[0.5, 0.5], [0.5, 0.5]] }), 'Invalid chart: axes.time.path.points must be spread out: on a 460 × 260 chart they make a track shorter than 1'],
     ['a curve point off the chart', timeline({ type: 'curve', points: [[0, 0], [1.5, 1]] }), 'Invalid chart: axes.time.path.points[1][0] must be a number from 0 to 1, got 1.5'],
     ['an unknown track', timeline({ type: 'wave' }), 'Invalid chart: axes.time.path.type must be one of line, serpentine, spiral, curve, got "wave"'],
     ['a key of another track', timeline({ type: 'line', rows: 2 }), 'Invalid chart: axes.time.path has an unknown key, "rows"'],

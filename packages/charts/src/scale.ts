@@ -389,19 +389,19 @@ function givenStep(step: number): TickStep {
  * The ticks to label when labels must be `every` tick spacings apart: those whose number is a
  * multiple of the smallest k of at least `every` that keeps the labelled step 1, 2 or 5 times a power
  * of ten, counted from zero, so a crowded step-2 axis shows 0, 10, 20 rather than 0, 6, 12. When no
- * tick is such a multiple, the one that is a multiple of the largest smaller k is labelled alone.
+ * tick is such a multiple, the one that is a multiple of the largest smaller k is labelled alone, and
+ * when no spacing is enough (every tick at one place), the first.
  */
 function labelledEvery(numbers: readonly number[], factor: number, every: number): number[] {
   const indices = numbers.map((_, i) => i);
   if (every <= 1) {
     return indices;
   }
-  const largest = Math.max(...numbers.map(Math.abs));
+  if (!Number.isFinite(every)) {
+    return [0];
+  }
   let alone: number[] = [];
-  for (let k = 2; k <= Math.max(every, largest); k++) {
-    if (!isNice(factor * k)) {
-      continue;
-    }
+  for (const k of niceMultiples(factor, Math.max(every, ...numbers.map(Math.abs)))) {
     const shown = indices.filter((i) => numbers[i]! % k === 0);
     if (k >= every && shown.length > 0) {
       return shown;
@@ -411,13 +411,19 @@ function labelledEvery(numbers: readonly number[], factor: number, every: number
   return alone.length > 0 ? alone : [0];
 }
 
-// Whether a whole number is 1, 2 or 5 times a power of ten.
-function isNice(value: number): boolean {
-  let rest = value;
-  while (rest % 10 === 0) {
-    rest /= 10;
+// The whole numbers k from 2 to `limit` that make `factor` × k 1, 2 or 5 times a power of ten,
+// smallest first: three to a power of ten, however large the limit.
+function niceMultiples(factor: number, limit: number): number[] {
+  const found: number[] = [];
+  for (let power = 1; power / factor <= limit; power *= 10) {
+    for (const nice of [1, 2, 5]) {
+      const k = (nice * power) / factor;
+      if (Number.isInteger(k) && k >= 2 && k <= limit) {
+        found.push(k);
+      }
+    }
   }
-  return rest === 1 || rest === 2 || rest === 5;
+  return found;
 }
 
 /** The fewest decimals, up to the most a format allows, that write two numbers differently. */

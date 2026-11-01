@@ -96,6 +96,14 @@ describe('linearScale', () => {
     expect(labelledTicks(linearScale({ ...axis, min: 3, max: 7 }, [3, 7], 250), 6)).toEqual([5]);
   });
 
+  it('labels the first tick alone when every tick is at one place', () => {
+    expect(linearScale(axis, [0, 30], 750).labelled(10, () => 0)).toEqual([0]);
+  });
+
+  it('labels the multiple of 2 alone on an axis of large numbers with no multiple of the larger steps', () => {
+    expect(labelledTicks(linearScale({ ...axis, min: 1e13 + 1, max: 1e13 + 3, step: 1 }, [1e13 + 1, 1e13 + 3], 250), 5)).toEqual([1e13 + 2]);
+  });
+
   it('rejects values that differ by less than 1e-20, which no tick step reaches', () => {
     expect(() => linearScale(axis, [1e-25, 2e-25], 250)).toThrow(
       'Invalid chart: axes.y has values that differ by 1e-25, less than the smallest tick step, 1e-20',

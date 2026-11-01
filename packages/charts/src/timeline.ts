@@ -152,8 +152,13 @@ function trackOf(path: CheckedTimelinePath, area: Rect, rowSpacing: number, char
       }
       return measured(points);
     }
-    case 'curve':
-      return measured(path.points.map(([x, y]): Point => [area.left + x * width, area.top + y * height]));
+    case 'curve': {
+      const track = measured(path.points.map(([x, y]): Point => [area.left + x * width, area.top + y * height]));
+      if (track.length < 1) {
+        fail('axes.time.path.points', `must be spread out: on a ${chart.width} × ${chart.height} chart they make a track shorter than 1`);
+      }
+      return track;
+    }
   }
 }
 
