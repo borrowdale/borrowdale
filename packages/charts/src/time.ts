@@ -133,7 +133,6 @@ function civilFromDays(days: number): [year: number, month: number, day: number]
   return [yearOfEra + era * 400 + (month <= 2 ? 1 : 0), month, day];
 }
 
-
 /** Ticks every `every` of a unit, on its boundaries in UTC. */
 export interface TimeInterval {
   unit: TimeUnit;

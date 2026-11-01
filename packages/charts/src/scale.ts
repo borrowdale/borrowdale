@@ -536,7 +536,6 @@ export function formatNumber(value: number, decimals: number, format: CheckedFor
   return `${sign}${format.prefix}${grouped}${fractionText}${format.suffix}`;
 }
 
-
 /** A value in a tooltip: all the decimals it has (at most MAX_DECIMALS), unless the format fixes them. */
 export function formatValue(value: number, format: CheckedFormat = PLAIN_FORMAT): string {
   return formatNumber(value, format.decimals ?? Math.min(MAX_DECIMALS, decimalsOf(value)), format);

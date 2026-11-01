@@ -519,7 +519,6 @@ function drawIntervals(
   });
 }
 
-
 function drawXRange(
   { drawing, frame, slotCount, categories }: MarkContext,
   { entry, scale, slot, axis }: Placed<Extract<CartesianSeries, { type: 'xRange' }>>,
