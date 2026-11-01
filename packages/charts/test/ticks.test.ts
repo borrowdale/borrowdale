@@ -92,6 +92,18 @@ describe('listed ticks on a linear axis', () => {
     expect(labelsOutside(layoutChart(longBeforeEnd))).toBe(0);
   });
 
+  // Every tick is 0.5 from the one before, but labels need a whole unit: 1 clears 0, which 0.5 does not.
+  it('keeps a label where it clears the last one kept, not where it clears the tick before it', () => {
+    expect(valueLabels({ ...bars({ ticks: [0, 0.5, 1, 1.5, 2] }), height: 100 })).toEqual(['0', '1', '2']);
+  });
+
+  it.each<[string, object, string[]]>([
+    ['at 0', { ticks: [0, 2] }, ['2', 'a', 'b', 'c']],
+    ['below 0 when the radius starts below it', { min: -2, ticks: [-1, 2] }, ['-1', '2', 'a', 'b', 'c']],
+  ])('takes a radius tick %s', (_case, axis, expected) => {
+    expect(layoutChart(radius(axis)).labels).toEqual(expected);
+  });
+
   it('keeps a label only where it clears the last one kept, however unevenly the ticks are spaced', () => {
     expect(valueLabels({ ...bars({ ticks: [0, 0.1, 0.2, 1, 2] }), height: 120 })).toEqual(['0', '1', '2']);
   });
@@ -113,6 +125,7 @@ describe('step and ticks', () => {
     ['a tick that is neither a value nor an object', bars({ ticks: [true] }), 'Invalid chart: axes.y.ticks[0] must be an object, got true'],
     ['a tick with an unknown key', bars({ ticks: [{ value: 1, text: 'a' }] }), 'Invalid chart: axes.y.ticks[0] has an unknown key, "text"'],
     ['a tick label over 100 characters', bars({ ticks: [{ value: 1, label: 'x'.repeat(101) }] }), 'Invalid chart: axes.y.ticks[0].label must be a string of at most 100 characters, got a string of 101 characters'],
+    ['a tick below a fixed min', bars({ min: 1, ticks: [0, 2] }), "Invalid chart: axes.y.ticks[0] must be within the axis' fixed ends, got 0"],
     ['one tick equal to all the data', points({ ticks: [5] }), 'Invalid chart: axes.x.ticks and the data all equal 5: give a min, a max or another tick'],
     ['one tick equal to all the data, in a format', points({ ticks: [5], format: { prefix: '$' } }), 'Invalid chart: axes.x.ticks and the data all equal 5: give a min, a max or another tick'],
     ['one tick equal to all the times', { ...points({}), axes: { x: { type: 'time', ticks: ['2026-11-03'] }, y: { type: 'linear' } }, series: [{ type: 'scatter', name: 'A', data: [['2026-11-03', 1]] }] } as ChartSpec, 'Invalid chart: axes.x.ticks and the data all equal 2026-11-03: give a min, a max or another tick'],

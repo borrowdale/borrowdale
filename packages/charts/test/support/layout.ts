@@ -39,7 +39,8 @@ export function pointsOutside(layout: ChartLayout, margin = 0): number {
 
 /** How many labels reach outside the chart's padding. */
 export function labelsOutside(layout: ChartLayout): number {
-  const labels = layout.nodes.flatMap((node) => (node.kind === 'text' ? [textBounds(node.text)] : []));
+  const drawn = layout.nodes.flatMap((node) => (node.kind === 'mark' ? node.nodes : [node]));
+  const labels = drawn.flatMap((node) => (node.kind === 'text' ? [textBounds(node.text)] : []));
   const [low, right, bottom] = [PAD - 0.01, layout.width - PAD + 0.01, layout.height - PAD + 0.01];
   return labels.filter((box) => box.x < low || box.y < low || box.x + box.width > right || box.y + box.height > bottom)
     .length;

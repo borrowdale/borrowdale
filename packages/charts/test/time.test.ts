@@ -107,8 +107,13 @@ describe('time labels', () => {
     ['seconds', '2026-11-03T09:30:15Z', '09:30:15'],
     ['milliseconds', '2026-11-03T09:30:15.025Z', '09:30:15.025'],
     ['an early year with four digits', '0042-01-01', '0042'],
+    ['half past midnight by its time, not its day', '2026-11-03T00:30Z', '00:30'],
   ])('writes %s', (_case, at, label) => {
     expect(formatTick(time('at', at), ENGLISH_MONTHS)).toBe(label);
+  });
+
+  it('writes a tooltip time with its milliseconds padded to three digits', () => {
+    expect(formatTime(time('at', '2026-11-03T09:30:15.025Z'))).toBe('2026-11-03 09:30:15.025');
   });
 
   it('writes months in the names it is given', () => {

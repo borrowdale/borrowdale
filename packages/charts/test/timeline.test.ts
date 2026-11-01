@@ -54,6 +54,36 @@ describe('a timeline', () => {
     expect(labelsOutside(layoutChart(spec))).toBe(0);
   });
 
+  it('lays out as many rows as have room for their turns across the chart', () => {
+    expect(laying(timeline({ type: 'serpentine', rows: 6 }, [300, 1000]))).not.toThrow();
+  });
+
+  it.each<[string, object, object]>([
+    ['a serpentine of 3 rows', { type: 'serpentine' }, { type: 'serpentine', rows: 3 }],
+    ['a spiral of 3 turns from a fifth of the radius', { type: 'spiral' }, { type: 'spiral', turns: 3, innerRadius: 0.2 }],
+  ])('lays out %s by default', (_case, given, full) => {
+    expect(svg(timeline(given))).toBe(svg(timeline(full)));
+  });
+
+  // Turns of a spiral close together, whose tick labels near each other belong to different turns.
+  it('keeps tick labels on neighbouring turns apart', () => {
+    expect(overlappingTexts(layoutChart(timeline({ type: 'spiral', turns: 6 }, [300, 300], [{ at: '1900-01-01' }, { at: '2020-01-01' }])))).toEqual([]);
+  });
+
+  it('keeps an event label at the start of the track on the chart', () => {
+    expect(labelsOutside(layoutChart(timeline(undefined, [300, 160], [{ at: '2000-01-01', label: 'A long label right at the very start' }, { at: '2020-01-01' }])))).toBe(0);
+  });
+
+  it('moves crowded labels apart on a hidden axis as on a shown one', () => {
+    const crowded = [{ at: '1960-01-01', label: 'Start' }, { at: '2019-01-01', label: 'Alpha' }, { at: '2019-03-01', label: 'Bravo' }, { at: '2019-05-01', label: 'Charlie' }, { at: '2030-01-01', label: 'End' }];
+    const hidden = { ...timeline({ type: 'serpentine', rows: 3 }, [460, 260], crowded), axes: { time: { type: 'time', hidden: true, path: { type: 'serpentine', rows: 3 } } } } as ChartSpec;
+    expect(overlappingTexts(layoutChart(hidden))).toEqual([]);
+  });
+
+  it('draws a curve with a turn at a point that shares only its x with the one before', () => {
+    expect(svg(timeline({ type: 'curve', points: [[0, 0], [0, 1], [1, 1]] }))).not.toBe(svg(timeline({ type: 'curve', points: [[0, 0], [1, 1]] })));
+  });
+
   it('draws a curve with a repeated point as the curve without it', () => {
     expect(svg(timeline({ type: 'curve', points: [[0, 1], [0.5, 0.2], [1, 0], [1, 0]] }))).toBe(svg(timeline({ type: 'curve', points: [[0, 1], [0.5, 0.2], [1, 0]] })));
   });
@@ -78,6 +108,10 @@ describe('a timeline', () => {
   it.each<[string, ChartSpec, string]>([
     ['more rows than fit', timeline({ type: 'serpentine', rows: 12 }), 'Invalid chart: axes.time.path.rows is 12, but a 460 × 260 chart has room for 4'],
     ['rows whose turns are wider than the chart', timeline({ type: 'serpentine', rows: 2 }, [300, 1000]), 'Invalid chart: axes.time.path.rows is 2, but a 300 × 1000 chart needs at least 6 for the turns between them to fit across it'],
+    ['rows whose turns are up to twice as wide as the chart', timeline({ type: 'serpentine', rows: 4 }, [300, 1000]), 'Invalid chart: axes.time.path.rows is 4, but a 300 × 1000 chart needs at least 6 for the turns between them to fit across it'],
+    ['one more row than fits', timeline({ type: 'serpentine', rows: 5 }), 'Invalid chart: axes.time.path.rows is 5, but a 460 × 260 chart has room for 4'],
+    ['a period that ends where it starts', timeline(undefined, [460, 160], [{ at: '2000-01-01', to: '2000-01-01' }]), 'Invalid chart: series[0].data[0].to must be after at; leave it out for a moment'],
+    ['an event label over 100 characters', timeline(undefined, [460, 160], [{ at: '2000-01-01', label: 'x'.repeat(101) }]), 'Invalid chart: series[0].data[0].label must be a string of at most 100 characters, got a string of 101 characters'],
     ['more than 20 rows', timeline({ type: 'serpentine', rows: 21 }), 'Invalid chart: axes.time.path.rows must be an integer from 1 to 20, got 21'],
     ['more than 20 turns', timeline({ type: 'spiral', turns: 21 }), 'Invalid chart: axes.time.path.turns must be a number from 1 to 20, got 21'],
     ['a curve of one point', timeline({ type: 'curve', points: [[0, 0]] }), 'Invalid chart: axes.time.path.points must have 2 to 100 entries, got 1'],

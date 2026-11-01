@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import '../../core/test/support/forbid-unportable-calls.js';
 import { layoutChart, toSvgChart, type ChartSpec } from '@borrowdale/charts';
-import { laying, svgTitles } from './support/layout.js';
+import { laying, shapesOf, svgTitles } from './support/layout.js';
 
 const rows = { type: 'band', categories: ['Design', 'Build', 'Launch'] };
 const plan = {
@@ -18,6 +18,10 @@ const plan = {
 const gantt = (series: object[], extra: object = {}): ChartSpec =>
   ({ width: 480, height: 220, axes: { x: { type: 'time' }, y: rows }, series, ...extra }) as ChartSpec;
 const items = (data: object[]): ChartSpec => gantt([{ type: 'xRange', name: 'P', data }]);
+const actual = { type: 'xRange', name: 'Actual', data: [{ row: 'Design', from: '2026-01-07', to: '2026-01-30' }] };
+// A milestone with its label on a vertical value axis, where labels go above their items.
+const upright = { width: 300, height: 400, axes: { x: { type: 'band', categories: ['a'] }, y: { type: 'linear', min: 0, max: 10 } },
+  series: [{ type: 'xRange', name: 'R', dataLabels: true, data: [{ row: 'a', from: 5, label: 'Go' }] }] } as ChartSpec;
 const onLinear = (data: object[]): ChartSpec =>
   ({ width: 400, height: 200, axes: { x: { type: 'linear' }, y: { type: 'band', categories: ['a'] } }, series: [{ type: 'xRange', name: 'R', data }] }) as ChartSpec;
 
@@ -41,8 +45,18 @@ describe('an xRange series', () => {
   });
 
   it('lists itself in the legend beside another series', () => {
-    const actual = { type: 'xRange', name: 'Actual', data: [{ row: 'Design', from: '2026-01-07', to: '2026-01-30' }] };
     expect(layoutChart(gantt([plan, actual])).labels.slice(0, 2)).toEqual(['Plan', 'Actual']);
+  });
+
+  // The other series then has the whole row, as if it were alone; no legend, which would differ.
+  it('takes no slot of its own as an overlay beside another series', () => {
+    expect(shapesOf(layoutChart(gantt([plan, { ...actual, overlay: true }], { legend: 'none' })), 'Plan, Design: Sketches, 2026-01-05 to 2026-01-23, 100% done'))
+      .toEqual(shapesOf(layoutChart(gantt([plan], { legend: 'none' })), 'Plan, Design: Sketches, 2026-01-05 to 2026-01-23, 100% done'));
+  });
+
+  // The diamond spans 184.8 to 197.7 down the chart; the label sits above it.
+  it('puts a milestone label above its diamond on a vertical value axis', () => {
+    expect(shapesOf(layoutChart(upright), 'R, a: Go, 5')[1]).toMatchObject({ kind: 'text', text: { y: 176.23 } });
   });
 
   it('writes progress as a percentage with the decimals the progress has, less two', () => {

@@ -47,6 +47,12 @@ describe('a time axis', () => {
     ['labels every ten minutes when they fit', onTime({ step: { unit: 'minute', every: 10 } }, [['2026-11-03T09:00Z', 1], ['2026-11-03T10:00Z', 3]], 600), ['09:00', '09:10', '09:20', '09:30', '09:40', '09:50', '10:00', ...yLabels]],
     ['ticks fixed ends closer together than the interval its length would choose', onTime({ min: '2026-01-02', max: '2026-01-30' }, [['2026-01-02', 1], ['2026-01-30', 3]], 220), ['5 Jan', '19 Jan', ...yLabels]],
     ['starts no earlier than year 0, though its step would round out before it', onTime({ step: { unit: 'week' } }, [['0000-01-01', 1], ['0000-01-30', 3]]), ['3 Jan', '10 Jan', '17 Jan', '24 Jan', '31 Jan', ...yLabels]],
+    ['labels a crowded daily step on the months it falls on', onTime({ step: { unit: 'day' } }, [['2026-01-01', 1], ['2026-03-31', 2]], 300), ['2026', 'Feb', 'Mar', '1.0', '1.2', '1.4', '1.6', '1.8', '2.0']],
+    ['labels a crowded hourly step on the days it falls on', onTime({ step: { unit: 'hour' } }, [['2026-01-01', 1], ['2026-01-03T23:00Z', 2]], 300), ['2026', '2 Jan', '3 Jan', '1.0', '1.2', '1.4', '1.6', '1.8', '2.0']],
+    ['counts a step of one unit when its every is left out', onTime({ step: { unit: 'month' } }, [['2026-01-01', 1], ['2026-06-30', 2]], 600), ['2026', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', '1.0', '1.2', '1.4', '1.6', '1.8', '2.0']],
+    ['gives a moment alone the interval of a day-long axis', onTime({}, [['2026-02-01T09:30Z', 1]], 300), ['06:00', '12:00', '0.0', '0.2', '0.4', '0.6', '0.8', '1.0']],
+    ['moves its free end one step out from a fixed min the data all equal', onTime({ min: '2026-11-03' }, [['2026-11-03', 1]]), ['3 Nov', '06:00', '0.0', '0.2', '0.4', '0.6', '0.8', '1.0']],
+    ['stops a fixed max at year 0 with its free end no earlier', onTime({ max: '0000-01-03', step: { unit: 'week' } }, [['0000-01-03', 1]]), ['3 Jan', '0.0', '0.2', '0.4', '0.6', '0.8', '1.0']],
     ['chooses fewer ticks on a narrow axis', onTime({}, [['2026-01-01', 1], ['2026-03-31', 3]], 200), ['2026', 'Feb', 'Mar', 'Apr', ...yLabels]],
     ['names the months as it is told', onTime({ format: { months: ['jan', 'febr', 'márc', 'ápr', 'máj', 'jún', 'júl', 'aug', 'szept', 'okt', 'nov', 'dec'] } }, [['2026-01-01', 1], ['2026-12-31', 3]]), ['2026', 'ápr', 'júl', 'okt', '2027', ...yLabels]],
   ])('%s', (_case, spec, expected) => {
@@ -91,6 +97,10 @@ describe('a time axis', () => {
     ['a max before the min', onTime({ min: '2026-02-01', max: '2026-01-01' }, [['2026-01-01', 1]]), 'Invalid chart: axes.x.max must be greater than min (2026-02-01), got 2026-01-01'],
     ['a step with no boundary between fixed ends', onTime({ min: '2026-01-05', max: '2026-01-20', step: { unit: 'month' } }, [['2026-01-06', 1]]), 'Invalid chart: axes.x.step puts no tick between 2026-01-05 and 2026-01-20'],
     ['a max at the earliest time it shows, with the data there too', onTime({ max: '0000-01-01' }, [['0000-01-01', 1]]), 'Invalid chart: axes.x.max is 0000-01-01, the earliest a time axis shows, which leaves no room before it'],
+    ['data after a fixed max', onTime({ max: '2026-02-01' }, [['2026-03-01', 1]]), 'Invalid chart: axes.x.max is 2026-02-01, but the data reach 2026-03-01'],
+    ['a time past 9999 once its offset is applied', onTime({}, [['9999-12-31T23:30-01:00', 1]]), 'Invalid chart: series[0].data[0][0] is outside 0000-01-01 to 9999-12-31 in UTC, got "9999-12-31T23:30-01:00"'],
+    ['a step with listed ticks', onTime({ step: { unit: 'month' }, ticks: ['2026-01-01'] }, [['2026-01-01', 1]]), 'Invalid chart: axes.x cannot combine step and ticks'],
+    ['a month name over 20 characters', onTime({ format: { months: ['m'.repeat(21), 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l'] } }, [['2026-01-01', 1]]), 'Invalid chart: axes.x.format.months[0] must be a string of at most 20 characters, got "mmmmmmmmmmmmmmmmmmmmm"'],
     ['data before a fixed min', onTime({ min: '2026-02-01' }, [['2026-01-01', 1]]), 'Invalid chart: axes.x.min is 2026-02-01, but the data reach 2026-01-01'],
     ['an xyArea whose times go back', xy({ type: 'time' }, linearY, [['2026-01-02', 1, 2], ['2026-01-01', 1, 3]], 'xyArea'), 'Invalid chart: series[0].data[1][0] must increase within each run'],
     ['a time axis on y2', { width: 400, height: 200, axes: { x: { type: 'band', categories: ['a'] }, y: linearY, y2: { type: 'time' } }, series: [{ type: 'bar', name: 'B', data: [1] }] } as unknown as ChartSpec, 'Invalid chart: axes.y2.type must be "linear", "log" or "sqrt", got "time"'],
@@ -119,6 +129,27 @@ describe('a log axis', () => {
   // The legend, the categories and the y axis' labels come first.
   it('serves as y2', () => {
     expect(labels(onY2('log')).slice(9)).toEqual(['10', '100', '1,000']);
+  });
+
+  it('ticks a range holding a single power of ten as a linear axis does', () => {
+    expect(scaleOf(axisOf('log', { min: 5, max: 50 }), [5, 50], 100).ticks).toEqual([20, 40]);
+  });
+
+  it('places the linear ticks of a narrow range by their logarithms', () => {
+    expect(place(scaleOf(axisOf('log', { min: 30, max: 95 }), [30, 95], 100), [0, 100]).at(60)).toBeCloseTo(60.133556169224875, 9);
+  });
+
+  it('moves its free end to the next power of ten out from a fixed min the data all equal', () => {
+    expect(scaleOf(axisOf('log', { min: 5 }), [5, 5], 300).domain).toEqual([5, 10]);
+  });
+
+  // The x axis' labels come first.
+  it('shows 1 to 10 with no data', () => {
+    expect(labels(xy(linearX, { type: 'log' }, [], 'scatter')).slice(6)).toEqual(['1', '2', '5', '10']);
+  });
+
+  it('rejects an xyArea high of 0', () => {
+    expect(laying(xy(linearX, { type: 'log' }, [[0, 1, 0]], 'xyArea'))).toThrow('Invalid chart: series[0].data[0][2] must be a number from 1e-20 to 1e15 on a log axis, got 0');
   });
 
   it('places each power of ten an equal distance apart', () => {

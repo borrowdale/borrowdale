@@ -80,6 +80,7 @@ describe('show', () => {
     ['a direction mark', 'a\u200fb', 'a\\u200fb'],
     ['a direction override', 'a\u202eb', 'a\\u202eb'],
     ['a direction isolate', 'a\u2066b', 'a\\u2066b'],
+    ['the end of a direction isolate', 'a\u2069b', 'a\\u2069b'],
     ['an Arabic letter mark', 'a\u061cb', 'a\\u061cb'],
     ['a zero-width space', 'a\u200bb', 'a\\u200bb'],
     ['a byte order mark', 'a\ufeffb', 'a\\ufeffb'],

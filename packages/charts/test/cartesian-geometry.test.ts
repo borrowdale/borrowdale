@@ -14,9 +14,14 @@ const unit = { x: { type: 'linear', min: 0, max: 1 }, y: { type: 'linear', min: 
 const difference = (data: [number, number, number][]): ChartLayout => layoutChart({ width: 300, height: 200,
   legend: 'none', style: { roughness: 0 }, axes: unit,
   series: [{ type: 'xyArea', name: 'D', data, difference: { positive: '#00ff00', negative: '#ff0000' } }] });
-// Edges that cross by less than the plot can tell apart, on an axis reaching 1e15.
-const nearFlat: ChartSpec = { width: 300, height: 200, legend: 'none', axes: { x: { type: 'linear', min: 0, max: 1 }, y: { type: 'linear', min: 0, max: 1e15 } },
-  series: [{ type: 'xyArea', name: 'D', data: [[0, 1, 1 + 2 ** -52], [1, 1 + 2 ** -52, 1]], difference: { positive: '#00ff00', negative: '#ff0000' } }] };
+// Edges that cross by less than the plot can tell apart, on an axis reaching 1e15, a third of the
+// way along, since the first gap is half the second.
+const nearFlat: ChartSpec = { width: 300, height: 200, legend: 'none', style: { roughness: 0 }, axes: { x: { type: 'linear', min: 0, max: 1 }, y: { type: 'linear', min: 0, max: 1e15 } },
+  series: [{ type: 'xyArea', name: 'D', data: [[0, 1, 1 + 2 ** -52], [1, 1 + 2 ** -51, 1]], difference: { positive: '#00ff00', negative: '#ff0000' } }] };
+// Edges crossing on a square-root axis: by their values a little past halfway, by their placed
+// heights 8/15 of the way, where they meet on the plot.
+const onRoots: ChartSpec = { width: 300, height: 200, legend: 'none', style: { roughness: 0 }, axes: { x: { type: 'linear', min: 0, max: 1 }, y: { type: 'sqrt', min: 0, max: 100 } },
+  series: [{ type: 'xyArea', name: 'D', data: [[0, 1, 81], [1, 49, 0]], difference: { positive: '#00ff00', negative: '#ff0000' } }] };
 const firstPath = (nodes: ChartNode[]) => nodes[0]?.kind === 'sketch' ? nodes[0].sketch.paths[0] : undefined;
 
 const stops = [{ offset: 0, color: '#ff0000' }, { offset: 1, color: '#0000ff' }];
@@ -73,8 +78,12 @@ describe('crossing fills', () => {
     expect(firstPath(shapesOf(difference([[0, 1, 1], [1, 0, 2]]), 'D'))).toMatchObject({ fill: '#00ff00' });
   });
 
-  it('fills a difference whose edges cross by less than the plot can tell apart', () => {
-    expect(layingOut(nearFlat)).not.toThrow();
+  it('fills a difference whose edges cross by less than the plot can tell apart, where the values cross', () => {
+    expect(firstPath(shapesOf(layoutChart(nearFlat), 'D'))).toMatchObject({ d: 'M159.06 165.88 L159.06 165.88 L200.64 165.88', fill: '#00ff00' });
+  });
+
+  it('splits a crossing on a square-root axis where the placed edges meet', () => {
+    expect(firstPath(shapesOf(layoutChart(onRoots), 'D'))).toMatchObject({ d: 'M40.06 150.85 L40.06 30.59 L170.06 102.75', fill: '#00ff00' });
   });
 });
 

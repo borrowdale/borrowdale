@@ -99,6 +99,18 @@ describe('a linear scale', () => {
     expect(labelledTicks(scaleOf({ ...axis, min: 3, max: 7 }, [3, 7], 250), 6)).toEqual([5]);
   });
 
+  it('rounds a free max out to a multiple of its step from flat data at a fixed min', () => {
+    expect(scaleOf({ ...axis, min: 5, step: 2 }, [5, 5], 250)).toMatchObject({ domain: [5, 6], ticks: [6] });
+  });
+
+  it('labels the first multiple of the largest smaller nice step alone, not the last', () => {
+    expect(labelledTicks(scaleOf({ ...axis, min: 1, max: 4, step: 1 }, [1, 4], 250), 4)).toEqual([2]);
+  });
+
+  it('reaches the listed ticks with its free ends, past the data', () => {
+    expect(scaleOf({ ...axis, ticks: [{ value: 0, label: undefined }, { value: 10, label: undefined }] }, [5, 5], 250).domain).toEqual([0, 10]);
+  });
+
   it('labels the first tick alone when every tick is at one place', () => {
     expect(scaleOf(axis, [0, 30], 750).labelled(10, atOnePlace)).toEqual([0]);
   });
