@@ -64,6 +64,9 @@ describe('an xRange series', () => {
 
   it.each<[string, ChartSpec, string]>([
     ['an item in a row that is not a category', items([{ row: 'Test', from: '2026-01-01', to: '2026-01-02' }]), 'Invalid chart: series[0].data[0].row is not a category of axes.y, got "Test"'],
+    ['a row longer than 100 characters', items([{ row: 'x'.repeat(101), from: '2026-01-05' }]), 'Invalid chart: series[0].data[0].row must be a string of at most 100 characters, got a string of 101 characters'],
+    ['a row with a line break, which no category has', items([{ row: 'Bu\nild', from: '2026-01-05' }]), 'Invalid chart: series[0].data[0].row is not a category of axes.y, got "Bu\\nild"'],
+    ['a time longer than 40 characters', items([{ row: 'Build', from: '2026-01-05T00:00:00.00000000000000000000Z' }]), 'Invalid chart: series[0].data[0].from must be a string of at most 40 characters, got "2026-01-05T00:00:00.00000000000000000000Z"'],
     ['an item that ends where it starts', items([{ row: 'Build', from: '2026-01-05', to: '2026-01-05' }]), 'Invalid chart: series[0].data[0].to must be after from; leave it out for a milestone'],
     ['an item that ends before it starts', items([{ row: 'Build', from: '2026-01-05', to: '2026-01-01' }]), 'Invalid chart: series[0].data[0].to must be after from; leave it out for a milestone'],
     ['an item without a start', items([{ row: 'Build' }]), 'Invalid chart: series[0].data[0].from is missing'],

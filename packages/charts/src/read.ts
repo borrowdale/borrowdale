@@ -139,11 +139,23 @@ export function nullable<T>(check: Check<T>): Check<T | null> {
  * character SVG cannot hold is rejected here even where the string only reaches a tooltip.
  */
 export function text(max = MAX_TEXT): Check<string> {
+  const short = shortText(max);
+  return (path, value) => {
+    const string = short(path, value);
+    probe(path, () => measureText(string));
+    return string;
+  };
+}
+
+/**
+ * A string of at most `max` characters, not measured: for one that is checked another way before
+ * anything draws it, as a time is parsed or a row matched to a category, which costs far less.
+ */
+export function shortText(max: number): Check<string> {
   return (path, value) => {
     if (typeof value !== 'string' || value.length > max) {
       fail(path, `must be a string of at most ${max} characters, got ${show(value)}`);
     }
-    probe(path, () => measureText(value));
     return value;
   };
 }
@@ -189,9 +201,12 @@ export function coordinates<const N extends readonly string[]>(names: N): Check<
   };
 }
 
-/** One entry of `coordinates`: a number, or a string carried until it is read as a time. */
+/**
+ * One entry of `coordinates`: a number, or a string carried until it is read as a time, which takes
+ * only the characters of ISO 8601, or rejected on an axis that is not a time axis.
+ */
 export const coordinate: Check<number> = (path, value) =>
-  typeof value === 'string' ? (text(MAX_TIME_TEXT)(path, value) as unknown as number) : number(-MAX_VALUE, MAX_VALUE)(path, value);
+  typeof value === 'string' ? (shortText(MAX_TIME_TEXT)(path, value) as unknown as number) : number(-MAX_VALUE, MAX_VALUE)(path, value);
 
 /**
  * Runs another package's own check, reporting its error at `path`. The other package writes what it

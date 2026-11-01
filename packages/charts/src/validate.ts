@@ -35,6 +35,7 @@ import {
   number,
   oneOf,
   probe,
+  shortText,
   show,
   text,
   tuple,
@@ -1043,7 +1044,8 @@ function checkXRangeItem(path: string, raw: unknown): CheckedXRangeItem {
   const r = fields(path, raw);
   r.allow(['row', 'from', 'to', 'label', 'progress']);
   return {
-    row: r.required('row', text(MAX_NAME)),
+    // Matched to a category, each measured as it was read, once the axes are known.
+    row: r.required('row', shortText(MAX_NAME)),
     category: -1,
     from: r.required('from', coordinate),
     to: r.optional('to', coordinate),
