@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import '../../core/test/support/forbid-unportable-calls.js';
 import { layoutChart, toSvgChart, type ChartSpec } from '@borrowdale/charts';
 
 const events = [

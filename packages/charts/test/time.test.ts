@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import '../../core/test/support/forbid-unportable-calls.js';
 import { ENGLISH_MONTHS, fieldsOf, formatTick, formatTime, interval, MAX_TIME, MIN_TIME, time, timeOf } from '../src/time.js';
 
 const reading = (value: unknown) => () => time('axes.x.min', value);
