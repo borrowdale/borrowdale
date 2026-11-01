@@ -35,11 +35,6 @@ interface Track {
 export function layoutTimeline(drawing: Drawing, chart: CheckedTimelineChart, rect: Rect, paints: Paint[]): void {
   const { axis, series } = chart;
   const line = drawing.lineHeight();
-  // Tick labels on the track's left and event labels on its right each take a line and a gap.
-  const margin = line + TICK + GAP;
-  const area: Rect = { left: rect.left + margin, top: rect.top + margin, right: rect.right - margin, bottom: rect.bottom - margin };
-  assertRoom(area, chart.width, chart.height);
-  const track = trackOf(axis, area, 2 * margin, chart);
   let [low, high] = [Infinity, -Infinity];
   for (const entry of series) {
     for (const event of entry.data) {
@@ -47,7 +42,21 @@ export function layoutTimeline(drawing: Drawing, chart: CheckedTimelineChart, re
     }
   }
   const end = axis.min ?? axis.max ?? 0;
-  const scale = scaleOf(axis, low > high ? [end, end] : [low, high], track.length);
+  // Tick labels on the track's left and event labels on its right each take a line and a gap. At the
+  // sides the track's ends need half the widest tick label, centred on them, when that is more; it
+  // is measured on the axis laid out once without it.
+  const margin = line + TICK + GAP;
+  const layOut = (side: number) => {
+    const area: Rect = { left: rect.left + side, top: rect.top + margin, right: rect.right - side, bottom: rect.bottom - margin };
+    assertRoom(area, chart.width, chart.height);
+    const track = trackOf(axis, area, 2 * margin, chart);
+    return { track, scale: scaleOf(axis, low > high ? [end, end] : [low, high], track.length) };
+  };
+  let { track, scale } = layOut(margin);
+  const half = axis.hidden ? 0 : Math.max(0, ...scale.labels.map((label) => drawing.width(label))) / 2;
+  if (half > margin) {
+    ({ track, scale } = layOut(half));
+  }
   const along = (value: number) => pointAt(track, scale.fraction(value) * track.length);
 
   const taken = new LabelRoom();
@@ -58,13 +67,14 @@ export function layoutTimeline(drawing: Drawing, chart: CheckedTimelineChart, re
     scale.ticks.forEach((tick, i) => {
       const { point, normal } = along(tick);
       drawing.push(drawing.outline(lineShape(point, offset(point, normal, TICK)), { stroke: INK, strokeWidth: 1 }, ['tick', tick]));
-      // A label also needs to clear those of other turns or rows near it, which can be close on the
-      // chart however far along the track they are.
-      const [x, y] = offset(point, normal, TICK + GAP + line / 2);
-      const box = boxAt(drawing.extent(scale.labels[i]!, CENTRED), x, y);
+      // A label stays on the chart, moved in from its edge as a data label is, and also needs to
+      // clear those of other turns or rows near it, which can be close on the chart however far
+      // along the track they are.
+      const spot = drawing.labelSpot(scale.labels[i]!, ...offset(point, normal, TICK + GAP + line / 2), rect, axis.path);
+      const box = boxAt(spot.extent, spot.x, spot.y);
       if (shown.has(i) && taken.clear(box)) {
         taken.add(box);
-        drawing.push(drawing.text(scale.labels[i]!, { x, y, ...CENTRED }));
+        drawing.push(drawing.text(spot.text, { x: spot.x, y: spot.y, ...CENTRED }));
       }
     });
   }

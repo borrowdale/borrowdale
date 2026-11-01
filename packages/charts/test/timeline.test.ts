@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import '../../core/test/support/forbid-unportable-calls.js';
 import { layoutChart, toSvgChart, type ChartSpec } from '@borrowdale/charts';
-import { laying, overlappingTexts, svgTitles } from './support/layout.js';
+import { labelsOutside, laying, overlappingTexts, svgTitles } from './support/layout.js';
 
 const events = [
   { at: '1969-07-20', label: 'Moon landing' },
@@ -21,6 +21,9 @@ const timeline = (path: object | undefined, size: [number, number] = [460, 260],
 const labels = (spec: ChartSpec): string[] => layoutChart(spec).labels;
 const names = events.map(({ label }) => label);
 const svg = (spec: ChartSpec): string => toSvgChart(layoutChart(spec));
+// A straight linear timeline from `from` to `to`, whose ticks are wide numbers.
+const wide = (from: number, to: number, size: [number, number]): ChartSpec =>
+  ({ width: size[0], height: size[1], axes: { time: { type: 'linear' } }, series: [{ type: 'timeline', name: 'T', data: [{ at: from }, { at: to }] }] }) as ChartSpec;
 
 describe('a timeline', () => {
   it.each<[string, object | undefined, [number, number], string[]]>([
@@ -42,6 +45,13 @@ describe('a timeline', () => {
   it('lays a long spiral out without asking for more ticks than an axis may have', () => {
     const long = { ...timeline(undefined, [1000, 1000], [{ at: 0 }, { at: 2100 }]), axes: { time: { type: 'linear', path: { type: 'spiral', turns: 20 } } } } as ChartSpec;
     expect(laying(long)).not.toThrow();
+  });
+
+  it.each<[string, ChartSpec]>([
+    ['the age of the Earth', wide(-4.6e9, 0, [600, 200])],
+    ['the largest values', wide(0, 1e15, [400, 200])],
+  ])('keeps tick labels as wide as those of %s on the chart', (_case, spec) => {
+    expect(labelsOutside(layoutChart(spec))).toBe(0);
   });
 
   it('draws a curve with a repeated point as the curve without it', () => {
