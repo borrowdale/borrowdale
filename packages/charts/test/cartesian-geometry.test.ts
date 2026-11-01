@@ -14,6 +14,9 @@ const unit = { x: { type: 'linear', min: 0, max: 1 }, y: { type: 'linear', min: 
 const difference = (data: [number, number, number][]): ChartLayout => layoutChart({ width: 300, height: 200,
   legend: 'none', style: { roughness: 0 }, axes: unit,
   series: [{ type: 'xyArea', name: 'D', data, difference: { positive: '#00ff00', negative: '#ff0000' } }] });
+// Edges that cross by less than the plot can tell apart, on an axis reaching 1e15.
+const nearFlat: ChartSpec = { width: 300, height: 200, legend: 'none', axes: { x: { type: 'linear', min: 0, max: 1 }, y: { type: 'linear', min: 0, max: 1e15 } },
+  series: [{ type: 'xyArea', name: 'D', data: [[0, 1, 1 + 2 ** -52], [1, 1 + 2 ** -52, 1]], difference: { positive: '#00ff00', negative: '#ff0000' } }] };
 const firstPath = (nodes: ChartNode[]) => nodes[0]?.kind === 'sketch' ? nodes[0].sketch.paths[0] : undefined;
 
 const stops = [{ offset: 0, color: '#ff0000' }, { offset: 1, color: '#0000ff' }];
@@ -68,6 +71,10 @@ describe('crossing fills', () => {
 
   it('colours a span that only touches at one end by its open side', () => {
     expect(firstPath(shapesOf(difference([[0, 1, 1], [1, 0, 2]]), 'D'))).toMatchObject({ fill: '#00ff00' });
+  });
+
+  it('fills a difference whose edges cross by less than the plot can tell apart', () => {
+    expect(layingOut(nearFlat)).not.toThrow();
   });
 });
 
