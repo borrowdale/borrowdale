@@ -10,7 +10,7 @@ import { fail } from './read.js';
 import { emptyExtent, formatAxisValue, scaleOf } from './scale.js';
 import { markerNode } from './symbols.js';
 import type { ChartNode } from './types.js';
-import type { CheckedTimelineChart } from './validate.js';
+import { MAX_ROWS, type CheckedTimelineChart } from './validate.js';
 
 // Points per half turn of a serpentine, and per whole turn of a spiral.
 const HALF_TURN_POINTS = 16;
@@ -145,14 +145,18 @@ function trackOf(axis: CheckedTimelineChart['axis'], area: Rect, rowSpacing: num
       // Rows evenly from the top of the area to its bottom, joined by half turns whose diameter is
       // the space between them; the labels of neighbouring rows share that space.
       const spacing = height / (track.rows - 1);
+      const room = Math.max(1, Math.floor(height / rowSpacing) + 1);
       if (spacing < rowSpacing) {
-        const room = Math.max(1, Math.floor(height / rowSpacing) + 1);
         return fail(`${axis.path}.path.rows`, `is ${track.rows}, but a ${chart.width} × ${chart.height} chart has room for ${room}`);
       }
-      // Each half turn is as wide as the rows are apart, and must fit across the area.
+      // Each half turn is as wide as the rows are apart, and must fit across the area. Where even as
+      // many rows as fit, up to the most a serpentine has, leave turns too wide, only one row fits.
       if (spacing > width) {
         const fewest = Math.ceil(height / width) + 1;
-        const needs = `needs at least ${fewest} for the turns between them to fit across it`;
+        const needs =
+          fewest <= Math.min(room, MAX_ROWS)
+            ? `needs at least ${fewest} for the turns between them to fit across it`
+            : 'is too narrow for the turns between rows, so it takes 1';
         return fail(`${axis.path}.path.rows`, `is ${track.rows}, but a ${chart.width} × ${chart.height} chart ${needs}`);
       }
       const radius = spacing / 2;

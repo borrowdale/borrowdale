@@ -141,6 +141,8 @@ describe('a timeline', () => {
     ['rows whose turns are wider than the chart', timeline({ type: 'serpentine', rows: 2 }, [300, 1000]), 'Invalid chart: axes.time.path.rows is 2, but a 300 × 1000 chart needs at least 6 for the turns between them to fit across it'],
     ['rows whose turns are up to twice as wide as the chart', timeline({ type: 'serpentine', rows: 4 }, [300, 1000]), 'Invalid chart: axes.time.path.rows is 4, but a 300 × 1000 chart needs at least 6 for the turns between them to fit across it'],
     ['one more row than fits', timeline({ type: 'serpentine', rows: 5 }), 'Invalid chart: axes.time.path.rows is 5, but a 460 × 260 chart has room for 4'],
+    ['rows whose turns need more rows than fit', timeline({ type: 'serpentine', rows: 2 }, [100, 400]), 'Invalid chart: axes.time.path.rows is 2, but a 100 × 400 chart is too narrow for the turns between rows, so it takes 1'],
+    ['rows whose turns need more than 20 rows', timeline({ type: 'serpentine', rows: 2 }, [300, 6000]), 'Invalid chart: axes.time.path.rows is 2, but a 300 × 6000 chart is too narrow for the turns between rows, so it takes 1'],
     ['a period that ends where it starts', timeline(undefined, [460, 160], [{ at: '2000-01-01', to: '2000-01-01' }]), 'Invalid chart: series[0].data[0].to must be after at; leave it out for a moment'],
     ['an event label over 100 characters', timeline(undefined, [460, 160], [{ at: '2000-01-01', label: 'x'.repeat(101) }]), 'Invalid chart: series[0].data[0].label must be a string of at most 100 characters, got a string of 101 characters'],
     ['more than 20 rows', timeline({ type: 'serpentine', rows: 21 }), 'Invalid chart: axes.time.path.rows must be an integer from 1 to 20, got 21'],

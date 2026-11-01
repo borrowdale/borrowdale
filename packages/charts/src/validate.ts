@@ -470,7 +470,8 @@ export function checkChart(spec: ChartSpec, font: Font = excalifont): CheckedCha
 
 const TIMELINE_AXIS_KEYS = ['type', 'min', 'max', 'step', 'ticks', 'hidden', 'format', 'path'];
 const TIMELINE_KEYS = { time: TIMELINE_AXIS_KEYS, linear: TIMELINE_AXIS_KEYS };
-const MAX_ROWS = 20;
+/** The most rows a serpentine track may have. */
+export const MAX_ROWS = 20;
 const MAX_TURNS = 20;
 const MAX_TRACK_POINTS = 100;
 
