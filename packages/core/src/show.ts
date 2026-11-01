@@ -2,9 +2,31 @@
 const MAX_SHOWN = 100;
 // The longest array an error message writes out; a longer one is described by its length.
 const MAX_ENTRIES = 8;
-// Characters that could break or disguise a line of a log: controls, line separators, and
-// bidirectional marks and overrides.
-const UNSAFE = /[\u0000-\u001f\u007f-\u009f\u061c\u200e\u200f\u2028\u2029\u202a-\u202e\u2066-\u2069]/g;
+// Characters that could break or disguise a line of a log: controls, line separators, bidirectional
+// marks and overrides, and characters that draw nothing (zero-width spaces and joiners, the byte
+// order mark, the soft hyphen, invisible operators and tag characters). A fixed list, since a
+// Unicode property would depend on the engine's Unicode version.
+const UNSAFE =
+  /[\u0000-\u001f\u007f-\u009f\u00ad\u061c\u180e\u200b-\u200f\u2028\u2029\u202a-\u202e\u2060-\u2064\u2066-\u2069\ufeff\ufff9-\ufffb]|\udb40[\udc00-\udc7f]/g;
+// The kinds of typed array, named without reading anything the value itself can define, such as its
+// tag.
+const TYPED_ARRAYS = [
+  'Int8Array',
+  'Uint8Array',
+  'Uint8ClampedArray',
+  'Int16Array',
+  'Uint16Array',
+  'Int32Array',
+  'Uint32Array',
+  'Float32Array',
+  'Float64Array',
+  'BigInt64Array',
+  'BigUint64Array',
+  'DataView',
+].flatMap((name) => {
+  const kind = (globalThis as Record<string, unknown>)[name];
+  return typeof kind === 'function' ? [{ name, kind }] : [];
+});
 
 /**
  * A rejected value, for an error message, written the same way by every @borrowdale package.
@@ -38,28 +60,46 @@ export function show(value: unknown): string {
 
 function shownObject(value: object): string {
   if (Array.isArray(value)) {
-    return value.length <= MAX_ENTRIES ? bracketed(value) : `an array of ${value.length}`;
+    // Its length read once: a Proxy could give another each time, or one that is not a number.
+    const length = lengthOf(value);
+    if (length === undefined) {
+      return 'an array';
+    }
+    return length <= MAX_ENTRIES ? bracketed(value, length) : `an array of ${length}`;
   }
   if (ArrayBuffer.isView(value)) {
-    return `a ${Object.prototype.toString.call(value).slice(8, -1)}`;
+    const typed = TYPED_ARRAYS.find(({ kind }) => value instanceof (kind as abstract new () => unknown));
+    return typed === undefined ? 'a typed array' : `a ${typed.name}`;
   }
   return 'an object';
 }
 
+// An array's length, read once, if it is a whole number.
+function lengthOf(array: readonly unknown[]): number | undefined {
+  const { length } = array;
+  return Number.isSafeInteger(length) && length >= 0 ? length : undefined;
+}
+
 // By index, so a hole shows as undefined; an entry whose getter throws leaves only the length.
-function bracketed(array: readonly unknown[]): string {
+function bracketed(array: readonly unknown[], length: number): string {
   try {
-    const entries = Array.from({ length: array.length }, (_, i) => {
+    const entries = Array.from({ length }, (_, i) => {
       const entry = array[i];
-      return Array.isArray(entry) ? `an array of ${entry.length}` : show(entry);
+      if (!Array.isArray(entry)) {
+        return show(entry);
+      }
+      const inner = lengthOf(entry);
+      return inner === undefined ? 'an array' : `an array of ${inner}`;
     });
     return `[${entries.join(', ')}]`;
   } catch {
-    return `an array of ${array.length}`;
+    return `an array of ${length}`;
   }
 }
 
 /** `message` with every character that could break or disguise a line of a log written as its \u escape. */
 export function escaped(message: string): string {
-  return message.replace(UNSAFE, (char) => `\\u${char.charCodeAt(0).toString(16).padStart(4, '0')}`);
+  return message.replace(UNSAFE, (found) =>
+    Array.from({ length: found.length }, (_, i) => `\\u${found.charCodeAt(i).toString(16).padStart(4, '0')}`).join(''),
+  );
 }

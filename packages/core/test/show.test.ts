@@ -22,6 +22,22 @@ class ThrowingTag extends Uint8Array {
     throw new Error('tag');
   }
 }
+// An array whose length is 3 when first read and a million after, and one whose length is text.
+let lengthReads = 0;
+const growing = new Proxy([1, 2, 3], {
+  get(target, key) {
+    if (key === 'length') {
+      lengthReads += 1;
+      return lengthReads === 1 ? 3 : 1_000_000;
+    }
+    return Reflect.get(target, key);
+  },
+});
+const wordy = new Proxy([1], {
+  get(target, key) {
+    return key === 'length' ? '\u202e3' : Reflect.get(target, key);
+  },
+});
 
 describe('show', () => {
   it.each<[string, unknown, string]>([
@@ -48,7 +64,9 @@ describe('show', () => {
     ['writes NaN', Number.NaN, 'NaN'],
     ['describes a revoked Proxy as an object', revoked, 'an object'],
     ['describes an array whose length throws as an object', trapped, 'an object'],
-    ['describes a typed array whose tag throws as an object', new ThrowingTag(1), 'an object'],
+    ['names a typed array by its kind, whatever its tag does', new ThrowingTag(1), 'a Uint8Array'],
+    ['reads the length of an array once', growing, '[1, 2, 3]'],
+    ['describes an array whose length is not a whole number only as an array', wordy, 'an array'],
     ['writes a string of 100 characters in full', 'x'.repeat(100), `"${'x'.repeat(100)}"`],
     ['writes an array of 8 entries in brackets', [1, 2, 3, 4, 5, 6, 7, 8], '[1, 2, 3, 4, 5, 6, 7, 8]'],
   ])('%s', (_case, value, shown) => {
@@ -63,6 +81,10 @@ describe('show', () => {
     ['a direction override', 'a\u202eb', 'a\\u202eb'],
     ['a direction isolate', 'a\u2066b', 'a\\u2066b'],
     ['an Arabic letter mark', 'a\u061cb', 'a\\u061cb'],
+    ['a zero-width space', 'a\u200bb', 'a\\u200bb'],
+    ['a byte order mark', 'a\ufeffb', 'a\\ufeffb'],
+    ['a soft hyphen', 'a\u00adb', 'a\\u00adb'],
+    ['a tag character, a pair of code units', 'a\u{E0041}b', 'a\\udb40\\udc41b'],
   ])('escapes %s in a message', (_case, message, written) => {
     expect(escaped(message)).toBe(written);
   });
