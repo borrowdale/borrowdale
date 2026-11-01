@@ -97,7 +97,7 @@ function linearScale(axis: CheckedLinearAxis, [lo, hi]: [number, number], length
   if (high - low < POWERS[0]!) {
     fail(axis.path, `has values that differ by ${high - low}, less than the smallest tick step, ${POWERS[0]}`);
   }
-  const count = Math.max(2, Math.floor(length / TICK_SPACING));
+  const count = tickCountFor(length);
   let step = axis.step === undefined ? tickStep(low, high, count) : givenStep(axis.step);
   let domain: [number, number] = [axis.min ?? step.tick(step.floor(low)), axis.max ?? step.tick(step.ceil(high))];
   if (!(domain[1] > domain[0])) {
@@ -116,7 +116,7 @@ function linearScale(axis: CheckedLinearAxis, [lo, hi]: [number, number], length
   }
   const tickCount = step.floor(domain[1]) - step.ceil(domain[0]) + 1;
   if (tickCount > MAX_TICKS) {
-    fail(`${axis.path}.step`, `gives ${tickCount} ticks from ${domain[0]} to ${domain[1]}, more than ${MAX_TICKS}`);
+    fail(axis.step === undefined ? axis.path : `${axis.path}.step`, `gives ${tickCount} ticks from ${domain[0]} to ${domain[1]}, more than ${MAX_TICKS}`);
   }
   const numbers = integersBetween(step.ceil(domain[0]), step.floor(domain[1]));
   const ticks = numbers.map(step.tick);
@@ -224,7 +224,7 @@ function logScale(axis: CheckedLinearAxis, [lo, hi]: [number, number], length: n
   if (!(domain[1] > domain[0])) {
     domain = axis.max === undefined ? [domain[0], POWERS[decadeOf(domain[0]) + EXPONENT_OFFSET + 1]!] : [POWERS[decadeOf(domain[1]) + EXPONENT_OFFSET - 1]!, domain[1]];
   }
-  const count = Math.max(2, Math.floor(length / TICK_SPACING));
+  const count = tickCountFor(length);
   const exponents = integersBetween(decadeOf(domain[0]), decadeOf(domain[1]));
   const candidates = DECADE_TICKS.map((mantissas) =>
     exponents
@@ -300,6 +300,14 @@ function everyFor(room: number, ticks: readonly number[], at: (value: number) =>
     narrowest = Math.min(narrowest, Math.abs(at(ticks[i]!) - at(ticks[i - 1]!)));
   }
   return Math.max(1, Math.ceil(room / narrowest));
+}
+
+/**
+ * How many ticks an axis `length` long asks for: about one per 50 units, but no more than half the
+ * most an axis may have, so that rounding out to a nice step never takes it past the most.
+ */
+export function tickCountFor(length: number): number {
+  return Math.min(MAX_TICKS / 2, Math.max(2, Math.floor(length / TICK_SPACING)));
 }
 
 /** Gives a scale its place, from `from` at the start of the domain to `to` at its end. */

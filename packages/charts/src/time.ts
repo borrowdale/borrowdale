@@ -4,7 +4,7 @@
 // weeks start on Monday, as in ISO 8601.
 import type { CheckedLinearAxis } from './check-axis.js';
 import { fail, MAX_TICKS, show, type Check } from './read.js';
-import { keptApart, listedTicks, type Scale } from './scale.js';
+import { keptApart, listedTicks, tickCountFor, type Scale } from './scale.js';
 
 const SECOND = 1000;
 const MINUTE = 60 * SECOND;
@@ -216,9 +216,6 @@ export const INTERVALS: readonly TimeInterval[] = [
   ...[1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000].map((every) => interval('year', every)),
 ];
 
-// About one tick per this many units of axis, as on a linear axis.
-const TICK_SPACING = 50;
-
 /**
  * A time scale over the data's extent: free ends rounded out to the boundaries of the interval that
  * gives about one tick per 50 units of `length` without passing that, or of the axis' own `step`.
@@ -230,7 +227,7 @@ export function timeScale(axis: CheckedLinearAxis, [lo, hi]: [number, number], l
     return listedTicks(axis, axis.ticks, [lo, hi]);
   }
   const [low, high] = [axis.min ?? lo, axis.max ?? hi];
-  const count = Math.max(2, Math.floor(length / TICK_SPACING));
+  const count = tickCountFor(length);
   // One moment alone, or a fixed end it equals, shows the day it falls in.
   const span = high > low ? high - low : DAY;
   const step = axis.interval ?? INTERVALS.find((candidate) => candidate.length * count >= span) ?? INTERVALS.at(-1)!;
@@ -241,7 +238,7 @@ export function timeScale(axis: CheckedLinearAxis, [lo, hi]: [number, number], l
   const ticks: number[] = [];
   for (let at = ceiling(step, domain[0]); at <= domain[1]; at = step.next(at)) {
     if (ticks.length === MAX_TICKS) {
-      fail(`${axis.path}.step`, `gives more than ${MAX_TICKS} ticks from ${formatTime(domain[0])} to ${formatTime(domain[1])}`);
+      fail(axis.interval === undefined ? axis.path : `${axis.path}.step`, `gives more than ${MAX_TICKS} ticks from ${formatTime(domain[0])} to ${formatTime(domain[1])}`);
     }
     ticks.push(at);
   }

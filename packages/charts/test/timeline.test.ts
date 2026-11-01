@@ -39,6 +39,12 @@ describe('a timeline', () => {
     expect(overlappingTexts(layoutChart(timeline({ type: 'serpentine', rows: 3 }, [460, 260], crowded)))).toEqual([]);
   });
 
+  // Its track is about 35,000 units long, so one tick per 50 units over 0 to 2,100 would be 1,051.
+  it('lays a long spiral out without asking for more ticks than an axis may have', () => {
+    const long = { ...timeline(undefined, [1000, 1000], [{ at: 0 }, { at: 2100 }]), axes: { time: { type: 'linear', path: { type: 'spiral', turns: 20 } } } } as ChartSpec;
+    expect(laying(long)).not.toThrow();
+  });
+
   it('writes moments and periods in tooltips', () => {
     expect(titles(timeline(undefined, [460, 160])).slice(0, 3)).toEqual([
       'Missions: Moon landing, 1969-07-20',
