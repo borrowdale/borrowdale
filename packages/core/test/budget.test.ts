@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Budget, sketch, type Shape } from '@borrowdale/core';
-import { charge, drawWithin, MAX_OPERATIONS } from '../src/engine/budget.js';
+import { charge, drawWithin, MAX_OPERATIONS } from '../src/budget.js';
 
 // One unit per stroke, and rough draws a line with two.
 const line: Shape = { kind: 'line', x1: 0, y1: 0, x2: 10, y2: 10 };

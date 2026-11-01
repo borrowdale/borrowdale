@@ -1,6 +1,6 @@
 // The boundary to the stroke engine (./engine/, which began as a TypeScript port of rough.js 4.6.6).
 // Replacing the engine means replacing this file and that directory.
-import { Budget, drawWithin, MAX_OPERATIONS } from './engine/budget.js';
+import { Budget, drawWithin, MAX_OPERATIONS } from './budget.js';
 import { DEFAULT_OPTIONS, fillWeight, type OpSet, type ResolvedOptions } from './engine/core.js';
 import { opsToPath, shapeSets } from './engine/generator.js';
 import type { Shape, ShapeKind, SketchPath } from './types.js';

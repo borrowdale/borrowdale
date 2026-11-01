@@ -149,7 +149,7 @@ SOFTWARE.
 
 ## fdlibm 5.3
 
-<https://www.netlib.org/fdlibm/>. `src/engine/math.ts` uses its polynomial coefficients and
+<https://www.netlib.org/fdlibm/>. `src/trig.ts` uses its polynomial coefficients and
 range-reduction constants for sin, cos and atan.
 
 ```

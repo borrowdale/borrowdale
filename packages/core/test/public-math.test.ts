@@ -1,11 +1,15 @@
 import { describe, expect, it } from 'vitest';
 // Before the module, so a Math.sin it called or kept a reference to would throw.
 import './support/forbid-unportable-math.js';
-import { cos, sin } from '@borrowdale/core/math';
+import { cos, MAX_ANGLE, sin } from '@borrowdale/core/math';
 
 // The published functions are the engine's own, so each value is the same in every JavaScript
 // engine. The expected values are Math.sin and Math.cos in Node, which agree here.
 describe('@borrowdale/core/math', () => {
+  it('exports the bound it checks', () => {
+    expect(MAX_ANGLE).toBe(1_000_000);
+  });
+
   it.each<[string, number, (x: number) => number, number]>([
     ['sin', 1, sin, 0.8414709848078965],
     ['cos', 1, cos, 0.5403023058681398],

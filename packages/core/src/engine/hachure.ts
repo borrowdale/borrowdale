@@ -1,9 +1,9 @@
 // Ported from hachure-fill 0.5.2 (bin/hachure.js). MIT License, Copyright (c) 2023 Preet Shihn.
 // See THIRD_PARTY_NOTICES.md.
 
-import { charge } from './budget.js';
+import { charge } from '../budget.js';
 import type { Line, Point } from './core.js';
-import { cos, sin } from './math.js';
+import { cos, sin } from '../trig.js';
 
 interface Edge {
   ymin: number;

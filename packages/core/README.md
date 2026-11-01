@@ -143,9 +143,9 @@ const point = [cx + r * cos(angle), cy + r * sin(angle)];
 ```
 
 They give the same result in every JavaScript engine. That result can differ from `Math.sin` and
-`Math.cos` in the last bits. They accept a finite number of radians within ±1,000,000 and throw a
-`RangeError` for anything else. Not far past that range the result would be wrong without any sign
-of it.
+`Math.cos` in the last bits. They accept a finite number of radians within ±1,000,000, exported
+as `MAX_ANGLE`, and throw a `RangeError` for anything else. Not far past that range the result
+would be wrong without any sign of it.
 
 ## Rendering
 

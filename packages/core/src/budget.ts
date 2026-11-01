@@ -5,7 +5,7 @@
 // curves, simplification). Loops that only transform points already counted (rotating, sorting
 // edges, converting curves) are not charged. The unit is a rough "work unit", not an exact
 // operation count; the public error keeps the word "operations".
-import { show } from '../show.js';
+import { show } from './show.js';
 
 export const MAX_OPERATIONS = 200_000;
 

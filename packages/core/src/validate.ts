@@ -1,4 +1,5 @@
 import { MAX_COORDINATE } from './engine/core.js';
+import { MAX_ANGLE } from './math.js';
 import { show } from './show.js';
 import { FILL_STYLES, type Shape, type ShapeKind, type SketchOptions } from './types.js';
 
@@ -8,8 +9,6 @@ const MAX_DASHES = 16;
 // The shortest dash pattern, dash and gap lengths added up.
 const MIN_DASH_PATTERN = 1;
 const MAX_ROUGHNESS = 10;
-// Degrees. The engine's own trigonometry reduces arguments only up to about 1.6e6 radians.
-const MAX_ANGLE = 1e6;
 
 // Both must be finite and within ±MAX_COORDINATE; a size must also not be negative.
 type FieldRule = 'number' | 'size';
@@ -90,6 +89,7 @@ const OPTION_RULES: Record<keyof SketchOptions, OptionRule> = {
     message: (value) => `Unknown fill style: ${typeof value === 'string' ? value : show(value)}`,
   },
   fillWeight: FINITE,
+  // In degrees, so its radians stay far inside the trigonometry's range.
   hachureAngle: { ok: (value) => isWithin(value, MAX_ANGLE), expected: `a finite number within ±${MAX_ANGLE}` },
   hachureGap: FINITE,
   dashOffset: FINITE,

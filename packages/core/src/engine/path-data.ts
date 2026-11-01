@@ -3,9 +3,9 @@
 // See THIRD_PARTY_NOTICES.md.
 
 import { pointsOnBezierCurves, simplify } from './bezier.js';
-import { charge } from './budget.js';
+import { charge } from '../budget.js';
 import { MAX_COORDINATE, type Point } from './core.js';
-import { asin, cos, sin, tan } from './math.js';
+import { asin, cos, sin, tan } from '../trig.js';
 
 export interface Segment {
   key: string;

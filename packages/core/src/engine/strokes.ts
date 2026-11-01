@@ -2,9 +2,9 @@
 // Preet Shihn. See THIRD_PARTY_NOTICES.md. The random-number and single-stroke primitives that both
 // the shape geometry (renderer.ts) and the fillers (fillers.ts) draw with.
 
-import { charge } from './budget.js';
+import { charge } from '../budget.js';
 import { Random, type Op, type ResolvedOptions } from './core.js';
-import { square } from './math.js';
+import { square } from '../trig.js';
 
 export function doubleLineFillOps(x1: number, y1: number, x2: number, y2: number, o: ResolvedOptions): Op[] {
   return doubleLine(x1, y1, x2, y2, o, true);

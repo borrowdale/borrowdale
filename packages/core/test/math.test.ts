@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { asin, atan, cos, sin } from '../src/engine/math.js';
+import { asin, atan, cos, sin } from '../src/trig.js';
 
 // The engine computes these with IEEE-exact operations only, so each value is the same in every
 // JavaScript engine.
