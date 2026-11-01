@@ -476,7 +476,7 @@ function checkTimelineChart(r: Fields, base: CheckedChartBase, series: SeriesOf<
   const axes = r.optional('axes', fields);
   axes?.allow(['time']);
   const axis = axes?.optional('time', checkTimelineAxis) ?? checkTimelineAxis('axes.time', { type: 'time' });
-  const value = axis.kind === 'time' ? valueReader('time') : numberOn(axis);
+  const value = readerOn(axis);
   for (const entry of series) {
     entry.data.forEach((event, i) => {
       const path = `${entry.path}.data[${i}]`;
@@ -563,13 +563,8 @@ function checkCartesianChart(
   const x = axes.required('x', checkAxis(CARTESIAN_KEYS, true));
   const y = axes.required('y', checkAxis(CARTESIAN_KEYS, true));
   const y2 = axes.optional('y2', checkY2Axis);
-  if (x.type === 'band' && y.type === 'band') {
-    fail('axes', 'has two band axes; one of x and y must be linear');
-  }
-  const band = x.type === 'band' ? x : y.type === 'band' ? y : undefined;
-  if (y2 && x.type !== 'band') {
-    fail('axes.y2', 'needs x to be the band axis');
-  }
+  const roles = rolesOf(x, y, y2);
+  const { band } = roles;
   for (const linear of [x, y, y2]) {
     if (linear?.type === 'linear' && linear.percent && !band) {
       fail(`${linear.path}.percent`, `needs a band axis: only stacking series (${STACKING}) use it`);
@@ -585,13 +580,8 @@ function checkCartesianChart(
     if (!rule.band && band) {
       fail(entry.path, `is a ${entry.type} series, which needs both axes linear`);
     }
-    const onY2 = 'axis' in entry && entry.axis === 'y2';
-    if (onY2 && !y2) {
-      fail(`${entry.path}.axis`, 'is y2, but the chart has no axes.y2');
-    }
-    // A series with no axis key (xRange) is on the value axis.
-    const onAxis = onY2 ? y2! : band === x ? y : x;
-    if (band && onAxis.type === 'linear' && onAxis.percent && !isStacking(entry)) {
+    const onAxis = roles.band && valueAxisOf(entry, roles);
+    if (onAxis && onAxis.percent && !isStacking(entry)) {
       const which = `a percent axis, which only stacking series (${STACKING}) can use`;
       fail(entry.path, `is a ${entry.type} series on ${onAxis.path}, ${which}`);
     }
@@ -616,7 +606,7 @@ function checkCartesianChart(
       stacked.set(`${entry.axis}|${entry.stack}`, first);
     }
   }
-  resolveValues(series, { x, y, y2 }, band);
+  resolveValues(series, roles);
   return { ...base, system: 'cartesian', x, y, y2, band, series, annotations: checkAnnotations(r, { x, y, y2 }, color) };
 }
 
@@ -626,46 +616,72 @@ function checkCartesianChart(
  * axis can show. A series a kind of axis cannot draw is rejected. Values are replaced in place, in the
  * lists validation copied.
  */
-function resolveValues(
-  series: readonly SeriesOf<'cartesian'>[],
-  axes: { x: CheckedAxis; y: CheckedAxis; y2: CheckedLinearAxis | undefined },
-  band: CheckedBandAxis | undefined,
-): void {
-  const reader = (axis: CheckedAxis): Check<number> =>
-    axis.type === 'band' ? anyValue : axis.kind === 'time' ? valueReader('time') : numberOn(axis);
+function resolveValues(series: readonly SeriesOf<'cartesian'>[], roles: AxisRoles): void {
   for (const entry of series) {
-    if (entry.type === 'xRange') {
-      resolveXRange(entry, reader((band === axes.x ? axes.y : axes.x) as CheckedLinearAxis), band!);
-      continue;
-    }
-    if (!('axis' in entry)) {
+    // Each pairing of a series and the chart's axes other than these was rejected before.
+    if (entry.type === 'xRange' && roles.band) {
+      resolveXRange(entry, readerOn(roles.value), roles.band);
+    } else if (entry.type !== 'xRange' && !('axis' in entry) && !roles.band) {
       // Both axes are continuous: each coordinate is read by the axis it is on.
-      const [x, y] = [reader(axes.x), reader(axes.y)];
+      const [x, y] = [readerOn(roles.x), readerOn(roles.y)];
       const readers = entry.type === 'bubble' ? [x, y, anyValue] : entry.type === 'xyArea' ? [x, y, y] : [x, y];
       readEach(entry.data, `${entry.path}.data`, readers);
       if (entry.type === 'xyArea') {
         checkArea(entry);
       }
-      continue;
-    }
-    const axis = (entry.axis === 'y2' ? axes.y2 : band === axes.x ? axes.y : axes.x) as CheckedLinearAxis;
-    if (axis.kind === 'time' && entry.type !== 'interval') {
-      fail(entry.path, `is a ${entry.type} series on ${axis.path}, a time axis, which only interval and xRange series can use`);
-    }
-    if (axis.kind === 'log' && (entry.type === 'bar' || entry.type === 'area')) {
-      fail(entry.path, `is a ${entry.type} series on ${axis.path}, a log axis, which cannot show the 0 it stands on`);
-    }
-    const value = reader(axis);
-    if (entry.type === 'interval' || entry.type === 'rangeArea') {
-      readEach(entry.data, `${entry.path}.data`, [value, value]);
-    } else {
-      entry.data.forEach((point, i) => {
-        if (point !== null) {
-          value(`${entry.path}.data[${i}]`, point);
-        }
-      });
+    } else if ('axis' in entry && roles.band) {
+      resolveOnAxis(entry, valueAxisOf(entry, roles));
     }
   }
+}
+
+/** A cartesian chart's axes by role: a band axis and the value axes across it, or two continuous axes. */
+type AxisRoles =
+  | { band: CheckedBandAxis; value: CheckedLinearAxis; y2: CheckedLinearAxis | undefined }
+  | { band: undefined; x: CheckedLinearAxis; y: CheckedLinearAxis };
+
+function rolesOf(x: CheckedAxis, y: CheckedAxis, y2: CheckedLinearAxis | undefined): AxisRoles {
+  if (x.type === 'band') {
+    return y.type === 'band' ? fail('axes', 'has two band axes; one of x and y must be linear') : { band: x, value: y, y2 };
+  }
+  if (y2) {
+    fail('axes.y2', 'needs x to be the band axis');
+  }
+  return y.type === 'band' ? { band: y, value: x, y2: undefined } : { band: undefined, x, y };
+}
+
+// The axis a series on a band chart is drawn against: y2 when it says so, else the value axis. A
+// series with no axis key (xRange) is on the value axis.
+function valueAxisOf(entry: SeriesOf<'cartesian'>, roles: Extract<AxisRoles, { band: CheckedBandAxis }>): CheckedLinearAxis {
+  if (!('axis' in entry) || entry.axis !== 'y2') {
+    return roles.value;
+  }
+  return roles.y2 ?? fail(`${entry.path}.axis`, 'is y2, but the chart has no axes.y2');
+}
+
+// The values of a series drawn one per category against `axis`.
+function resolveOnAxis(entry: Extract<SeriesOf<'cartesian'>, { axis: unknown }>, axis: CheckedLinearAxis): void {
+  if (axis.kind === 'time' && entry.type !== 'interval') {
+    fail(entry.path, `is a ${entry.type} series on ${axis.path}, a time axis, which only interval and xRange series can use`);
+  }
+  if (axis.kind === 'log' && (entry.type === 'bar' || entry.type === 'area')) {
+    fail(entry.path, `is a ${entry.type} series on ${axis.path}, a log axis, which cannot show the 0 it stands on`);
+  }
+  const value = readerOn(axis);
+  if (entry.type === 'interval' || entry.type === 'rangeArea') {
+    readEach(entry.data, `${entry.path}.data`, [value, value]);
+  } else {
+    entry.data.forEach((point, i) => {
+      if (point !== null) {
+        value(`${entry.path}.data[${i}]`, point);
+      }
+    });
+  }
+}
+
+// How a value on a continuous axis is read: a time on a time axis, else a number.
+function readerOn(axis: CheckedLinearAxis): Check<number> {
+  return axis.kind === 'time' ? valueReader('time') : numberOn(axis);
 }
 
 // Each item's row among the band axis' categories, and its ends read by the value axis.
