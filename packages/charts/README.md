@@ -41,13 +41,14 @@ cannot share a chart:
 
 | Series types | Axes |
 |---|---|
-| `bar`, `line`, `area`, `rangeArea`, `interval`, in any mix | `x` and `y`, one of them `band` |
-| `scatter`, `bubble`, `xyLine`, `xyArea`, in any mix | `x` and `y`, both `linear` |
+| `bar`, `line`, `area`, `rangeArea`, `interval`, `xRange`, in any mix | `x` and `y`, one of them `band` |
+| `scatter`, `bubble`, `xyLine`, `xyArea`, in any mix | `x` and `y`, both continuous: `linear`, `time`, `log` or `sqrt` |
 | `radar`, `rose`, `polarLine`, `polarArea`, in any mix | `angle` (`band`), and optionally `radius` (`linear`) |
 | `radialBar` | `angle` (`linear`) and `radius` (`band`) |
 | `polarScatter` | `angle` and `radius`, both `linear` |
 | `pie`, up to 10 as nested rings | none |
 | `gauge`, any number sharing the dial | optionally `angle` (`linear`) |
+| `timeline`, any number sharing the track | optionally `time` (`time` or `linear`), with its `path` |
 
 | `type` | `data` | Options |
 |---|---|---|
@@ -56,6 +57,7 @@ cannot share a chart:
 | `area` | a value or `null` per category | `stack`, `curve`, `axis: 'y2'`. Stacked values must not be negative. Areas of one stack share a `curve` |
 | `rangeArea` | a `[low, high]` pair or `null` per category, high not below low | `curve`, `axis: 'y2'` |
 | `interval` | a `[from, to]` pair or `null` per category | `display`, `width`, `overlay`, endpoint symbols, `shape`, `dataLabels`, `axis: 'y2'`; see [additional marks](#additional-cartesian-marks) |
+| `xRange` | `{ row, from, to?, label?, progress? }` items, any number per category | a Gantt or x-range chart; see [time](#time-log-and-square-root-axes) |
 | `xyLine` | numeric `[x, y]` pairs or `null` between runs | `symbol`, `dash`, `dataLabels`, `segments`, `widths`, `gradient`; see [widths and colours](#widths-crossings-and-colours) |
 | `xyArea` | `[x, low, high]` intervals or `null` between runs, x increasing within each run | `difference` permits crossing boundaries; see [widths and colours](#widths-crossings-and-colours) |
 | `scatter` | `[x, y]` points | |
@@ -68,6 +70,7 @@ cannot share a chart:
 | `polarArea` | a value or `null` per category of the angle axis | `stack`. Stacked values must not be negative |
 | `polarScatter` | `[angle, radius]` points | |
 | `gauge` | `value`, a number on the dial | `display`: `needle` (default) or `bar`; `length`: a needle's length as a share of the radius, 0.1 to 1 (default 0.8) |
+| `timeline` | `{ at, to?, label? }` moments and periods | `dataLabels`; see [timelines](#timelines) |
 
 A slice's `offset` (0 to 0.5 of the radius) pulls it out from the centre. Give every slice of a pie
 a `radius`, or none: each slice then reaches out in proportion to it, the largest to the full
@@ -169,6 +172,58 @@ take rings inside the track, or the track itself when there are no bands, and a 
 rings as fit outside its hub; a lone gauge writes its value under the centre. A clock dial labelled
 every hour is `min: 0, max: 12, step: 1` over a whole turn; a compass is `min: 0, max: 360` with
 `ticks` labelled N, E, S and W.
+
+## Time, log and square-root axes
+
+A cartesian `x` or `y` axis may be `time`, `log` or `sqrt` as well as `band` or `linear`, and `y2`
+`log` or `sqrt`. Each takes `title`, `min`, `max`, `ticks`, `grid`, `hidden`, `format` and
+`labelAngle` as a linear axis does; `percent` is for linear axes only.
+
+| `type` | Values | Ticks |
+|---|---|---|
+| `time` | ISO 8601 strings (`"2026-11-01"`, `"2026-11"`, `"2026-11-01T09:30Z"`, `"2026-11-01T09:30:15.250+01:00"`) or whole milliseconds since 1970-01-01T00:00Z, from year 0000 to 9999 | calendar boundaries in UTC, from milliseconds to millennia, about one per 50 units; `step: { unit, every }` picks them, `unit` one of `millisecond`, `second`, `minute`, `hour`, `day`, `week`, `month`, `year` |
+| `log` | numbers from 1e-20 to 1e15 | powers of ten, with 1, 2 and 5 times them, or every one to nine times, where there is room; free ends round out to powers of ten; no `step` |
+| `sqrt` | numbers, negative ones mirroring positive ones | a linear axis' ticks, placed by their square roots |
+
+Times are read without the JavaScript engine's date parser, which differs between engines and
+accepts dates that do not exist: an impossible day such as `2027-02-30` is an error. A date and time
+must end in `Z` or an offset from UTC such as `+01:00`, since one without would be read as local time,
+which differs between viewers. A date alone is midnight UTC. Ticks and labels are in UTC, and weeks
+start on Monday. Labels are written without locale data, each at the coarsest level it falls on:
+`2026` on a year, `Nov` on a month, `3 Nov` on a day, `09:30` on a minute; `format: { months }` gives
+the 12 month names, each at most 20 characters, in another language. Tooltips write a time as
+`2026-11-03 09:30`.
+
+On a time axis only `interval` and `xRange` series take values on the value axis of a band chart:
+range bars and Gantt rows. Values a log axis cannot show are errors, and so are `bar` and `area`
+series on one, since they stand on 0.
+
+An `xRange` series lays items along the rows of the band axis: each `{ row, from, to, label,
+progress }`, `row` a category, `to` after `from`, `progress` 0 to 1 drawn solid along its start.
+Without `to` an item is a milestone, a diamond at `from`. `dataLabels` writes each label on its item,
+or past its end where it does not fit; `width` (0.05 to 1 of the row's slot, default 0.6), `shape`
+(`rectangle` or `rounded`) and `overlay` work as on an interval. Arrows between items are `arrow`
+annotations, such as `{ type: 'arrow', from: ['2026-02-06', 'Design'], to: ['2026-02-09', 'Build'] }`.
+
+Annotations take times on a time axis: `{ type: 'line', axis: 'x', value: '2026-06-15', label: 'A' }`.
+
+## Timelines
+
+A `timeline` series places moments, `{ at, label }`, and periods, `{ at, to, label }`, along one
+axis, `axes.time`: a `time` axis by default, or `linear`, taking `min`, `max`, `step`, `ticks`,
+`hidden` and `format`. Its `path` lays the axis out as a track, earliest first:
+
+| `path` | Track |
+|---|---|
+| `{ type: 'line' }` | straight across the chart (the default) |
+| `{ type: 'serpentine', rows }` | `rows` (1 to 20, default 3) left to right and back, joined by half turns; a chart too small for them is an error |
+| `{ type: 'spiral', turns, innerRadius }` | `turns` (1 to 20, default 3) out from `innerRadius` (0 to 0.9 of the radius, default 0.2), clockwise from the top |
+| `{ type: 'curve', points }` | through 2 to 100 `[x, y]` points, each 0 to 1 across and down the chart, joined by straight segments |
+
+Values are placed by their distance along the track, and ticks fall about every 50 units of it,
+labelled on its left where they clear the labels before them. Moments are dots and periods thick
+stretches of the track; with `dataLabels`, labels go on its right, moving out up to two lines to clear
+the labels placed before them. On a tightly wound spiral some labels can still overlap.
 
 ## Chart options
 
@@ -397,7 +452,10 @@ lines and range areas retain their existing curve options.
 ### Chart compositions
 
 The repository's `apps/examples/cartesian-cases.json` contains 33 complete specs;
-run `node apps/examples/cartesian.mjs` after building to render each one.
+run `node apps/examples/cartesian.mjs` after building to render each one. Its
+`apps/examples/time-cases.json` holds 12 more, rendered by `node apps/examples/time.mjs`: a time axis,
+range bars, a Gantt chart, an x-range chart, an annotation chart, a cycle plot, a Marey chart, log and
+square-root axes, and serpentine, spiral and curve timelines.
 
 | Chart | Preparation and composition |
 |---|---|
@@ -410,6 +468,10 @@ run `node apps/examples/cartesian.mjs` after building to render each one.
 | Centred Likert | Centre the neutral interval on zero; place negative responses to its left and positive responses to its right, using overlaid interval series |
 | Strip/barcode | Scatter points on a constant y, with circle or tick symbols |
 | Index/change line | For a chosen nonzero base `b`, plot `100 * value / b` for an index, or `value - b` for absolute change; retain null gaps |
+| Range bar | An `interval` series on a time value axis, one `[from, to]` per category |
+| Annotation chart | An `xyLine` on a time `x` axis, with `line` annotations at the events and `label` annotations for their notes |
+| Cycle plot | A linear `x` axis with `ticks` labelled by month at 0 to 11; each month's values over the years as one `xyLine` run around its tick, `null` between months, and each month's mean as a short dashed run |
+| Marey chart | A time `x` axis and a linear `y` axis with `ticks` at each station's distance, labelled by its name; one `xyLine` per train through its times at the stations |
 | Function plot | Sample the function into numeric `[x,y]` data outside the spec and draw an `xyLine` |
 
 Apply the same category order to every composed series. Horizontal interval

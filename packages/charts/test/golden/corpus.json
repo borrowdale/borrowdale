@@ -5789,5 +5789,1219 @@
     }
    ]
   }
+ },
+ {
+  "name": "time-axis-line",
+  "spec": {
+   "width": 480,
+   "height": 260,
+   "title": "Noon temperature, November",
+   "axes": {
+    "x": {
+     "type": "time"
+    },
+    "y": {
+     "type": "linear",
+     "format": {
+      "suffix": " °C"
+     }
+    }
+   },
+   "series": [
+    {
+     "type": "xyLine",
+     "name": "York",
+     "data": [
+      [
+       "2026-11-01",
+       10.0
+      ],
+      [
+       "2026-11-02",
+       8.7
+      ],
+      [
+       "2026-11-03",
+       10.6
+      ],
+      [
+       "2026-11-04",
+       9.3
+      ],
+      [
+       "2026-11-05",
+       8.0
+      ],
+      [
+       "2026-11-06",
+       10.0
+      ],
+      [
+       "2026-11-07",
+       8.7
+      ],
+      [
+       "2026-11-08",
+       7.3
+      ],
+      [
+       "2026-11-09",
+       9.3
+      ],
+      [
+       "2026-11-10",
+       8.0
+      ],
+      [
+       "2026-11-11",
+       6.7
+      ],
+      [
+       "2026-11-12",
+       8.7
+      ],
+      [
+       "2026-11-13",
+       7.3
+      ],
+      [
+       "2026-11-14",
+       9.3
+      ],
+      [
+       "2026-11-15",
+       8.0
+      ],
+      [
+       "2026-11-16",
+       6.7
+      ],
+      [
+       "2026-11-17",
+       8.7
+      ],
+      [
+       "2026-11-18",
+       7.3
+      ],
+      [
+       "2026-11-19",
+       6.0
+      ],
+      [
+       "2026-11-20",
+       8.0
+      ],
+      [
+       "2026-11-21",
+       6.7
+      ],
+      [
+       "2026-11-22",
+       5.4
+      ],
+      [
+       "2026-11-23",
+       7.3
+      ],
+      [
+       "2026-11-24",
+       6.0
+      ],
+      [
+       "2026-11-25",
+       8.0
+      ],
+      [
+       "2026-11-26",
+       6.7
+      ],
+      [
+       "2026-11-27",
+       5.4
+      ],
+      [
+       "2026-11-28",
+       7.3
+      ],
+      [
+       "2026-11-29",
+       6.0
+      ],
+      [
+       "2026-11-30",
+       4.7
+      ]
+     ],
+     "symbol": "circle"
+    }
+   ]
+  }
+ },
+ {
+  "name": "time-range-bars",
+  "spec": {
+   "width": 480,
+   "height": 240,
+   "title": "Exhibitions",
+   "axes": {
+    "x": {
+     "type": "time"
+    },
+    "y": {
+     "type": "band",
+     "categories": [
+      "North hall",
+      "South hall",
+      "Garden"
+     ]
+    }
+   },
+   "series": [
+    {
+     "type": "interval",
+     "name": "Open",
+     "data": [
+      [
+       "2026-03-02",
+       "2026-05-31"
+      ],
+      [
+       "2026-04-15",
+       "2026-09-30"
+      ],
+      [
+       "2026-05-01",
+       "2026-08-15"
+      ]
+     ],
+     "width": 0.6
+    }
+   ]
+  }
+ },
+ {
+  "name": "time-gantt",
+  "spec": {
+   "width": 520,
+   "height": 260,
+   "title": "Release plan",
+   "axes": {
+    "x": {
+     "type": "time"
+    },
+    "y": {
+     "type": "band",
+     "categories": [
+      "Design",
+      "Build",
+      "Test",
+      "Launch"
+     ]
+    }
+   },
+   "series": [
+    {
+     "type": "xRange",
+     "name": "Plan",
+     "dataLabels": true,
+     "data": [
+      {
+       "row": "Design",
+       "from": "2026-01-05",
+       "to": "2026-01-23",
+       "label": "Sketches",
+       "progress": 1
+      },
+      {
+       "row": "Design",
+       "from": "2026-01-26",
+       "to": "2026-02-06",
+       "label": "Review",
+       "progress": 0.5
+      },
+      {
+       "row": "Build",
+       "from": "2026-02-09",
+       "to": "2026-03-20",
+       "label": "Prototype",
+       "progress": 0.25
+      },
+      {
+       "row": "Test",
+       "from": "2026-03-16",
+       "to": "2026-04-03",
+       "label": "Field test"
+      },
+      {
+       "row": "Launch",
+       "from": "2026-04-13",
+       "label": "Go live"
+      }
+     ]
+    }
+   ],
+   "annotations": [
+    {
+     "type": "arrow",
+     "from": [
+      "2026-02-06",
+      "Design"
+     ],
+     "to": [
+      "2026-02-09",
+      "Build"
+     ]
+    },
+    {
+     "type": "arrow",
+     "from": [
+      "2026-03-20",
+      "Build"
+     ],
+     "to": [
+      "2026-03-20",
+      "Test"
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "time-x-range",
+  "spec": {
+   "width": 480,
+   "height": 240,
+   "title": "Shifts, planned and worked",
+   "axes": {
+    "x": {
+     "type": "time",
+     "step": {
+      "unit": "hour",
+      "every": 3
+     }
+    },
+    "y": {
+     "type": "band",
+     "categories": [
+      "Ana",
+      "Ben",
+      "Cai"
+     ]
+    }
+   },
+   "series": [
+    {
+     "type": "xRange",
+     "name": "Planned",
+     "data": [
+      {
+       "row": "Ana",
+       "from": "2026-11-02T06:00Z",
+       "to": "2026-11-02T14:00Z"
+      },
+      {
+       "row": "Ben",
+       "from": "2026-11-02T10:00Z",
+       "to": "2026-11-02T18:00Z"
+      },
+      {
+       "row": "Cai",
+       "from": "2026-11-02T14:00Z",
+       "to": "2026-11-02T22:00Z"
+      }
+     ]
+    },
+    {
+     "type": "xRange",
+     "name": "Worked",
+     "data": [
+      {
+       "row": "Ana",
+       "from": "2026-11-02T06:10Z",
+       "to": "2026-11-02T13:40Z"
+      },
+      {
+       "row": "Ben",
+       "from": "2026-11-02T10:30Z",
+       "to": "2026-11-02T18:20Z"
+      },
+      {
+       "row": "Cai",
+       "from": "2026-11-02T14:00Z",
+       "to": "2026-11-02T21:30Z"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "time-annotation-chart",
+  "spec": {
+   "width": 520,
+   "height": 260,
+   "title": "Visitors",
+   "axes": {
+    "x": {
+     "type": "time"
+    },
+    "y": {
+     "type": "linear"
+    }
+   },
+   "series": [
+    {
+     "type": "xyLine",
+     "name": "Visitors",
+     "data": [
+      [
+       "2026-01-01",
+       120
+      ],
+      [
+       "2026-02-01",
+       135
+      ],
+      [
+       "2026-03-01",
+       160
+      ],
+      [
+       "2026-04-01",
+       210
+      ],
+      [
+       "2026-05-01",
+       260
+      ],
+      [
+       "2026-06-01",
+       300
+      ],
+      [
+       "2026-07-01",
+       340
+      ],
+      [
+       "2026-08-01",
+       330
+      ],
+      [
+       "2026-09-01",
+       280
+      ],
+      [
+       "2026-10-01",
+       220
+      ],
+      [
+       "2026-11-01",
+       170
+      ],
+      [
+       "2026-12-01",
+       150
+      ]
+     ]
+    }
+   ],
+   "annotations": [
+    {
+     "type": "line",
+     "axis": "x",
+     "value": "2026-04-10",
+     "label": "A"
+    },
+    {
+     "type": "line",
+     "axis": "x",
+     "value": "2026-08-20",
+     "label": "B"
+    },
+    {
+     "type": "label",
+     "at": [
+      "2026-04-10",
+      320
+     ],
+     "text": "A: new entrance"
+    },
+    {
+     "type": "label",
+     "at": [
+      "2026-08-20",
+      360
+     ],
+     "text": "B: summer festival"
+    }
+   ]
+  }
+ },
+ {
+  "name": "time-cycle-plot",
+  "spec": {
+   "width": 560,
+   "height": 260,
+   "title": "Monthly mean temperature, 2022 to 2025",
+   "legend": "none",
+   "axes": {
+    "x": {
+     "type": "linear",
+     "min": -0.5,
+     "max": 11.5,
+     "ticks": [
+      {
+       "value": 0,
+       "label": "Jan"
+      },
+      {
+       "value": 1,
+       "label": "Feb"
+      },
+      {
+       "value": 2,
+       "label": "Mar"
+      },
+      {
+       "value": 3,
+       "label": "Apr"
+      },
+      {
+       "value": 4,
+       "label": "May"
+      },
+      {
+       "value": 5,
+       "label": "Jun"
+      },
+      {
+       "value": 6,
+       "label": "Jul"
+      },
+      {
+       "value": 7,
+       "label": "Aug"
+      },
+      {
+       "value": 8,
+       "label": "Sep"
+      },
+      {
+       "value": 9,
+       "label": "Oct"
+      },
+      {
+       "value": 10,
+       "label": "Nov"
+      },
+      {
+       "value": 11,
+       "label": "Dec"
+      }
+     ]
+    },
+    "y": {
+     "type": "linear",
+     "format": {
+      "suffix": " °C"
+     }
+    }
+   },
+   "series": [
+    {
+     "type": "xyLine",
+     "name": "By year",
+     "data": [
+      [
+       -0.3,
+       2.1
+      ],
+      [
+       -0.1,
+       2.7
+      ],
+      [
+       0.1,
+       3.3
+      ],
+      [
+       0.3,
+       3.9
+      ],
+      null,
+      [
+       0.7,
+       3.6
+      ],
+      [
+       0.9,
+       4.2
+      ],
+      [
+       1.1,
+       3.8
+      ],
+      [
+       1.3,
+       4.4
+      ],
+      null,
+      [
+       1.7,
+       5.4
+      ],
+      [
+       1.9,
+       6.0
+      ],
+      [
+       2.1,
+       6.6
+      ],
+      [
+       2.3,
+       7.2
+      ],
+      null,
+      [
+       2.7,
+       8.8
+      ],
+      [
+       2.9,
+       8.4
+      ],
+      [
+       3.1,
+       9.0
+      ],
+      [
+       3.3,
+       9.6
+      ],
+      null,
+      [
+       3.7,
+       12.5
+      ],
+      [
+       3.9,
+       13.1
+      ],
+      [
+       4.1,
+       13.7
+      ],
+      [
+       4.3,
+       13.3
+      ],
+      null,
+      [
+       4.7,
+       15.4
+      ],
+      [
+       4.9,
+       16.0
+      ],
+      [
+       5.1,
+       16.6
+      ],
+      [
+       5.3,
+       17.2
+      ],
+      null,
+      [
+       5.7,
+       18.5
+      ],
+      [
+       5.9,
+       19.1
+      ],
+      [
+       6.1,
+       18.7
+      ],
+      [
+       6.3,
+       19.3
+      ],
+      null,
+      [
+       6.7,
+       17.8
+      ],
+      [
+       6.9,
+       18.4
+      ],
+      [
+       7.1,
+       19.0
+      ],
+      [
+       7.3,
+       19.6
+      ],
+      null,
+      [
+       7.7,
+       15.1
+      ],
+      [
+       7.9,
+       14.7
+      ],
+      [
+       8.1,
+       15.3
+      ],
+      [
+       8.3,
+       15.9
+      ],
+      null,
+      [
+       8.7,
+       10.4
+      ],
+      [
+       8.9,
+       11.0
+      ],
+      [
+       9.1,
+       11.6
+      ],
+      [
+       9.3,
+       11.2
+      ],
+      null,
+      [
+       9.7,
+       5.4
+      ],
+      [
+       9.9,
+       6.0
+      ],
+      [
+       10.1,
+       6.6
+      ],
+      [
+       10.3,
+       7.2
+      ],
+      null,
+      [
+       10.7,
+       3.4
+      ],
+      [
+       10.9,
+       4.0
+      ],
+      [
+       11.1,
+       3.6
+      ],
+      [
+       11.3,
+       4.2
+      ]
+     ],
+     "symbol": "circle"
+    },
+    {
+     "type": "xyLine",
+     "name": "Mean",
+     "data": [
+      [
+       -0.35,
+       3.0
+      ],
+      [
+       0.35,
+       3.0
+      ],
+      null,
+      [
+       0.65,
+       4.0
+      ],
+      [
+       1.35,
+       4.0
+      ],
+      null,
+      [
+       1.65,
+       6.3
+      ],
+      [
+       2.35,
+       6.3
+      ],
+      null,
+      [
+       2.65,
+       8.95
+      ],
+      [
+       3.35,
+       8.95
+      ],
+      null,
+      [
+       3.65,
+       13.15
+      ],
+      [
+       4.35,
+       13.15
+      ],
+      null,
+      [
+       4.65,
+       16.3
+      ],
+      [
+       5.35,
+       16.3
+      ],
+      null,
+      [
+       5.65,
+       18.9
+      ],
+      [
+       6.35,
+       18.9
+      ],
+      null,
+      [
+       6.65,
+       18.7
+      ],
+      [
+       7.35,
+       18.7
+      ],
+      null,
+      [
+       7.65,
+       15.25
+      ],
+      [
+       8.35,
+       15.25
+      ],
+      null,
+      [
+       8.65,
+       11.05
+      ],
+      [
+       9.35,
+       11.05
+      ],
+      null,
+      [
+       9.65,
+       6.3
+      ],
+      [
+       10.35,
+       6.3
+      ],
+      null,
+      [
+       10.65,
+       3.8
+      ],
+      [
+       11.35,
+       3.8
+      ]
+     ],
+     "dash": [
+      4,
+      3
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "time-marey",
+  "spec": {
+   "width": 520,
+   "height": 300,
+   "title": "Morning trains, York to London",
+   "axes": {
+    "x": {
+     "type": "time"
+    },
+    "y": {
+     "type": "linear",
+     "ticks": [
+      {
+       "value": 0,
+       "label": "York"
+      },
+      {
+       "value": 51,
+       "label": "Doncaster"
+      },
+      {
+       "value": 140,
+       "label": "Peterborough"
+      },
+      {
+       "value": 196,
+       "label": "Stevenage"
+      },
+      {
+       "value": 303,
+       "label": "London"
+      }
+     ]
+    }
+   },
+   "series": [
+    {
+     "type": "xyLine",
+     "name": "Train A",
+     "data": [
+      [
+       "2026-11-02T06:00Z",
+       0
+      ],
+      [
+       "2026-11-02T06:24Z",
+       51
+      ],
+      [
+       "2026-11-02T07:06Z",
+       140
+      ],
+      [
+       "2026-11-02T07:33Z",
+       196
+      ],
+      [
+       "2026-11-02T08:24Z",
+       303
+      ]
+     ]
+    },
+    {
+     "type": "xyLine",
+     "name": "Train B",
+     "data": [
+      [
+       "2026-11-02T07:30Z",
+       0
+      ],
+      [
+       "2026-11-02T08:02Z",
+       51
+      ],
+      [
+       "2026-11-02T08:58Z",
+       140
+      ],
+      [
+       "2026-11-02T09:33Z",
+       196
+      ],
+      [
+       "2026-11-02T10:40Z",
+       303
+      ]
+     ]
+    },
+    {
+     "type": "xyLine",
+     "name": "Train C",
+     "data": [
+      [
+       "2026-11-02T08:15Z",
+       0
+      ],
+      [
+       "2026-11-02T08:39Z",
+       51
+      ],
+      [
+       "2026-11-02T09:21Z",
+       140
+      ],
+      [
+       "2026-11-02T09:48Z",
+       196
+      ],
+      [
+       "2026-11-02T10:39Z",
+       303
+      ]
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "log-scatter",
+  "spec": {
+   "width": 420,
+   "height": 280,
+   "title": "Body and brain mass",
+   "axes": {
+    "x": {
+     "type": "log",
+     "title": "Body (kg)"
+    },
+    "y": {
+     "type": "log",
+     "title": "Brain (g)"
+    }
+   },
+   "series": [
+    {
+     "type": "scatter",
+     "name": "Mammals",
+     "data": [
+      [
+       0.02,
+       0.4
+      ],
+      [
+       0.3,
+       2.4
+      ],
+      [
+       3,
+       25
+      ],
+      [
+       60,
+       1320
+      ],
+      [
+       6000,
+       5000
+      ],
+      [
+       160000,
+       7800
+      ]
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "sqrt-bars",
+  "spec": {
+   "width": 420,
+   "height": 260,
+   "title": "Downloads",
+   "axes": {
+    "x": {
+     "type": "band",
+     "categories": [
+      "core",
+      "fills",
+      "text",
+      "charts"
+     ]
+    },
+    "y": {
+     "type": "sqrt"
+    }
+   },
+   "series": [
+    {
+     "type": "bar",
+     "name": "Week",
+     "data": [
+      4,
+      90,
+      400,
+      1600
+     ],
+     "dataLabels": true
+    }
+   ]
+  }
+ },
+ {
+  "name": "timeline-serpentine",
+  "spec": {
+   "width": 480,
+   "height": 280,
+   "title": "Spaceflight",
+   "axes": {
+    "time": {
+     "type": "time",
+     "path": {
+      "type": "serpentine",
+      "rows": 3
+     }
+    }
+   },
+   "series": [
+    {
+     "type": "timeline",
+     "name": "Missions",
+     "dataLabels": true,
+     "data": [
+      {
+       "at": "1969-07-20",
+       "label": "Moon landing"
+      },
+      {
+       "at": "1977-09-05",
+       "label": "Voyager 1"
+      },
+      {
+       "at": "1981-04-12",
+       "to": "2011-07-21",
+       "label": "Space Shuttle"
+      },
+      {
+       "at": "1990-04-24",
+       "label": "Hubble"
+      },
+      {
+       "at": "1998-11-20",
+       "label": "ISS"
+      },
+      {
+       "at": "2021-12-25",
+       "label": "Webb"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "timeline-spiral",
+  "spec": {
+   "width": 380,
+   "height": 380,
+   "title": "Spaceflight",
+   "axes": {
+    "time": {
+     "type": "time",
+     "path": {
+      "type": "spiral",
+      "turns": 2
+     }
+    }
+   },
+   "series": [
+    {
+     "type": "timeline",
+     "name": "Missions",
+     "dataLabels": true,
+     "data": [
+      {
+       "at": "1969-07-20",
+       "label": "Moon landing"
+      },
+      {
+       "at": "1977-09-05",
+       "label": "Voyager 1"
+      },
+      {
+       "at": "1981-04-12",
+       "to": "2011-07-21",
+       "label": "Space Shuttle"
+      },
+      {
+       "at": "1990-04-24",
+       "label": "Hubble"
+      },
+      {
+       "at": "1998-11-20",
+       "label": "ISS"
+      },
+      {
+       "at": "2021-12-25",
+       "label": "Webb"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "timeline-curve",
+  "spec": {
+   "width": 480,
+   "height": 280,
+   "title": "A walk, in kilometres",
+   "axes": {
+    "time": {
+     "type": "linear",
+     "path": {
+      "type": "curve",
+      "points": [
+       [
+        0,
+        0.9
+       ],
+       [
+        0.25,
+        0.2
+       ],
+       [
+        0.6,
+        0.7
+       ],
+       [
+        1,
+        0.1
+       ]
+      ]
+     }
+    }
+   },
+   "series": [
+    {
+     "type": "timeline",
+     "name": "Walk",
+     "dataLabels": true,
+     "data": [
+      {
+       "at": 0,
+       "label": "Start"
+      },
+      {
+       "at": 3.5,
+       "to": 5,
+       "label": "Woods"
+      },
+      {
+       "at": 8,
+       "label": "Bridge"
+      },
+      {
+       "at": 11,
+       "label": "Summit"
+      }
+     ]
+    }
+   ]
+  }
  }
 ]
