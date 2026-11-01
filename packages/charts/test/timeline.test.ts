@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import '../../core/test/support/forbid-unportable-calls.js';
 import { layoutChart, toSvgChart, type ChartSpec } from '@borrowdale/charts';
-import { overlappingTexts } from './support/layout.js';
+import { laying, overlappingTexts, svgTitles } from './support/layout.js';
 
 const events = [
   { at: '1969-07-20', label: 'Moon landing' },
@@ -19,8 +19,6 @@ const timeline = (path: object | undefined, size: [number, number] = [460, 260],
     series: [{ type: 'timeline', name: 'Missions', dataLabels: true, data }],
   }) as ChartSpec;
 const labels = (spec: ChartSpec): string[] => layoutChart(spec).labels;
-const titles = (spec: ChartSpec): string[] => [...toSvgChart(layoutChart(spec)).matchAll(/<title>([^<]*)<\/title>/g)].map((m) => m[1]!);
-const laying = (spec: ChartSpec) => () => layoutChart(spec);
 const names = events.map(({ label }) => label);
 
 describe('a timeline', () => {
@@ -46,7 +44,7 @@ describe('a timeline', () => {
   });
 
   it('writes moments and periods in tooltips', () => {
-    expect(titles(timeline(undefined, [460, 160])).slice(0, 3)).toEqual([
+    expect(svgTitles(timeline(undefined, [460, 160])).slice(0, 3)).toEqual([
       'Missions: Moon landing, 1969-07-20',
       'Missions: Voyager 1, 1977-09-05',
       'Missions: Space Shuttle, 1981-04-12 to 2011-07-21',

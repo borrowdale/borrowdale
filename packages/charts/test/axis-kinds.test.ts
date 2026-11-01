@@ -3,7 +3,7 @@ import '../../core/test/support/forbid-unportable-calls.js';
 import { layoutChart, toSvgChart, type ChartSpec } from '@borrowdale/charts';
 import type { CheckedLinearAxis } from '../src/check-axis.js';
 import { place, scaleOf, PLAIN_FORMAT } from '../src/scale.js';
-import { shapesOf } from './support/layout.js';
+import { laying, shapesOf, svgTitles } from './support/layout.js';
 
 const xy = (x: object, y: object, data: unknown[], type = 'xyLine', width = 400): ChartSpec =>
   ({ width, height: 260, axes: { x, y }, series: [{ type, name: 'S', data }] }) as ChartSpec;
@@ -18,8 +18,6 @@ const plan: ChartSpec = {
 } as ChartSpec;
 // The value labels, after the categories or before the y axis' labels.
 const labels = (spec: ChartSpec): string[] => layoutChart(spec).labels;
-const titles = (spec: ChartSpec): string[] => [...toSvgChart(layoutChart(spec)).matchAll(/<title>([^<]*)<\/title>/g)].map((m) => m[1]!);
-const laying = (spec: ChartSpec) => () => layoutChart(spec);
 const svg = (spec: ChartSpec): string => toSvgChart(layoutChart(spec));
 const yLabels = ['1.0', '1.5', '2.0', '2.5', '3.0'];
 // Bars on y and a line on a y2 axis of the given type, from 10 to 1,000.
@@ -58,7 +56,7 @@ describe('a time axis', () => {
   });
 
   it('writes a time in a tooltip as its date and time of day', () => {
-    expect(titles(xy({ type: 'time' }, linearY, [['2026-11-03T09:30Z', 5]], 'scatter'))).toEqual(['S: 2026-11-03 09:30, 5']);
+    expect(svgTitles(xy({ type: 'time' }, linearY, [['2026-11-03T09:30Z', 5]], 'scatter'))).toEqual(['S: 2026-11-03 09:30, 5']);
   });
 
   it('places annotations at times', () => {
@@ -67,7 +65,7 @@ describe('a time axis', () => {
   });
 
   it('draws intervals of time as range bars, with their dates in tooltips', () => {
-    expect(titles(plan)).toEqual(['Plan, Design: 2026-01-05 to 2026-01-20', 'Plan, Build: 2026-01-15 to 2026-02-10']);
+    expect(svgTitles(plan)).toEqual(['Plan, Design: 2026-01-05 to 2026-01-20', 'Plan, Build: 2026-01-15 to 2026-02-10']);
   });
 
   it('labels range bars by the Mondays they span', () => {

@@ -1,5 +1,5 @@
 // Reading a chart layout back in tests: its marks, texts and the points its shapes pass through.
-import type { ChartLayout, ChartNode } from '@borrowdale/charts';
+import { layoutChart, toSvgChart, type ChartLayout, type ChartNode, type ChartSpec } from '@borrowdale/charts';
 import { textBounds } from '@borrowdale/text';
 import { PAD } from '../../src/frame.js';
 
@@ -62,4 +62,14 @@ export function overlappingTexts(layout: ChartLayout): string[] {
 
 export function texts(layout: ChartLayout): string[] {
   return layout.nodes.flatMap((node) => (node.kind === 'text' ? [node.text.text] : []));
+}
+
+/** Laying a spec out, to be called by `toThrow`. */
+export function laying(spec: unknown): () => ChartLayout {
+  return () => layoutChart(spec as ChartSpec);
+}
+
+/** The tooltips of a spec's marks, as its SVG writes them. */
+export function svgTitles(spec: ChartSpec): string[] {
+  return [...toSvgChart(layoutChart(spec)).matchAll(/<title>([^<]*)<\/title>/g)].map((match) => match[1]!);
 }

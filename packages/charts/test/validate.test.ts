@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { InvalidChartError, layoutChart, toSvgChart, type ChartSpec } from '@borrowdale/charts';
+import { laying } from './support/layout.js';
 
 const bands = { x: { type: 'band', categories: ['a', 'b'] }, y: { type: 'linear' } };
 const longKey = 'k'.repeat(101);
@@ -10,7 +11,6 @@ const bars = { width: 400, height: 300, axes: bands, series: [{ type: 'bar', nam
 // Core's message for a dash of one string, up to the string: 116 characters.
 const DASH_MESSAGE = 'Invalid style: strokeLineDash must be an array of 1 to 16 lengths from 0 to 1000000, adding up to at least 1, got ["';
 const dashOf = (entry: string) => ({ ...bars, style: { strokeLineDash: [entry] } });
-const laying = (spec: unknown) => () => layoutChart(spec as ChartSpec);
 const xy = { x: { type: 'linear' }, y: { type: 'linear' } };
 const pie = { width: 300, height: 200, series: [{ type: 'pie', name: 'P', data: [{ name: 'a', value: 1 }] }] };
 const spokes = { angle: { type: 'band', categories: ['a', 'b', 'c'] } };

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import '../../core/test/support/forbid-unportable-calls.js';
 import { layoutChart, type ChartSpec } from '@borrowdale/charts';
+import { laying } from './support/layout.js';
 
 const months = { type: 'band', categories: ['Jan', 'Feb'] };
 const bars = (y: object): ChartSpec =>
@@ -15,7 +16,6 @@ const polar = (angle: object): ChartSpec =>
   ({ width: 300, height: 300, legend: 'none', axes: { angle: { type: 'linear', ...angle }, radius: { type: 'linear' } }, series: [{ type: 'polarScatter', name: 'S', data: [[10, 1]] }] }) as ChartSpec;
 // The value-axis labels of a bar chart: every label but the two categories.
 const valueLabels = (spec: ChartSpec): string[] => layoutChart(spec).labels.slice(2);
-const laying = (spec: ChartSpec) => () => layoutChart(spec);
 
 describe('a step on a linear axis', () => {
   it.each<[string, object, string[]]>([

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import '../../core/test/support/forbid-unportable-calls.js';
 import { layoutChart, toSvgChart, type ChartSpec } from '@borrowdale/charts';
+import { laying, svgTitles } from './support/layout.js';
 
 const rows = { type: 'band', categories: ['Design', 'Build', 'Launch'] };
 const plan = {
@@ -19,12 +20,10 @@ const gantt = (series: object[], extra: object = {}): ChartSpec =>
 const items = (data: object[]): ChartSpec => gantt([{ type: 'xRange', name: 'P', data }]);
 const onLinear = (data: object[]): ChartSpec =>
   ({ width: 400, height: 200, axes: { x: { type: 'linear' }, y: { type: 'band', categories: ['a'] } }, series: [{ type: 'xRange', name: 'R', data }] }) as ChartSpec;
-const titles = (spec: ChartSpec): string[] => [...toSvgChart(layoutChart(spec)).matchAll(/<title>([^<]*)<\/title>/g)].map((m) => m[1]!);
-const laying = (spec: ChartSpec) => () => layoutChart(spec);
 
 describe('an xRange series', () => {
   it('writes each task in its tooltip with its row, label, dates and progress, and a milestone with its date', () => {
-    expect(titles(gantt([plan]))).toEqual([
+    expect(svgTitles(gantt([plan]))).toEqual([
       'Plan, Design: Sketches, 2026-01-05 to 2026-01-23, 100% done',
       'Plan, Design: Review, 2026-01-26 to 2026-02-06, 50% done',
       'Plan, Build: Prototype and production run, 2026-02-02 to 2026-03-13, 25% done',
@@ -47,7 +46,7 @@ describe('an xRange series', () => {
   });
 
   it('writes progress as a percentage with the decimals the progress has, less two', () => {
-    expect(titles(onLinear([{ row: 'a', from: 2, to: 5, progress: 0.07 }, { row: 'a', from: 6, to: 8, progress: 0.29 }, { row: 'a', from: 9, to: 10, progress: 0.075 }]))).toEqual([
+    expect(svgTitles(onLinear([{ row: 'a', from: 2, to: 5, progress: 0.07 }, { row: 'a', from: 6, to: 8, progress: 0.29 }, { row: 'a', from: 9, to: 10, progress: 0.075 }]))).toEqual([
       'R, a: 2 to 5, 7% done',
       'R, a: 6 to 8, 29% done',
       'R, a: 9 to 10, 7.5% done',
@@ -60,7 +59,7 @@ describe('an xRange series', () => {
 
   it('spans a linear value axis too', () => {
     const linear = { width: 400, height: 200, axes: { x: { type: 'linear' }, y: { type: 'band', categories: ['a'] } }, series: [{ type: 'xRange', name: 'R', data: [{ row: 'a', from: 2, to: 5 }] }] } as ChartSpec;
-    expect(titles(linear)).toEqual(['R, a: 2 to 5']);
+    expect(svgTitles(linear)).toEqual(['R, a: 2 to 5']);
   });
 
   it.each<[string, ChartSpec, string]>([
