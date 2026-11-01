@@ -8,7 +8,7 @@ import {
   type TextStyle,
 } from '@borrowdale/text';
 import { excalifontFiles } from '@borrowdale/text/excalifont-files';
-import { evaluateInChromium } from '../../core/test/support/chromium.js';
+import { evaluateIn } from '../../core/test/support/browsers.js';
 import corpus from './golden/corpus.json' with { type: 'json' };
 import goldens from './golden/goldens.json' with { type: 'json' };
 
@@ -58,7 +58,7 @@ const RIGHT_TO_LEFT = 'text{direction:rtl}';
 
 // Draws a label on a page that embeds only the files fontFaceCss picks for it.
 function embed(label: Golden): Promise<Embedded> {
-  return evaluateInChromium(
+  return evaluateIn('chromium', 
     SOURCE,
     'borrowdaleText',
     `<style>${fontFaceCss(excalifontFiles, [label.text])}</style>` +
@@ -77,7 +77,7 @@ describe('Chromium parity', () => {
   let corpusFaces = NaN;
 
   beforeAll(async () => {
-    ({ drawn, faces: corpusFaces } = await evaluateInChromium(
+    ({ drawn, faces: corpusFaces } = await evaluateIn('chromium', 
       SOURCE,
       'borrowdaleText',
       `<meta http-equiv="Content-Security-Policy" content="font-src 'none'">` +
@@ -195,7 +195,7 @@ describe('Chromium, with fontFaceCss rules and a right-to-left rule in the page 
   let ruled: Ruled = { drawError: '', canvasWidth: NaN, svgX: NaN, attributeX: NaN, domX: NaN };
 
   beforeAll(async () => {
-    ruled = await evaluateInChromium(
+    ruled = await evaluateIn('chromium', 
       SOURCE,
       'borrowdaleText',
       `<html dir="rtl"><head><style>${fontFaceCss(excalifontFiles, [tickLayout.text])}${RIGHT_TO_LEFT}</style></head>` +
@@ -263,7 +263,7 @@ describe('Chromium, right to left under a Content-Security-Policy that blocks st
   let strict: Strict = { svgX: NaN, domX: NaN, domRuleX: NaN, svgRuleX: NaN };
 
   beforeAll(async () => {
-    strict = await evaluateInChromium(
+    strict = await evaluateIn('chromium', 
       SOURCE,
       'borrowdaleText',
       `<html dir="rtl"><head><meta http-equiv="Content-Security-Policy" content="style-src 'none'; font-src 'none'"></head>` +

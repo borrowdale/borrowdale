@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import type { drawSketch as DrawSketch, Sketch } from '@borrowdale/core';
-import { evaluateInChromium } from './support/chromium.js';
+import { evaluateIn } from './support/browsers.js';
 
 type Results = {
   strokesMatch: boolean;
@@ -13,7 +13,7 @@ type Results = {
 let results: Results;
 
 beforeAll(async () => {
-  results = await evaluateInChromium(
+  results = await evaluateIn('chromium', 
     new URL('../src/index.ts', import.meta.url),
     'borrowdale',
     '',

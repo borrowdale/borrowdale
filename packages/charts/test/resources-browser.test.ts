@@ -1,9 +1,9 @@
 import { expect, it } from 'vitest';
 import type * as Charts from '@borrowdale/charts';
-import { evaluateInChromium } from '../../core/test/support/chromium.js';
+import { evaluateIn } from '../../core/test/support/browsers.js';
 
 it('keeps zero-width segments invisible on Canvas as in SVG', async () => {
-  const result = await evaluateInChromium(new URL('../src/index.ts', import.meta.url), 'charts', '', async () => {
+  const result = await evaluateIn('chromium', new URL('../src/index.ts', import.meta.url), 'charts', '', async () => {
     const api = (globalThis as unknown as { charts: typeof Charts }).charts;
     const layout = api.layoutChart({ width: 64, height: 64, legend: 'none', style: { roughness: 0 },
       axes: { x: { type: 'linear', min: 0, max: 1, hidden: true }, y: { type: 'linear', min: 0, max: 1, hidden: true } },
@@ -26,7 +26,7 @@ it('keeps zero-width segments invisible on Canvas as in SVG', async () => {
 }, 120_000);
 
 it('renders preloaded images and continuous gradients on native Canvas and SVG', async () => {
-  const result = await evaluateInChromium(new URL('../src/index.ts', import.meta.url), 'charts', '', async () => {
+  const result = await evaluateIn('chromium', new URL('../src/index.ts', import.meta.url), 'charts', '', async () => {
     const api = (globalThis as unknown as { charts: typeof Charts }).charts;
     const canvas = document.createElement('canvas'); canvas.width = 64; canvas.height = 64;
     const context = canvas.getContext('2d')!;
@@ -65,7 +65,7 @@ it('renders preloaded images and continuous gradients on native Canvas and SVG',
 }, 120_000);
 
 it('keeps native DOM resource references distinct across detached, shadow and template charts', async () => {
-  const result = await evaluateInChromium(new URL('../src/index.ts', import.meta.url), 'charts', '', async () => {
+  const result = await evaluateIn('chromium', new URL('../src/index.ts', import.meta.url), 'charts', '', async () => {
     const api = (globalThis as unknown as { charts: typeof Charts }).charts;
     const layout = api.layoutChart({ width: 100, height: 100, legend: 'none',
       axes: { x: { type: 'linear' }, y: { type: 'linear' } },
