@@ -46,8 +46,8 @@ describe('time', () => {
     ['a week date', '2026-W44', 'Invalid chart: axes.x.min must be an ISO 8601 date such as "2026-11-01" or "2026-11-01T09:30Z", or milliseconds, got "2026-W44"'],
     ['four decimals of a second', '2026-11-01T09:30:15.2500Z', 'Invalid chart: axes.x.min must be an ISO 8601 date such as "2026-11-01" or "2026-11-01T09:30Z", or milliseconds, got "2026-11-01T09:30:15.2500Z"'],
     ['a time pushed before year 0 by its offset', '0000-01-01T00:00+01:00', 'Invalid chart: axes.x.min is outside 0000-01-01 to 9999-12-31 in UTC, got "0000-01-01T00:00+01:00"'],
-    ['a fraction of a millisecond', 1.5, `Invalid chart: axes.x.min must be a whole number of milliseconds from ${MIN_TIME} to ${MAX_TIME}, or an ISO 8601 string, got 1.5`],
-    ['milliseconds past 9999', MAX_TIME + 1, `Invalid chart: axes.x.min must be a whole number of milliseconds from ${MIN_TIME} to ${MAX_TIME}, or an ISO 8601 string, got ${MAX_TIME + 1}`],
+    ['a fraction of a millisecond', 1.5, 'Invalid chart: axes.x.min must be a whole number of milliseconds from -62167219200000 to 253402300799999, or an ISO 8601 string, got 1.5'],
+    ['milliseconds past 9999', 253_402_300_800_000, 'Invalid chart: axes.x.min must be a whole number of milliseconds from -62167219200000 to 253402300799999, or an ISO 8601 string, got 253402300800000'],
     ['a Date object', new Date(0), 'Invalid chart: axes.x.min must be an ISO 8601 date such as "2026-11-01" or "2026-11-01T09:30Z", or milliseconds, got an object'],
   ])('rejects %s', (_case, value, message) => {
     expect(reading(value)).toThrow(message);

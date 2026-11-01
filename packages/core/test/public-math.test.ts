@@ -7,6 +7,8 @@ import { cos, log, MAX_ANGLE, sin } from '@borrowdale/core/math';
 const { proxy: revoked, revoke } = Proxy.revocable([], {});
 revoke();
 const sinOfRevoked = (): number => sin(revoked as unknown as number);
+// Calling `fn` with `x`, to be called by `toThrow`.
+const calling = (fn: (x: number) => number, x: unknown) => (): number => fn(x as number);
 
 // The published functions are the engine's own, so each value is the same in every JavaScript
 // engine. The expected values are Math.sin and Math.cos in Node, which agree here.
@@ -33,16 +35,16 @@ describe('@borrowdale/core/math', () => {
     ['sin', '1', sin, '"1"'],
     ['cos', Object.create(null), cos, 'an object'],
   ])('%s rejects %s with a RangeError', (name, x, fn, shown) => {
-    expect(() => fn(x as number)).toThrow(
+    expect(calling(fn, x)).toThrow(
       new RangeError(`Invalid argument: ${name}(x) must be a finite number within ±1000000, got ${shown}`),
     );
   });
 
-  // The expected values are Math.log in Node.
   it('rejects a revoked Proxy with a RangeError, describing it as an object', () => {
     expect(sinOfRevoked).toThrow(new RangeError('Invalid argument: sin(x) must be a finite number within ±1000000, got an object'));
   });
 
+  // The expected values are Math.log in Node.
   it.each<[number, number]>([
     [1, 0],
     [2, 0.6931471805599453],
@@ -67,6 +69,6 @@ describe('@borrowdale/core/math', () => {
     [Number.NaN, 'NaN'],
     ['1', '"1"'],
   ])('log rejects %s with a RangeError', (x, shown) => {
-    expect(() => log(x as number)).toThrow(new RangeError(`Invalid argument: log(x) must be a finite number above 0, got ${shown}`));
+    expect(calling(log, x)).toThrow(new RangeError(`Invalid argument: log(x) must be a finite number above 0, got ${shown}`));
   });
 });

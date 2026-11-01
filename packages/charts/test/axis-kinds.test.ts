@@ -251,6 +251,8 @@ describe('a log axis', () => {
 });
 
 describe('an axis check', () => {
+  // What this pins is the @ts-expect-error on `replacingPath`, which only the typecheck of the tests
+  // checks; at run time the check is made either way.
   it('is still made when an extra replacing a common key is forced past the compiler', () => {
     expect(replacingPath).toBeTypeOf('function');
   });

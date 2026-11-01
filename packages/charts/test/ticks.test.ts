@@ -83,11 +83,11 @@ describe('listed ticks on a linear axis', () => {
     expect(valueLabels(bars(y))).toEqual(labels);
   });
 
-  // The dial's value, 3, is written under its hub.
-  // A whole turn has no end: the last point is next to the first, which keeps its place.
+  // The dial's value, 3, is written under its hub. A whole turn has no end: the last point is next
+  // to the first, which keeps its place.
+  const eightPoints = { min: 0, max: 360, ticks: [{ value: 0, label: 'N' }, { value: 45, label: 'NE' }, { value: 90, label: 'E' }, { value: 135, label: 'SE' }, { value: 180, label: 'S' }, { value: 225, label: 'SW' }, { value: 270, label: 'W' }, { value: 315, label: 'NW' }] };
   it('labels a small compass dial of 8 points on every other point, all the way round', () => {
-    const compass = { min: 0, max: 360, ticks: ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'].map((label, i) => ({ value: i * 45, label })) };
-    expect(layoutChart({ ...dial(compass), width: 120, height: 120 }).labels).toEqual(['N', 'E', 'S', 'W', '3']);
+    expect(layoutChart({ ...dial(eightPoints), width: 120, height: 120 }).labels).toEqual(['N', 'E', 'S', 'W', '3']);
   });
 
   // The y axis' first label, 1.0, follows the x axis' labels.
@@ -105,6 +105,7 @@ describe('listed ticks on a linear axis', () => {
     expect(laying(points({ min: 0, max: 100, ticks: [{ value: 99.9, label: 'A very long label' }, { value: 100, label: '' }] }))).not.toThrow();
   });
 
+  // The dial's value, 3, is written under its hub.
   it('labels a compass dial by its points', () => {
     const compass = { min: 0, max: 360, ticks: [{ value: 0, label: 'N' }, { value: 90, label: 'E' }, { value: 180, label: 'S' }, { value: 270, label: 'W' }] };
     expect(layoutChart(dial(compass)).labels).toEqual(['N', 'E', 'S', 'W', '3']);

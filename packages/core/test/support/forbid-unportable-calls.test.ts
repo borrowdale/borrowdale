@@ -21,6 +21,8 @@ const callOn = (owner: object, name: string) => () => (owner as Record<string, M
 const callDateWithout = () => Date();
 const newDate = (...args: unknown[]) => () => new (Date as unknown as new (...a: unknown[]) => Date)(...args);
 const newNumberFormat = () => new Intl.NumberFormat('en');
+const callMath = (name: string) => () => (Math[name as keyof Math] as MathFunction)(1, 1);
+const cosAtLoadOf1 = () => cosAtLoad(1);
 
 describe('the unportable-call guard', () => {
   it('classifies every Math function as unportable or exact', () => {
@@ -28,11 +30,11 @@ describe('the unportable-call guard', () => {
   });
 
   it.each(UNPORTABLE)('makes Math.%s throw', (name) => {
-    expect(() => (Math[name] as MathFunction)(1, 1)).toThrow(`Math.${name}() called while drawing`);
+    expect(callMath(name)).toThrow(`Math.${name}() called while drawing`);
   });
 
   it('reaches a reference to Math.cos taken by a module loaded after it', () => {
-    expect(() => cosAtLoad(1)).toThrow('Math.cos() called while drawing');
+    expect(cosAtLoadOf1).toThrow('Math.cos() called while drawing');
   });
 
   it.each<[string, number[], number]>([
