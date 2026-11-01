@@ -157,7 +157,8 @@ const FIXED: Partial<Record<TimeUnit, [length: number, origin: number]>> = {
 
 /**
  * Every `every` of `unit`: counted from the epoch for units of fixed length (from midnight for hours
- * that divide a day, from a Monday for weeks), from January for months, and from year 0 for years.
+ * that divide a day, from a Monday for weeks), from January of year 0 for months, and from year 0 for
+ * years.
  */
 export function interval(unit: TimeUnit, every: number): TimeInterval {
   const fixed = FIXED[unit];
@@ -229,12 +230,15 @@ export function timeScale(axis: CheckedLinearAxis, [lo, hi]: [number, number], l
   // One moment alone, or a fixed end it equals, chooses its interval as if the axis were a day long.
   const span = high > low ? high - low : DAY;
   let step = axis.interval ?? INTERVALS.find((candidate) => candidate.length * count >= span) ?? INTERVALS.at(-1)!;
-  // A free start rounds out no earlier than the earliest time an axis shows.
-  let domain: [number, number] = [axis.min ?? Math.max(MIN_TIME, step.floor(low)), axis.max ?? ceiling(step, high)];
+  // A free end rounds out no further than the earliest or latest time an axis shows.
+  let domain: [number, number] = [axis.min ?? Math.max(MIN_TIME, step.floor(low)), axis.max ?? Math.min(MAX_TIME, ceiling(step, high))];
   if (!(domain[1] > domain[0])) {
     // A fixed end the data all equal: the free end moves one step out from it, if there is room.
-    if (axis.max === undefined) {
-      domain = [domain[0], step.next(step.floor(domain[0]))];
+    if (axis.max === undefined && domain[0] < MAX_TIME) {
+      domain = [domain[0], Math.min(MAX_TIME, step.next(step.floor(domain[0])))];
+    } else if (axis.max === undefined) {
+      const [at, is] = axis.min === undefined ? [axis.path, 'has all its data at'] : [`${axis.path}.min`, 'is'];
+      fail(at, `${is} ${formatTime(MAX_TIME)}, the latest a time axis shows, which leaves no room after it`);
     } else if (domain[1] > MIN_TIME) {
       domain = [Math.max(MIN_TIME, step.floor(domain[1] - 1)), domain[1]];
     } else {
@@ -250,8 +254,8 @@ export function timeScale(axis: CheckedLinearAxis, [lo, hi]: [number, number], l
   const ticks: number[] = [];
   for (let at = ceiling(step, domain[0]); at <= domain[1]; at = step.next(at)) {
     if (ticks.length === MAX_TICKS) {
-      const at = axis.interval === undefined ? axis.path : `${axis.path}.step`;
-      fail(at, `gives more than ${MAX_TICKS} ticks from ${formatTime(domain[0])} to ${formatTime(domain[1])}`);
+      const path = axis.interval === undefined ? axis.path : `${axis.path}.step`;
+      fail(path, `gives more than ${MAX_TICKS} ticks from ${formatTime(domain[0])} to ${formatTime(domain[1])}`);
     }
     ticks.push(at);
   }

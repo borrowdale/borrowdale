@@ -197,8 +197,9 @@ the 12 month names, each at most 20 characters, in another language. Tooltips wr
 `2026-11-03 09:30`.
 
 A step counts every `every` of its unit from the epoch for units of fixed length (from midnight
-for hours that divide a day, from a Monday for weeks), from January for months, and from year 0 for
-years, so `{ unit: 'month', every: 3 }` falls on quarters. Where labels would overlap, a time axis
+for hours that divide a day, from a Monday for weeks), from January of year 0 for months, and from
+year 0 for years, so `{ unit: 'month', every: 3 }` falls on quarters, and a number of months that
+does not divide 12 runs on across the years. Where labels would overlap, a time axis
 labels every tick of its step when they fit, and otherwise only the ticks on the boundaries of a
 coarser interval, such as whole months or years.
 
