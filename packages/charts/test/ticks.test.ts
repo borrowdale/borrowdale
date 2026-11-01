@@ -10,6 +10,8 @@ const dial = (angle: object): ChartSpec =>
   ({ width: 260, height: 260, legend: 'none', axes: { angle: { type: 'linear', startAngle: 0, endAngle: 360, ...angle } }, series: [{ type: 'gauge', name: 'G', value: 3 }] }) as ChartSpec;
 const radius = (axis: object): ChartSpec =>
   ({ width: 300, height: 300, axes: { angle: { type: 'band', categories: ['a', 'b', 'c'] }, radius: { type: 'linear', ...axis } }, series: [{ type: 'radar', name: 'R', data: [1, 2, 3] }] }) as ChartSpec;
+const polar = (angle: object): ChartSpec =>
+  ({ width: 300, height: 300, legend: 'none', axes: { angle: { type: 'linear', ...angle }, radius: { type: 'linear' } }, series: [{ type: 'polarScatter', name: 'S', data: [[10, 1]] }] }) as ChartSpec;
 // The value-axis labels of a bar chart: every label but the two categories.
 const valueLabels = (spec: ChartSpec): string[] => layoutChart(spec).labels.slice(2);
 const laying = (spec: ChartSpec) => () => layoutChart(spec);
@@ -35,6 +37,29 @@ describe('a step on a linear axis', () => {
 
   it('steps a radius axis', () => {
     expect(layoutChart(radius({ step: 1.5 })).labels).toEqual(['1.5', '3.0', 'a', 'b', 'c']);
+  });
+
+  // The dial's value, 3, is written under its hub.
+  it('labels a crowded dial on multiples of a nice number of steps', () => {
+    expect(layoutChart(dial({ min: 0, max: 100, step: 1, startAngle: -90, endAngle: 90 })).labels).toEqual(['0', '20', '40', '60', '80', '100', '3']);
+  });
+
+  it('labels a crowded radius axis on multiples of a nice number of steps', () => {
+    expect(layoutChart(radius({ step: 0.1 })).labels).toEqual(['0.5', '1.0', '1.5', '2.0', '2.5', '3.0', 'a', 'b', 'c']);
+  });
+
+  it('labels only the outermost tick of a radius axis too crowded for two', () => {
+    const rose = { width: 160, height: 160, axes: { angle: { type: 'band', categories: ['n', 'e', 's', 'w'], startAngle: 270, endAngle: 450 }, radius: { type: 'linear', format: { suffix: ' thousand' } } }, series: [{ type: 'rose', name: 'R', data: [100_000, 200_000, 300_000, 400_000] }] } as ChartSpec;
+    expect(layoutChart(rose).labels).toEqual(['400,000 thousand', 'n', 'e', 's', 'w']);
+  });
+
+  // The radius axis' labels, 0.5 and 1.0, come first.
+  it('labels a crowded angle axis on multiples of a nice number of steps', () => {
+    expect(layoutChart(polar({ min: 0, max: 360, step: 5 })).labels).toEqual(['0.5', '1.0', '0', '25', '50', '75', '100', '125', '150', '175', '200', '225', '250', '275', '300', '325']);
+  });
+
+  it('leaves out the last label of a whole turn when it would crowd the first', () => {
+    expect(layoutChart(polar({ min: 0, max: 360 })).labels).toEqual(['0.5', '1.0', '0', '50', '100', '150', '200', '250', '300']);
   });
 });
 

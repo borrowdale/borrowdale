@@ -335,7 +335,7 @@ const crampedTicks: ChartSpec = {
     angle: { type: 'band', categories: ['n', 'e', 's', 'w'], startAngle: 270, endAngle: 450 },
     radius: { type: 'linear', format: { suffix: ' thousand' } },
   },
-  series: [{ type: 'rose', name: 'R', data: [100_000, 200_000, 300_000, 400_000] }],
+  series: [{ type: 'rose', name: 'R', data: [10_000_000, 20_000_000, 30_000_000, 40_000_000] }],
 };
 const pulledLoneSlice: ChartSpec = {
   ...loneSlice,

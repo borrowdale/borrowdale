@@ -5,6 +5,7 @@ import {
   alignTowards,
   fitSweep,
   isWholeTurn,
+  labelledRim,
   polarFrame,
   RADIANS,
   RIM_SHARE,
@@ -101,13 +102,18 @@ export function layoutGauge(drawing: Drawing, chart: CheckedGaugeChart, rect: Re
   if (!axis.hidden) {
     const ink = { stroke: INK, strokeWidth: 1 };
     const { ticks, labels } = rimTicks(scale, whole);
+    const labelRadius = inner - TICK - GAP;
+    const size: [number, number] = [Math.max(0, ...labels.map((label) => drawing.width(label))) + GAP, drawing.lineHeight() + GAP / 2];
+    const shown = new Set(labelledRim(scale, ticks.length, labelRadius, size, whole));
     ticks.forEach((tick, i) => {
       const at = scale.at(tick);
       const [[x1, y1], [x2, y2]] = [point(at, inner), point(at, inner - TICK)];
       drawing.push(drawing.outline({ kind: 'line', x1, y1, x2, y2 }, ink, ['tick', tick]));
-      // Inside the rim, so each label is placed towards the centre.
-      const [px, py] = point(at, inner - TICK - GAP);
-      drawing.push(drawing.text(labels[i]!, { x: px, y: py, ...alignTowards(at, false) }));
+      if (shown.has(i)) {
+        // Inside the rim, so each label is placed towards the centre.
+        const [px, py] = point(at, labelRadius);
+        drawing.push(drawing.text(labels[i]!, { x: px, y: py, ...alignTowards(at, false) }));
+      }
     });
   }
 

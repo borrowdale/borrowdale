@@ -9,6 +9,8 @@ import {
   alignTowards,
   fitSweep,
   isWholeTurn,
+  labelledRim,
+  onCircle,
   polarFrame,
   RADIANS,
   RIM_SHARE,
@@ -228,7 +230,7 @@ export function layoutPolar(drawing: Drawing, chart: CheckedPolarChart, rect: Re
   let fitted = fitIn(rect);
   let box = rect;
   for (let round = 0; ; round++) {
-    const over = overflowOf(drawing, startLabels(fitted.frame, fitted.radiusPlace, radiusAxis, startAngle), rect);
+    const over = overflowOf(drawing, startLabels(drawing, fitted.frame, fitted.radiusPlace, radiusAxis, startAngle), rect);
     if (!Object.values(over).some((by) => by > FIT_TOLERANCE)) {
       break;
     }
@@ -304,14 +306,18 @@ export function layoutPolar(drawing: Drawing, chart: CheckedPolarChart, rect: Re
     polarMarkOf(entry).draw(context, placed, paints[i]!);
   });
 
-  for (const { text, ...position } of startLabels(frame, radiusPlace, radiusAxis, startAngle)) {
+  for (const { text, ...position } of startLabels(drawing, frame, radiusPlace, radiusAxis, startAngle)) {
     drawing.push(drawing.text(text, position));
   }
   if (!angleAxis.hidden) {
-    for (const spoke of spokes) {
-      const [px, py] = frame.point(spoke.angle, radius + GAP);
-      drawing.push(drawing.text(spoke.label, { x: px, y: py, ...alignTowards(spoke.angle, true) }));
-    }
+    // A band axis labels every category; a linear one only the ticks whose labels do not overlap.
+    const shown = angle.type === 'linear' ? new Set(labelledRim(angle.scale, spokes.length, radius + GAP, [widest + GAP, line + GAP / 2], whole)) : undefined;
+    spokes.forEach((spoke, i) => {
+      if (shown?.has(i) ?? true) {
+        const [px, py] = frame.point(spoke.angle, radius + GAP);
+        drawing.push(drawing.text(spoke.label, { x: px, y: py, ...alignTowards(spoke.angle, true) }));
+      }
+    });
   }
 }
 
@@ -325,9 +331,11 @@ interface StartLabel {
 
 /**
  * The radius axis' labels along the start of the sweep: a linear axis' ticks beside the spoke, past
- * the hole, or a band axis' categories before it, at their rings.
+ * the hole, those that would overlap the one before left out, or a band axis' categories before it,
+ * at their rings.
  */
 function startLabels(
+  drawing: Drawing,
   frame: PolarFrame,
   radius: PolarScale,
   axis: CheckedPolarChart['radius'],
@@ -338,16 +346,18 @@ function startLabels(
   }
   if (radius.type === 'linear') {
     const { scale } = radius;
-    return scale.ticks.flatMap((tick, i) => {
-      const [px, py] = frame.point(startAngle, scale.at(tick));
-      const label = {
-        text: scale.labels[i]!,
-        x: px + GAP / 2,
-        y: py,
-        anchor: 'start' as const,
-        baseline: 'middle' as const,
-      };
-      return tick > scale.domain[0] ? [label] : [];
+    // Labels along the spoke clear each other when they are a label's width apart across the chart
+    // or a line apart down it.
+    const [across, down] = onCircle(startAngle).map(Math.abs) as [number, number];
+    const widest = Math.max(0, ...scale.labels.map((label) => drawing.width(label)));
+    const room = Math.min((widest + GAP) / across, (drawing.lineHeight() + GAP / 2) / down);
+    // The start is not labelled, so when it is all thinning leaves, the outermost tick is instead.
+    const past = scale.labelled(room, scale.at).filter((i) => scale.ticks[i]! > scale.domain[0]);
+    const last = scale.ticks.length - 1;
+    const shown = past.length > 0 || !(scale.ticks[last]! > scale.domain[0]) ? past : [last];
+    return shown.map((i) => {
+      const [px, py] = frame.point(startAngle, scale.at(scale.ticks[i]!));
+      return { text: scale.labels[i]!, x: px + GAP / 2, y: py, anchor: 'start', baseline: 'middle' };
     });
   }
   const names = axis.type === 'band' ? axis.categories : [];
