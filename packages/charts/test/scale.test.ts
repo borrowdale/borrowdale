@@ -27,6 +27,9 @@ const axis: CheckedLinearAxis = {
 // apart, so the room is that many units.
 const labelledTicks = (scale: Scale, every: number): number[] =>
   scale.labelled(every, (value) => scale.ticks.indexOf(value)).map((i) => scale.ticks[i]!);
+// Places every tick at one place.
+const atOnePlace = (): number => 0;
+const scaling = (on: CheckedLinearAxis, extent: [number, number], length: number) => () => scaleOf(on, extent, length);
 
 describe('a linear scale', () => {
   it.each<[string, [number, number], number, [number, number], string[]]>([
@@ -97,7 +100,7 @@ describe('a linear scale', () => {
   });
 
   it('labels the first tick alone when every tick is at one place', () => {
-    expect(scaleOf(axis, [0, 30], 750).labelled(10, () => 0)).toEqual([0]);
+    expect(scaleOf(axis, [0, 30], 750).labelled(10, atOnePlace)).toEqual([0]);
   });
 
   it('labels the multiple of 2 alone on an axis of large numbers with no multiple of the larger steps', () => {
@@ -105,7 +108,7 @@ describe('a linear scale', () => {
   });
 
   it('rejects values that differ by less than 1e-20, which no tick step reaches', () => {
-    expect(() => scaleOf(axis, [1e-25, 2e-25], 250)).toThrow(
+    expect(scaling(axis, [1e-25, 2e-25], 250)).toThrow(
       'Invalid chart: axes.y has values that differ by 1e-25, less than the smallest tick step, 1e-20',
     );
   });
@@ -129,7 +132,7 @@ describe('a linear scale', () => {
   });
 
   it('rejects data above a fixed max, naming the axis', () => {
-    expect(() => scaleOf({ ...axis, max: 50 }, [0, 87], 250)).toThrow('Invalid chart: axes.y.max is 50, but the data reach 87');
+    expect(scaling({ ...axis, max: 50 }, [0, 87], 250)).toThrow('Invalid chart: axes.y.max is 50, but the data reach 87');
   });
 
   it('maps the domain onto the range it is placed on, which may run backwards', () => {

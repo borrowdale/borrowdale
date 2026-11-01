@@ -32,6 +32,7 @@ const layout: ChartLayout = {
 };
 const untitled: ChartLayout = { ...layout, title: undefined as unknown as string, nodes: [] };
 const otherFont: ChartLayout = { ...layout, family: 'Virgil' };
+const rendering = (chart: ChartLayout, options: Parameters<typeof toSvgChart>[1]) => () => toSvgChart(chart, options);
 // Latin and Cyrillic come from two different Excalifont files.
 const twoScripts: ChartLayout = { ...layout, labels: ['Hi', 'Москва'] };
 
@@ -71,7 +72,7 @@ describe('toSvgChart', () => {
   });
 
   it('rejects font files of another family than the chart was laid out in', () => {
-    expect(() => toSvgChart(otherFont, { fontFiles: excalifontFiles })).toThrow(
+    expect(rendering(otherFont, { fontFiles: excalifontFiles })).toThrow(
       'Font files are for "Excalifont", but the chart was laid out in "Virgil"',
     );
   });

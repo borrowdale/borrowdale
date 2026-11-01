@@ -3,13 +3,14 @@ import { InvalidChartError, layoutChart, toSvgChart, type ChartSpec } from '@bor
 
 const bands = { x: { type: 'band', categories: ['a', 'b'] }, y: { type: 'linear' } };
 const longKey = 'k'.repeat(101);
-// Core's message for a dash of one string, up to the string: 116 characters.
-const DASH_MESSAGE = 'Invalid style: strokeLineDash must be an array of 1 to 16 lengths from 0 to 1000000, adding up to at least 1, got ["';
-const dashOf = (entry: string) => ({ ...bars, style: { strokeLineDash: [entry] } });
 const manyBars = Array.from({ length: 28 }, (_, i) => ({ type: 'bar', name: `s${i}`, data: [1, 2] }));
 const oneTooMany = [...manyBars, { type: 'bar', name: 's28', data: [1, 2] }];
 const ownColour = [...manyBars, { type: 'bar', name: 'own', color: '#000', data: [1, 2] }];
 const bars = { width: 400, height: 300, axes: bands, series: [{ type: 'bar', name: 'A', data: [1, 2] }] };
+// Core's message for a dash of one string, up to the string: 116 characters.
+const DASH_MESSAGE = 'Invalid style: strokeLineDash must be an array of 1 to 16 lengths from 0 to 1000000, adding up to at least 1, got ["';
+const dashOf = (entry: string) => ({ ...bars, style: { strokeLineDash: [entry] } });
+const laying = (spec: unknown) => () => layoutChart(spec as ChartSpec);
 const xy = { x: { type: 'linear' }, y: { type: 'linear' } };
 const pie = { width: 300, height: 200, series: [{ type: 'pie', name: 'P', data: [{ name: 'a', value: 1 }] }] };
 const spokes = { angle: { type: 'band', categories: ['a', 'b', 'c'] } };
@@ -227,7 +228,7 @@ describe('chart validation', () => {
     ['more series than the palette has pairs', { ...bars, series: oneTooMany }, 'Invalid chart: series[28] needs a color: the 28 colour and hatching pairs of the palette are used up'],
     ['a plot with no room left', { ...bars, width: 20, height: 20 }, 'Invalid chart: a 20 × 20 chart leaves no room for the plot after its title, legend and labels'],
   ])('rejects %s', (_case, spec, message) => {
-    expect(() => layoutChart(spec as ChartSpec)).toThrow(message);
+    expect(laying(spec)).toThrow(message);
   });
 
   it.each<[string, unknown]>([
@@ -267,8 +268,9 @@ describe('chart validation', () => {
   });
 
   it('repeats a message from core of exactly 200 characters in full', () => {
-    // A string of 82 characters, its quotes and the bracket after them make 200.
-    expect(() => layoutChart(dashOf('a'.repeat(82)) as unknown as ChartSpec)).toThrow(
+    // The message up to the string, a string of 82 characters, and the quote and bracket that close
+    // it make 200.
+    expect(laying(dashOf('a'.repeat(82)))).toThrow(
       new InvalidChartError('style', `is not valid: ${DASH_MESSAGE}${'a'.repeat(82)}"]`),
     );
   });

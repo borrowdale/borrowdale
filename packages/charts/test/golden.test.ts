@@ -18,7 +18,7 @@ describe('golden charts', () => {
     expect(Object.keys(expected)).toEqual(names);
   });
 
-  // The example pages draw these, so they are recorded and reviewed here too.
+  // The example scripts render these, so they are recorded and reviewed here too.
   it.each([...cartesianExamples, ...timeExamples])('holds the example $name', (example) => {
     expect(corpus).toContainEqual(example);
   });

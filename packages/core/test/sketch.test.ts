@@ -175,7 +175,7 @@ describe('validation', () => {
     ['a negative curveFitting', { kind: 'ellipse', cx: 0, cy: 0, width: 10, height: 10 }, { curveFitting: -0.1 }, 'curveFitting must be a number from 0 to 1, got -0.1'],
     ['a hachure angle that is not finite', rectangle, { fill: 'red', hachureAngle: Number.POSITIVE_INFINITY }, 'hachureAngle must be a finite number, got Infinity'],
     ['a dash that is not an array', rectangle, { strokeLineDash: 4 }, 'strokeLineDash must be an array of 1 to 16 lengths from 0 to 1000000, adding up to at least 1, got 4'],
-    ['an empty dash', rectangle, { strokeLineDash: [] }, 'strokeLineDash must be an array of 1 to 16 lengths from 0 to 1000000, adding up to at least 1, got '],
+    ['an empty dash', rectangle, { strokeLineDash: [] }, 'strokeLineDash must be an array of 1 to 16 lengths from 0 to 1000000, adding up to at least 1, got []'],
     ['a dash pattern shorter than one unit', rectangle, { strokeLineDash: [0.005, 0] }, 'strokeLineDash must be an array of 1 to 16 lengths from 0 to 1000000, adding up to at least 1, got [0.005, 0]'],
     ['a dash of zeros', rectangle, { strokeLineDash: [0, 0] }, 'strokeLineDash must be an array of 1 to 16 lengths from 0 to 1000000, adding up to at least 1, got [0, 0]'],
     ['a negative dash length', rectangle, { strokeLineDash: [4, -1] }, 'strokeLineDash must be an array of 1 to 16 lengths from 0 to 1000000, adding up to at least 1, got [4, -1]'],

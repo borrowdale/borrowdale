@@ -22,6 +22,9 @@ const titles = (spec: ChartSpec): string[] => [...toSvgChart(layoutChart(spec)).
 const laying = (spec: ChartSpec) => () => layoutChart(spec);
 const svg = (spec: ChartSpec): string => toSvgChart(layoutChart(spec));
 const yLabels = ['1.0', '1.5', '2.0', '2.5', '3.0'];
+// Bars on y and a line on a y2 axis of the given type, from 10 to 1,000.
+const onY2 = (type: string): ChartSpec =>
+  ({ width: 400, height: 260, axes: { x: { type: 'band', categories: ['a', 'b'] }, y: { type: 'linear' }, y2: { type } }, series: [{ type: 'bar', name: 'B', data: [1, 2] }, { type: 'line', name: 'L', axis: 'y2', data: [10, 1000] }] }) as ChartSpec;
 // A bar from 0 to 100 with its data label, on a y axis of that kind fixed to those ends.
 const labelledBar = (type: string): ChartSpec =>
   ({ width: 300, height: 200, legend: 'none', style: { roughness: 0 }, axes: { x: { type: 'band', categories: ['a'] }, y: { type, min: 0, max: 100 } }, series: [{ type: 'bar', name: 'B', dataLabels: true, data: [100] }] }) as ChartSpec;
@@ -44,6 +47,10 @@ describe('a time axis', () => {
     ['names the months as it is told', onTime({ format: { months: ['jan', 'febr', 'márc', 'ápr', 'máj', 'jún', 'júl', 'aug', 'szept', 'okt', 'nov', 'dec'] } }, [['2026-01-01', 1], ['2026-12-31', 3]]), ['2026', 'ápr', 'júl', 'okt', '2027', ...yLabels]],
   ])('%s', (_case, spec, expected) => {
     expect(labels(spec)).toEqual(expected);
+  });
+
+  it('puts listed ticks at the times given, labelled by their own labels or as its ticks are', () => {
+    expect(labels(onTime({ ticks: ['2026-01-01', { value: '2026-07-01', label: 'H2' }] }, [['2026-01-01', 1], ['2026-12-31', 3]]))).toEqual(['2026', 'H2', ...yLabels]);
   });
 
   it('draws times given as milliseconds exactly as the same times given as strings', () => {
@@ -103,6 +110,11 @@ describe('a log axis', () => {
     expect(labels({ ...xy(linearX, { type: 'log', min: 30, max: 95 }, [[0, 40], [1, 90]], 'scatter'), height: 200 }).slice(6)).toEqual(['40', '60', '80']);
   });
 
+  // The legend, the categories and the y axis' labels come first.
+  it('serves as y2', () => {
+    expect(labels(onY2('log')).slice(9)).toEqual(['10', '100', '1,000']);
+  });
+
   it('places each power of ten an equal distance apart', () => {
     expect(place(scaleOf(axisOf('log'), [1, 1000], 300), [0, 300]).at(10)).toBeCloseTo(100, 9);
   });
@@ -140,6 +152,10 @@ describe('a square-root axis', () => {
     ['a negative value as far below 0 as its positive is above', [-100, 100], -25, 25],
   ])('places %s', (_case, extent, value, at) => {
     expect(place(scaleOf(axisOf('sqrt', { min: extent[0], max: extent[1] }), extent, 300), [0, 100]).at(value)).toBeCloseTo(at, 9);
+  });
+
+  it('serves as y2', () => {
+    expect(labels(onY2('sqrt')).slice(9)).toEqual(['0', '500', '1,000']);
   });
 
   it('rejects ends whose square roots are equal', () => {

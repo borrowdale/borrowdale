@@ -42,7 +42,7 @@ function fakeContext(fonts: unknown) {
     translate: vi.fn(),
     rotate: vi.fn(),
     fillText: vi.fn(),
-    // Ten units per UTF-16 code unit, so a cluster's width shows how many it has.
+    // Ten units per UTF-16 code unit, so a unit's width shows how many code units it has.
     measureText: vi.fn((text: string) => ({ width: text.length * 10 })),
     write: vi.fn(),
     font: '',
@@ -192,7 +192,7 @@ describe('appendText', () => {
 });
 
 describe('drawText', () => {
-  it('fills each cluster at the layout position or where the one before it ends, in the layout font', () => {
+  it('fills each unit at the layout position or where the one before it ends, in the layout font', () => {
     const context = loadedContext();
 
     drawText(context as unknown as CanvasRenderingContext2D, layoutText('AB', at));
@@ -208,6 +208,14 @@ describe('drawText', () => {
     drawText(context as unknown as CanvasRenderingContext2D, layoutText('q\u0301x', at));
 
     expect(context.fillText.mock.calls).toEqual([['q\u0301', 100, 50], ['x', 120, 50]]);
+  });
+
+  it('fills nothing for empty text', () => {
+    const context = loadedContext();
+
+    drawText(context as unknown as CanvasRenderingContext2D, layoutText('', at));
+
+    expect(context.fillText).not.toHaveBeenCalled();
   });
 
   it('fills a flag, an emoji with a skin tone and a joined emoji pair whole, each once', () => {

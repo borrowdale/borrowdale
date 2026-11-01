@@ -36,12 +36,12 @@ describe('an xRange series', () => {
     expect(layoutChart(gantt([plan])).labels).toEqual(['Sketches', 'Review', 'Prototype and production run', 'Go live', '2026', 'Feb', 'Mar', 'Apr', 'Design', 'Build', 'Launch']);
   });
 
-  it('draws an arrow annotation between two tasks', () => {
+  it('accepts an arrow annotation between two tasks', () => {
     const arrow = { annotations: [{ type: 'arrow', from: ['2026-02-06', 'Design'], to: ['2026-02-02', 'Build'] }] };
     expect(laying(gantt([plan], arrow))).not.toThrow();
   });
 
-  it('takes a slot of its own beside another series, listed in the legend', () => {
+  it('lists itself in the legend beside another series', () => {
     const actual = { type: 'xRange', name: 'Actual', data: [{ row: 'Design', from: '2026-01-07', to: '2026-01-30' }] };
     expect(layoutChart(gantt([plan, actual])).labels.slice(0, 2)).toEqual(['Plan', 'Actual']);
   });

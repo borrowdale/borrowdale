@@ -143,7 +143,7 @@ describe.each(ENGINES)('%s parity', (engine) => {
     expect(uncovered).toEqual(['uncovered-characters', 'cyrillic-stress-mark']);
   });
 
-  it('draws a letter whose mark is in another Excalifont file in a fallback font, which is why it is listed', () => {
+  it('draws a letter whose mark is in another Excalifont file at another width exactly where this engine falls back for it', () => {
     expect(Math.abs(Number(drawn['cyrillic-stress-mark']?.svgWidth) - stressed.width) > 0.05).toBe(
       FALLBACK_CHANGES_WIDTH[engine],
     );
@@ -173,7 +173,7 @@ describe.each(ENGINES)('%s parity', (engine) => {
     expect(shapedNames).toEqual(['kerning-pairs', 'ligatures']);
   });
 
-  it.each(shaped)('$name would be drawn at another width with kerning and ligatures left on', ({ name }) => {
+  it.each(shaped)('$name is drawn at another width with kerning and ligatures left on exactly where this engine shapes SVG text', ({ name }) => {
     expect(Math.abs(Number(drawn[name]?.shapedWidth) - Number(expected[name]?.width)) > 0.05).toBe(
       SVG_SHAPES_BY_DEFAULT[engine],
     );

@@ -39,7 +39,9 @@ describe('a step on a linear axis', () => {
   it('steps a radius axis', () => {
     expect(layoutChart(radius({ step: 1.5 })).labels).toEqual(['1.5', '3.0', 'a', 'b', 'c']);
   });
+});
 
+describe('crowded labels on a gauge or polar chart', () => {
   // The dial's value, 3, is written under its hub.
   it('labels a crowded dial on multiples of a nice number of steps', () => {
     expect(layoutChart(dial({ min: 0, max: 100, step: 1, startAngle: -90, endAngle: 90 })).labels).toEqual(['0', '20', '40', '60', '80', '100', '3']);
@@ -66,7 +68,7 @@ describe('a step on a linear axis', () => {
 
 describe('listed ticks on a linear axis', () => {
   it.each<[string, object, string[]]>([
-    ['puts ticks exactly there, with their own labels or formatted values', { ticks: [0, { value: 1.5, label: 'target' }, 2] }, ['0', 'target', '2']],
+    ['put ticks exactly there, with their own labels or formatted values', { ticks: [0, { value: 1.5, label: 'target' }, 2] }, ['0', 'target', '2']],
     ['reach past the data', { ticks: [0, 10] }, ['0', '10']],
     ['write their values in the axis format', { ticks: [0, 1.25], format: { suffix: ' kg' } }, ['0 kg', '1.25 kg']],
   ])('%s', (_case, y, labels) => {
