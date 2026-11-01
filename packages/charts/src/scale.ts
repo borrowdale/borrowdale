@@ -1,7 +1,7 @@
 import { log } from '@borrowdale/core/math';
 import type { CheckedFormat, CheckedLinearAxis, CheckedTick } from './check-axis.js';
 import { decimalsOf } from './decimals.js';
-import { fail, MAX_DECIMALS, MAX_TICKS } from './read.js';
+import { bound, fail, MAX_DECIMALS, MAX_TICKS, MAX_VALUE } from './read.js';
 import { formatTick, formatTime, timeScale, writtenOn } from './time.js';
 
 // Powers of ten as literals, which are correctly rounded, rather than `10 ** n` or `Math.pow`, which
@@ -114,13 +114,22 @@ function linearScale(axis: CheckedLinearAxis, [lo, hi]: [number, number], length
   }
   const count = tickCountFor(length);
   let step = axis.step === undefined ? tickStep(low, high, count) : givenStep(axis.step);
-  let domain: [number, number] = [axis.min ?? step.tick(step.floor(low)), axis.max ?? step.tick(step.ceil(high))];
+  // A free end rounds out no further than the most a value may be either side of zero.
+  let domain: [number, number] = [
+    axis.min ?? Math.max(-MAX_VALUE, step.tick(step.floor(low))),
+    axis.max ?? Math.min(MAX_VALUE, step.tick(step.ceil(high))),
+  ];
   if (!(domain[1] > domain[0])) {
-    // A fixed end met data that all equal it: the free end moves one tick outward.
-    domain =
-      axis.max === undefined
-        ? [domain[0], step.tick(step.ceil(domain[0]) + 1)]
-        : [step.tick(step.floor(domain[1]) - 1), domain[1]];
+    // A fixed end met data that all equal it: the free end moves one tick outward, if there is room.
+    if (axis.max === undefined && domain[0] < MAX_VALUE) {
+      domain = [domain[0], Math.min(MAX_VALUE, step.tick(step.ceil(domain[0]) + 1))];
+    } else if (axis.max === undefined) {
+      fail(`${axis.path}.min`, `is ${bound(MAX_VALUE)}, the most an axis shows, which leaves no room above it`);
+    } else if (domain[1] > -MAX_VALUE) {
+      domain = [Math.max(-MAX_VALUE, step.tick(step.floor(domain[1]) - 1)), domain[1]];
+    } else {
+      fail(`${axis.path}.max`, `is ${bound(-MAX_VALUE)}, the least an axis shows, which leaves no room below it`);
+    }
   }
   if (flat && (axis.min !== undefined || axis.max !== undefined) && axis.step === undefined) {
     // Against a fixed end, the step of flat data came from the range widened against zero, not the
@@ -271,9 +280,12 @@ function logScale(axis: CheckedLinearAxis, [lo, hi]: [number, number], length: n
   // Free ends round out to powers of ten; one value alone shows the power of ten it lies in.
   let domain: [number, number] = [axis.min ?? POWERS[decadeOf(lo) + EXPONENT_OFFSET]!, axis.max ?? powerAtOrAbove(hi)];
   if (!(domain[1] > domain[0])) {
-    // A fixed end the data all equal: the free end moves to the next power of ten out from it.
-    if (axis.max === undefined) {
+    // A fixed end the data all equal, or one value alone on a power of ten: the free end moves to the
+    // next power of ten out from it, below where above passes the most a value may be.
+    if (axis.max === undefined && domain[0] < MAX_VALUE) {
       domain = [domain[0], POWERS[decadeOf(domain[0]) + EXPONENT_OFFSET + 1]!];
+    } else if (axis.max === undefined && axis.min !== undefined) {
+      fail(`${axis.path}.min`, `is ${bound(MAX_VALUE)}, the most a log axis shows, which leaves no room above it`);
     } else {
       const below = POWERS[decadeOf(domain[1]) + EXPONENT_OFFSET - 1];
       domain = [below ?? fail(`${axis.path}.max`, `is ${axis.max}, the least a log axis shows, which leaves no room below it`), domain[1]];

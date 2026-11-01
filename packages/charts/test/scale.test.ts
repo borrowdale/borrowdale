@@ -43,7 +43,7 @@ describe('a linear scale', () => {
     ['ends on 0.3 rather than rounding 3.0000000000000004 up', [0, 0.3], 150, [0, 0.3], ['0.0', '0.1', '0.2', '0.3']],
     ['draws values half a billionth apart as equal, against zero', [1e9, 1e9 + 0.5], 250, [0, 1.2e9], ['0', '200,000,000', '400,000,000', '600,000,000', '800,000,000', '1,000,000,000', '1,200,000,000']],
     ['tells values two billionths apart from equal', [1e9, 1e9 + 2], 250, [1e9, 1e9 + 2], ['1,000,000,000.0', '1,000,000,000.5', '1,000,000,001.0', '1,000,000,001.5', '1,000,000,002.0']],
-    ['draws values a billionth apart as equal, against zero', [1e15, 1e15 + 1], 250, [0, 1.2e15], ['0', '200,000,000,000,000', '400,000,000,000,000', '600,000,000,000,000', '800,000,000,000,000', '1,000,000,000,000,000', '1,200,000,000,000,000']],
+    ['draws values a quadrillionth apart as equal, against zero', [1e15 - 1, 1e15], 250, [0, 1e15], ['0', '200,000,000,000,000', '400,000,000,000,000', '600,000,000,000,000', '800,000,000,000,000', '1,000,000,000,000,000']],
   ])('%s', (_case, extent, length, domain, labels) => {
     expect(scaleOf(axis, extent, length)).toMatchObject({ domain, labels });
   });
@@ -101,6 +101,29 @@ describe('a linear scale', () => {
 
   it('rounds a free max out to a multiple of its step from flat data at a fixed min', () => {
     expect(scaleOf({ ...axis, min: 5, step: 2 }, [5, 5], 250)).toMatchObject({ domain: [5, 6], ticks: [6] });
+  });
+
+  // 3e14 does not divide 1e15, the most a value may be: the free end stops there, past the last tick.
+  it.each<[string, [number, number], [number, number], number[]]>([
+    ['max', [0, 1e15], [0, 1e15], [0, 3e14, 6e14, 9e14]],
+    ['min', [-1e15, 0], [-1e15, 0], [-9e14, -6e14, -3e14, 0]],
+  ])('rounds a free %s out no further than 1e15 from zero', (_case, extent, domain, ticks) => {
+    expect(scaleOf({ ...axis, step: 3e14 }, extent, 250)).toMatchObject({ domain, ticks });
+  });
+
+  // One step of 3e14 out from 9e14 would pass 1e15.
+  it.each<[string, CheckedLinearAxis, [number, number], [number, number]]>([
+    ['max from a fixed min', { ...axis, min: 9e14, step: 3e14 }, [9e14, 9e14], [9e14, 1e15]],
+    ['min from a fixed max', { ...axis, max: -9e14, step: 3e14 }, [-9e14, -9e14], [-1e15, -9e14]],
+  ])('moves a free %s that the data all equal out no further than 1e15', (_case, on, extent, domain) => {
+    expect(scaleOf(on, extent, 250).domain).toEqual(domain);
+  });
+
+  it.each<[string, CheckedLinearAxis, [number, number], string]>([
+    ['a min at the most an axis shows, with the data there too', { ...axis, min: 1e15 }, [1e15, 1e15], 'Invalid chart: axes.y.min is 1e15, the most an axis shows, which leaves no room above it'],
+    ['a max at the least an axis shows, with the data there too', { ...axis, max: -1e15 }, [-1e15, -1e15], 'Invalid chart: axes.y.max is -1e15, the least an axis shows, which leaves no room below it'],
+  ])('rejects %s', (_case, on, extent, message) => {
+    expect(scaling(on, extent, 250)).toThrow(message);
   });
 
   // Shown against zero, -5 gives a step of 1, which leaves one tick below the max: the step is

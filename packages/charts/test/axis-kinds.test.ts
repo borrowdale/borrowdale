@@ -211,6 +211,15 @@ describe('a log axis', () => {
     expect(svgTitles(xy({ type: 'log' }, linearY, [[10, 1], [1000, 2]], 'scatter'))).toEqual(['S: 10, 1', 'S: 1,000, 2']);
   });
 
+  // 1e15 is the most a value may be, so the power of ten it lies in is shown below it, not above.
+  it('shows a value alone at 1e15 in the power of ten below it', () => {
+    expect(labels(xy(linearX, { type: 'log' }, [[0, 1e15]], 'scatter')).slice(6)).toEqual(['100,000,000,000,000', '200,000,000,000,000', '500,000,000,000,000', '1,000,000,000,000,000']);
+  });
+
+  it('ends a square-root axis with a step no further than 1e15', () => {
+    expect(scaleOf(axisOf('sqrt', { step: 3e14 }), [0, 1e15], 250).domain).toEqual([0, 1e15]);
+  });
+
   // A bubble's size is not on either axis.
   it('takes a bubble of size 0 on a log axis', () => {
     expect(laying(xy(linearX, { type: 'log' }, [[1, 10, 0], [2, 100, 5]], 'bubble'))).not.toThrow();
@@ -226,6 +235,7 @@ describe('a log axis', () => {
     ['a step', xy(linearX, { type: 'log', step: 10 }, [[0, 1]], 'scatter'), 'Invalid chart: axes.y has an unknown key, "step"'],
     ['a percent stack', xy(linearX, { type: 'log', percent: true }, [[0, 1]], 'scatter'), 'Invalid chart: axes.y has an unknown key, "percent"'],
     ['a max at the least value it shows, with the data there too', xy(linearX, { type: 'log', max: 1e-20 }, [[0, 1e-20]], 'scatter'), 'Invalid chart: axes.y.max is 1e-20, the least a log axis shows, which leaves no room below it'],
+    ['a min at the most value it shows, with the data there too', xy(linearX, { type: 'log', min: 1e15 }, [[0, 1e15]], 'scatter'), 'Invalid chart: axes.y.min is 1e15, the most a log axis shows, which leaves no room above it'],
     ['ends whose logarithms are equal', xy(linearX, { type: 'log', min: 999999999999999.9, max: 1e15 }, [[0, 1e15]], 'scatter'), 'Invalid chart: axes.y cannot place values between 999999999999999.9 and 1000000000000000, whose logarithms are equal'],
     ['data beyond a fixed end', xy(linearX, { type: 'log', max: 100 }, [[0, 400]], 'scatter'), 'Invalid chart: axes.y.max is 100, but the data reach 400'],
   ])('rejects %s', (_case, spec, message) => {

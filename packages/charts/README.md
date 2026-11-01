@@ -115,7 +115,7 @@ With `y` as the band axis, bars and lines run horizontally. A sparkline is a sma
 | `type: 'linear'` | rounded out from the data to ticks of 1, 2 or 5 × 10ⁿ, about one per 50 units |
 | `y2` | a second value axis on the right, `linear`, `log` or `sqrt`, for series with `axis: 'y2'`. Only when `x` is the band axis |
 | `min`, `max` | fix an end of a linear axis; `max` must be above `min`, and data outside them is an error |
-| `step` | a tick at every multiple of it, counted from zero, with free ends rounded out to one: a number above 0, at most 1e15, with at most 20 decimals, giving at most 1,000 ticks |
+| `step` | a tick at every multiple of it, counted from zero, with free ends rounded out to one, but no further than ±1e15: a number above 0, at most 1e15, with at most 20 decimals, giving at most 1,000 ticks |
 | `ticks` | ticks exactly at these values, increasing and within any fixed end: a number, written in the axis format, or `{ value, label }` with a label of at most 100 characters. Free ends reach the outermost tick or value. 1 to 1,000; not with `step` |
 | `percent` | stacks on the axis show each value as its share of the stack's total. Only bar and area series may use it, on a chart with a band axis |
 | `grid` | gridlines at the ticks; on by default, except on `y2` |
@@ -184,7 +184,7 @@ its own `step` and `format`, below. `percent` is for linear axes only.
 | `type` | Values | Ticks |
 |---|---|---|
 | `time` | ISO 8601 strings (`"2026-11-01"`, `"2026-11"`, `"2026-11-01T09:30Z"`, `"2026-11-01T09:30:15.250+01:00"`) or whole milliseconds since 1970-01-01T00:00Z, from year 0000 to 9999 | calendar boundaries in UTC, from milliseconds to millennia, about one per 50 units; `step: { unit, every }` picks them, `unit` one of `millisecond`, `second`, `minute`, `hour`, `day`, `week`, `month`, `year` and `every` a whole number from 1 to 1,000 (default 1), giving at most 1,000 ticks |
-| `log` | numbers from 1e-20 to 1e15 | powers of ten, with 1, 2 and 5 times them, or every one to nine times, where there is room; where none of those fits and fewer than two powers of ten lie between its ends, a linear axis' ticks; free ends round out to powers of ten; no `step` |
+| `log` | numbers from 1e-20 to 1e15 | powers of ten, with 1, 2 and 5 times them, or every one to nine times, where there is room; where none of those fits and fewer than two powers of ten lie between its ends, a linear axis' ticks; free ends round out to powers of ten within those bounds, so a value alone at 1e15 shows the power below it; no `step` |
 | `sqrt` | numbers, negative ones mirroring positive ones | a linear axis' ticks, placed by their square roots |
 
 Times are read without the JavaScript engine's date parser, which differs between engines and
