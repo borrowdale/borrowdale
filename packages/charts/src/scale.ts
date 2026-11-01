@@ -73,6 +73,18 @@ export function scaleOf(axis: CheckedLinearAxis, extent: [number, number], lengt
   }
 }
 
+/**
+ * The extent of an axis with nothing on it: its listed ticks', or else its fixed end, or 0, or 1 on
+ * a log axis. Listed ticks are within the fixed ends, so they never pass them.
+ */
+export function emptyExtent(axis: CheckedLinearAxis): [number, number] {
+  if (axis.ticks !== undefined) {
+    return [axis.ticks[0]!.value, axis.ticks.at(-1)!.value];
+  }
+  const end = axis.min ?? axis.max ?? (axis.kind === 'log' ? 1 : 0);
+  return [end, end];
+}
+
 /** A scale with a place: `at` maps a value to a position. */
 export interface PlacedScale extends Scale {
   at: (value: number) => number;

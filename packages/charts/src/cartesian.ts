@@ -18,7 +18,7 @@ import { assertRoom, BAND_PADDING, type Rect } from './frame.js';
 import { loneDot, piecesOf, POINT_SIZE, runsOf, solid } from './marks.js';
 import { hatched, LINE_WIDTH, type Paint } from './palette.js';
 import { stackGroup, stackSpans, type Span } from './stack.js';
-import { bandScale, formatAxisValue, formatShare, formatValue, place, scaleOf, type BandScale, type PlacedScale } from './scale.js';
+import { bandScale, emptyExtent, formatAxisValue, formatShare, formatValue, place, scaleOf, type BandScale, type PlacedScale } from './scale.js';
 import { markerNode } from './symbols.js';
 import type { ChartNode, Curve } from './types.js';
 import { isStacking, type CheckedCartesianChart, type SeriesOf } from './validate.js';
@@ -101,12 +101,12 @@ export function layoutCartesian(drawing: Drawing, chart: CheckedCartesianChart, 
     'axis' in entry && entry.axis === 'y2' ? 'y2' : horizontal ? 'x' : 'y';
   const spans = spansOf(series, valueAxisOf, linear);
   const cuts = areaCutsOf(series, valueAxisOf);
-  // An axis with nothing drawn on it starts at its fixed end, or at 0, or 1 on a log axis.
+  // A linear axis with nothing drawn on it spans its listed ticks, or starts at its fixed end, at 0,
+  // or at 1 on a log axis.
   const extentOf = (key: AxisKey): [number, number] => {
-    const end = linear[key]?.min ?? linear[key]?.max ?? (linear[key]?.kind === 'log' ? 1 : 0);
     const data = extent(key, series, spans, valueAxisOf);
     const values = chart.annotations.flatMap(annotationValues).filter((item) => item.axis === key && typeof item.value === 'number').map((item) => item.value as number);
-    if (values.length === 0) return data ?? [end, end];
+    if (values.length === 0) return data ?? emptyExtent(linear[key]!);
     return [Math.min(data?.[0] ?? Infinity, ...values), Math.max(data?.[1] ?? -Infinity, ...values)];
   };
 

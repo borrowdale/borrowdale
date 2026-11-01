@@ -21,7 +21,7 @@ import {
 import { loneDot, POINT_SIZE, runsOf, solid } from './marks.js';
 import { GRID, GRID_WIDTH, hatched, LINE_WIDTH, type Paint } from './palette.js';
 import { fail } from './read.js';
-import { bandScale, formatValue, place, PLAIN_FORMAT, scaleOf, type PlacedScale } from './scale.js';
+import { bandScale, emptyExtent, formatValue, place, PLAIN_FORMAT, scaleOf, type PlacedScale } from './scale.js';
 import { stackGroup, stackSpans, type Span } from './stack.js';
 import type { ChartNode } from './types.js';
 import { isStacking, type CheckedPolarChart, type SeriesOf } from './validate.js';
@@ -386,13 +386,10 @@ function overflowOf(drawing: Drawing, labels: readonly StartLabel[], box: Rect):
   );
 }
 
-/** The data's extent on a value axis, from 0 on a radius axis that sets no `min`. */
+/** The data's extent on a value axis, or its emptyExtent, from 0 on a radius axis that sets no `min`. */
 function endsOf(axis: CheckedLinearAxis, extent: [number, number] | undefined, fromZero = false): [number, number] {
-  if (!extent) {
-    const end = axis.min ?? axis.max ?? 0;
-    return [end, end];
-  }
-  return [fromZero && axis.min === undefined ? 0 : extent[0], extent[1]];
+  const [low, high] = extent ?? emptyExtent(axis);
+  return [fromZero && axis.min === undefined ? 0 : low, high];
 }
 
 /** Categories around the circle: on a whole turn the first at the start, else each centred in its share. */

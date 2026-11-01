@@ -7,7 +7,7 @@ import { assertRoom, GAP, TICK, type Rect } from './frame.js';
 import { POINT_SIZE, solid } from './marks.js';
 import { INK, type Paint } from './palette.js';
 import { fail } from './read.js';
-import { formatAxisValue, scaleOf } from './scale.js';
+import { emptyExtent, formatAxisValue, scaleOf } from './scale.js';
 import { markerNode } from './symbols.js';
 import type { ChartNode } from './types.js';
 import type { CheckedTimelineChart } from './validate.js';
@@ -41,14 +41,13 @@ export function layoutTimeline(drawing: Drawing, chart: CheckedTimelineChart, re
       [low, high] = [Math.min(low, event.at), Math.max(high, event.to ?? event.at)];
     }
   }
-  const end = axis.min ?? axis.max ?? 0;
   // Tick labels on the track's left and event labels on its right each take a line and a gap.
   const margin = line + TICK + GAP;
   const layOut = (side: number) => {
     const area: Rect = { left: rect.left + side, top: rect.top + margin, right: rect.right - side, bottom: rect.bottom - margin };
     assertRoom(area, chart.width, chart.height);
     const track = trackOf(axis, area, 2 * margin, chart);
-    return { track, scale: scaleOf(axis, low > high ? [end, end] : [low, high], track.length) };
+    return { track, scale: scaleOf(axis, low > high ? emptyExtent(axis) : [low, high], track.length) };
   };
   let { track, scale } = layOut(margin);
   // A straight track ends at the sides, where a label centred on a tick near an end can reach past

@@ -123,6 +123,19 @@ describe('listed ticks on a linear axis', () => {
     expect(valueLabels({ ...bars({ ticks: [0, 0.5, 1, 1.5, 2] }), height: 100 })).toEqual(['0', '1', '2']);
   });
 
+  // With nothing drawn, the free ends reach the outermost ticks, not a placeholder taken as data.
+  const year = ['2026-01-01', '2026-06-01', '2026-12-01'];
+  const emptyScatter = { width: 400, height: 300, legend: 'none', axes: { x: { type: 'time', ticks: year }, y: { type: 'linear' } }, series: [{ type: 'scatter', name: 'A', data: [] }] } as ChartSpec;
+  const emptyTimeline = { width: 400, height: 200, legend: 'none', axes: { time: { type: 'time', ticks: year } }, series: [{ type: 'timeline', name: 'T', data: [] }] } as ChartSpec;
+  const emptyAngle = { width: 300, height: 300, legend: 'none', axes: { angle: { type: 'linear', ticks: [1000, 1010, 1020, 1030] }, radius: { type: 'linear' } }, series: [{ type: 'polarScatter', name: 'S', data: [] }] } as ChartSpec;
+  it.each<[string, ChartSpec, string[]]>([
+    ['a scatter chart', emptyScatter, ['2026', 'Jun', 'Dec']],
+    ['a timeline', emptyTimeline, ['2026', 'Jun', 'Dec']],
+    ['a polar chart', emptyAngle, ['1,000', '1,010', '1,020']],
+  ])('spans the listed ticks of %s with no data', (_case, spec, labels) => {
+    expect(layoutChart(spec).labels).toEqual(expect.arrayContaining(labels));
+  });
+
   it.each<[string, object, string[]]>([
     ['at 0', { ticks: [0, 2] }, ['2', 'a', 'b', 'c']],
     ['below 0 when the radius starts below it', { min: -2, ticks: [-1, 2] }, ['-1', '2', 'a', 'b', 'c']],
