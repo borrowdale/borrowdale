@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import '../../core/test/support/forbid-unportable-calls.js';
 import { layoutChart, toSvgChart, type ChartSpec } from '@borrowdale/charts';
-import type { CheckedLinearAxis } from '../src/check-axis.js';
+import { checkContinuousAxis, type CheckedLinearAxis } from '../src/check-axis.js';
 import { place, scaleOf, PLAIN_FORMAT } from '../src/scale.js';
 import { laying, shapesOf, svgTitles } from './support/layout.js';
 
@@ -23,6 +23,10 @@ const yLabels = ['1.0', '1.5', '2.0', '2.5', '3.0'];
 // Bars on y and a line on a y2 axis of the given type, from 10 to 1,000.
 const onY2 = (type: string): ChartSpec =>
   ({ width: 400, height: 260, axes: { x: { type: 'band', categories: ['a', 'b'] }, y: { type: 'linear' }, y2: { type } }, series: [{ type: 'bar', name: 'B', data: [1, 2] }, { type: 'line', name: 'L', axis: 'y2', data: [10, 1000] }] }) as ChartSpec;
+// An extra key with the name of a key every axis has would replace it when spread in, so the
+// compiler rejects one; the typecheck of the tests is what fails if it stops doing so.
+// @ts-expect-error: `path` is a key every axis has.
+const replacingPath = checkContinuousAxis({ linear: ['type'] }, false, () => ({ path: 'other' }));
 // A bar from 0 to 100 with its data label, on a y axis of that kind fixed to those ends.
 const labelledBar = (type: string): ChartSpec =>
   ({ width: 300, height: 200, legend: 'none', style: { roughness: 0 }, axes: { x: { type: 'band', categories: ['a'] }, y: { type, min: 0, max: 100 } }, series: [{ type: 'bar', name: 'B', dataLabels: true, data: [100] }] }) as ChartSpec;
@@ -134,6 +138,12 @@ describe('a log axis', () => {
     ['data beyond a fixed end', xy(linearX, { type: 'log', max: 100 }, [[0, 400]], 'scatter'), 'Invalid chart: axes.y.max is 100, but the data reach 400'],
   ])('rejects %s', (_case, spec, message) => {
     expect(laying(spec)).toThrow(message);
+  });
+});
+
+describe('an axis check', () => {
+  it('is still made when an extra replacing a common key is forced past the compiler', () => {
+    expect(replacingPath).toBeTypeOf('function');
   });
 });
 
