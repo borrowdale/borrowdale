@@ -42,6 +42,7 @@ describe('a time axis', () => {
     ['labels every tick of its own interval when they fit, though no built-in one is that long', onTime({ step: { unit: 'month', every: 2 } }, [['2026-01-01', 1], ['2026-12-31', 3]], 600), ['2026', 'Mar', 'May', 'Jul', 'Sep', 'Nov', '2027', ...yLabels]],
     ['labels every ten minutes when they fit', onTime({ step: { unit: 'minute', every: 10 } }, [['2026-11-03T09:00Z', 1], ['2026-11-03T10:00Z', 3]], 600), ['09:00', '09:10', '09:20', '09:30', '09:40', '09:50', '10:00', ...yLabels]],
     ['ticks fixed ends closer together than the interval its length would choose', onTime({ min: '2026-01-02', max: '2026-01-30' }, [['2026-01-02', 1], ['2026-01-30', 3]], 220), ['5 Jan', '19 Jan', ...yLabels]],
+    ['starts no earlier than year 0, though its step would round out before it', onTime({ step: { unit: 'week' } }, [['0000-01-01', 1], ['0000-01-30', 3]]), ['3 Jan', '10 Jan', '17 Jan', '24 Jan', '31 Jan', ...yLabels]],
     ['chooses fewer ticks on a narrow axis', onTime({}, [['2026-01-01', 1], ['2026-03-31', 3]], 200), ['2026', 'Feb', 'Mar', 'Apr', ...yLabels]],
     ['names the months as it is told', onTime({ format: { months: ['jan', 'febr', 'márc', 'ápr', 'máj', 'jún', 'júl', 'aug', 'szept', 'okt', 'nov', 'dec'] } }, [['2026-01-01', 1], ['2026-12-31', 3]]), ['2026', 'ápr', 'júl', 'okt', '2027', ...yLabels]],
   ])('%s', (_case, spec, expected) => {

@@ -229,7 +229,8 @@ export function timeScale(axis: CheckedLinearAxis, [lo, hi]: [number, number], l
   // One moment alone, or a fixed end it equals, chooses its interval as if the axis were a day long.
   const span = high > low ? high - low : DAY;
   let step = axis.interval ?? INTERVALS.find((candidate) => candidate.length * count >= span) ?? INTERVALS.at(-1)!;
-  let domain: [number, number] = [axis.min ?? step.floor(low), axis.max ?? ceiling(step, high)];
+  // A free start rounds out no earlier than the earliest time an axis shows.
+  let domain: [number, number] = [axis.min ?? Math.max(MIN_TIME, step.floor(low)), axis.max ?? ceiling(step, high)];
   if (!(domain[1] > domain[0])) {
     // A fixed end the data all equal: the free end moves one step out from it, if there is room.
     if (axis.max === undefined) {
