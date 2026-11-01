@@ -114,13 +114,13 @@ describe('a timeline', () => {
     expect([placesOf(fourAtOnce, 'A'), placesOf(fourAtOnce, 'D')]).toEqual([[[195.97, 139.63]], [[195.34, 106.51]]]);
   });
 
-  // The sides of a straight track widen for its last tick label, so both end labels are centred on
-  // their ticks, "Now" as far in from the left as the last one is from the right.
   // A serpentine of one row is a straight track, the one its message recommends where turns do not fit.
   it('lays a serpentine of one row out as a straight track', () => {
     expect(layoutChart(geologic({ type: 'serpentine', rows: 1 }, [460, 200]))).toEqual(layoutChart(geologic({ type: 'line' }, [460, 200])));
   });
 
+  // The sides of a straight track widen for its last tick label, so both end labels are centred on
+  // their ticks, "Now" as far in from the left as the last one is from the right.
   it('centres the long end labels of a straight track on their ticks', () => {
     const straight = geologic({ type: 'line' }, [400, 120]);
     expect([placesOf(straight, 'Now'), placesOf(straight, 'Start of the Cambrian')]).toEqual([[[61.56, 44.51]], [[261.79, 44.51]]]);

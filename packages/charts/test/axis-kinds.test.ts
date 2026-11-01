@@ -78,12 +78,12 @@ describe('a time axis', () => {
     expect(labels({ ...onTime({ step: { unit: 'day' } }, [['2026-01-20', 1], ['2026-02-10', 2]], 200), height: 200 })).toEqual(['Feb', '1.0', '1.5', '2.0']);
   });
 
-  // The month's boundary is the fixed max itself, so its tick is the axis' own.
   // Eight days take 8 ticks of a day, which a 350-unit axis has just room for, at one per 50 units.
   it('takes the finest interval whose ticks the length has room for, room for exactly them included', () => {
     expect(scaleOf(axisOf('time', { months: ENGLISH_MONTHS }), [time('at', '2026-11-02'), time('at', '2026-11-09')], 350).labels).toEqual(['2 Nov', '3 Nov', '4 Nov', '5 Nov', '6 Nov', '7 Nov', '8 Nov', '9 Nov']);
   });
 
+  // The month's boundary is the fixed max itself, so its tick is the axis' own.
   it('keeps the interval its length chooses where the fixed ends hold one of its boundaries', () => {
     const month = { width: 200, height: 200, legend: 'none', axes: { x: { type: 'time', min: '2026-01-02', max: '2026-02-01' }, y: linearY }, series: [{ type: 'scatter', name: 'S', data: [['2026-01-10', 1]] }] } as ChartSpec;
     expect(labels(month)).toEqual(['Feb', '0.0', '0.5', '1.0']);
