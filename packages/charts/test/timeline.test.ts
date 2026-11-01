@@ -25,6 +25,15 @@ const svg = (spec: ChartSpec): string => toSvgChart(layoutChart(spec));
 const eras = [{ value: 0, label: 'Now' }, { value: 66, label: 'End of the Cretaceous' }, { value: 252, label: 'End of the Permian' }, { value: 541, label: 'Start of the Cambrian' }];
 const geologic = (path: object, size: [number, number]): ChartSpec =>
   ({ width: size[0], height: size[1], axes: { time: { type: 'linear', ticks: eras, path } }, series: [{ type: 'timeline', name: 'T', data: [{ at: 0 }, { at: 541 }] }] }) as ChartSpec;
+// Twelve labels a year apart on a straight track, each wider than a cell of the grid that finds the
+// labels near a new one.
+const longLabels = Array.from({ length: 12 }, (_, i) => ({ at: 2000 + i, label: `A rather long label, number ${i + 1}` }));
+const wideLabels = { width: 600, height: 240, axes: { time: { type: 'linear' } }, series: [{ type: 'timeline', name: 'T', dataLabels: true, data: longLabels }] } as ChartSpec;
+// Where each text `text` is drawn, in a mark or not.
+const placesOf = (spec: ChartSpec, text: string): [number, number][] =>
+  layoutChart(spec)
+    .nodes.flatMap((node) => (node.kind === 'mark' ? node.nodes : [node]))
+    .flatMap((node) => (node.kind === 'text' && node.text.text === text ? [[node.text.x, node.text.y] as [number, number]] : []));
 // A straight linear timeline from `from` to `to`, whose ticks are wide numbers.
 const wide = (from: number, to: number, size: [number, number]): ChartSpec =>
   ({ width: size[0], height: size[1], axes: { time: { type: 'linear' } }, series: [{ type: 'timeline', name: 'T', data: [{ at: from }, { at: to }] }] }) as ChartSpec;
@@ -76,6 +85,16 @@ describe('a timeline', () => {
 
   it('keeps an event label at the start of the track on the chart', () => {
     expect(labelsOutside(layoutChart(timeline(undefined, [300, 160], [{ at: '2000-01-01', label: 'A long label right at the very start' }, { at: '2020-01-01' }])))).toBe(0);
+  });
+
+  it('keeps labels wider than the cells of its grid apart', () => {
+    expect(overlappingTexts(layoutChart(wideLabels))).toEqual([]);
+  });
+
+  it('gives an empty label no room, so a label at the same moment stays beside it', () => {
+    const empty = timeline(undefined, [400, 200], [{ at: '2000-01-01', label: '' }, { at: '2000-01-01', label: 'B' }, { at: '2010-01-01' }]);
+    const unlabelled = timeline(undefined, [400, 200], [{ at: '2000-01-01' }, { at: '2000-01-01', label: 'B' }, { at: '2010-01-01' }]);
+    expect(placesOf(empty, 'B')).toEqual(placesOf(unlabelled, 'B'));
   });
 
   it('moves crowded labels apart on a hidden axis as on a shown one', () => {

@@ -21,8 +21,10 @@ const TRACK_WIDTH = 1.5;
 // How many lines out from the track, on each side, an event's label may move to clear the labels
 // before it.
 const LABEL_LEVELS = 3;
-// The side of a cell of the grid that finds labels near a new one.
+// The side of a cell of the grid that finds labels near a new one: at least 64 units, and 4 lines,
+// so a label is in few cells whatever the font size.
 const CELL = 64;
+const CELL_LINES = 4;
 
 /** A track: its points, and how far along it each one is. */
 interface Track {
@@ -67,7 +69,7 @@ export function layoutTimeline(drawing: Drawing, chart: CheckedTimelineChart, re
   }
   const along = (value: number) => pointAt(track, scale.fraction(value) * track.length);
 
-  const taken = new LabelRoom();
+  const taken = new LabelRoom(line);
   if (!axis.hidden) {
     drawing.push(drawing.outline({ kind: 'linearPath', points: [...track.points] }, { stroke: INK, strokeWidth: TRACK_WIDTH }, ['track']));
     const room = Math.max(0, ...scale.labels.map((label) => drawing.width(label))) + GAP;
@@ -250,29 +252,42 @@ function boxAt({ left, right, up, down }: Extent, x: number, y: number): Rect {
 /** The boxes of the labels placed so far, in a grid of cells, so a new one is checked only against those near it. */
 class LabelRoom {
   readonly #cells = new Map<string, Rect[]>();
+  readonly #size: number;
 
-  /** Whether `box` overlaps no box placed so far. */
+  constructor(line: number) {
+    this.#size = Math.max(CELL, CELL_LINES * line);
+  }
+
+  /** Whether `box` overlaps no box placed so far. A box with no area, as an empty label has, takes no room. */
   clear(box: Rect): boolean {
-    return this.#keys(box).every((key) => (this.#cells.get(key) ?? []).every((other) => !overlaps(box, other)));
+    return !hasArea(box) || !this.#some(box, (key) => this.#cells.get(key)?.some((other) => overlaps(box, other)) ?? false);
   }
 
   add(box: Rect): void {
-    for (const key of this.#keys(box)) {
-      const cell = this.#cells.get(key) ?? [];
-      cell.push(box);
-      this.#cells.set(key, cell);
+    if (hasArea(box)) {
+      this.#some(box, (key) => {
+        const cell = this.#cells.get(key) ?? [];
+        cell.push(box);
+        this.#cells.set(key, cell);
+        return false;
+      });
     }
   }
 
-  #keys({ left, top, right, bottom }: Rect): string[] {
-    const keys: string[] = [];
-    for (let column = Math.floor(left / CELL); column <= Math.floor(right / CELL); column++) {
-      for (let row = Math.floor(top / CELL); row <= Math.floor(bottom / CELL); row++) {
-        keys.push(`${column} ${row}`);
+  // Whether `found` is true of a cell `box` is in, asked of each in turn until it is.
+  #some({ left, top, right, bottom }: Rect, found: (key: string) => boolean): boolean {
+    const size = this.#size;
+    for (let column = Math.floor(left / size); column <= Math.floor(right / size); column++) {
+      for (let row = Math.floor(top / size); row <= Math.floor(bottom / size); row++) {
+        if (found(`${column} ${row}`)) return true;
       }
     }
-    return keys;
+    return false;
   }
+}
+
+function hasArea(box: Rect): boolean {
+  return box.right > box.left && box.bottom > box.top;
 }
 
 function overlaps(a: Rect, b: Rect): boolean {
