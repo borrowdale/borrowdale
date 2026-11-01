@@ -244,7 +244,7 @@ const SERIES_RULES = {
     system: 'timeline',
     band: false,
     keys: ['dataLabels', 'data'],
-    read: (r: Fields, _path: string, reserve: ReservePoints) => ({ data: r.required('data', list(0, MAX_POINTS, checkEvent, reserve)) }),
+    read: (r: Fields, _path: string, reserve: ReservePoints) => ({ data: r.required('data', list(0, MAX_POINTS, checkTimelineEvent, reserve)) }),
   },
   pie: {
     system: 'pie',
@@ -1008,13 +1008,13 @@ function checkRange(path: string, raw: unknown): [number, number] {
 }
 
 /** A timeline event; at and to are read once the axis is known (checkTimelineChart). */
-interface CheckedEvent {
+interface CheckedTimelineEvent {
   at: number;
   to: number | undefined;
   label: string | undefined;
 }
 
-function checkEvent(path: string, raw: unknown): CheckedEvent {
+function checkTimelineEvent(path: string, raw: unknown): CheckedTimelineEvent {
   const r = fields(path, raw);
   r.allow(['at', 'to', 'label']);
   return { at: r.required('at', coordinate), to: r.optional('to', coordinate), label: r.optional('label', text(MAX_NAME)) };

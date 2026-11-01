@@ -109,37 +109,37 @@ export function layoutTimeline(drawing: Drawing, chart: CheckedTimelineChart, re
 
 /** The points of the axis' track in `area`, earliest first. A serpentine's rows must be `rowSpacing` apart. */
 function trackOf(axis: CheckedTimelineChart['axis'], area: Rect, rowSpacing: number, chart: CheckedTimelineChart): Track {
-  const path = axis.track;
+  const { track } = axis;
   const [width, height] = [area.right - area.left, area.bottom - area.top];
-  switch (path.type) {
+  switch (track.type) {
     case 'line': {
       const y = (area.top + area.bottom) / 2;
       return measured([[area.left, y], [area.right, y]]);
     }
     case 'serpentine': {
-      if (path.rows === 1) {
+      if (track.rows === 1) {
         const y = (area.top + area.bottom) / 2;
         return measured([[area.left, y], [area.right, y]]);
       }
       // Rows evenly from the top of the area to its bottom, joined by half turns whose diameter is
       // the space between them; the labels of neighbouring rows share that space.
-      const spacing = height / (path.rows - 1);
+      const spacing = height / (track.rows - 1);
       if (spacing < rowSpacing) {
         const room = Math.max(1, Math.floor(height / rowSpacing) + 1);
-        return fail(`${axis.path}.path.rows`, `is ${path.rows}, but a ${chart.width} × ${chart.height} chart has room for ${room}`);
+        return fail(`${axis.path}.path.rows`, `is ${track.rows}, but a ${chart.width} × ${chart.height} chart has room for ${room}`);
       }
       // Each half turn is as wide as the rows are apart, and must fit across the area.
       if (spacing > width) {
         const fewest = Math.ceil(height / width) + 1;
-        return fail(`${axis.path}.path.rows`, `is ${path.rows}, but a ${chart.width} × ${chart.height} chart needs at least ${fewest} for the turns between them to fit across it`);
+        return fail(`${axis.path}.path.rows`, `is ${track.rows}, but a ${chart.width} × ${chart.height} chart needs at least ${fewest} for the turns between them to fit across it`);
       }
       const radius = spacing / 2;
       const points: Point[] = [];
-      for (let row = 0; row < path.rows; row++) {
+      for (let row = 0; row < track.rows; row++) {
         const y = area.top + row * spacing;
         const [start, end] = row % 2 === 0 ? [area.left + radius, area.right - radius] : [area.right - radius, area.left + radius];
         points.push([start, y], [end, y]);
-        if (row + 1 < path.rows) {
+        if (row + 1 < track.rows) {
           // Outward on the side the row ends at, down to the next row.
           const side = row % 2 === 0 ? 1 : -1;
           for (let k = 1; k < HALF_TURN_POINTS; k++) {
@@ -153,25 +153,25 @@ function trackOf(axis: CheckedTimelineChart['axis'], area: Rect, rowSpacing: num
     case 'spiral': {
       const [cx, cy] = [(area.left + area.right) / 2, (area.top + area.bottom) / 2];
       const outer = Math.min(width, height) / 2;
-      const inner = outer * path.innerRadius;
-      const count = Math.ceil(path.turns * TURN_POINTS);
+      const inner = outer * track.innerRadius;
+      const count = Math.ceil(track.turns * TURN_POINTS);
       const points: Point[] = [];
       for (let k = 0; k <= count; k++) {
-        const turned = (path.turns * k) / count;
+        const turned = (track.turns * k) / count;
         const angle = 2 * Math.PI * turned;
-        const r = inner + ((outer - inner) * turned) / path.turns;
+        const r = inner + ((outer - inner) * turned) / track.turns;
         points.push([cx + r * sin(angle), cy - r * cos(angle)]);
       }
       return measured(points);
     }
     case 'curve': {
       // A point repeating the one before it adds no length, and no direction for a tick there.
-      const distinct = path.points.filter(([x, y], i) => i === 0 || x !== path.points[i - 1]![0] || y !== path.points[i - 1]![1]);
-      const track = measured(distinct.map(([x, y]): Point => [area.left + x * width, area.top + y * height]));
-      if (track.length < 1) {
+      const distinct = track.points.filter(([x, y], i) => i === 0 || x !== track.points[i - 1]![0] || y !== track.points[i - 1]![1]);
+      const curve = measured(distinct.map(([x, y]): Point => [area.left + x * width, area.top + y * height]));
+      if (curve.length < 1) {
         fail(`${axis.path}.path.points`, `must be spread out: on a ${chart.width} × ${chart.height} chart they make a track shorter than 1`);
       }
-      return track;
+      return curve;
     }
   }
 }

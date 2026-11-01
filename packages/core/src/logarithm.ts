@@ -31,7 +31,7 @@ function withHighWord(x: number, high: number): number {
   return view.getFloat64(0);
 }
 
-/** ln(x) for a finite x > 0. */
+/** The natural logarithm of `input`, a finite number above 0. */
 export function log(input: number): number {
   let x = input;
   let hx = highWord(x);
@@ -49,14 +49,13 @@ export function log(input: number): number {
   x = withHighWord(x, hx | (i ^ 0x3ff00000));
   k += i >> 20;
   const f = x - 1;
-  const dk = k;
   if ((0x000fffff & (2 + hx)) < 3) {
     // |f| < 2^-20.
     if (f === 0) {
-      return k === 0 ? 0 : dk * LN2_HI + dk * LN2_LO;
+      return k === 0 ? 0 : k * LN2_HI + k * LN2_LO;
     }
     const r = f * f * (0.5 - 0.33333333333333333 * f);
-    return k === 0 ? f - r : dk * LN2_HI - (r - dk * LN2_LO - f);
+    return k === 0 ? f - r : k * LN2_HI - (r - k * LN2_LO - f);
   }
   const s = f / (2 + f);
   const z = s * s;
@@ -66,7 +65,7 @@ export function log(input: number): number {
   const r = t2 + t1;
   if (((hx - 0x6147a) | (0x6b851 - hx)) > 0) {
     const hfsq = 0.5 * f * f;
-    return k === 0 ? f - (hfsq - s * (hfsq + r)) : dk * LN2_HI - (hfsq - (s * (hfsq + r) + dk * LN2_LO) - f);
+    return k === 0 ? f - (hfsq - s * (hfsq + r)) : k * LN2_HI - (hfsq - (s * (hfsq + r) + k * LN2_LO) - f);
   }
-  return k === 0 ? f - s * (f - r) : dk * LN2_HI - (s * (f - r) - dk * LN2_LO - f);
+  return k === 0 ? f - s * (f - r) : k * LN2_HI - (s * (f - r) - k * LN2_LO - f);
 }
