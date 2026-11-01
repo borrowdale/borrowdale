@@ -414,8 +414,8 @@ describe('layoutChart', () => {
     expect(texts(layoutChart(wideTicks))).toEqual(['0', '1,000,000', '2,000,000', '3,000,000', 'North', 'South']);
   });
 
-  it('labels every third tick of a vertical value axis whose labels would overlap', () => {
-    expect(texts(layoutChart(tallLabels))).toEqual(['a', 'b', '0', '6', '12', '18', '24', '30']);
+  it('labels a crowded vertical value axis on multiples of ten, counted from zero', () => {
+    expect(texts(layoutChart(tallLabels))).toEqual(['a', 'b', '0', '10', '20', '30']);
   });
 
   it('writes a point in its tooltip with the format of each axis', () => {
@@ -475,7 +475,7 @@ describe('layoutChart', () => {
   });
 
   it('lays out an empty axis that fixes its min, from that min', () => {
-    expect(layoutChart(emptyY2).labels).toContain('10');
+    expect(layoutChart(emptyY2).labels).toContain('10.0');
   });
 
   it('rejects a right-hand legend taller than the chart, by name', () => {

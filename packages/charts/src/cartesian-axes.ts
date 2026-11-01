@@ -228,11 +228,13 @@ export function drawGuide(
   if (axis.type === 'linear') {
     // Ticks are evenly spaced, and a lone tick has nothing to overlap.
     const [first, second] = scale!.ticks;
-    const nth = every(second === undefined ? Infinity : Math.abs(scale!.at(second) - scale!.at(first!)));
+    const shown = new Set(
+      scale!.labelled(every(second === undefined ? Infinity : Math.abs(scale!.at(second) - scale!.at(first!)))),
+    );
     scale!.ticks.forEach((tick, i) => {
       const at = scale!.at(tick);
       drawing.push(drawing.outline(lineShape(rules.tick(plot, at)), ink, ['tick', key, tick]));
-      if (i % nth === 0) {
+      if (shown.has(i)) {
         drawing.push(drawing.text(labels[i]!, label(at)));
       }
     });

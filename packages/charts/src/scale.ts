@@ -38,6 +38,8 @@ export interface Scale {
   labels: string[];
   /** Where a value lies along the domain: 0 at its start, 1 at its end. */
   fraction: (value: number) => number;
+  /** The indices of the ticks to label when labels must be at least `every` tick spacings apart. */
+  labelled: (every: number) => number[];
 }
 
 /** A scale with a place: `at` maps a value to a position. */
@@ -61,14 +63,16 @@ export function linearScale(axis: CheckedLinearAxis, [lo, hi]: [number, number],
   // An axis fixed at both ends shows exactly them, however close together; validation has made sure
   // that max is above min.
   const fixed = axis.min !== undefined && axis.max !== undefined;
-  if (!fixed && high - low <= Math.max(Math.abs(low), Math.abs(high)) * EQUAL_SHARE) {
+  const flat = !fixed && high - low <= Math.max(Math.abs(low), Math.abs(high)) * EQUAL_SHARE;
+  if (flat) {
     // One value, or values too close to tell apart: show them against zero, or 0 to 1 for zero.
     [low, high] = low === 0 && high === 0 ? [0, 1] : [Math.min(0, low, high), Math.max(0, low, high)];
   }
   if (high - low < POWERS[0]!) {
     fail(axis.path, `has values that differ by ${high - low}, less than the smallest tick step, ${POWERS[0]}`);
   }
-  const step = tickStep(low, high, Math.max(2, Math.floor(length / TICK_SPACING)));
+  const count = Math.max(2, Math.floor(length / TICK_SPACING));
+  let step = tickStep(low, high, count);
   let domain: [number, number] = [axis.min ?? step.tick(step.floor(low)), axis.max ?? step.tick(step.ceil(high))];
   if (!(domain[1] > domain[0])) {
     // A fixed end met data that all equal it: the free end moves one tick outward.
@@ -77,14 +81,37 @@ export function linearScale(axis: CheckedLinearAxis, [lo, hi]: [number, number],
         ? [domain[0], step.tick(step.ceil(domain[0]) + 1)]
         : [step.tick(step.floor(domain[1]) - 1), domain[1]];
   }
-  const ticks = integersBetween(step.ceil(domain[0]), step.floor(domain[1])).map(step.tick);
-  const decimals = axis.format.decimals ?? step.decimals;
+  if (flat && (axis.min !== undefined || axis.max !== undefined)) {
+    // Against a fixed end, the step of flat data came from the range widened against zero, not the
+    // range shown: it is chosen again for that range, which then gets as many ticks as any axis of
+    // its length, and the free end is rounded out to it.
+    step = tickStep(domain[0], domain[1], count);
+    domain = axis.max === undefined ? [domain[0], step.tick(step.ceil(domain[1]))] : [step.tick(step.floor(domain[0])), domain[1]];
+  }
+  const numbers = integersBetween(step.ceil(domain[0]), step.floor(domain[1]));
+  const ticks = numbers.map(step.tick);
   const span = domain[1] - domain[0];
+  const fraction = (value: number): number => (value - domain[0]) / span;
+  if (ticks.some((tick, i) => i > 0 && !(tick > ticks[i - 1]!))) {
+    // Ends fixed so close that the doubles between them run out repeat their ticks (from 1 to
+    // 1 + 2^-52, 257 ticks hold 2 values): the ends alone are the ticks then, written with the
+    // decimals that tell them apart.
+    const decimals = axis.format.decimals ?? decimalsApart(domain[0], domain[1]);
+    return {
+      domain,
+      ticks: [...domain],
+      labels: domain.map((end) => formatNumber(end, decimals, axis.format)),
+      fraction,
+      labelled: (every) => (every <= 1 ? [0, 1] : [0]),
+    };
+  }
+  const decimals = axis.format.decimals ?? step.decimals;
   return {
     domain,
     ticks,
     labels: ticks.map((tick) => formatNumber(tick, decimals, axis.format)),
-    fraction: (value) => (value - domain[0]) / span,
+    fraction,
+    labelled: (every) => labelledEvery(numbers, step.factor, every),
   };
 }
 
@@ -102,6 +129,8 @@ interface TickStep {
   ceil: (value: number) => number;
   /** Decimals that tell the ticks apart. */
   decimals: number;
+  /** The step is this times a power of ten: 1, 2, 5 or 10. */
+  factor: number;
 }
 
 // Ticks are integers divided by a power of ten, rather than a fraction multiplied, so 0.3 is the
@@ -132,7 +161,52 @@ function tickStep(lo: number, hi: number, count: number): TickStep {
       return tick(i) < value ? i + 1 : i;
     },
     decimals: exponent < 0 ? Math.max(0, -exponent - (factor === 10 ? 1 : 0)) : 0,
+    factor,
   };
+}
+
+/**
+ * The ticks to label when labels must be `every` tick spacings apart: those whose number is a
+ * multiple of the smallest k of at least `every` that keeps the labelled step 1, 2 or 5 times a power
+ * of ten, counted from zero, so a crowded step-2 axis shows 0, 10, 20 rather than 0, 6, 12. When no
+ * tick is such a multiple, the one that is a multiple of the largest smaller k is labelled alone.
+ */
+function labelledEvery(numbers: readonly number[], factor: number, every: number): number[] {
+  const indices = numbers.map((_, i) => i);
+  if (every <= 1) {
+    return indices;
+  }
+  const largest = Math.max(...numbers.map(Math.abs));
+  let alone: number[] = [];
+  for (let k = 2; k <= Math.max(every, largest); k++) {
+    if (!isNice(factor * k)) {
+      continue;
+    }
+    const shown = indices.filter((i) => numbers[i]! % k === 0);
+    if (k >= every && shown.length > 0) {
+      return shown;
+    }
+    alone = shown.length > 0 ? [shown[0]!] : alone;
+  }
+  return alone.length > 0 ? alone : [0];
+}
+
+// Whether a whole number is 1, 2 or 5 times a power of ten.
+function isNice(value: number): boolean {
+  let rest = value;
+  while (rest % 10 === 0) {
+    rest /= 10;
+  }
+  return rest === 1 || rest === 2 || rest === 5;
+}
+
+/** The fewest decimals, up to the most a format allows, that write two numbers differently. */
+function decimalsApart(a: number, b: number): number {
+  let decimals = 0;
+  while (decimals < MAX_DECIMALS && a.toFixed(decimals) === b.toFixed(decimals)) {
+    decimals++;
+  }
+  return decimals;
 }
 
 function integersBetween(first: number, last: number): number[] {
