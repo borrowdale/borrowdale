@@ -26,10 +26,9 @@ export function drawShape(
 
 // An angle in degrees taken within one turn. The remainder of two doubles is exact, so a large angle
 // draws as its remainder does, its radians stay far inside the trigonometry's range, and the 90° a
-// cross-hatch adds to it is never lost to rounding. The remainder of -360 is -0, drawn as 0.
+// cross-hatch adds to it is never lost to rounding. -0, the remainder of -360, draws as 0 does.
 function withinTurn(degrees: number): number {
-  const rest = degrees % 360;
-  return rest === 0 ? 0 : rest;
+  return degrees % 360;
 }
 
 function toSketchPath(
