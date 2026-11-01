@@ -372,6 +372,35 @@ export interface IntervalSeries extends ValueSeries {
   toSymbol?: Marker | undefined;
 }
 
+/** A row's stretch of the value axis, often of time: a task of a Gantt chart, or a milestone. */
+export interface XRangeItem {
+  /** The category of the band axis the item is in. */
+  row: string;
+  from: ChartValue;
+  /** Where the item ends, after `from`. Without it the item is a milestone: a diamond at `from`. */
+  to?: ChartValue | undefined;
+  /** At most 100 characters, in the item's tooltip and, with `dataLabels`, on it. */
+  label?: string | undefined;
+  /** 0 to 1: how much of the item is done, drawn solid along its start. */
+  progress?: number | undefined;
+}
+
+/**
+ * Stretches of a band axis' rows along the value axis: a Gantt chart, an x-range chart or a timeline
+ * of periods, with any number of items in a row. Each series takes a slot of its own in every row
+ * unless `overlay`. Arrows between items are `arrow` annotations from `[from, row]` to `[to, row]`.
+ */
+export interface XRangeSeries extends SeriesBase {
+  type: 'xRange';
+  data: readonly XRangeItem[];
+  /** Writes each item's label on it, or past its end where it does not fit. */
+  dataLabels?: boolean | undefined;
+  shape?: 'rectangle' | 'rounded' | undefined;
+  /** Fraction of the row's slot, from 0.05 to 1. Defaults to 0.6. */
+  width?: number | undefined;
+  overlay?: boolean | undefined;
+}
+
 /** Numeric points joined in their supplied order, including loops and descending x. */
 export interface XYLineSeries extends SeriesBase {
   type: 'xyLine';
@@ -557,6 +586,7 @@ export type Series =
   | AreaSeries
   | RangeAreaSeries
   | IntervalSeries
+  | XRangeSeries
   | XYLineSeries
   | XYAreaSeries
   | ScatterSeries

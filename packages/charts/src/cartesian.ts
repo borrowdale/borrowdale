@@ -54,6 +54,7 @@ const MARKS: { [K in MarkType]: Mark<Extract<CartesianSeries, { type: K }>> } = 
   area: { zero: true, slot: false, legend: 'box', reach: none, draw: drawArea },
   rangeArea: { zero: false, slot: false, legend: 'box', reach: none, draw: drawArea },
   interval: { zero: false, slot: true, legend: 'box', reach: () => POINT_SIZE / 2, draw: drawIntervals },
+  xRange: { zero: false, slot: true, legend: 'box', reach: () => MILESTONE / 2, draw: drawXRange },
   xyLine: {
     zero: false, slot: false, legend: 'line',
     reach: (_size, entry, style) => Math.max(POINT_SIZE,
@@ -264,6 +265,8 @@ interface MarkContext {
 /** The plot and its orientation: marks give positions as [along, value] and get [x, y] back. */
 interface Frame {
   plot: Rect;
+  /** Whether the value axis runs across, with the bands stacked down the plot. */
+  horizontal: boolean;
   /** The centre of category `index`'s band, along the band axis. */
   center: (index: number) => number;
   /** Where category `index`'s band starts, and how wide it is. */
@@ -280,6 +283,7 @@ interface Frame {
 function makeFrame(plot: Rect, horizontal: boolean, bands: BandScale | undefined): Frame {
   return {
     plot,
+    horizontal,
     center: (i) => bands!.start(i) + bands!.width(i) / 2,
     band: (i) => ({ start: bands!.start(i), width: bands!.width(i) }),
     point: ([along, value]) => (horizontal ? [value, along] : [along, value]),
@@ -403,6 +407,13 @@ function extent(
     high = Math.max(high, value);
   };
   for (const entry of series) {
+    if (entry.type === 'xRange') {
+      for (const item of valueAxisOf(entry) === key ? entry.data : []) {
+        take(item.from);
+        take(item.to ?? item.from);
+      }
+      continue;
+    }
     if (entry.type === 'scatter' || entry.type === 'bubble' || entry.type === 'xyLine' || entry.type === 'xyArea') {
       for (const point of key === 'y2' ? [] : entry.data) {
         if (point === null) continue;
@@ -435,7 +446,7 @@ function slotsOf(
   const keyOf = (entry: CartesianSeries): string =>
     'stack' in entry ? stackOf(entry, valueAxisOf) : `#${entry.index}`;
   const keys = [...new Set(series.filter((entry) => markOf(entry).slot &&
-    !(entry.type === 'interval' && entry.overlay)).map(keyOf))];
+    !((entry.type === 'interval' || entry.type === 'xRange') && entry.overlay)).map(keyOf))];
   return { slotOf: (entry) => keys.indexOf(keyOf(entry)), count: keys.length };
 }
 
@@ -488,6 +499,60 @@ function drawIntervals(
       nodes.push(drawing.label(formatAxisValue(pair[1], axis), x, y, frame.plot, `${entry.path}.dataLabels`));
     }
     drawing.mark(`${entry.name}, ${categories[i]}: ${formatAxisValue(pair[0], axis)} to ${formatAxisValue(pair[1], axis)}`, nodes);
+  });
+}
+
+// A milestone's diamond is this many units across, or the width of its slot if that is less.
+const MILESTONE = 12;
+// Between an item's label and the end of its bar or milestone.
+const LABEL_GAP = 4;
+
+function drawXRange(
+  { drawing, frame, slotCount, categories }: MarkContext,
+  { entry, scale, slot, axis }: Placed<Extract<CartesianSeries, { type: 'xRange' }>>,
+  paint: Paint,
+): void {
+  // Along the value axis, a label of `text` is this long: its width across a horizontal value axis,
+  // its height up a vertical one.
+  const { horizontal } = frame;
+  const lengthOf = (text: string): number => (horizontal ? drawing.width(text) : drawing.lineHeight());
+  entry.data.forEach((item, i) => {
+    const band = frame.band(item.category);
+    const slotWidth = band.width / (entry.overlay ? 1 : slotCount);
+    const center = entry.overlay ? frame.center(item.category) : band.start + (slot + 0.5) * slotWidth;
+    const width = slotWidth * entry.width;
+    const row = categories[item.category]!;
+    const key = [entry.name, row, 'xRange', i];
+    const from = scale.at(item.from);
+    const named = item.label === undefined ? '' : `${item.label}, `;
+    const nodes: ChartNode[] = [];
+    // Centred on the item where it fits, else past its end, in the direction the item runs.
+    const label = (start: number, end: number, direction: number): void => {
+      if (!entry.dataLabels || item.label === undefined) return;
+      const length = lengthOf(item.label);
+      const at = Math.abs(end - start) >= length + 2 * LABEL_GAP ? (start + end) / 2 : end + direction * (LABEL_GAP + length / 2);
+      const [x, y] = frame.point([center, at]);
+      nodes.push(drawing.label(item.label, x, y, frame.plot, `${entry.path}.dataLabels`));
+    };
+    if (item.to === undefined) {
+      const size = Math.min(MILESTONE, width);
+      nodes.push(markerNode(drawing, 'diamond', frame.point([center, from]), size, solid(paint.color), key, entry.style));
+      // Rightwards along a horizontal value axis, upwards along a vertical one.
+      const direction = horizontal ? 1 : -1;
+      label(from, from + (direction * size) / 2, direction);
+      drawing.mark(`${entry.name}, ${row}: ${named}${formatAxisValue(item.from, axis)}`, nodes);
+      return;
+    }
+    const to = scale.at(item.to);
+    nodes.push(drawing.shape(barShape(entry.shape, center - width / 2, width, from, to, frame.point, frame.box), hatched(paint), key, entry.style));
+    const done = item.progress ?? 0;
+    if (done > 0) {
+      // Solid, half as thick, along the start of the bar.
+      nodes.push(drawing.shape(frame.box(center - width / 4, width / 2, from, from + (to - from) * done), solid(paint.color), [...key, 'progress'], entry.style));
+    }
+    label(from, to, Math.sign(to - from));
+    const progress = item.progress === undefined ? '' : `, ${formatValue(item.progress * 100)}% done`;
+    drawing.mark(`${entry.name}, ${row}: ${named}${formatAxisValue(item.from, axis)} to ${formatAxisValue(item.to, axis)}${progress}`, nodes);
   });
 }
 

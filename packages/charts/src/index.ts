@@ -46,6 +46,8 @@ export type {
   IntervalSeries,
   XYLineSeries,
   XYAreaSeries,
+  XRangeItem,
+  XRangeSeries,
   RoseSeries,
   ScatterSeries,
   SqrtAxis,

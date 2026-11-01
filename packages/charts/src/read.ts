@@ -181,18 +181,17 @@ export function tuple<const N extends readonly string[]>(names: N): Check<{ [K i
  * (`resolveValues` in validate.ts); the type says number because nothing reads them before then.
  */
 export function coordinates<const N extends readonly string[]>(names: N): Check<{ [K in keyof N]: number }> {
-  const entry = number(-MAX_VALUE, MAX_VALUE);
-  const timeText = text(MAX_TIME_TEXT);
   return (path, value) => {
     if (!Array.isArray(value) || value.length !== names.length) {
       fail(path, `must be a [${names.join(', ')}] array, got ${show(value)}`);
     }
-    return names.map((_, i) => {
-      const raw = value[i] as unknown;
-      return typeof raw === 'string' ? (timeText(`${path}[${i}]`, raw) as unknown as number) : entry(`${path}[${i}]`, raw);
-    }) as { [K in keyof N]: number };
+    return names.map((_, i) => coordinate(`${path}[${i}]`, value[i] as unknown)) as { [K in keyof N]: number };
   };
 }
+
+/** One entry of `coordinates`: a number, or a string carried until it is read as a time. */
+export const coordinate: Check<number> = (path, value) =>
+  typeof value === 'string' ? (text(MAX_TIME_TEXT)(path, value) as unknown as number) : number(-MAX_VALUE, MAX_VALUE)(path, value);
 
 /**
  * Runs another package's own check, reporting its error at `path`. The other package repeats what it

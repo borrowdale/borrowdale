@@ -23,6 +23,7 @@ import {
 } from './check-axis.js';
 import {
   boolean,
+  coordinate,
   coordinates,
   fail,
   MAX_VALUE,
@@ -170,6 +171,17 @@ const SERIES_RULES = {
       overlay: r.optional('overlay', boolean) ?? false,
       fromSymbol: r.optional('fromSymbol', checkMarker),
       toSymbol: r.optional('toSymbol', checkMarker),
+    }),
+  },
+  xRange: {
+    system: 'cartesian',
+    band: true,
+    keys: ['dataLabels', 'data', 'shape', 'width', 'overlay'],
+    read: (r: Fields, _path: string, reserve: ReservePoints) => ({
+      data: r.required('data', list(0, MAX_POINTS, checkXRangeItem, reserve)),
+      shape: r.optional('shape', oneOf(['rectangle', 'rounded'] as const)) ?? 'rectangle',
+      width: r.optional('width', number(0.05, 1)) ?? 0.6,
+      overlay: r.optional('overlay', boolean) ?? false,
     }),
   },
   xyLine: {
@@ -548,6 +560,10 @@ function resolveValues(
   const reader = (axis: CheckedAxis): Check<number> =>
     axis.type === 'band' ? anyValue : axis.kind === 'time' ? valueReader('time') : numberOn(axis);
   for (const entry of series) {
+    if (entry.type === 'xRange') {
+      resolveXRange(entry, reader((band === axes.x ? axes.y : axes.x) as CheckedLinearAxis), band!);
+      continue;
+    }
     if (!('axis' in entry)) {
       // Both axes are continuous: each coordinate is read by the axis it is on.
       const [x, y] = [reader(axes.x), reader(axes.y)];
@@ -560,7 +576,7 @@ function resolveValues(
     }
     const axis = (entry.axis === 'y2' ? axes.y2 : band === axes.x ? axes.y : axes.x) as CheckedLinearAxis;
     if (axis.kind === 'time' && entry.type !== 'interval') {
-      fail(entry.path, `is a ${entry.type} series on ${axis.path}, a time axis, which only interval series can use`);
+      fail(entry.path, `is a ${entry.type} series on ${axis.path}, a time axis, which only interval and xRange series can use`);
     }
     if (axis.kind === 'log' && (entry.type === 'bar' || entry.type === 'area')) {
       fail(entry.path, `is a ${entry.type} series on ${axis.path}, a log axis, which cannot show the 0 it stands on`);
@@ -576,6 +592,20 @@ function resolveValues(
       });
     }
   }
+}
+
+// Each item's row among the band axis' categories, and its ends read by the value axis.
+function resolveXRange(entry: Extract<SeriesOf<'cartesian'>, { type: 'xRange' }>, value: Check<number>, band: CheckedBandAxis): void {
+  const rows = new Map(band.categories.map((name, i) => [name, i]));
+  entry.data.forEach((item, i) => {
+    const path = `${entry.path}.data[${i}]`;
+    item.category = rows.get(item.row) ?? fail(`${path}.row`, `is not a category of ${band.path}, got ${show(item.row)}`);
+    item.from = value(`${path}.from`, item.from);
+    item.to = item.to === undefined ? undefined : value(`${path}.to`, item.to);
+    if (item.to !== undefined && !(item.to > item.from)) {
+      fail(`${path}.to`, 'must be after from; leave it out for a milestone');
+    }
+  });
 }
 
 // A number on a continuous axis that is not a time axis: a string is a mistake there, and a log axis
@@ -877,6 +907,30 @@ function checkRange(path: string, raw: unknown): [number, number] {
     fail(path, `has its high value below its low value, [${low}, ${high}]`);
   }
   return [low, high];
+}
+
+/** An xRange item; its row is found, and from and to read, once the axes are known (resolveValues). */
+interface CheckedXRangeItem {
+  row: string;
+  /** The index of its row among the band axis' categories. */
+  category: number;
+  from: number;
+  to: number | undefined;
+  label: string | undefined;
+  progress: number | undefined;
+}
+
+function checkXRangeItem(path: string, raw: unknown): CheckedXRangeItem {
+  const r = fields(path, raw);
+  r.allow(['row', 'from', 'to', 'label', 'progress']);
+  return {
+    row: r.required('row', text(MAX_NAME)),
+    category: -1,
+    from: r.required('from', coordinate),
+    to: r.optional('to', coordinate),
+    label: r.optional('label', text(MAX_NAME)),
+    progress: r.optional('progress', number(0, 1)),
+  };
 }
 
 function checkBubble(path: string, raw: unknown): [number, number, number] {

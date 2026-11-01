@@ -61,7 +61,7 @@ describe('a time axis', () => {
   });
 
   it.each<[string, ChartSpec, string]>([
-    ['a line series on a time value axis', { width: 400, height: 200, axes: { x: { type: 'band', categories: ['a'] }, y: { type: 'time' } }, series: [{ type: 'line', name: 'L', data: [1] }] } as ChartSpec, 'Invalid chart: series[0] is a line series on axes.y, a time axis, which only interval series can use'],
+    ['a line series on a time value axis', { width: 400, height: 200, axes: { x: { type: 'band', categories: ['a'] }, y: { type: 'time' } }, series: [{ type: 'line', name: 'L', data: [1] }] } as ChartSpec, 'Invalid chart: series[0] is a line series on axes.y, a time axis, which only interval and xRange series can use'],
     ['a time on an axis that is not a time axis', xy(linearX, linearY, [['2026-01-01', 1]]), 'Invalid chart: series[0].data[0][0] must be a number, since axes.x is not a time axis, got "2026-01-01"'],
     ['a date and time without an offset', onTime({}, [['2026-01-01T09:00', 1]]), 'Invalid chart: series[0].data[0][0] must end in Z or an offset such as +01:00, since a time without one is local time, got "2026-01-01T09:00"'],
     ['an impossible day', onTime({}, [['2027-02-30', 1]]), 'Invalid chart: series[0].data[0][0] is not a date in the calendar, got "2027-02-30"'],
