@@ -2,6 +2,9 @@
 const MAX_SHOWN = 100;
 // The longest array an error message writes out; a longer one is described by its length.
 const MAX_ENTRIES = 8;
+// The largest bigint either side of zero an error message writes out; a larger one is described by
+// that bound, which it is checked against without being written.
+const MAX_BIGINT = 10n ** 100n;
 // Characters that could break or disguise a line of a log: controls, line separators, bidirectional
 // marks and overrides, interlinear annotation marks, and the characters Unicode 16 says draw nothing
 // (its default ignorables: zero-width spaces and joiners, the byte order mark, the soft hyphen,
@@ -37,8 +40,8 @@ const TYPED_ARRAYS = [
  * line written as escapes; a long string is described by its length. An array of up to 8 entries is
  * written in brackets, `[4, -1]`, its entries shown the same way but arrays and objects among them
  * only by kind; a longer array, a typed array and any other object is described by its kind, never
- * converted, since that could throw or run code from the input. A bigint keeps its `n`, and -0 its
- * sign.
+ * converted, since that could throw or run code from the input. A bigint keeps its `n`, and one
+ * beyond ±1e100 is described by that bound; -0 keeps its sign.
  */
 export function show(value: unknown): string {
   if (typeof value === 'string') {
@@ -53,7 +56,7 @@ export function show(value: unknown): string {
     }
   }
   if (typeof value === 'bigint') {
-    return `${value}n`;
+    return -MAX_BIGINT <= value && value <= MAX_BIGINT ? `${value}n` : 'a bigint beyond ±1e100';
   }
   if (typeof value === 'function' || typeof value === 'symbol') {
     return `a ${typeof value}`;
