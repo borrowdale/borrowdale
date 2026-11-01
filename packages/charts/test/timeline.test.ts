@@ -64,6 +64,7 @@ describe('a timeline', () => {
 
   it.each<[string, ChartSpec, string]>([
     ['more rows than fit', timeline({ type: 'serpentine', rows: 12 }), 'Invalid chart: axes.time.path.rows is 12, but a 460 × 260 chart has room for 4'],
+    ['rows whose turns are wider than the chart', timeline({ type: 'serpentine', rows: 2 }, [300, 1000]), 'Invalid chart: axes.time.path.rows is 2, but a 300 × 1000 chart needs at least 6 for the turns between them to fit across it'],
     ['more than 20 rows', timeline({ type: 'serpentine', rows: 21 }), 'Invalid chart: axes.time.path.rows must be an integer from 1 to 20, got 21'],
     ['more than 20 turns', timeline({ type: 'spiral', turns: 21 }), 'Invalid chart: axes.time.path.turns must be a number from 1 to 20, got 21'],
     ['a curve of one point', timeline({ type: 'curve', points: [[0, 0]] }), 'Invalid chart: axes.time.path.points must have 2 to 100 entries, got 1'],

@@ -129,6 +129,11 @@ function trackOf(axis: CheckedTimelineChart['axis'], area: Rect, rowSpacing: num
         const room = Math.max(1, Math.floor(height / rowSpacing) + 1);
         return fail(`${axis.path}.path.rows`, `is ${path.rows}, but a ${chart.width} × ${chart.height} chart has room for ${room}`);
       }
+      // Each half turn is as wide as the rows are apart, and must fit across the area.
+      if (spacing > width) {
+        const fewest = Math.ceil(height / width) + 1;
+        return fail(`${axis.path}.path.rows`, `is ${path.rows}, but a ${chart.width} × ${chart.height} chart needs at least ${fewest} for the turns between them to fit across it`);
+      }
       const radius = spacing / 2;
       const points: Point[] = [];
       for (let row = 0; row < path.rows; row++) {
