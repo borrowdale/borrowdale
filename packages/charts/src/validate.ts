@@ -108,6 +108,8 @@ const readPoints =
   <const N extends readonly [string, string]>(names: N) =>
   (r: Fields, reserve: ReservePoints) =>
     r.required('data', list(0, MAX_POINTS, coordinates(names), reserve));
+// A polar chart has no time axis, so its points are numbers.
+const readPolarPoints = (r: Fields, reserve: ReservePoints) => r.required('data', list(0, MAX_POINTS, tuple(['angle', 'radius']), reserve));
 
 /** What a series type needs of a polar chart. */
 interface PolarNeeds {
@@ -292,7 +294,7 @@ const SERIES_RULES = {
     band: false,
     polar: { angle: 'linear', radius: 'linear', outward: 'never', polygon: false },
     keys: ['dataLabels', 'data', 'symbol'],
-    read: (r: Fields, _path: string, reserve: ReservePoints) => ({ symbol: readSymbol(r), data: readPoints(['angle', 'radius'])(r, reserve) }),
+    read: (r: Fields, _path: string, reserve: ReservePoints) => ({ symbol: readSymbol(r), data: readPolarPoints(r, reserve) }),
   },
   gauge: {
     system: 'gauge',
