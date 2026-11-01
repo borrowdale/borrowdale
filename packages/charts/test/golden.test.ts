@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 // Before the package, so the guard also reaches Math references it takes when it loads.
-import '../../core/test/support/forbid-unportable-math.js';
+import '../../core/test/support/forbid-unportable-calls.js';
 import { layoutChart, toSvgChart, type ChartSpec } from '@borrowdale/charts';
 import corpus from './golden/corpus.json' with { type: 'json' };
 import goldens from './golden/goldens.json' with { type: 'json' };

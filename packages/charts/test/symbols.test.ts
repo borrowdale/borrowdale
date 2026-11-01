@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import '../../core/test/support/forbid-unportable-math.js';
+import '../../core/test/support/forbid-unportable-calls.js';
 import { layoutChart, toSvgChart, type ChartSpec, type MarkerSymbol } from '@borrowdale/charts';
 import { symbolShape } from '../src/symbols.js';
 import { pointsOutside, shapesOf } from './support/layout.js';

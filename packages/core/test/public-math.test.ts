@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 // Before the module, so a Math.sin it called or kept a reference to would throw.
-import './support/forbid-unportable-math.js';
+import './support/forbid-unportable-calls.js';
 import { cos, MAX_ANGLE, sin } from '@borrowdale/core/math';
 
 // The published functions are the engine's own, so each value is the same in every JavaScript
