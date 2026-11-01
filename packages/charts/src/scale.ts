@@ -478,6 +478,11 @@ export function formatValue(value: number, format: CheckedFormat = PLAIN_FORMAT)
   return formatNumber(value, format.decimals ?? Math.min(MAX_DECIMALS, decimalsOf(value)), format);
 }
 
+/** A share from 0 to 1 as a percentage, written with the share's own decimals less two: 0.07 is 7. */
+export function formatShare(share: number): string {
+  return formatNumber(share * 100, Math.min(MAX_DECIMALS, Math.max(0, decimalsOf(share) - 2)), PLAIN_FORMAT);
+}
+
 /** Raw data values keep the value axis' format, without a percent-stack suffix; times are dates. */
 export function formatAxisValue(value: number, axis: CheckedLinearAxis): string {
   return axis.kind === 'time' ? formatTime(value) : formatValue(value, { ...axis.format, suffix: axis.percent ? '' : axis.format.suffix });

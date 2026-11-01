@@ -18,7 +18,7 @@ import { assertRoom, BAND_PADDING, type Rect } from './frame.js';
 import { loneDot, piecesOf, POINT_SIZE, runsOf, solid } from './marks.js';
 import { hatched, LINE_WIDTH, type Paint } from './palette.js';
 import { stackGroup, stackSpans, type Span } from './stack.js';
-import { bandScale, formatValue, formatAxisValue, place, scaleOf, type BandScale, type PlacedScale } from './scale.js';
+import { bandScale, formatAxisValue, formatShare, formatValue, place, scaleOf, type BandScale, type PlacedScale } from './scale.js';
 import { markerNode } from './symbols.js';
 import type { ChartNode, Curve } from './types.js';
 import { isStacking, type CheckedCartesianChart, type SeriesOf } from './validate.js';
@@ -555,7 +555,7 @@ function drawXRange(
       nodes.push(drawing.shape(frame.box(center - width / 4, width / 2, from, from + (to - from) * done), solid(paint.color), [...key, 'progress'], entry.style));
     }
     label(from, to, Math.sign(to - from));
-    const progress = item.progress === undefined ? '' : `, ${formatValue(item.progress * 100)}% done`;
+    const progress = item.progress === undefined ? '' : `, ${formatShare(item.progress)}% done`;
     drawing.mark(`${entry.name}, ${row}: ${named}${formatAxisValue(item.from, axis)} to ${formatAxisValue(item.to, axis)}${progress}`, nodes);
   });
 }

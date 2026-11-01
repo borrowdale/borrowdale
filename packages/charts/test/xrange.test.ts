@@ -17,6 +17,8 @@ const plan = {
 const gantt = (series: object[], extra: object = {}): ChartSpec =>
   ({ width: 480, height: 220, axes: { x: { type: 'time' }, y: rows }, series, ...extra }) as ChartSpec;
 const items = (data: object[]): ChartSpec => gantt([{ type: 'xRange', name: 'P', data }]);
+const onLinear = (data: object[]): ChartSpec =>
+  ({ width: 400, height: 200, axes: { x: { type: 'linear' }, y: { type: 'band', categories: ['a'] } }, series: [{ type: 'xRange', name: 'R', data }] }) as ChartSpec;
 const titles = (spec: ChartSpec): string[] => [...toSvgChart(layoutChart(spec)).matchAll(/<title>([^<]*)<\/title>/g)].map((m) => m[1]!);
 const laying = (spec: ChartSpec) => () => layoutChart(spec);
 
@@ -42,6 +44,14 @@ describe('an xRange series', () => {
   it('takes a slot of its own beside another series, listed in the legend', () => {
     const actual = { type: 'xRange', name: 'Actual', data: [{ row: 'Design', from: '2026-01-07', to: '2026-01-30' }] };
     expect(layoutChart(gantt([plan, actual])).labels.slice(0, 2)).toEqual(['Plan', 'Actual']);
+  });
+
+  it('writes progress as a percentage with the decimals the progress has, less two', () => {
+    expect(titles(onLinear([{ row: 'a', from: 2, to: 5, progress: 0.07 }, { row: 'a', from: 6, to: 8, progress: 0.29 }, { row: 'a', from: 9, to: 10, progress: 0.075 }]))).toEqual([
+      'R, a: 2 to 5, 7% done',
+      'R, a: 6 to 8, 29% done',
+      'R, a: 9 to 10, 7.5% done',
+    ]);
   });
 
   it('draws the same with an overlay series as without one, when it is the only series', () => {
