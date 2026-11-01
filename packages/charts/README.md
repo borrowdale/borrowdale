@@ -170,9 +170,10 @@ A gauge's dial is its `angle` axis: by default 0 to 100 over −120 to 120 degre
 stretches, in order and not overlapping. Without `min` and `max` it reaches from 0 to the values
 and bands; it shows 0 unless `min` or `max` leaves it out. Ticks and labels are inside the rim; bars
 take rings inside the track, or the track itself when there are no bands, and a dial holds as many
-rings as fit outside its hub; a lone gauge writes its value under the centre. A clock dial labelled
-every hour is `min: 0, max: 12, step: 1` over a whole turn; a compass is `min: 0, max: 360` with
-`ticks` labelled N, E, S and W.
+rings as fit outside its hub; a lone gauge writes its value under the centre. On a whole turn the
+last tick would fall on the first, so it is left out: a clock dial is `min: 0, max: 12` over a whole
+turn with `ticks` at 0 to 11, the one at 0 labelled 12; a compass is `min: 0, max: 360` with `ticks`
+labelled N, E, S and W.
 
 ## Time, log and square-root axes
 
