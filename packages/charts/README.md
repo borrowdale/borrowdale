@@ -208,9 +208,10 @@ series on one, since they stand on 0.
 An `xRange` series lays items along the rows of the band axis: each `{ row, from, to, label,
 progress }`, `row` a category, `to` after `from`, `progress` 0 to 1 drawn solid along its start.
 Without `to` an item is a milestone, a diamond at `from`. `dataLabels` writes each label on its item,
-or past its end where it does not fit; `width` (0.05 to 1 of the row's slot, default 0.6), `shape`
+or past its end where it does not fit, where in a crowded row it can overlap the next; `width` (0.05 to 1 of the row's slot, default 0.6), `shape`
 (`rectangle` or `rounded`) and `overlay` work as on an interval. Arrows between items are `arrow`
-annotations, such as `{ type: 'arrow', from: ['2026-02-06', 'Design'], to: ['2026-02-09', 'Build'] }`.
+annotations, such as `{ type: 'arrow', from: ['2026-02-06', 'Design'], to: ['2026-02-09', 'Build'] }`;
+they point at the middle of a row, so between the slots where several series share it.
 
 Annotations take times on a time axis: `{ type: 'line', axis: 'x', value: '2026-06-15', label: 'A' }`.
 
@@ -230,8 +231,8 @@ axis, `axes.time`: a `time` axis by default, or `linear`, taking `min`, `max`, `
 Values are placed by their distance along the track, and ticks fall about every 50 units of it,
 labelled on its left where they clear the labels before them. Moments are dots and periods thick
 stretches of the track; with `dataLabels`, labels go on its right, moving out up to two lines to clear
-the labels placed before them, and then to its left, beyond the tick labels. On a tightly wound
-spiral some labels can still overlap.
+the labels placed before them, and then to its left, beyond the tick labels. On a crowded track,
+such as a tightly wound spiral, some labels can still overlap.
 
 ## Chart options
 
