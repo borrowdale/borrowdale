@@ -17,6 +17,11 @@ import {
 // them make a cluster of their own.
 const CLUSTER = /[^\p{M}\u200D][\p{M}\u200D]*|[\p{M}\u200D]+/gu;
 
+/** The clusters of `text`, in order, as it is measured and drawn. */
+export function clustersOf(text: string): string[] {
+  return text.match(CLUSTER) ?? [];
+}
+
 // Where text may be cut: a character with the marks, emoji modifiers and tags after it, and through a
 // zero-width joiner the character after that; a pair of regional indicators, which make one flag; or
 // marks with no character before them. So a cut never splits a surrogate pair, an accent from its
