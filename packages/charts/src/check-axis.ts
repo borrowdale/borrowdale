@@ -151,10 +151,14 @@ export function checkAxis<X extends object = object>(
 }
 
 /** A continuous axis of one of the kinds `keys` lists, allowing that kind's keys. */
-export function checkContinuousAxis(keys: Partial<Record<AxisKind, readonly string[]>>, grid: boolean): Check<CheckedLinearAxis> {
+export function checkContinuousAxis<X extends object = object>(
+  keys: Partial<Record<AxisKind, readonly string[]>>,
+  grid: boolean,
+  extra: Extra<X> = noExtra as Extra<X>,
+): Check<CheckedLinearAxis & X> {
   return (path, raw) => {
     const kind = readType(path, raw, Object.keys(keys)) as AxisKind;
-    return checkLinearAxis(keys[kind]!, grid, noExtra, kind)(path, raw);
+    return checkLinearAxis(keys[kind]!, grid, extra, kind)(path, raw);
   };
 }
 

@@ -6,6 +6,7 @@ import {
   CARTESIAN_KEYS,
   checkAngleAxis,
   checkAxis,
+  checkContinuousAxis,
   checkLinearAxis,
   checkRadiusAxis,
   checkSweep,
@@ -24,6 +25,7 @@ import {
 import {
   boolean,
   coordinate,
+  integer,
   coordinates,
   fail,
   MAX_VALUE,
@@ -62,7 +64,7 @@ const MIN_NEEDLE = 0.1;
 const DEFAULT_NEEDLE = 0.8;
 const MAX_BANDS = 100;
 
-export type System = 'cartesian' | 'polar' | 'pie' | 'gauge';
+export type System = 'cartesian' | 'polar' | 'pie' | 'gauge' | 'timeline';
 
 type ReservePoints = (count: number) => void;
 const categoryValues = (reserve: ReservePoints) =>
@@ -236,6 +238,12 @@ const SERIES_RULES = {
     keys: ['dataLabels', 'data', 'symbol'],
     read: (r: Fields, _path: string, reserve: ReservePoints) => ({ symbol: readSymbol(r), data: r.required('data', list(0, MAX_POINTS, checkBubble, reserve)) }),
   },
+  timeline: {
+    system: 'timeline',
+    band: false,
+    keys: ['dataLabels', 'data'],
+    read: (r: Fields, _path: string, reserve: ReservePoints) => ({ data: r.required('data', list(0, MAX_POINTS, checkEvent, reserve)) }),
+  },
   pie: {
     system: 'pie',
     band: false,
@@ -392,7 +400,20 @@ export interface CheckedGaugeChart extends CheckedChartBase {
 }
 
 /** A chart, checked: one shape per coordinate system, each with only its own axes and series. */
-export type CheckedChart = CheckedCartesianChart | CheckedPolarChart | CheckedPieChart | CheckedGaugeChart;
+/** The track of a timeline, with its defaults filled in. */
+export type CheckedTimelinePath =
+  | { type: 'line' }
+  | { type: 'serpentine'; rows: number }
+  | { type: 'spiral'; turns: number; innerRadius: number }
+  | { type: 'curve'; points: [number, number][] };
+
+export interface CheckedTimelineChart extends CheckedChartBase {
+  system: 'timeline';
+  axis: CheckedLinearAxis & { path: CheckedTimelinePath };
+  series: SeriesOf<'timeline'>[];
+}
+
+export type CheckedChart = CheckedCartesianChart | CheckedPolarChart | CheckedPieChart | CheckedGaugeChart | CheckedTimelineChart;
 
 /**
  * Throws a named error, starting "Invalid chart:" and naming the place in the spec, for anything that
@@ -437,8 +458,57 @@ export function checkChart(spec: ChartSpec, font: Font = excalifont): CheckedCha
       return checkPieChart(r, base, seriesOf(series, 'pie'));
     case 'gauge':
       return checkGaugeChart(r, base, seriesOf(series, 'gauge'));
+    case 'timeline':
+      return checkTimelineChart(r, base, seriesOf(series, 'timeline'));
   }
 }
+
+const TIMELINE_KEYS = { time: ['type', 'min', 'max', 'step', 'ticks', 'hidden', 'format', 'path'], linear: ['type', 'min', 'max', 'step', 'ticks', 'hidden', 'format', 'path'] };
+const MAX_ROWS = 20;
+const MAX_TURNS = 20;
+const MAX_TRACK_POINTS = 100;
+
+const checkTimelineAxis = checkContinuousAxis(TIMELINE_KEYS, false, (r) => ({ path: r.optional('path', checkTrack) ?? { type: 'line' as const } }));
+
+function checkTimelineChart(r: Fields, base: CheckedChartBase, series: SeriesOf<'timeline'>[]): CheckedTimelineChart {
+  const axes = r.optional('axes', fields);
+  axes?.allow(['time']);
+  const axis = axes?.optional('time', checkTimelineAxis) ?? checkTimelineAxis('axes.time', { type: 'time' });
+  const value = axis.kind === 'time' ? valueReader('time') : numberOn(axis);
+  for (const entry of series) {
+    entry.data.forEach((event, i) => {
+      const path = `${entry.path}.data[${i}]`;
+      event.at = value(`${path}.at`, event.at);
+      event.to = event.to === undefined ? undefined : value(`${path}.to`, event.to);
+      if (event.to !== undefined && !(event.to > event.at)) {
+        fail(`${path}.to`, 'must be after at; leave it out for a moment');
+      }
+    });
+  }
+  return { ...base, system: 'timeline', axis, series };
+}
+
+const checkTrack: Check<CheckedTimelinePath> = (path, raw) => {
+  const r = fields(path, raw);
+  const type = r.required('type', oneOf(['line', 'serpentine', 'spiral', 'curve'] as const));
+  switch (type) {
+    case 'line':
+      r.allow(['type']);
+      return { type };
+    case 'serpentine':
+      r.allow(['type', 'rows']);
+      return { type, rows: r.optional('rows', integer(1, MAX_ROWS)) ?? 3 };
+    case 'spiral':
+      r.allow(['type', 'turns', 'innerRadius']);
+      return { type, turns: r.optional('turns', number(1, MAX_TURNS)) ?? 3, innerRadius: r.optional('innerRadius', number(0, 0.9)) ?? 0.2 };
+    case 'curve':
+      r.allow(['type', 'points']);
+      return { type, points: r.required('points', list(2, MAX_TRACK_POINTS, (p, point) => {
+        const [x, y] = tuple(['x', 'y'])(p, point);
+        return [number(0, 1)(`${p}[0]`, x), number(0, 1)(`${p}[1]`, y)];
+      })) };
+  }
+};
 
 function checkSeries(path: string, raw: unknown, index: number, reserve: ReservePoints): CheckedSeries {
   const r = fields(path, raw);
@@ -907,6 +977,19 @@ function checkRange(path: string, raw: unknown): [number, number] {
     fail(path, `has its high value below its low value, [${low}, ${high}]`);
   }
   return [low, high];
+}
+
+/** A timeline event; at and to are read once the axis is known (checkTimelineChart). */
+interface CheckedEvent {
+  at: number;
+  to: number | undefined;
+  label: string | undefined;
+}
+
+function checkEvent(path: string, raw: unknown): CheckedEvent {
+  const r = fields(path, raw);
+  r.allow(['at', 'to', 'label']);
+  return { at: r.required('at', coordinate), to: r.optional('to', coordinate), label: r.optional('label', text(MAX_NAME)) };
 }
 
 /** An xRange item; its row is found, and from and to read, once the axes are known (resolveValues). */

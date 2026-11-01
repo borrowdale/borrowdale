@@ -7,6 +7,7 @@ import { layoutGauge } from './gauge.js';
 import { layoutPie } from './pie.js';
 import { layoutPolar, polarLegendOf } from './polar.js';
 import { fail } from './read.js';
+import { layoutTimeline } from './timeline.js';
 import { markerNode } from './symbols.js';
 import type { ChartLayout, ChartOptions, ChartSpec, LegendPosition, Marker } from './types.js';
 import { checkChart, type CheckedChart } from './validate.js';
@@ -62,6 +63,9 @@ export function layoutChart(spec: ChartSpec, options: ChartOptions = {}): ChartL
       break;
     case 'gauge':
       layoutGauge(drawing, chart, rect, entryPaints);
+      break;
+    case 'timeline':
+      layoutTimeline(drawing, chart, rect, entryPaints);
       break;
     default:
       unknownSystem(chart);

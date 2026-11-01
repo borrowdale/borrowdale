@@ -55,6 +55,11 @@ export type {
   SeriesType,
   Sweep,
   TimeAxis,
+  TimelineAxes,
+  TimelineAxis,
+  TimelineEvent,
+  TimelinePath,
+  TimelineSeries,
   TimeUnit,
 } from './types.js';
 

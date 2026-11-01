@@ -28,7 +28,7 @@ export interface ChartSpec {
    * `fillWeight` 0 to 100.
    */
   style?: SketchStyle | undefined;
-  axes?: CartesianAxes | PolarAxes | GaugeAxes | undefined;
+  axes?: CartesianAxes | PolarAxes | GaugeAxes | TimelineAxes | undefined;
   /** Up to 100 Cartesian annotations. Numeric coordinates contribute to automatic domains. */
   annotations?: readonly Annotation[] | undefined;
   series: readonly Series[];
@@ -372,6 +372,48 @@ export interface IntervalSeries extends ValueSeries {
   toSymbol?: Marker | undefined;
 }
 
+/**
+ * The axis of a timeline: time by default, or linear, laid along its `path`. Ticks are about one
+ * per 50 units of the track, labelled on its left, as a time or linear axis labels them.
+ */
+export interface TimelineAxes {
+  time?: TimelineAxis | undefined;
+}
+
+export type TimelineAxis =
+  | (Omit<TimeAxis, 'title' | 'grid' | 'labelAngle'> & { path?: TimelinePath | undefined })
+  | (Omit<LinearAxis, 'title' | 'grid' | 'labelAngle' | 'percent'> & { path?: TimelinePath | undefined });
+
+/**
+ * The track a timeline is laid along, earliest first: a straight `line` across the chart (the
+ * default); a `serpentine` of `rows` (1 to 20, default 3) left to right and back, joined by half
+ * turns; a `spiral` of `turns` (1 to 20, default 3) out from `innerRadius` (0 to 0.9 of the radius,
+ * default 0.2), clockwise from the top; or a `curve` through 2 to 100 `points`, each `[x, y]` from
+ * 0 to 1 across and down the chart, joined by straight segments.
+ */
+export type TimelinePath =
+  | { type: 'line' }
+  | { type: 'serpentine'; rows?: number | undefined }
+  | { type: 'spiral'; turns?: number | undefined; innerRadius?: number | undefined }
+  | { type: 'curve'; points: readonly (readonly [x: number, y: number])[] };
+
+/** A moment of a timeline, or a period from `at` to `to`. */
+export interface TimelineEvent {
+  at: ChartValue;
+  /** After `at`: the event is then a period, drawn as a thick stretch of the track. */
+  to?: ChartValue | undefined;
+  /** At most 100 characters, in the event's tooltip and, with `dataLabels`, beside it. */
+  label?: string | undefined;
+}
+
+/** Events and periods along a track: a serpentine, spiral or curve timeline, or a straight one. */
+export interface TimelineSeries extends SeriesBase {
+  type: 'timeline';
+  data: readonly TimelineEvent[];
+  /** Writes each event's label beside it, on the right of the track. */
+  dataLabels?: boolean | undefined;
+}
+
 /** A row's stretch of the value axis, often of time: a task of a Gantt chart, or a milestone. */
 export interface XRangeItem {
   /** The category of the band axis the item is in. */
@@ -587,6 +629,7 @@ export type Series =
   | RangeAreaSeries
   | IntervalSeries
   | XRangeSeries
+  | TimelineSeries
   | XYLineSeries
   | XYAreaSeries
   | ScatterSeries
