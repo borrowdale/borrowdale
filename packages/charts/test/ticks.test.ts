@@ -151,6 +151,24 @@ describe('listed ticks on a linear axis', () => {
     expect(layoutChart(spec).labels).toEqual(expect.arrayContaining(labels));
   });
 
+  // One tick spans nothing, so the axis reaches it from where an axis with nothing on it starts.
+  const lone = (axis: object, y: object = { type: 'linear' }): ChartSpec =>
+    ({ width: 400, height: 200, legend: 'none', axes: { x: axis, y }, series: [{ type: 'scatter', name: 'A', data: [] }] }) as ChartSpec;
+  it.each<[string, ChartSpec, string[]]>([
+    ['a linear axis from 0', lone({ type: 'linear', ticks: [{ value: 5, label: 'Target' }] }), ['Target', '0.0', '0.5', '1.0']],
+    ['a log axis from 1', lone({ type: 'log', ticks: [100] }), ['100', '0.0', '0.5', '1.0']],
+    ['a time axis from 1970', lone({ type: 'time', ticks: ['2026-01-01'] }), ['2026', '0.0', '0.5', '1.0']],
+  ])('labels a lone listed tick on %s with no data', (_case, spec, labels) => {
+    expect(layoutChart(spec).labels).toEqual(labels);
+  });
+
+  it.each<[string, ChartSpec]>([
+    ['a timeline', { width: 400, height: 200, axes: { time: { type: 'time', ticks: ['2026-01-01'] } }, series: [{ type: 'timeline', name: 'T', data: [] }] } as ChartSpec],
+    ['a polar angle axis', { width: 300, height: 300, legend: 'none', axes: { angle: { type: 'linear', ticks: [1000] }, radius: { type: 'linear' } }, series: [{ type: 'polarScatter', name: 'S', data: [] }] } as ChartSpec],
+  ])('lays out %s with a lone listed tick and no data', (_case, spec) => {
+    expect(laying(spec)).not.toThrow();
+  });
+
   it.each<[string, object, string[]]>([
     ['at 0', { ticks: [0, 2] }, ['2', 'a', 'b', 'c']],
     ['below 0 when the radius starts below it', { min: -2, ticks: [-1, 2] }, ['-1', '2', 'a', 'b', 'c']],

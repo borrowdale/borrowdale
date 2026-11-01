@@ -74,11 +74,12 @@ export function scaleOf(axis: CheckedLinearAxis, extent: [number, number], lengt
 }
 
 /**
- * The extent of an axis with nothing on it: its listed ticks', or else its fixed end, or 0, or 1 on
- * a log axis. Listed ticks are within the fixed ends, so they never pass them.
+ * The extent of an axis with nothing on it: its listed ticks', where there are two or more, or else
+ * its fixed end, or 0, or 1 on a log axis, which a lone listed tick then extends. Listed ticks are
+ * within the fixed ends, so they never pass them.
  */
 export function emptyExtent(axis: CheckedLinearAxis): [number, number] {
-  if (axis.ticks !== undefined) {
+  if (axis.ticks !== undefined && axis.ticks.length > 1) {
     return [axis.ticks[0]!.value, axis.ticks.at(-1)!.value];
   }
   const end = axis.min ?? axis.max ?? (axis.kind === 'log' ? 1 : 0);
