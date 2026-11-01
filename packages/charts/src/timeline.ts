@@ -3,7 +3,7 @@
 import type { Point, Shape } from '@borrowdale/core';
 import { cos, sin } from '@borrowdale/core/math';
 import { CENTRED, type Drawing, type Extent } from './drawing.js';
-import { assertRoom, GAP, TICK, type Rect } from './frame.js';
+import { aChart, assertRoom, GAP, TICK, type Rect } from './frame.js';
 import { POINT_SIZE, solid } from './marks.js';
 import { INK, type Paint } from './palette.js';
 import { fail } from './read.js';
@@ -146,20 +146,20 @@ function trackOf(axis: CheckedTimelineChart['axis'], area: Rect, rowSpacing: num
       }
       // Rows evenly from the top of the area to its bottom, joined by half turns whose diameter is
       // the space between them; the labels of neighbouring rows share that space.
+      // The labels of neighbouring rows need `rowSpacing` between them, so at most `room` rows fit; and
+      // each half turn is as wide as the rows are apart and must fit across the area, so at least
+      // `fewest`. Where no count up to the most a serpentine has does both, only one row fits.
       const spacing = height / (track.rows - 1);
       const room = Math.max(1, Math.floor(height / rowSpacing) + 1);
-      if (spacing < rowSpacing) {
-        return fail(`${axis.path}.path.rows`, `is ${track.rows}, but a ${chart.width} × ${chart.height} chart has room for ${room}`);
-      }
-      // Each half turn is as wide as the rows are apart, and must fit across the area. Where even as
-      // many rows as fit, up to the most a serpentine has, leave turns too wide, only one row fits.
-      if (spacing > width) {
-        const fewest = Math.ceil(height / width) + 1;
+      const fewest = Math.ceil(height / width) + 1;
+      if (spacing < rowSpacing || spacing > width) {
         const needs =
-          fewest <= Math.min(room, MAX_ROWS)
-            ? `needs at least ${fewest} for the turns between them to fit across it`
-            : 'is too narrow for the turns between rows, so it takes 1';
-        return fail(`${axis.path}.path.rows`, `is ${track.rows}, but a ${chart.width} × ${chart.height} chart ${needs}`);
+          fewest > Math.min(room, MAX_ROWS)
+            ? 'is too narrow for the turns between rows, so it takes 1'
+            : spacing < rowSpacing
+              ? `has room for ${room}`
+              : `needs at least ${fewest} for the turns between them to fit across it`;
+        return fail(`${axis.path}.path.rows`, `is ${track.rows}, but ${aChart(chart.width, chart.height)} ${needs}`);
       }
       const radius = spacing / 2;
       const points: Point[] = [];
@@ -197,8 +197,7 @@ function trackOf(axis: CheckedTimelineChart['axis'], area: Rect, rowSpacing: num
       const distinct = track.points.filter(([x, y], i) => i === 0 || x !== track.points[i - 1]![0] || y !== track.points[i - 1]![1]);
       const curve = measured(distinct.map(([x, y]): Point => [area.left + x * width, area.top + y * height]));
       if (curve.length < 1) {
-        const size = `${chart.width} × ${chart.height}`;
-        fail(`${axis.path}.path.points`, `must be spread out: on a ${size} chart they make a track shorter than 1`);
+        fail(`${axis.path}.path.points`, `must be spread out: on ${aChart(chart.width, chart.height)} they make a track shorter than 1`);
       }
       return curve;
     }

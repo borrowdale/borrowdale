@@ -1,6 +1,6 @@
 import type { Point, Shape } from '@borrowdale/core';
 import type { Drawing } from './drawing.js';
-import { assertRoom, GAP, TICK, type Rect } from './frame.js';
+import { aChart, assertRoom, GAP, TICK, type Rect } from './frame.js';
 import {
   alignTowards,
   fitSweep,
@@ -87,7 +87,7 @@ export function layoutGauge(drawing: Drawing, chart: CheckedGaugeChart, rect: Re
     const [where, problem] =
       bars.length > 0
         ? ['series', `holds ${bars.length} gauge bars, more rings than the dial has room for`]
-        : ['', `a ${chart.width} × ${chart.height} chart leaves no room for the dial's ticks around its hub`];
+        : ['', `${aChart(chart.width, chart.height)} leaves no room for the dial's ticks around its hub`];
     fail(where, problem);
   }
   const grid = { stroke: GRID, strokeWidth: GRID_WIDTH };

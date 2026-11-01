@@ -229,6 +229,9 @@ describe('chart validation', () => {
     ['a no-break space in rgb()', { ...bars, series: [{ type: 'bar', name: 'A', color: 'rgb(1,\u00a02,3)', data: [1, 2] }] }, 'Invalid chart: series[0].color must be a colour (a hex code, a name, rgb() or hsl()), got "rgb(1,\u00a02,3)"'],
     ['more series than the palette has pairs', { ...bars, series: oneTooMany }, 'Invalid chart: series[28] needs a color: the 28 colour and hatching pairs of the palette are used up'],
     ['a plot with no room left', { ...bars, width: 20, height: 20 }, 'Invalid chart: a 20 × 20 chart leaves no room for the plot after its title, legend and labels'],
+    ['a plot with no room left on a chart read from eleven', { ...bars, width: 11, height: 20 }, 'Invalid chart: an 11 × 20 chart leaves no room for the plot after its title, legend and labels'],
+    ['a plot with no room left on a chart read from eighteen', { ...bars, width: 18, height: 20 }, 'Invalid chart: an 18 × 20 chart leaves no room for the plot after its title, legend and labels'],
+    ['a plot with no room left on a chart read from one hundred and eighteen', { ...bars, width: 118, height: 20 }, 'Invalid chart: a 118 × 20 chart leaves no room for the plot after its title, legend and labels'],
   ])('rejects %s', (_case, spec, message) => {
     expect(laying(spec)).toThrow(message);
   });

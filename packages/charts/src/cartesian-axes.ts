@@ -5,7 +5,7 @@ import { cos, sin } from '@borrowdale/core/math';
 import type { TextAnchor, TextBaseline } from '@borrowdale/text';
 import type { CheckedAxis } from './check-axis.js';
 import type { Drawing, Extent } from './drawing.js';
-import { assertRoom, BAND_PADDING, GAP, TICK, type Rect } from './frame.js';
+import { aChart, assertRoom, BAND_PADDING, GAP, TICK, type Rect } from './frame.js';
 import { GRID, GRID_WIDTH, INK } from './palette.js';
 import { fail } from './read.js';
 import { bandScale, type BandScale, type PlacedScale, type Scale } from './scale.js';
@@ -290,7 +290,7 @@ export function fitBandEnds(plot: Rect, guide: Guide, rect: Rect, chart: { width
     }
     fitted = { ...fitted, [start]: fitted[start] + Math.max(0, before), [end]: fitted[end] - Math.max(0, after) };
   }
-  return fail('', `a ${chart.width} × ${chart.height} chart leaves no room for the end labels of ${axis.path}`);
+  return fail('', `${aChart(chart.width, chart.height)} leaves no room for the end labels of ${axis.path}`);
 }
 
 /**

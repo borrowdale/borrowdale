@@ -4,7 +4,7 @@ import type { TextAnchor, TextBaseline } from '@borrowdale/text';
 import type { CheckedFormat, CheckedLinearAxis } from './check-axis.js';
 import { coordinate } from './curves.js';
 import type { Drawing, SeedKey } from './drawing.js';
-import { assertRoom, BAND_PADDING, GAP, type Rect } from './frame.js';
+import { aChart, assertRoom, BAND_PADDING, GAP, type Rect } from './frame.js';
 import {
   alignTowards,
   fitSweep,
@@ -235,7 +235,7 @@ export function layoutPolar(drawing: Drawing, chart: CheckedPolarChart, rect: Re
       break;
     }
     if (round === MAX_REFITS) {
-      fail('', `a ${chart.width} × ${chart.height} chart leaves no room for the labels of axes.radius`);
+      fail('', `${aChart(chart.width, chart.height)} leaves no room for the labels of axes.radius`);
     }
     box = {
       left: box.left + over.left,
