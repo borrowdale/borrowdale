@@ -3,6 +3,11 @@ import { describe, expect, it } from 'vitest';
 import './support/forbid-unportable-calls.js';
 import { cos, log, MAX_ANGLE, sin } from '@borrowdale/core/math';
 
+// A Proxy that throws when anything looks at it, even a test title.
+const { proxy: revoked, revoke } = Proxy.revocable([], {});
+revoke();
+const sinOfRevoked = (): number => sin(revoked as unknown as number);
+
 // The published functions are the engine's own, so each value is the same in every JavaScript
 // engine. The expected values are Math.sin and Math.cos in Node, which agree here.
 describe('@borrowdale/core/math', () => {
@@ -34,6 +39,10 @@ describe('@borrowdale/core/math', () => {
   });
 
   // The expected values are Math.log in Node.
+  it('rejects a revoked Proxy with a RangeError, describing it as an object', () => {
+    expect(sinOfRevoked).toThrow(new RangeError('Invalid argument: sin(x) must be a finite number within ±1000000, got an object'));
+  });
+
   it.each<[number, number]>([
     [1, 0],
     [2, 0.6931471805599453],

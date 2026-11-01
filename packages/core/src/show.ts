@@ -19,14 +19,13 @@ export function show(value: unknown): string {
   if (typeof value === 'string') {
     return value.length > MAX_SHOWN ? `a string of ${value.length} characters` : escaped(JSON.stringify(value));
   }
-  if (Array.isArray(value)) {
-    return value.length <= MAX_ENTRIES ? bracketed(value) : `an array of ${value.length}`;
-  }
-  if (ArrayBuffer.isView(value)) {
-    return `a ${Object.prototype.toString.call(value).slice(8, -1)}`;
-  }
   if (typeof value === 'object' && value !== null) {
-    return 'an object';
+    // Looking at an object can itself throw, from a revoked Proxy, a trap or a getter on its tag.
+    try {
+      return shownObject(value);
+    } catch {
+      return 'an object';
+    }
   }
   if (typeof value === 'bigint') {
     return `${value}n`;
@@ -35,6 +34,16 @@ export function show(value: unknown): string {
     return `a ${typeof value}`;
   }
   return Object.is(value, -0) ? '-0' : String(value);
+}
+
+function shownObject(value: object): string {
+  if (Array.isArray(value)) {
+    return value.length <= MAX_ENTRIES ? bracketed(value) : `an array of ${value.length}`;
+  }
+  if (ArrayBuffer.isView(value)) {
+    return `a ${Object.prototype.toString.call(value).slice(8, -1)}`;
+  }
+  return 'an object';
 }
 
 // By index, so a hole shows as undefined; an entry whose getter throws leaves only the length.

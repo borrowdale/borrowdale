@@ -8,6 +8,21 @@ const throwing = Object.defineProperty([1, 2], 1, {
   },
 });
 
+// Objects that throw when looked at: a revoked Proxy, a Proxy whose every read throws, and a typed
+// array whose tag throws.
+const { proxy: revoked, revoke } = Proxy.revocable([], {});
+revoke();
+const trapped = new Proxy([1, 2], {
+  get() {
+    throw new Error('read');
+  },
+});
+class ThrowingTag extends Uint8Array {
+  get [Symbol.toStringTag](): 'Uint8Array' {
+    throw new Error('tag');
+  }
+}
+
 describe('show', () => {
   it.each<[string, unknown, string]>([
     ['quotes a string, so a number in it is visibly a string', '10', '"10"'],
@@ -31,11 +46,24 @@ describe('show', () => {
     ['writes undefined', undefined, 'undefined'],
     ['writes a number', 1.5, '1.5'],
     ['writes NaN', Number.NaN, 'NaN'],
+    ['describes a revoked Proxy as an object', revoked, 'an object'],
+    ['describes an array whose length throws as an object', trapped, 'an object'],
+    ['describes a typed array whose tag throws as an object', new ThrowingTag(1), 'an object'],
+    ['writes a string of 100 characters in full', 'x'.repeat(100), `"${'x'.repeat(100)}"`],
+    ['writes an array of 8 entries in brackets', [1, 2, 3, 4, 5, 6, 7, 8], '[1, 2, 3, 4, 5, 6, 7, 8]'],
   ])('%s', (_case, value, shown) => {
     expect(show(value)).toBe(shown);
   });
 
-  it('escapes every unsafe character in a message', () => {
-    expect(escaped('a\nb\u2028c')).toBe('a\\u000ab\\u2028c');
+  it.each<[string, string, string]>([
+    ['a line break', 'a\nb', 'a\\u000ab'],
+    ['a line separator', 'a\u2028b', 'a\\u2028b'],
+    ['a C1 control', 'a\u0085b', 'a\\u0085b'],
+    ['a direction mark', 'a\u200fb', 'a\\u200fb'],
+    ['a direction override', 'a\u202eb', 'a\\u202eb'],
+    ['a direction isolate', 'a\u2066b', 'a\\u2066b'],
+    ['an Arabic letter mark', 'a\u061cb', 'a\\u061cb'],
+  ])('escapes %s in a message', (_case, message, written) => {
+    expect(escaped(message)).toBe(written);
   });
 });
