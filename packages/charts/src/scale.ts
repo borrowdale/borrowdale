@@ -115,7 +115,8 @@ function linearScale(axis: CheckedLinearAxis, [lo, hi]: [number, number], length
   }
   const tickCount = step.floor(domain[1]) - step.ceil(domain[0]) + 1;
   if (tickCount > MAX_TICKS) {
-    fail(axis.step === undefined ? axis.path : `${axis.path}.step`, `gives ${tickCount} ticks from ${domain[0]} to ${domain[1]}, more than ${MAX_TICKS}`);
+    const at = axis.step === undefined ? axis.path : `${axis.path}.step`;
+    fail(at, `gives ${tickCount} ticks from ${domain[0]} to ${domain[1]}, more than ${MAX_TICKS}`);
   }
   if (tickCount < 1) {
     fail(`${axis.path}.step`, `puts no tick between ${domain[0]} and ${domain[1]}`);
@@ -291,7 +292,7 @@ function powerAtOrAbove(value: number): number {
   return POWERS[exponent + EXPONENT_OFFSET]! === value ? value : POWERS[exponent + EXPONENT_OFFSET + 1]!;
 }
 
-// m × 10^exponent as the nearest double to that decimal: an integer times a power, or over one.
+// mantissa × 10^exponent as the nearest double to that decimal: an integer times a power, or over one.
 function decimal(mantissa: number, exponent: number): number {
   return exponent < 0 ? mantissa / POWERS[EXPONENT_OFFSET - exponent]! : mantissa * POWERS[EXPONENT_OFFSET + exponent]!;
 }

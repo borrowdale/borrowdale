@@ -14,23 +14,23 @@ import {
   MAX_CATEGORIES,
   MAX_HOLE,
   MAX_NAME,
+  valueReader,
   type CheckedAngleAxis,
   type CheckedAxis,
   type CheckedBandAxis,
   type CheckedLinearAxis,
   type CheckedRadiusAxis,
   type CheckedSweep,
-  valueReader,
 } from './check-axis.js';
 import {
   boolean,
   coordinate,
-  integer,
   coordinates,
   fail,
-  MAX_VALUE,
   fields,
+  integer,
   list,
+  MAX_VALUE,
   nullable,
   number,
   oneOf,
@@ -244,7 +244,9 @@ const SERIES_RULES = {
     system: 'timeline',
     band: false,
     keys: ['dataLabels', 'data'],
-    read: (r: Fields, _path: string, reserve: ReservePoints) => ({ data: r.required('data', list(0, MAX_POINTS, checkTimelineEvent, reserve)) }),
+    read: (r: Fields, _path: string, reserve: ReservePoints) => ({
+      data: r.required('data', list(0, MAX_POINTS, checkTimelineEvent, reserve)),
+    }),
   },
   pie: {
     system: 'pie',
@@ -465,12 +467,15 @@ export function checkChart(spec: ChartSpec, font: Font = excalifont): CheckedCha
   }
 }
 
-const TIMELINE_KEYS = { time: ['type', 'min', 'max', 'step', 'ticks', 'hidden', 'format', 'path'], linear: ['type', 'min', 'max', 'step', 'ticks', 'hidden', 'format', 'path'] };
+const TIMELINE_AXIS_KEYS = ['type', 'min', 'max', 'step', 'ticks', 'hidden', 'format', 'path'];
+const TIMELINE_KEYS = { time: TIMELINE_AXIS_KEYS, linear: TIMELINE_AXIS_KEYS };
 const MAX_ROWS = 20;
 const MAX_TURNS = 20;
 const MAX_TRACK_POINTS = 100;
 
-const checkTimelineAxis = checkContinuousAxis(TIMELINE_KEYS, false, (r) => ({ track: r.optional('path', checkTrack) ?? { type: 'line' as const } }));
+const checkTimelineAxis = checkContinuousAxis(TIMELINE_KEYS, false, (r) => ({
+  track: r.optional('path', checkTrack) ?? { type: 'line' as const },
+}));
 
 function checkTimelineChart(r: Fields, base: CheckedChartBase, series: SeriesOf<'timeline'>[]): CheckedTimelineChart {
   const axes = r.optional('axes', fields);
@@ -642,7 +647,10 @@ type AxisRoles =
 
 function rolesOf(x: CheckedAxis, y: CheckedAxis, y2: CheckedLinearAxis | undefined): AxisRoles {
   if (x.type === 'band') {
-    return y.type === 'band' ? fail('axes', 'has two band axes; one of x and y must be continuous: linear, time, log or sqrt') : { band: x, value: y, y2 };
+    if (y.type === 'band') {
+      fail('axes', 'has two band axes; one of x and y must be continuous: linear, time, log or sqrt');
+    }
+    return { band: x, value: y, y2 };
   }
   if (y2) {
     fail('axes.y2', 'needs x to be the band axis');

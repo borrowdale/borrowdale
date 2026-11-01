@@ -288,7 +288,13 @@ interface Frame {
  * Where a mark of a series with slots sits in category `index`'s band: across its own slot of
  * `slotCount`, or the whole band for an overlay, as a centre and the slot's width times the series'.
  */
-function slotIn(frame: Frame, index: number, slot: number, slotCount: number, entry: { overlay: boolean; width: number }): { center: number; width: number } {
+function slotIn(
+  frame: Frame,
+  index: number,
+  slot: number,
+  slotCount: number,
+  entry: { overlay: boolean; width: number },
+): { center: number; width: number } {
   const band = frame.band(index);
   const slotWidth = band.width / (entry.overlay ? 1 : slotCount);
   return { center: entry.overlay ? frame.center(index) : band.start + (slot + 0.5) * slotWidth, width: slotWidth * entry.width };
@@ -519,9 +525,9 @@ function drawXRange(
   { entry, scale, slot, axis }: Placed<Extract<CartesianSeries, { type: 'xRange' }>>,
   paint: Paint,
 ): void {
+  const { horizontal } = frame;
   // Along the value axis, a label of `text` is this long: its width across a horizontal value axis,
   // its height up a vertical one.
-  const { horizontal } = frame;
   const lengthOf = (text: string): number => (horizontal ? drawing.width(text) : drawing.lineHeight());
   entry.data.forEach((item, i) => {
     const { center, width } = slotIn(frame, item.category, slot, slotCount, entry);
@@ -548,15 +554,18 @@ function drawXRange(
       return;
     }
     const to = scale.at(item.to);
-    nodes.push(drawing.shape(barShape(entry.shape, center - width / 2, width, from, to, frame.point, frame.box), hatched(paint), key, entry.style));
+    const bar = barShape(entry.shape, center - width / 2, width, from, to, frame.point, frame.box);
+    nodes.push(drawing.shape(bar, hatched(paint), key, entry.style));
     const done = item.progress ?? 0;
     if (done > 0) {
       // Solid, half as thick, along the start of the bar.
-      nodes.push(drawing.shape(frame.box(center - width / 4, width / 2, from, from + (to - from) * done), solid(paint.color), [...key, 'progress'], entry.style));
+      const part = frame.box(center - width / 4, width / 2, from, from + (to - from) * done);
+      nodes.push(drawing.shape(part, solid(paint.color), [...key, 'progress'], entry.style));
     }
     label(from, to, Math.sign(to - from));
     const progress = item.progress === undefined ? '' : `, ${formatShare(item.progress)}% done`;
-    drawing.mark(`${entry.name}, ${row}: ${named}${formatAxisValue(item.from, axis)} to ${formatAxisValue(item.to, axis)}${progress}`, nodes);
+    const span = `${formatAxisValue(item.from, axis)} to ${formatAxisValue(item.to, axis)}`;
+    drawing.mark(`${entry.name}, ${row}: ${named}${span}${progress}`, nodes);
   });
 }
 

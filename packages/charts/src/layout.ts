@@ -7,8 +7,8 @@ import { layoutGauge } from './gauge.js';
 import { layoutPie } from './pie.js';
 import { layoutPolar, polarLegendOf } from './polar.js';
 import { fail } from './read.js';
-import { layoutTimeline } from './timeline.js';
 import { markerNode } from './symbols.js';
+import { layoutTimeline } from './timeline.js';
 import type { ChartLayout, ChartOptions, ChartSpec, LegendPosition, Marker } from './types.js';
 import { checkChart, type CheckedChart } from './validate.js';
 

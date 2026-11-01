@@ -135,7 +135,7 @@ type Beyond<X> = [Extract<keyof X, keyof CheckedBandAxis | keyof CheckedLinearAx
 
 const noExtra: Extra<object> = () => ({});
 
-/** The keys each axis type a context accepts allows, by type. */
+/** For each axis type a context accepts, the keys it allows. */
 type AxisKeys = { band: readonly string[] } & Partial<Record<AxisKind, readonly string[]>>;
 
 /**

@@ -4,9 +4,9 @@ import type { Point, Shape } from '@borrowdale/core';
 import { cos, sin } from '@borrowdale/core/math';
 import { CENTRED, type Drawing, type Extent } from './drawing.js';
 import { assertRoom, GAP, TICK, type Rect } from './frame.js';
-import { fail } from './read.js';
 import { POINT_SIZE, solid } from './marks.js';
 import { INK, type Paint } from './palette.js';
+import { fail } from './read.js';
 import { formatAxisValue, scaleOf } from './scale.js';
 import { markerNode } from './symbols.js';
 import type { ChartNode } from './types.js';
@@ -101,7 +101,8 @@ export function layoutTimeline(drawing: Drawing, chart: CheckedTimelineChart, re
         taken.add(boxAt(spot.extent, spot.x, spot.y));
         nodes.push(drawing.label(event.label, spot.x, spot.y, rect, path));
       }
-      const when = event.to === undefined ? formatAxisValue(event.at, axis) : `${formatAxisValue(event.at, axis)} to ${formatAxisValue(event.to, axis)}`;
+      const when =
+        event.to === undefined ? formatAxisValue(event.at, axis) : `${formatAxisValue(event.at, axis)} to ${formatAxisValue(event.to, axis)}`;
       drawing.mark(`${entry.name}: ${named}${when}`, nodes);
     });
   });
@@ -131,7 +132,8 @@ function trackOf(axis: CheckedTimelineChart['axis'], area: Rect, rowSpacing: num
       // Each half turn is as wide as the rows are apart, and must fit across the area.
       if (spacing > width) {
         const fewest = Math.ceil(height / width) + 1;
-        return fail(`${axis.path}.path.rows`, `is ${track.rows}, but a ${chart.width} × ${chart.height} chart needs at least ${fewest} for the turns between them to fit across it`);
+        const needs = `needs at least ${fewest} for the turns between them to fit across it`;
+        return fail(`${axis.path}.path.rows`, `is ${track.rows}, but a ${chart.width} × ${chart.height} chart ${needs}`);
       }
       const radius = spacing / 2;
       const points: Point[] = [];
@@ -169,7 +171,8 @@ function trackOf(axis: CheckedTimelineChart['axis'], area: Rect, rowSpacing: num
       const distinct = track.points.filter(([x, y], i) => i === 0 || x !== track.points[i - 1]![0] || y !== track.points[i - 1]![1]);
       const curve = measured(distinct.map(([x, y]): Point => [area.left + x * width, area.top + y * height]));
       if (curve.length < 1) {
-        fail(`${axis.path}.path.points`, `must be spread out: on a ${chart.width} × ${chart.height} chart they make a track shorter than 1`);
+        const size = `${chart.width} × ${chart.height}`;
+        fail(`${axis.path}.path.points`, `must be spread out: on a ${size} chart they make a track shorter than 1`);
       }
       return curve;
     }

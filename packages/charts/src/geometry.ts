@@ -183,7 +183,13 @@ export function rimTicks(scale: Scale, whole: boolean): { ticks: number[]; label
  * for the label's diagonal, the most it needs whichever way its neighbour lies; and on a whole turn
  * without the last labels that would crowd the first across the start.
  */
-export function labelledRim(scale: PlacedScale, count: number, radius: number, [width, height]: [number, number], whole: boolean): number[] {
+export function labelledRim(
+  scale: PlacedScale,
+  count: number,
+  radius: number,
+  [width, height]: [number, number],
+  whole: boolean,
+): number[] {
   const room = Math.sqrt(width * width + height * height);
   const along = (value: number): number => scale.at(value) * RADIANS * radius;
   const shown = scale.labelled(room, along).filter((i) => i < count);

@@ -243,7 +243,8 @@ export function timeScale(axis: CheckedLinearAxis, [lo, hi]: [number, number], l
   const ticks: number[] = [];
   for (let at = ceiling(step, domain[0]); at <= domain[1]; at = step.next(at)) {
     if (ticks.length === MAX_TICKS) {
-      fail(axis.interval === undefined ? axis.path : `${axis.path}.step`, `gives more than ${MAX_TICKS} ticks from ${formatTime(domain[0])} to ${formatTime(domain[1])}`);
+      const at = axis.interval === undefined ? axis.path : `${axis.path}.step`;
+      fail(at, `gives more than ${MAX_TICKS} ticks from ${formatTime(domain[0])} to ${formatTime(domain[1])}`);
     }
     ticks.push(at);
   }

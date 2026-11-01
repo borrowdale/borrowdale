@@ -91,9 +91,9 @@ export function drawXYArea({ drawing, x }: Context, { entry, scale }: Placed<XYA
               [entry.name, 'difference', i, j, part], entry.style));
           };
           if ((da < 0 && db > 0) || (da > 0 && db < 0)) {
-            // Where the edges cross on the plot, from their placed heights: exact on any scale, where
-            // the values' own differences are so only on a linear one. Heights the plot places
-            // alike, both 0 on an axis too wide to tell them apart, fall back to the values'.
+            // Where the edges cross on the plot: the placed heights give it on any scale, the values'
+            // own differences only on a linear one. Heights the plot places alike, both 0 on an axis
+            // too wide to tell them apart, fall back to the values'.
             const [pa, pb] = [high[j]![1] - low[j]![1], high[j + 1]![1] - low[j + 1]![1]];
             const t = pa === pb ? da / (da - db) : pa / (pa - pb);
             const crossing: Point = [low[j]![0] + (low[j + 1]![0] - low[j]![0]) * t,

@@ -13,7 +13,8 @@ type Results = {
 let results: Results;
 
 beforeAll(async () => {
-  results = await evaluateIn('chromium', 
+  results = await evaluateIn(
+    'chromium',
     new URL('../src/index.ts', import.meta.url),
     'borrowdale',
     '',

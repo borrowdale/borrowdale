@@ -1,5 +1,6 @@
 // Render the time, log, square-root, Gantt and timeline examples as standalone SVG documents with
-// their font embedded. Usage: npm run build && node apps/examples/time.mjs
+// their font embedded.
+// Usage: npm run build && node apps/examples/time.mjs
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { layoutChart, toSvgChart } from '@borrowdale/charts';
 import { excalifontFiles } from '@borrowdale/text/excalifont-files';

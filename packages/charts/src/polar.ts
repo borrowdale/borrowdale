@@ -311,7 +311,10 @@ export function layoutPolar(drawing: Drawing, chart: CheckedPolarChart, rect: Re
   }
   if (!angleAxis.hidden) {
     // A band axis labels every category; a linear one only the ticks whose labels do not overlap.
-    const shown = angle.type === 'linear' ? new Set(labelledRim(angle.scale, spokes.length, radius + GAP, [widest + GAP, line + GAP / 2], whole)) : undefined;
+    const shown =
+      angle.type === 'linear'
+        ? new Set(labelledRim(angle.scale, spokes.length, radius + GAP, [widest + GAP, line + GAP / 2], whole))
+        : undefined;
     spokes.forEach((spoke, i) => {
       if (shown?.has(i) ?? true) {
         const [px, py] = frame.point(spoke.angle, radius + GAP);
@@ -351,7 +354,7 @@ function startLabels(
     const [across, down] = onCircle(startAngle).map(Math.abs) as [number, number];
     const widest = Math.max(0, ...scale.labels.map((label) => drawing.width(label)));
     const room = Math.min((widest + GAP) / across, (drawing.lineHeight() + GAP / 2) / down);
-    // The start is not labelled, so when it is all thinning leaves, the outermost tick is instead.
+    // The start is not labelled, so when it is all that thinning leaves, the outermost tick is.
     const past = scale.labelled(room, scale.at).filter((i) => scale.ticks[i]! > scale.domain[0]);
     const last = scale.ticks.length - 1;
     const shown = past.length > 0 || last < 0 || !(scale.ticks[last]! > scale.domain[0]) ? past : [last];
