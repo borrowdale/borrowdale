@@ -280,6 +280,16 @@ interface Frame {
   area: (high: readonly Point[], low: readonly Point[], curve: Curve) => Shape;
 }
 
+/**
+ * Where a mark of a series with slots sits in category `index`'s band: across its own slot of
+ * `slotCount`, or the whole band for an overlay, as a centre and the slot's width times the series'.
+ */
+function slotIn(frame: Frame, index: number, slot: number, slotCount: number, entry: { overlay: boolean; width: number }): { center: number; width: number } {
+  const band = frame.band(index);
+  const slotWidth = band.width / (entry.overlay ? 1 : slotCount);
+  return { center: entry.overlay ? frame.center(index) : band.start + (slot + 0.5) * slotWidth, width: slotWidth * entry.width };
+}
+
 function makeFrame(plot: Rect, horizontal: boolean, bands: BandScale | undefined): Frame {
   return {
     plot,
@@ -467,10 +477,7 @@ function drawIntervals(
 ): void {
   entry.data.forEach((pair, i) => {
     if (!pair) return;
-    const band = frame.band(i);
-    const slotWidth = band.width / (entry.overlay ? 1 : slotCount);
-    const center = entry.overlay ? frame.center(i) : band.start + (slot + 0.5) * slotWidth;
-    const width = slotWidth * entry.width;
+    const { center, width } = slotIn(frame, i, slot, slotCount, entry);
     const [from, to] = pair.map((value) => scale.at(value)) as [number, number];
     const key = [entry.name, categories[i]!, 'interval'];
     const outline = { stroke: paint.color, strokeWidth: LINE_WIDTH };
@@ -517,10 +524,7 @@ function drawXRange(
   const { horizontal } = frame;
   const lengthOf = (text: string): number => (horizontal ? drawing.width(text) : drawing.lineHeight());
   entry.data.forEach((item, i) => {
-    const band = frame.band(item.category);
-    const slotWidth = band.width / (entry.overlay ? 1 : slotCount);
-    const center = entry.overlay ? frame.center(item.category) : band.start + (slot + 0.5) * slotWidth;
-    const width = slotWidth * entry.width;
+    const { center, width } = slotIn(frame, item.category, slot, slotCount, entry);
     const row = categories[item.category]!;
     const key = [entry.name, row, 'xRange', i];
     const from = scale.at(item.from);
