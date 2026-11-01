@@ -246,8 +246,8 @@ export function timeScale(axis: CheckedLinearAxis, [lo, hi]: [number, number], l
     ticks.push(at);
   }
   const spanShown = domain[1] - domain[0];
-  // The intervals at or above this one, to label only the ticks on their boundaries.
-  const coarser = INTERVALS.filter((candidate) => candidate.length >= step.length);
+  // The step itself, then the longer intervals, to label only the ticks on their boundaries.
+  const coarser = [step, ...INTERVALS.filter((candidate) => candidate.length > step.length)];
   return {
     domain,
     ticks,
