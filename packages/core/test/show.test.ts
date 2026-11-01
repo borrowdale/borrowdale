@@ -38,6 +38,11 @@ const wordy = new Proxy([1], {
     return key === 'length' ? '\u202e3' : Reflect.get(target, key);
   },
 });
+const negative = new Proxy([1], {
+  get(target, key) {
+    return key === 'length' ? -1 : Reflect.get(target, key);
+  },
+});
 
 describe('show', () => {
   it.each<[string, unknown, string]>([
@@ -67,6 +72,10 @@ describe('show', () => {
     ['names a typed array by its kind, whatever its tag does', new ThrowingTag(1), 'a Uint8Array'],
     ['reads the length of an array once', growing, '[1, 2, 3]'],
     ['describes an array whose length is not a whole number only as an array', wordy, 'an array'],
+    ['describes an array whose length is negative only as an array', negative, 'an array'],
+    ['describes an array in an array whose length is not a whole number only as an array', [negative], '[an array]'],
+    ['names a Float16Array', new Float16Array([1]), 'a Float16Array'],
+    ['names a DataView', new DataView(new ArrayBuffer(2)), 'a DataView'],
     ['writes a string of 100 characters in full', 'x'.repeat(100), `"${'x'.repeat(100)}"`],
     ['writes an array of 8 entries in brackets', [1, 2, 3, 4, 5, 6, 7, 8], '[1, 2, 3, 4, 5, 6, 7, 8]'],
   ])('%s', (_case, value, shown) => {
@@ -86,7 +95,24 @@ describe('show', () => {
     ['a byte order mark', 'a\ufeffb', 'a\\ufeffb'],
     ['a soft hyphen', 'a\u00adb', 'a\\u00adb'],
     ['a tag character, a pair of code units', 'a\u{E0041}b', 'a\\udb40\\udc41b'],
+    ['a combining grapheme joiner', 'a\u034fb', 'a\\u034fb'],
+    ['the Hangul fillers', 'a\u115f\u1160\u3164\uffa0b', 'a\\u115f\\u1160\\u3164\\uffa0b'],
+    ['the Khmer inherent vowels', 'a\u17b4\u17b5b', 'a\\u17b4\\u17b5b'],
+    ['the Mongolian variation selectors', 'a\u180b\u180fb', 'a\\u180b\\u180fb'],
+    ['an invisible format character after the isolates', 'a\u206a\u206fb', 'a\\u206a\\u206fb'],
+    ['a variation selector', 'a\ufe00\ufe0fb', 'a\\ufe00\\ufe0fb'],
+    ['a code point reserved to draw nothing', 'a\ufff0\ufff8b', 'a\\ufff0\\ufff8b'],
+    ['a shorthand format control', 'a\u{1BCA0}\u{1BCA3}b', 'a\\ud82f\\udca0\\ud82f\\udca3b'],
+    ['a musical beam or tie mark', 'a\u{1D173}\u{1D17A}b', 'a\\ud834\\udd73\\ud834\\udd7ab'],
+    ['a supplementary variation selector', 'a\u{E0100}\u{E0FFF}b', 'a\\udb40\\udd00\\udb43\\udfffb'],
   ])('escapes %s in a message', (_case, message, written) => {
     expect(escaped(message)).toBe(written);
+  });
+
+  // Just outside each range: a combining mark, a superscript, a fullwidth comma, a Hangul letter,
+  // the specials before the reserved ones, and the code points either side of the pairs escaped.
+  it('keeps the characters next to those it escapes', () => {
+    const drawn = '\u034e\u2070\ufe10\u3165\uffef\ufffc\u{1BC9F}\u{1BCA4}\u{1D172}\u{1D17B}\u{E1000}';
+    expect(escaped(drawn)).toBe(drawn);
   });
 });

@@ -3,13 +3,15 @@ const MAX_SHOWN = 100;
 // The longest array an error message writes out; a longer one is described by its length.
 const MAX_ENTRIES = 8;
 // Characters that could break or disguise a line of a log: controls, line separators, bidirectional
-// marks and overrides, and characters that draw nothing (zero-width spaces and joiners, the byte
-// order mark, the soft hyphen, invisible operators and tag characters). A fixed list, since a
-// Unicode property would depend on the engine's Unicode version.
+// marks and overrides, interlinear annotation marks, and the characters Unicode 16 says draw nothing
+// (its default ignorables: zero-width spaces and joiners, the byte order mark, the soft hyphen,
+// fillers, variation selectors, invisible operators, tag characters and the code points kept for
+// more). A fixed list, since a Unicode property would depend on the engine's Unicode version; those
+// past U+FFFF are matched as their pairs of code units.
 const UNSAFE =
-  /[\u0000-\u001f\u007f-\u009f\u00ad\u061c\u180e\u200b-\u200f\u2028\u2029\u202a-\u202e\u2060-\u2064\u2066-\u2069\ufeff\ufff9-\ufffb]|\udb40[\udc00-\udc7f]/g;
-// The kinds of typed array, named without reading anything the value itself can define, such as its
-// tag.
+  /[\u0000-\u001f\u007f-\u009f\u00ad\u034f\u061c\u115f\u1160\u17b4\u17b5\u180b-\u180f\u200b-\u200f\u2028-\u202e\u2060-\u206f\u3164\ufe00-\ufe0f\ufeff\uffa0\ufff0-\ufffb]|\ud82f[\udca0-\udca3]|\ud834[\udd73-\udd7a]|[\udb40-\udb43][\udc00-\udfff]/g;
+// The kinds of view on an ArrayBuffer, named by their constructors rather than by anything the value
+// itself can define, such as its tag. A kind the engine lacks is left out.
 const TYPED_ARRAYS = [
   'Int8Array',
   'Uint8Array',
@@ -18,6 +20,7 @@ const TYPED_ARRAYS = [
   'Uint16Array',
   'Int32Array',
   'Uint32Array',
+  'Float16Array',
   'Float32Array',
   'Float64Array',
   'BigInt64Array',
