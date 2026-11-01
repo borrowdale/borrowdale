@@ -585,20 +585,22 @@ function checkCartesianChart(
     if (!rule.band && band) {
       fail(entry.path, `is a ${entry.type} series, which needs both axes linear`);
     }
+    const onY2 = 'axis' in entry && entry.axis === 'y2';
+    if (onY2 && !y2) {
+      fail(`${entry.path}.axis`, 'is y2, but the chart has no axes.y2');
+    }
+    // A series with no axis key (xRange) is on the value axis.
+    const onAxis = onY2 ? y2! : band === x ? y : x;
+    if (band && onAxis.type === 'linear' && onAxis.percent && !isStacking(entry)) {
+      const which = `a percent axis, which only stacking series (${STACKING}) can use`;
+      fail(entry.path, `is a ${entry.type} series on ${onAxis.path}, ${which}`);
+    }
     if (!('axis' in entry)) {
       continue;
-    }
-    if (entry.axis === 'y2' && !y2) {
-      fail(`${entry.path}.axis`, 'is y2, but the chart has no axes.y2');
     }
     if (band && entry.data.length !== band.categories.length) {
       const categories = `${band.path}.categories has ${band.categories.length}`;
       fail(`${entry.path}.data`, `has ${entry.data.length} values, but ${categories}`);
-    }
-    const onAxis = entry.axis === 'y2' ? y2! : band === x ? y : x;
-    if (onAxis.type === 'linear' && onAxis.percent && !isStacking(entry)) {
-      const which = `a percent axis, which only stacking series (${STACKING}) can use`;
-      fail(entry.path, `is a ${entry.type} series on ${onAxis.path}, ${which}`);
     }
     if (entry.type === 'area' && entry.stack !== undefined) {
       entry.data.forEach((point, i) => {
