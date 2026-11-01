@@ -1,20 +1,18 @@
 // Reading a chart spec that came from JSON: through own properties only, arrays by index, and every
 // problem reported as one named error that says where in the spec it is.
+import { escaped, show } from '@borrowdale/core/show';
 import { measureText } from '@borrowdale/text';
 
 // The longest text @borrowdale/text lays out.
 const MAX_TEXT = 1000;
-// The longest string an error message repeats; a longer one is described by its length.
-const MAX_SHOWN = 100;
 // The longest message from another package's check that an error repeats.
 const MAX_MESSAGE = 200;
-// Characters that could break or disguise a line of a log: controls, line separators, and
-// bidirectional marks and overrides.
-const UNSAFE = /[\u0000-\u001f\u007f-\u009f\u061c\u200e\u200f\u2028\u2029\u202a-\u202e\u2066-\u2069]/g;
 /** Large enough for any count or amount, and small enough that `toFixed` never uses exponent notation. */
 export const MAX_VALUE = 1e15;
 /** The most decimals a number is written with. */
 export const MAX_DECIMALS = 20;
+
+export { show };
 
 /** Reads a value at `path`, returning it checked, or throws. */
 export type Check<T> = (path: string, value: unknown) => T;
@@ -38,29 +36,6 @@ export class InvalidChartError extends Error {
 /** Throws an `InvalidChartError` for the spec at `path`. */
 export function fail(path: string, problem: string): never {
   throw new InvalidChartError(path, problem);
-}
-
-/**
- * A rejected value, for an error message. Strings are quoted so `"10"` is visibly not the number 10;
- * a long string is described by its length, and anything but a string, number, boolean or null by
- * its kind, since converting it to a string could throw or run code from the spec.
- */
-export function show(value: unknown): string {
-  if (typeof value === 'string') {
-    return value.length > MAX_SHOWN ? `a string of ${value.length} characters` : escaped(JSON.stringify(value));
-  }
-  if (Array.isArray(value)) {
-    return `an array of ${value.length}`;
-  }
-  if (typeof value === 'object' && value !== null) {
-    return 'an object';
-  }
-  return typeof value === 'function' || typeof value === 'symbol' ? `a ${typeof value}` : String(value);
-}
-
-// Each unsafe character written as its \u escape.
-function escaped(message: string): string {
-  return message.replace(UNSAFE, (char) => `\\u${char.charCodeAt(0).toString(16).padStart(4, '0')}`);
 }
 
 /** The fields of one spec object. A field set to `undefined` counts as not set, as in core. */

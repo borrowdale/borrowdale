@@ -116,7 +116,7 @@ describe('a budget shared by several sketch() calls', () => {
 
   it('rejects maxOperations given as an object that cannot become a string, by its kind', () => {
     expect(() => new Budget(Object.create(null) as number)).toThrow(
-      'Invalid budget: maxOperations must be a whole number from 1 to 9007199254740991, got object',
+      'Invalid budget: maxOperations must be a whole number from 1 to 9007199254740991, got an object',
     );
   });
 

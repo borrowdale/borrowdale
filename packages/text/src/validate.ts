@@ -1,3 +1,4 @@
+import { show } from '@borrowdale/core/show';
 import { excalifont } from './fonts/excalifont.js';
 import {
   TEXT_ANCHORS,
@@ -330,13 +331,4 @@ export function codePointName(codePoint: number): string {
   return `U+${codePoint.toString(16).toUpperCase().padStart(4, '0')}`;
 }
 
-// Unlike String(), never throws: an object without a prototype has no toString.
-export function show(value: unknown): string {
-  if (typeof value === 'string') {
-    return JSON.stringify(value);
-  }
-  if (value === null) {
-    return 'null';
-  }
-  return typeof value === 'object' || typeof value === 'function' ? typeof value : String(value);
-}
+export { show };

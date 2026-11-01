@@ -145,6 +145,12 @@ They give the same result in every JavaScript engine. That result can differ fro
 as `MAX_ANGLE`, and throw a `RangeError` for anything else. Not far past that range the result
 would be wrong without any sign of it.
 
+## Values in error messages
+
+`@borrowdale/core/show` exports `show(value)`, which every `@borrowdale` package uses to write a
+rejected value into an error message: strings quoted and escaped, a short array in brackets, and
+anything that could throw or run code when converted named by its kind.
+
 ## Rendering
 
 | Function | Output | Needs |

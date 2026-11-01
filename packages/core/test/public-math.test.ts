@@ -26,7 +26,7 @@ describe('@borrowdale/core/math', () => {
     ['sin', Number.NaN, sin, 'NaN'],
     ['cos', Number.POSITIVE_INFINITY, cos, 'Infinity'],
     ['sin', '1', sin, '"1"'],
-    ['cos', Object.create(null), cos, 'object'],
+    ['cos', Object.create(null), cos, 'an object'],
   ])('%s rejects %s with a RangeError', (name, x, fn, shown) => {
     expect(() => fn(x as number)).toThrow(
       new RangeError(`Invalid argument: ${name}(x) must be a finite number within ±1000000, got ${shown}`),
