@@ -52,10 +52,12 @@ export function layoutTimeline(drawing: Drawing, chart: CheckedTimelineChart, re
     return { track, scale: scaleOf(axis, low > high ? emptyExtent(axis) : [low, high], track.length) };
   };
   let { track, scale } = layOut(margin);
-  // A straight track ends at the sides, where a label centred on a tick near an end can reach past
-  // the margin: the sides then take what the labels drawn there need, measured on the track laid out
-  // once without it, while the area keeps its room. Elsewhere labelSpot keeps labels on the chart.
-  if (axis.track.type === 'line' && !axis.hidden) {
+  // A straight track, a line or a serpentine of one row, ends at the sides, where a label centred on a
+  // tick near an end can reach past the margin: the sides then take what the labels drawn there need,
+  // measured on the track laid out once without it, while the area keeps its room. Elsewhere
+  // labelSpot keeps labels on the chart.
+  const straight = axis.track.type === 'line' || (axis.track.type === 'serpentine' && axis.track.rows === 1);
+  if (straight && !axis.hidden) {
     const room = Math.max(0, ...scale.labels.map((label) => drawing.width(label))) + GAP;
     const shown = scale.labelled(room, (value) => scale.fraction(value) * track.length);
     const needs = shown.map((i) => {
