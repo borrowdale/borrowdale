@@ -150,7 +150,8 @@ SOFTWARE.
 ## fdlibm 5.3
 
 <https://www.netlib.org/fdlibm/>. `src/trig.ts` uses its polynomial coefficients and
-range-reduction constants for sin, cos and atan.
+range-reduction constants for sin, cos and atan, and `src/exponential.ts` is a port of its natural
+logarithm and exponential (`e_log.c` and `e_exp.c`).
 
 ```
 Copyright (C) 1993 by Sun Microsystems, Inc. All rights reserved.

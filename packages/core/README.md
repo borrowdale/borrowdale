@@ -129,21 +129,25 @@ Only pass markup you built yourself, never text from users.
 
 `escapeAttribute(value)` escapes a single string for use inside a double-quoted attribute.
 
-## Portable sine and cosine
+## Portable maths
 
-`@borrowdale/core/math` exports the engine's own `sin` and `cos`, for coordinates that must be the
-same in every JavaScript engine (for example points on a circle placed next to a drawing):
+`@borrowdale/core/math` exports the engine's own `sin` and `cos`, and a natural logarithm `log` and
+exponential `exp`, for numbers that must be the same in every JavaScript engine (for example points
+on a circle placed next to a drawing, or positions on a logarithmic scale):
 
 ```js
-import { cos, sin } from '@borrowdale/core/math';
+import { cos, exp, log, sin } from '@borrowdale/core/math';
 
 const point = [cx + r * cos(angle), cy + r * sin(angle)];
+const decades = log(value) / log(10);
 ```
 
-They give the same result in every JavaScript engine. That result can differ from `Math.sin` and
-`Math.cos` in the last bits. They accept a finite number of radians within ±1,000,000, exported
-as `MAX_ANGLE`, and throw a `RangeError` for anything else. Not far past that range the result
-would be wrong without any sign of it.
+They give the same result in every JavaScript engine. That result can differ from `Math.sin`,
+`Math.cos`, `Math.log` and `Math.exp` in the last bit; `log` and `exp` are within one unit in the
+last place of the true value. `sin` and `cos` accept a finite number of radians within ±1,000,000,
+exported as `MAX_ANGLE`; not far past that range the result would be wrong without any sign of it.
+`log` accepts a finite number above 0, and `exp` a finite number within ±709, exported as
+`MAX_EXPONENT`. Each throws a `RangeError` for anything else.
 
 ## Values in error messages
 
