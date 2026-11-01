@@ -624,7 +624,6 @@ function checkCartesianChart(
  */
 function resolveValues(series: readonly SeriesOf<'cartesian'>[], roles: AxisRoles): void {
   for (const entry of series) {
-    // Each pairing of a series and the chart's axes other than these was rejected before.
     if (entry.type === 'xRange' && roles.band) {
       resolveXRange(entry, readerOn(roles.value), roles.band);
     } else if (entry.type !== 'xRange' && !('axis' in entry) && !roles.band) {
@@ -637,6 +636,10 @@ function resolveValues(series: readonly SeriesOf<'cartesian'>[], roles: AxisRole
       }
     } else if ('axis' in entry && roles.band) {
       resolveOnAxis(entry, valueAxisOf(entry, roles));
+    } else {
+      // Each other pairing of a series and the chart's axes was rejected before: a series here is
+      // of a type this does not read, whose values would be left unread.
+      throw new Error(`Unread chart values: ${entry.path}, a ${entry.type} series`);
     }
   }
 }
