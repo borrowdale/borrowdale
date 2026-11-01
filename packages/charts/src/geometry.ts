@@ -192,7 +192,7 @@ export function labelledRim(
 ): number[] {
   const room = Math.sqrt(width * width + height * height);
   const along = (value: number): number => scale.at(value) * RADIANS * radius;
-  const shown = scale.labelled(room, along).filter((i) => i < count);
+  const shown = scale.labelled(room, along, !whole).filter((i) => i < count);
   const turn = 360 * RADIANS * radius;
   while (whole && shown.length > 1 && along(scale.ticks[shown[0]!]!) + turn - along(scale.ticks[shown.at(-1)!]!) < room) {
     shown.pop();

@@ -41,8 +41,12 @@ export interface Scale {
   labels: string[];
   /** Where a value lies along the domain: 0 at its start, 1 at its end. */
   fraction: (value: number) => number;
-  /** The indices of the ticks to label when their centres must be `room` apart where `at` puts them. */
-  labelled: (room: number, at: (value: number) => number) => number[];
+  /**
+   * The indices of the ticks to label when their centres must be `room` apart where `at` puts them.
+   * `toEnd` says the axis has an end past its last tick, where room is kept for that tick's label,
+   * as a straight axis does and a whole turn does not.
+   */
+  labelled: (room: number, at: (value: number) => number, toEnd?: boolean) => number[];
 }
 
 /**
@@ -163,7 +167,7 @@ export function listedTicks(axis: CheckedLinearAxis, listed: readonly CheckedTic
     ticks,
     labels: listed.map(({ value, label }) => label ?? tickText(axis, value)),
     fraction: linearFraction(domain),
-    labelled: (room, at) => keptToEnd(ticks, room, at),
+    labelled: (room, at, toEnd = true) => (toEnd ? keptToEnd(ticks, room, at) : keptApart(ticks, room, at)),
   };
 }
 

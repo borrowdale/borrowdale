@@ -76,6 +76,16 @@ describe('listed ticks on a linear axis', () => {
   });
 
   // The dial's value, 3, is written under its hub.
+  // A whole turn has no end: the last point is next to the first, which keeps its place.
+  it('labels a small compass dial of 8 points on every other point, all the way round', () => {
+    const compass = { min: 0, max: 360, ticks: ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'].map((label, i) => ({ value: i * 45, label })) };
+    expect(layoutChart({ ...dial(compass), width: 120, height: 120 }).labels).toEqual(['N', 'E', 'S', 'W', '3']);
+  });
+
+  it('labels the first point alone where even it crowds the last', () => {
+    expect(layoutChart(points({ min: 0, max: 100, ticks: [0, { value: 1, label: 'the last tick' }] })).labels).not.toContain('the last tick');
+  });
+
   it('labels a compass dial by its points', () => {
     const compass = { min: 0, max: 360, ticks: [{ value: 0, label: 'N' }, { value: 90, label: 'E' }, { value: 180, label: 'S' }, { value: 270, label: 'W' }] };
     expect(layoutChart(dial(compass)).labels).toEqual(['N', 'E', 'S', 'W', '3']);
