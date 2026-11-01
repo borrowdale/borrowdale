@@ -126,7 +126,7 @@ Where tick labels would overlap, an axis labels fewer of its ticks and keeps eve
 gridline. Evenly spaced ticks are labelled on multiples of a nice number of steps counted from zero,
 so a crowded axis with a step of 2 shows 0, 10, 20; listed ticks keep each label that clears the last
 one kept, and on an axis with an end the last tick, leaving out the labels before it that would crowd
-it, unless even the first would.
+it; where even the first would, they label whichever of the two is nearer its own end.
 
 Numbers are never formatted with the locale data of the JavaScript engine, which differs between
 engines; set `thousands` and `decimal` to write them for another language. Bars and areas always

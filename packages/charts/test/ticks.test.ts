@@ -95,6 +95,16 @@ describe('listed ticks on a linear axis', () => {
     expect(layoutChart(points({ min: 0, max: 100, ticks: [0, { value: 1, label: 'b' }] })).labels.slice(0, 2)).toEqual(['0', '1.0']);
   });
 
+  // New Year's Eve ends the axis, where room is kept for its label; Christmas, a week before, crowds it.
+  const endOfYear = { width: 400, height: 200, legend: 'none', axes: { x: { type: 'time', ticks: [{ value: '2026-12-24', label: 'Christmas' }, { value: '2026-12-31', label: 'NYE' }] }, y: { type: 'linear' } }, series: [{ type: 'scatter', name: 'S', data: [['2026-01-01', 10], ['2026-12-31', 20]] }] } as ChartSpec;
+  it('labels the last tick alone where even the first crowds it and the last is nearer its end', () => {
+    expect(layoutChart(endOfYear).labels.slice(0, 1)).toEqual(['NYE']);
+  });
+
+  it('lays out a long first label that crowds an empty last one at the end', () => {
+    expect(laying(points({ min: 0, max: 100, ticks: [{ value: 99.9, label: 'A very long label' }, { value: 100, label: '' }] }))).not.toThrow();
+  });
+
   it('labels a compass dial by its points', () => {
     const compass = { min: 0, max: 360, ticks: [{ value: 0, label: 'N' }, { value: 90, label: 'E' }, { value: 180, label: 'S' }, { value: 270, label: 'W' }] };
     expect(layoutChart(dial(compass)).labels).toEqual(['N', 'E', 'S', 'W', '3']);

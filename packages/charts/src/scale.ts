@@ -189,7 +189,7 @@ export function listedTicks(axis: CheckedLinearAxis, listed: readonly CheckedTic
     ticks,
     labels: listed.map(({ value, label }) => label ?? tickText(axis, value)),
     fraction: linearFraction(domain),
-    labelled: (room, at, toEnd = true) => (toEnd ? keptToEnd(ticks, room, at) : keptApart(ticks, room, at)),
+    labelled: (room, at, toEnd = true) => (toEnd ? keptToEnd(ticks, room, at, domain) : keptApart(ticks, room, at)),
   };
 }
 
@@ -212,9 +212,9 @@ export function keptApart(ticks: readonly number[], room: number, at: (value: nu
 /**
  * Listed ticks to label: as keptApart, but always the last, since the axis leaves room past its end
  * for the last label only; the labels before it that crowd it are left out instead. When even the
- * first crowds it, the first alone is labelled.
+ * first crowds it, the one of the two nearer its own end is labelled alone.
  */
-function keptToEnd(ticks: readonly number[], room: number, at: (value: number) => number): number[] {
+function keptToEnd(ticks: readonly number[], room: number, at: (value: number) => number, [from, to]: [number, number]): number[] {
   const shown = keptApart(ticks, room, at);
   const last = ticks.length - 1;
   const crowds = (i: number): boolean => Math.abs(at(ticks[last]!) - at(ticks[i]!)) < room;
@@ -224,7 +224,13 @@ function keptToEnd(ticks: readonly number[], room: number, at: (value: number) =
   while (shown.length > 1 && crowds(shown.at(-1)!)) {
     shown.pop();
   }
-  return crowds(shown.at(-1)!) ? shown : [...shown, last];
+  if (!crowds(shown.at(-1)!)) {
+    return [...shown, last];
+  }
+  // Even the first crowds the last: the one of them nearer its own end, where the axis keeps room
+  // for its label past that end, or the first where they are as near.
+  const [first, end] = [Math.abs(at(ticks[0]!) - at(from)), Math.abs(at(to) - at(ticks[last]!))];
+  return end < first ? [last] : [0];
 }
 
 function linearFraction([from, to]: [number, number]): (value: number) => number {
