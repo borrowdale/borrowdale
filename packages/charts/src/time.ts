@@ -226,12 +226,6 @@ const TICK_SPACING = 50;
  * would overlap, only the ticks on a coarser interval's boundaries are labelled.
  */
 export function timeScale(axis: CheckedLinearAxis, [lo, hi]: [number, number], length: number): Scale {
-  if (axis.min !== undefined && lo < axis.min) {
-    fail(`${axis.path}.min`, `is ${formatTime(axis.min)}, but the data reach ${formatTime(lo)}`);
-  }
-  if (axis.max !== undefined && hi > axis.max) {
-    fail(`${axis.path}.max`, `is ${formatTime(axis.max)}, but the data reach ${formatTime(hi)}`);
-  }
   if (axis.ticks) {
     return listedTicks(axis, axis.ticks, [lo, hi]);
   }

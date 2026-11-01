@@ -45,8 +45,19 @@ export interface Scale {
   labelled: (room: number, at: (value: number) => number) => number[];
 }
 
-/** The scale of a continuous axis, by its kind, over the data's extent, for an axis `length` long. */
+/**
+ * The scale of a continuous axis, by its kind, over the data's extent, for an axis `length` long. A
+ * fixed `min` or `max` is an end, and data beyond it is an error, for every kind.
+ */
 export function scaleOf(axis: CheckedLinearAxis, extent: [number, number], length: number): Scale {
+  const [lo, hi] = extent;
+  const written = (value: number): string => (axis.kind === 'time' ? formatTime(value) : String(value));
+  if (axis.min !== undefined && lo < axis.min) {
+    fail(`${axis.path}.min`, `is ${written(axis.min)}, but the data reach ${written(lo)}`);
+  }
+  if (axis.max !== undefined && hi > axis.max) {
+    fail(`${axis.path}.max`, `is ${written(axis.max)}, but the data reach ${written(hi)}`);
+  }
   switch (axis.kind) {
     case 'linear':
       return linearScale(axis, extent, length);
@@ -67,16 +78,10 @@ export interface PlacedScale extends Scale {
 /**
  * A scale for the axis over the data's extent, rounded out to "nice" ticks (1, 2 or 5 times a power
  * of ten) about one per 50 units of its `length`, or to multiples of the axis' `step`, or reaching
- * its listed `ticks`. A fixed `min` or `max` is an end instead, and data beyond it is an error. Only
- * + − × ÷ and exact rounding.
+ * its listed `ticks`. A fixed `min` or `max` is an end instead, which the data stay within (scaleOf).
+ * Only + − × ÷ and exact rounding.
  */
-export function linearScale(axis: CheckedLinearAxis, [lo, hi]: [number, number], length: number): Scale {
-  if (axis.min !== undefined && lo < axis.min) {
-    fail(`${axis.path}.min`, `is ${axis.min}, but the data reach ${lo}`);
-  }
-  if (axis.max !== undefined && hi > axis.max) {
-    fail(`${axis.path}.max`, `is ${axis.max}, but the data reach ${hi}`);
-  }
+function linearScale(axis: CheckedLinearAxis, [lo, hi]: [number, number], length: number): Scale {
   if (axis.ticks) {
     return listedTicks(axis, axis.ticks, [lo, hi]);
   }
@@ -142,15 +147,9 @@ export function linearScale(axis: CheckedLinearAxis, [lo, hi]: [number, number],
 
 /**
  * An axis with listed ticks: its free ends reach the outermost tick or value, and each tick has its
- * own label or its value in the axis format. `fraction` places values between the ends, linearly
- * unless another is given.
+ * own label or its value in the axis format. `fraction` places values between the ends linearly.
  */
-export function listedTicks(
-  axis: CheckedLinearAxis,
-  listed: readonly CheckedTick[],
-  [lo, hi]: [number, number],
-  spacing: (domain: [number, number]) => (value: number) => number = linearFraction,
-): Scale {
+export function listedTicks(axis: CheckedLinearAxis, listed: readonly CheckedTick[], [lo, hi]: [number, number]): Scale {
   const ticks = listed.map(({ value }) => value);
   const domain: [number, number] = [axis.min ?? Math.min(lo, ticks[0]!), axis.max ?? Math.max(hi, ticks.at(-1)!)];
   if (!(domain[1] > domain[0])) {
@@ -161,7 +160,7 @@ export function listedTicks(
     domain,
     ticks,
     labels: listed.map(({ value, label }) => label ?? tickText(axis, value)),
-    fraction: spacing(domain),
+    fraction: linearFraction(domain),
     labelled: (room, at) => keptApart(ticks, room, at),
   };
 }
@@ -192,15 +191,9 @@ function linearFraction([from, to]: [number, number]): (value: number) => number
  * a value's distance from zero grows with its square root and negative values mirror positive ones.
  */
 function sqrtScale(axis: CheckedLinearAxis, extent: [number, number], length: number): Scale {
-  const spacing = ([from, to]: [number, number]) => {
-    const [start, end] = [signedRoot(from), signedRoot(to)];
-    return (value: number) => (signedRoot(value) - start) / (end - start);
-  };
-  if (axis.ticks) {
-    return listedTicks(axis, axis.ticks, extent, spacing);
-  }
   const scale = linearScale(axis, extent, length);
-  return { ...scale, fraction: spacing(scale.domain) };
+  const [start, end] = scale.domain.map(signedRoot) as [number, number];
+  return { ...scale, fraction: (value) => (signedRoot(value) - start) / (end - start) };
 }
 
 // Square roots are correctly rounded, so the same in every engine.
@@ -218,18 +211,13 @@ const DECADE_TICKS = [[1, 2, 3, 4, 5, 6, 7, 8, 9], [1, 2, 5], [1]] as const;
  * MIN_LOG. Positions come from the portable logarithm, so they are the same in every engine.
  */
 function logScale(axis: CheckedLinearAxis, [lo, hi]: [number, number], length: number): Scale {
-  if (axis.min !== undefined && lo < axis.min) {
-    fail(`${axis.path}.min`, `is ${axis.min}, but the data reach ${lo}`);
-  }
-  if (axis.max !== undefined && hi > axis.max) {
-    fail(`${axis.path}.max`, `is ${axis.max}, but the data reach ${hi}`);
-  }
   const spacing = ([from, to]: [number, number]) => {
     const [start, end] = [log(from), log(to)];
     return (value: number) => (log(value) - start) / (end - start);
   };
   if (axis.ticks) {
-    return listedTicks(axis, axis.ticks, [lo, hi], spacing);
+    const listed = listedTicks(axis, axis.ticks, [lo, hi]);
+    return { ...listed, fraction: spacing(listed.domain) };
   }
   // Free ends round out to powers of ten; one value alone shows the power of ten it lies in.
   let domain: [number, number] = [axis.min ?? POWERS[decadeOf(lo) + EXPONENT_OFFSET]!, axis.max ?? powerAtOrAbove(hi)];

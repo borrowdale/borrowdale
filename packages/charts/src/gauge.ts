@@ -15,7 +15,7 @@ import {
 import { solid } from './marks.js';
 import { GRID, GRID_WIDTH, hatched, INK, type Paint } from './palette.js';
 import { fail } from './read.js';
-import { formatValue, linearScale, place } from './scale.js';
+import { formatValue, place, scaleOf } from './scale.js';
 import type { CheckedGaugeChart, SeriesOf } from './validate.js';
 
 type GaugeSeries = SeriesOf<'gauge'>;
@@ -71,7 +71,7 @@ export function layoutGauge(drawing: Drawing, chart: CheckedGaugeChart, rect: Re
     [low, high] = [Math.min(low, value), Math.max(high, value)];
   }
   const rimLength = radius * (endAngle - startAngle) * RADIANS * RIM_SHARE;
-  const scale = place(linearScale(axis, [low, high], rimLength), [startAngle, endAngle]);
+  const scale = place(scaleOf(axis, [low, high], rimLength), [startAngle, endAngle]);
   const [first, last] = scale.domain;
   const origin = Math.min(Math.max(0, first), last);
 

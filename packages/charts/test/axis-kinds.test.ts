@@ -131,6 +131,14 @@ describe('a square-root axis', () => {
     expect(place(scaleOf(axisOf('sqrt', { min: extent[0], max: extent[1] }), extent, 300), [0, 100]).at(value)).toBeCloseTo(at, 9);
   });
 
+  it('rejects data past a fixed end with listed ticks, as without them', () => {
+    expect(laying(xy(linearX, { type: 'sqrt', max: 100, ticks: [0, 50, 100] }, [[0, 10], [1, 400]], 'scatter'))).toThrow('Invalid chart: axes.y.max is 100, but the data reach 400');
+  });
+
+  it('places listed ticks by their square roots', () => {
+    expect(place(scaleOf(axisOf('sqrt', { max: 100, ticks: [{ value: 0, label: undefined }, { value: 25, label: undefined }, { value: 100, label: undefined }] }), [0, 100], 300), [0, 100]).at(25)).toBeCloseTo(50, 9);
+  });
+
   it('rejects a percent stack', () => {
     expect(laying(xy(linearX, { type: 'sqrt', percent: true }, [[0, 1]], 'scatter'))).toThrow('Invalid chart: axes.y has an unknown key, "percent"');
   });

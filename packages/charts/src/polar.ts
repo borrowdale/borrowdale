@@ -21,7 +21,7 @@ import {
 import { loneDot, POINT_SIZE, runsOf, solid } from './marks.js';
 import { GRID, GRID_WIDTH, hatched, LINE_WIDTH, type Paint } from './palette.js';
 import { fail } from './read.js';
-import { bandScale, formatValue, linearScale, place, PLAIN_FORMAT, type PlacedScale } from './scale.js';
+import { bandScale, formatValue, place, PLAIN_FORMAT, scaleOf, type PlacedScale } from './scale.js';
 import { stackGroup, stackSpans, type Span } from './stack.js';
 import type { ChartNode } from './types.js';
 import { isStacking, type CheckedPolarChart, type SeriesOf } from './validate.js';
@@ -179,7 +179,7 @@ export function layoutPolar(drawing: Drawing, chart: CheckedPolarChart, rect: Re
   // half of the arc, measured before the labels decide the radius.
   const rimLength = (Math.min(rect.right - rect.left, rect.bottom - rect.top) / 2) * sweep * RADIANS * RIM_SHARE;
   const angleScale =
-    angleAxis.type === 'linear' ? linearScale(angleAxis, endsOf(angleAxis, extentOf('angle')), rimLength) : undefined;
+    angleAxis.type === 'linear' ? scaleOf(angleAxis, endsOf(angleAxis, extentOf('angle')), rimLength) : undefined;
   const rim = angleScale && rimTicks(angleScale, whole);
   const rimLabels = angleAxis.hidden ? [] : angleAxis.type === 'band' ? angleAxis.categories : rim!.labels;
   // The labels around the rim decide how much room the circle leaves.
@@ -214,7 +214,7 @@ export function layoutPolar(drawing: Drawing, chart: CheckedPolarChart, rect: Re
         ? {
             type: 'linear',
             path: radiusAxis.path,
-            scale: place(linearScale(radiusAxis, endsOf(radiusAxis, extentOf('radius'), true), radius - hole), [
+            scale: place(scaleOf(radiusAxis, endsOf(radiusAxis, extentOf('radius'), true), radius - hole), [
               hole,
               radius,
             ]),
