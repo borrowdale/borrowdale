@@ -24,6 +24,9 @@ export interface Extent {
 
 type TextOptions = Omit<LayoutOptions, 'font' | 'fontSize'> & { fontSize?: number | undefined };
 
+// A data label is centred on the point it is drawn at.
+const CENTRED = { anchor: 'middle', baseline: 'middle' } as const;
+
 /** What tells one mark's strokes from another's: its series, category, part and the like. */
 export type SeedKey = readonly (string | number)[];
 
@@ -125,15 +128,24 @@ export class Drawing {
   /** A centred data label, fitted and kept inside the supplied plotting rectangle. */
   label(text: string, x: number, y: number, rect: Rect, path: string): ChartNode {
     this.#place();
+    const spot = this.labelSpot(text, x, y, rect, path);
+    return this.text(spot.text, { ...CENTRED, x: spot.x, y: spot.y });
+  }
+
+  /**
+   * Where `label` draws a label asked for at (x, y): cut to fit across `rect` and moved inside it,
+   * with the extent it has there, so a caller can check the room it takes before drawing it.
+   */
+  labelSpot(text: string, x: number, y: number, rect: Rect, path: string): { text: string; x: number; y: number; extent: Extent } {
     const fitted = this.fit(text, rect.right - rect.left, path);
-    const options = { anchor: 'middle', baseline: 'middle' } as const;
-    const extent = this.extent(fitted, options);
+    const extent = this.extent(fitted, CENTRED);
     if (extent.up + extent.down > rect.bottom - rect.top) fail(path, 'has no vertical room for its label');
-    return this.text(fitted, {
-      ...options,
+    return {
+      text: fitted,
       x: Math.max(rect.left + extent.left, Math.min(rect.right - extent.right, x)),
       y: Math.max(rect.top + extent.up, Math.min(rect.bottom - extent.down, y)),
-    });
+      extent,
+    };
   }
 
   /** A trusted image, named by `asset`, fitted inside the box. */

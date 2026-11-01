@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import '../../core/test/support/forbid-unportable-calls.js';
 import { layoutChart, toSvgChart, type ChartSpec } from '@borrowdale/charts';
+import { overlappingTexts } from './support/layout.js';
 
 const events = [
   { at: '1969-07-20', label: 'Moon landing' },
@@ -30,6 +31,12 @@ describe('a timeline', () => {
     ['lays a spiral out from the centre', { type: 'spiral', turns: 3 }, [360, 360], ['1968', '1970', '1972', '1974', '1976', '1978', '1980', '1982', '1984', '1986', '1988', '1990', '1992', '1994', '1996', '1998', '2000', '2002', '2004', '2006', '2008', '2010', '2012', '2014', '2016', '2018', '2020', '2022', ...names]],
   ])('%s', (_case, path, size, expected) => {
     expect(labels(timeline(path, size))).toEqual(expected);
+  });
+
+  // Three events close together on the last row, whose labels go below it, near the chart's edge.
+  it('moves crowded labels apart at the edge of the chart, where they are kept inside it', () => {
+    const crowded = [{ at: '1960-01-01', label: 'Start' }, { at: '2019-01-01', label: 'Alpha' }, { at: '2019-03-01', label: 'Bravo' }, { at: '2019-05-01', label: 'Charlie' }, { at: '2030-01-01', label: 'End' }];
+    expect(overlappingTexts(layoutChart(timeline({ type: 'serpentine', rows: 3 }, [460, 260], crowded)))).toEqual([]);
   });
 
   it('writes moments and periods in tooltips', () => {

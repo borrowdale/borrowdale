@@ -49,6 +49,17 @@ export function titles(layout: ChartLayout): string[] {
   return layout.nodes.flatMap((node) => (node.kind === 'mark' ? [node.title] : []));
 }
 
+/** Each pair of drawn texts, in marks or not, whose boxes overlap, as "first / second". */
+export function overlappingTexts(layout: ChartLayout): string[] {
+  const drawn = layout.nodes.flatMap((node) => (node.kind === 'mark' ? node.nodes : [node]));
+  const boxes = drawn.flatMap((node) => (node.kind === 'text' ? [{ text: node.text.text, ...textBounds(node.text) }] : []));
+  return boxes.flatMap((a, i) =>
+    boxes.slice(i + 1).flatMap((b) =>
+      a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height ? [`${a.text} / ${b.text}`] : [],
+    ),
+  );
+}
+
 export function texts(layout: ChartLayout): string[] {
   return layout.nodes.flatMap((node) => (node.kind === 'text' ? [node.text.text] : []));
 }

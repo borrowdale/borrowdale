@@ -2,7 +2,7 @@
 // curve), with each series' moments and periods placed along it by arc length.
 import type { Point, Shape } from '@borrowdale/core';
 import { cos, sin } from '@borrowdale/core/math';
-import type { Drawing } from './drawing.js';
+import type { Drawing, Extent } from './drawing.js';
 import { assertRoom, GAP, TICK, type Rect } from './frame.js';
 import { fail } from './read.js';
 import { POINT_SIZE, solid } from './marks.js';
@@ -18,7 +18,8 @@ const TURN_POINTS = 64;
 // How thick a period is drawn along the track, and the track itself.
 const PERIOD_WIDTH = 6;
 const TRACK_WIDTH = 1.5;
-// How many lines out from the track an event's label may move to clear the labels before it.
+// How many lines out from the track, on each side, an event's label may move to clear the labels
+// before it.
 const LABEL_LEVELS = 3;
 // The side of a cell of the grid that finds labels near a new one.
 const CELL = 64;
@@ -70,6 +71,12 @@ export function layoutTimeline(drawing: Drawing, chart: CheckedTimelineChart, re
   }
 
   const levels = Array.from({ length: LABEL_LEVELS }, (_, i) => i);
+  // How far out from the track each place for an event's label is: the lines on its right, then
+  // those on its left beyond the tick labels, so a label kept off the chart's edge can still move.
+  const step = line + GAP / 2;
+  const right = PERIOD_WIDTH / 2 + GAP + line / 2;
+  const left = axis.hidden ? right : TICK + GAP + line + GAP / 2 + line / 2;
+  const places = [...levels.map((level) => -(right + level * step)), ...levels.map((level) => left + level * step)];
   series.forEach((entry, s) => {
     const paint = paints[s]!;
     entry.data.forEach((event, i) => {
@@ -85,15 +92,15 @@ export function layoutTimeline(drawing: Drawing, chart: CheckedTimelineChart, re
           { stroke: paint.color, strokeWidth: PERIOD_WIDTH }, key, entry.style));
       }
       if (entry.dataLabels && event.label !== undefined) {
-        // On the track's right, beside the moment or the middle of the period, on the first of a few
-        // lines out from it where the label clears those placed before it.
+        // Beside the moment or the middle of the period, at the first of those places where the label,
+        // as drawn, cut short and kept on the chart, clears those placed before it; at the first
+        // place when none does.
         const { point, normal } = pointAt(track, event.to === undefined ? from : (from + scale.fraction(event.to) * track.length) / 2);
-        const extent = drawing.extent(event.label, centred);
-        const at = (level: number): Point => offset(point, normal, -(PERIOD_WIDTH / 2 + GAP + line / 2 + level * (line + GAP / 2)));
-        const level = levels.find((candidate) => taken.clear(boxAt(extent, ...at(candidate)))) ?? 0;
-        const [x, y] = at(level);
-        taken.add(boxAt(extent, x, y));
-        nodes.push(drawing.label(event.label, x, y, rect, `${entry.path}.dataLabels`));
+        const path = `${entry.path}.dataLabels`;
+        const spots = places.map((distance) => drawing.labelSpot(event.label!, ...offset(point, normal, distance), rect, path));
+        const spot = spots.find(({ extent, x, y }) => taken.clear(boxAt(extent, x, y))) ?? spots[0]!;
+        taken.add(boxAt(spot.extent, spot.x, spot.y));
+        nodes.push(drawing.label(event.label, spot.x, spot.y, rect, path));
       }
       const when = event.to === undefined ? formatAxisValue(event.at, axis) : `${formatAxisValue(event.at, axis)} to ${formatAxisValue(event.to, axis)}`;
       drawing.mark(`${entry.name}: ${named}${when}`, nodes);
@@ -209,7 +216,7 @@ function stretch(track: Track, from: number, to: number): Point[] {
 }
 
 /** A label's box on the chart, from its extent about the point it is centred on. */
-function boxAt({ left, right, up, down }: { left: number; right: number; up: number; down: number }, x: number, y: number): Rect {
+function boxAt({ left, right, up, down }: Extent, x: number, y: number): Rect {
   return { left: x - left, right: x + right, top: y - up, bottom: y + down };
 }
 
