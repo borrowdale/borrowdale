@@ -122,6 +122,7 @@ describe('validation', () => {
     ['a one-point linear path', { kind: 'linearPath', points: [[0, 0]] }, {}, 'linearPath needs at least 2 points, got 1'],
     ['path data with an unknown character', { kind: 'path', d: 'M0 0 L10 x' }, {}, 'Invalid shape: path.d: unexpected "x"'],
     ['path data that stops mid-command', { kind: 'path', d: 'M0' }, {}, 'Invalid shape: path.d ended in the middle of a command'],
+    ['path data with a command where a number should be', { kind: 'path', d: 'M0 0 L10 Z' }, {}, 'Invalid shape: path.d: L needs a number, got "Z"'],
     ['relative path data that leaves the range', { kind: 'path', d: 'M1e6 0 l1e6 0' }, {}, 'path.d reaches, once arcs and relative coordinates are resolved, 2000000, outside ±1000000'],
     ['an inherited option name', rectangle, { constructor: 1 }, 'Unknown option: "constructor"'],
     ['a NaN strokeWidth', rectangle, { strokeWidth: Number.NaN }, 'strokeWidth must be a finite number, got NaN'],

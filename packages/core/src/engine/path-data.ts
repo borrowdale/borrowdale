@@ -92,7 +92,7 @@ export function parsePath(d: string): Segment[] {
         if (isType(numberToken, NUMBER)) {
           params[params.length] = +numberToken.text;
         } else {
-          throw new Error(`Invalid shape: path.d: ${mode} needs a number, got ${numberToken.text}`);
+          throw new Error(`Invalid shape: path.d: ${mode} needs a number, got ${show(numberToken.text)}`);
         }
       }
       if (typeof PARAMS[mode] === 'number') {
@@ -496,7 +496,7 @@ function assertWithinRange(segments: Segment[], verb: string): Segment[] {
   for (const { data } of segments) {
     for (const value of data) {
       if (!(Number.isFinite(value) && Math.abs(value) <= MAX_COORDINATE)) {
-        throw new Error(`Invalid shape: path.d ${verb} ${value}, outside ±${MAX_COORDINATE}`);
+        throw new Error(`Invalid shape: path.d ${verb} ${show(value)}, outside ±${MAX_COORDINATE}`);
       }
     }
   }

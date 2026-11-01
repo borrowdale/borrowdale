@@ -144,7 +144,7 @@ function assertShape(shape: Shape): void {
   switch (shape.kind) {
     case 'arc':
       if (!(shape.stop > shape.start)) {
-        throw new Error(`Invalid shape: arc.stop must be greater than arc.start, got start ${shape.start}, stop ${shape.stop}`);
+        throw new Error(`Invalid shape: arc.stop must be greater than arc.start, got start ${show(shape.start)}, stop ${show(shape.stop)}`);
       }
       if (shape.closed !== undefined && typeof shape.closed !== 'boolean') {
         throw new Error(`Invalid shape: arc.closed must be a boolean, got ${show(shape.closed)}`);
