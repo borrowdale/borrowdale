@@ -211,12 +211,13 @@ export function drawGrid(
 export function drawGuide(
   drawing: Drawing,
   plot: Rect,
+  rect: Rect,
   guide: Guide,
   scale: PlacedScale | undefined,
   bands: BandScale | undefined,
   line: number,
 ): void {
-  const { side, key, axis, labels, reach, room } = guide;
+  const { side, key, axis, labels, halves, reach, room } = guide;
   if (axis.hidden) {
     return;
   }
@@ -226,11 +227,21 @@ export function drawGuide(
   drawing.push(drawing.outline(lineShape(rules.edge(plot)), ink, ['axis', key]));
   if (axis.type === 'linear') {
     const shown = new Set(scale!.labelled(room, scale!.at));
+    // A flat label below the plot is centred on its tick, and has twice the way to the nearer side
+    // of the chart: the room past the ends holds the end labels, but a label labelled alone, or one
+    // wider than the chart, can need more, and is cut short. Beside the plot every label has room.
+    const fitted = (i: number, at: number): string => {
+      const way = Math.min(at - rect.left, rect.right - at);
+      if (side !== 'bottom' || axis.labelAngle !== 0 || halves[i]! <= way + LABEL_ROUNDING) {
+        return labels[i]!;
+      }
+      return drawing.fit(labels[i]!, 2 * way, axis.ticks === undefined ? axis.path : `${axis.path}.ticks[${i}]`);
+    };
     scale!.ticks.forEach((tick, i) => {
       const at = scale!.at(tick);
       drawing.push(drawing.outline(lineShape(rules.tick(plot, at)), ink, ['tick', key, tick]));
       if (shown.has(i)) {
-        drawing.push(drawing.text(labels[i]!, label(at)));
+        drawing.push(drawing.text(fitted(i, at), label(at)));
       }
     });
   } else {

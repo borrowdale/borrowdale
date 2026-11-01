@@ -216,7 +216,7 @@ export function layoutCartesian(drawing: Drawing, chart: CheckedCartesianChart, 
   });
   drawAnnotations(drawing, chart.annotations, 'front', plot, annotationAt);
   for (const entry of guides) {
-    drawGuide(drawing, plot, entry, scales[entry.key], bands, line);
+    drawGuide(drawing, plot, rect, entry, scales[entry.key], bands, line);
   }
 }
 

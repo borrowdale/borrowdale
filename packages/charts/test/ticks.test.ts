@@ -102,6 +102,22 @@ describe('listed ticks on a linear axis', () => {
     expect(labelsOutside(layoutChart(longBeforeEnd))).toBe(0);
   });
 
+  // A label is centred on its tick, so it has twice the way to the nearer side of the chart. The
+  // first is labelled alone here, as it crowds the next ones.
+  const opening = { value: 0, label: 'Opening of the new terminal building' };
+  const wider = { ...points({ ticks: [opening, 50, 100] }), width: 160 };
+  const pastStart = { ...points({ min: -200, ticks: [opening, 50, 100] }), width: 300 };
+  it.each<[string, ChartSpec]>([
+    ['wider than the chart', wider],
+    ['drawn alone well past the start of the axis', pastStart],
+  ])('cuts a label %s short to keep it on the chart', (_case, spec) => {
+    expect(labelsOutside(layoutChart(spec))).toBe(0);
+  });
+
+  it('cuts a label short with an ellipsis', () => {
+    expect(layoutChart(wider).labels[0]).toMatch(/^Opening of.*…$/);
+  });
+
   // Every tick is 0.5 from the one before, but labels need a whole unit: 1 clears 0, which 0.5 does not.
   it('keeps a label where it clears the last one kept, not where it clears the tick before it', () => {
     expect(valueLabels({ ...bars({ ticks: [0, 0.5, 1, 1.5, 2] }), height: 100 })).toEqual(['0', '1', '2']);

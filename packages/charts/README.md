@@ -252,8 +252,9 @@ chart's `style` over them, and a series' own `style` over all of these. So
 
 A chart title, an axis title or a legend name too long for its room is cut short with "…" between
 whole characters (see `fitText` in `@borrowdale/text`): the chart title to the chart's width, an
-axis title to the length of the plot, a legend name to the width of a legend row, or half the
-chart's width for a legend on the right. Tooltips and the drawing's accessible name keep the whole text. Where not even
+axis title to the length of the plot, a label below the plot to twice the way from its tick to the
+nearer side of the chart, a legend name to the width of a legend row, or half the chart's width for
+a legend on the right. Tooltips and the drawing's accessible name keep the whole text. Where not even
 "…" fits, it is an error naming the text's place in the spec.
 
 The font is not part of the spec, since a spec may come from anyone: pass a `@borrowdale/text` font
