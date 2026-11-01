@@ -44,7 +44,8 @@ const BASELINE_SHIFT: Record<TextBaseline, (ascent: number, descent: number) => 
 
 /**
  * Measures text from the font's own advance widths, with no DOM. Kerning and ligatures are not
- * applied, and the renderers switch them off, so the drawn text is exactly this wide.
+ * applied: the SVG and DOM renderers switch them off, and the canvas renderer fills one unit at a
+ * time, so none can form, and the drawn text is this wide.
  */
 export function measureText(text: string, options?: MeasureOptions): TextExtent {
   return rounded(extent(checkMeasure(text, options)));
@@ -82,7 +83,7 @@ export function fitText(text: string, maxWidth: number, options?: MeasureOptions
   return cut(low);
 }
 
-/** Measures text and places it, so the renderers only draw and never measure. */
+/** Measures text and places it, so the SVG and DOM renderers only draw; the canvas one measures each unit it fills. */
 export function layoutText(text: string, options: LayoutOptions): TextLayout {
   const checked = checkLayout(text, options);
   const { x, y, rotate } = checked;
