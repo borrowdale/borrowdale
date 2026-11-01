@@ -32,7 +32,7 @@ export const PLAIN_FORMAT: CheckedFormat = {
   suffix: '',
 };
 
-/** A linear scale before it is given a place: its ends, ticks and their labels. */
+/** The scale of a continuous axis before it is given a place: its ends, ticks and their labels. */
 export interface Scale {
   /** The ends of the axis, rounded out to ticks unless fixed. */
   domain: [number, number];
@@ -511,7 +511,7 @@ export function formatShare(share: number): string {
   return formatNumber(share * 100, Math.min(MAX_DECIMALS, Math.max(0, decimalsOf(share) - 2)), PLAIN_FORMAT);
 }
 
-/** Raw data values keep the value axis' format, without a percent-stack suffix; times are dates. */
+/** Raw data values keep the value axis' format, without a percent-stack suffix; times are written by formatTime. */
 export function formatAxisValue(value: number, axis: CheckedLinearAxis): string {
   return axis.kind === 'time' ? formatTime(value) : formatValue(value, { ...axis.format, suffix: axis.percent ? '' : axis.format.suffix });
 }

@@ -58,7 +58,7 @@ cannot share a chart:
 | `rangeArea` | a `[low, high]` pair or `null` per category, high not below low | `curve`, `axis: 'y2'` |
 | `interval` | a `[from, to]` pair or `null` per category | `display`, `width`, `overlay`, endpoint symbols, `shape`, `dataLabels`, `axis: 'y2'`; see [additional marks](#additional-cartesian-marks) |
 | `xRange` | `{ row, from, to?, label?, progress? }` items, any number per category | a Gantt or x-range chart; see [time](#time-log-and-square-root-axes) |
-| `xyLine` | numeric `[x, y]` pairs or `null` between runs | `symbol`, `dash`, `dataLabels`, `segments`, `widths`, `gradient`; see [widths and colours](#widths-crossings-and-colours) |
+| `xyLine` | `[x, y]` pairs, each read by its axis (a time on a time axis), or `null` between runs | `symbol`, `dash`, `dataLabels`, `segments`, `widths`, `gradient`; see [widths and colours](#widths-crossings-and-colours) |
 | `xyArea` | `[x, low, high]` intervals or `null` between runs, x increasing within each run | `difference` permits crossing boundaries; see [widths and colours](#widths-crossings-and-colours) |
 | `scatter` | `[x, y]` points | |
 | `bubble` | `[x, y, size]` points: the size sets the area, and is not negative | |
@@ -113,10 +113,10 @@ With `y` as the band axis, bars and lines run horizontally. A sparkline is a sma
 |---|---|
 | `type: 'band'`, `categories` | one band per category, each name at most 100 characters and at most once |
 | `type: 'linear'` | rounded out from the data to ticks of 1, 2 or 5 × 10ⁿ, about one per 50 units |
-| `y2` | a second linear axis on the right, for series with `axis: 'y2'`. Only when `x` is the band axis |
+| `y2` | a second value axis on the right, `linear`, `log` or `sqrt`, for series with `axis: 'y2'`. Only when `x` is the band axis |
 | `min`, `max` | fix an end of a linear axis; `max` must be above `min`, and data outside them is an error |
-| `step` | a tick at every multiple of it, counted from zero, with free ends rounded out to one: a number above 0 with at most 20 decimals, giving at most 1,000 ticks |
-| `ticks` | ticks exactly at these values, increasing and within any fixed end: a number, written in the axis format, or `{ value, label }`. Free ends reach the outermost tick or value. 1 to 1,000; not with `step` |
+| `step` | a tick at every multiple of it, counted from zero, with free ends rounded out to one: a number above 0, at most 1e15, with at most 20 decimals, giving at most 1,000 ticks |
+| `ticks` | ticks exactly at these values, increasing and within any fixed end: a number, written in the axis format, or `{ value, label }` with a label of at most 100 characters. Free ends reach the outermost tick or value. 1 to 1,000; not with `step` |
 | `percent` | stacks on the axis show each value as its share of the stack's total. Only bar and area series may use it, on a chart with a band axis |
 | `grid` | gridlines at the ticks; on by default, except on `y2` |
 | `title`, `hidden` | |
@@ -124,8 +124,8 @@ With `y` as the band axis, bars and lines run horizontally. A sparkline is a sma
 
 Where tick labels would overlap, an axis labels fewer of its ticks and keeps every tick and
 gridline. Evenly spaced ticks are labelled on multiples of a nice number of steps counted from zero,
-so a crowded axis with a step of 2 shows 0, 10, 20; listed ticks keep each label that clears the one
-before it.
+so a crowded axis with a step of 2 shows 0, 10, 20; listed ticks keep each label that clears the last
+one kept.
 
 Numbers are never formatted with the locale data of the JavaScript engine, which differs between
 engines; set `thousands` and `decimal` to write them for another language. Bars and areas always
@@ -176,13 +176,14 @@ every hour is `min: 0, max: 12, step: 1` over a whole turn; a compass is `min: 0
 ## Time, log and square-root axes
 
 A cartesian `x` or `y` axis may be `time`, `log` or `sqrt` as well as `band` or `linear`, and `y2`
-`log` or `sqrt`. Each takes `title`, `min`, `max`, `ticks`, `grid`, `hidden`, `format` and
-`labelAngle` as a linear axis does; `percent` is for linear axes only.
+`log` or `sqrt`. Each takes `title`, `min`, `max`, `ticks`, `grid`, `hidden` and `labelAngle` as a
+linear axis does. `log` and `sqrt` take the number `format` and `sqrt` also `step`; a time axis takes
+its own `step` and `format`, below. `percent` is for linear axes only.
 
 | `type` | Values | Ticks |
 |---|---|---|
-| `time` | ISO 8601 strings (`"2026-11-01"`, `"2026-11"`, `"2026-11-01T09:30Z"`, `"2026-11-01T09:30:15.250+01:00"`) or whole milliseconds since 1970-01-01T00:00Z, from year 0000 to 9999 | calendar boundaries in UTC, from milliseconds to millennia, about one per 50 units; `step: { unit, every }` picks them, `unit` one of `millisecond`, `second`, `minute`, `hour`, `day`, `week`, `month`, `year` |
-| `log` | numbers from 1e-20 to 1e15 | powers of ten, with 1, 2 and 5 times them, or every one to nine times, where there is room; free ends round out to powers of ten; no `step` |
+| `time` | ISO 8601 strings (`"2026-11-01"`, `"2026-11"`, `"2026-11-01T09:30Z"`, `"2026-11-01T09:30:15.250+01:00"`) or whole milliseconds since 1970-01-01T00:00Z, from year 0000 to 9999 | calendar boundaries in UTC, from milliseconds to millennia, about one per 50 units; `step: { unit, every }` picks them, `unit` one of `millisecond`, `second`, `minute`, `hour`, `day`, `week`, `month`, `year` and `every` a whole number from 1 to 1,000 (default 1), giving at most 1,000 ticks |
+| `log` | numbers from 1e-20 to 1e15 | powers of ten, with 1, 2 and 5 times them, or every one to nine times, where there is room; where none of those fits and fewer than two powers of ten lie between its ends, a linear axis' ticks; free ends round out to powers of ten; no `step` |
 | `sqrt` | numbers, negative ones mirroring positive ones | a linear axis' ticks, placed by their square roots |
 
 Times are read without the JavaScript engine's date parser, which differs between engines and
@@ -193,6 +194,12 @@ start on Monday. Labels are written without locale data, each at the coarsest le
 `2026` on a year, `Nov` on a month, `3 Nov` on a day, `09:30` on a minute; `format: { months }` gives
 the 12 month names, each at most 20 characters, in another language. Tooltips write a time as
 `2026-11-03 09:30`.
+
+A step counts every `every` of its unit from the epoch for units of fixed length (from midnight
+for hours that divide a day, from a Monday for weeks), from January for months, and from year 0 for
+years, so `{ unit: 'month', every: 3 }` falls on quarters. Where labels would overlap, a time axis
+labels every tick of its step when they fit, and otherwise only the ticks on the boundaries of a
+coarser interval, such as whole months or years.
 
 On a time axis only `interval` and `xRange` series take values on the value axis of a band chart:
 range bars and Gantt rows. Values a log axis cannot show are errors, and so are `bar` and `area`
@@ -216,14 +223,15 @@ axis, `axes.time`: a `time` axis by default, or `linear`, taking `min`, `max`, `
 | `path` | Track |
 |---|---|
 | `{ type: 'line' }` | straight across the chart (the default) |
-| `{ type: 'serpentine', rows }` | `rows` (1 to 20, default 3) left to right and back, joined by half turns; a chart too small for them is an error |
+| `{ type: 'serpentine', rows }` | `rows` (1 to 20, default 3) left to right and back, joined by half turns; a chart too short for them, or too narrow for their turns, is an error |
 | `{ type: 'spiral', turns, innerRadius }` | `turns` (1 to 20, default 3) out from `innerRadius` (0 to 0.9 of the radius, default 0.2), clockwise from the top |
-| `{ type: 'curve', points }` | through 2 to 100 `[x, y]` points, each 0 to 1 across and down the chart, joined by straight segments |
+| `{ type: 'curve', points }` | through 2 to 100 `[x, y]` points, each 0 to 1 across and down the area inside the track's labels, joined by straight segments |
 
 Values are placed by their distance along the track, and ticks fall about every 50 units of it,
 labelled on its left where they clear the labels before them. Moments are dots and periods thick
 stretches of the track; with `dataLabels`, labels go on its right, moving out up to two lines to clear
-the labels placed before them. On a tightly wound spiral some labels can still overlap.
+the labels placed before them, and then to its left, beyond the tick labels. On a tightly wound
+spiral some labels can still overlap.
 
 ## Chart options
 
@@ -348,8 +356,9 @@ bars, choosing equal errors for symmetric bars. A single endpoint marker on
 `[value, value]` makes a Cleveland dot. `error` on equal endpoints makes a target
 cap for a bullet chart.
 
-`xyLine` takes numeric `[x, y]` pairs, with `null` between runs. It connects points
-in their given order, including descending x and loops, and needs two linear axes.
+`xyLine` takes `[x, y]` pairs, each read by the axis it is on, with `null` between runs. It
+connects points in their given order, including descending x and loops, and needs two continuous
+axes: `linear`, `time`, `log` or `sqrt`.
 `symbol` adds markers, and `dash` controls the line. A lone point remains visible.
 `xyArea` takes `[x, low, high]` intervals; x increases strictly within each run.
 Use it for supplied confidence bands, with an `xyLine` for the estimate. Statistical
@@ -364,7 +373,7 @@ The area of equally shaped bubbles remains proportional to their size value.
 A tick is a vertical stroke. New symbol choices are also shown in point legends.
 
 `dataLabels: true` adds values to bars, intervals, lines, numeric lines, scatter,
-bubbles and polar scatter; pies show slice names and values. Defaults stay off.
+bubbles and polar scatter, and labels to xRange items and timeline events; pies show slice names and values. Defaults stay off.
 Labels use the relevant value-axis format where available, retain raw values for
 percent bars, fit the plotting rectangle, and can overlap in dense charts. Pie
 labels use each actual slice's offset and radius. A label that cannot fit even
@@ -393,7 +402,7 @@ SVG output embeds each referenced raster once and positions it through reference
 ### Annotations
 
 Cartesian `annotations` accept up to 100 entries. Coordinates are numbers on
-linear axes or category names on band axes. Numeric annotation coordinates
+linear, log and sqrt axes, times on time axes, and category names on band axes. Numeric annotation coordinates
 contribute to automatic domains, and values beyond fixed bounds are errors.
 Bands on category axes extend between category centres.
 
@@ -411,7 +420,7 @@ Line/band axes are `x`, `y` or `y2`. Region, arrow and label entries use `axis: 
 for their second coordinate when needed. `color` sets the shape paint; annotation
 text keeps the chart's text ink. `layer` is `back` or `front`; bands and regions
 start behind the grid, other annotations above the data. Labels stay inside the
-plot. Polar and pie annotations are not supported.
+plot. Polar, pie, gauge and timeline charts take no annotations.
 
 ### Widths, crossings and colours
 

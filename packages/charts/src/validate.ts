@@ -91,7 +91,7 @@ const gradientColor: Check<string> = (path, value) => {
 };
 
 // Each field a series type may have, read the same way by every type that has it, so a cartesian
-// type and its polar twin take the same values.
+// type and its polar twin take the same values, except that a polar chart's points are numbers only.
 const readAxis = (r: Fields) => r.optional('axis', valueAxis) ?? 'y';
 const readStack = (r: Fields) => r.optional('stack', text());
 const readCurve = (r: Fields) => r.optional('curve', curve) ?? 'linear';
@@ -223,7 +223,7 @@ const SERIES_RULES = {
         const d = fields(p, raw); d.allow(['positive', 'negative']);
         return { positive: d.required('positive', color), negative: d.required('negative', color) };
       });
-      // Its order and bounds are checked once its times are read (resolveValues).
+      // Its order and bounds are checked once its values are read against the axes (resolveValues).
       const data = r.required('data', list(0, MAX_POINTS, nullable(coordinates(['x', 'low', 'high'])), reserve));
       return { data, difference };
     },
@@ -260,7 +260,7 @@ const SERIES_RULES = {
     read: checkRadarData,
   },
   // The polar twins of bar, line, area and scatter: the same fields, read by the same readers, less
-  // what a polar chart has no use for (a second value axis, curves).
+  // what a polar chart has no use for (a second value axis, curves, times).
   rose: {
     system: 'polar',
     band: true,

@@ -373,14 +373,15 @@ export interface IntervalSeries extends ValueSeries {
   toSymbol?: Marker | undefined;
 }
 
-/**
- * The axis of a timeline: time by default, or linear, laid along its `path`. Ticks are about one
- * per 50 units of the track, labelled on its left, as a time or linear axis labels them.
- */
+/** A timeline's one axis. */
 export interface TimelineAxes {
   time?: TimelineAxis | undefined;
 }
 
+/**
+ * The axis of a timeline: time by default, or linear, laid along its `path`. Ticks are about one
+ * per 50 units of the track, labelled on its left, as a time or linear axis labels them.
+ */
 export type TimelineAxis =
   | (Omit<TimeAxis, 'title' | 'grid' | 'labelAngle'> & { path?: TimelinePath | undefined })
   | (Omit<LinearAxis, 'title' | 'grid' | 'labelAngle' | 'percent'> & { path?: TimelinePath | undefined });
@@ -390,7 +391,7 @@ export type TimelineAxis =
  * default); a `serpentine` of `rows` (1 to 20, default 3) left to right and back, joined by half
  * turns; a `spiral` of `turns` (1 to 20, default 3) out from `innerRadius` (0 to 0.9 of the radius,
  * default 0.2), clockwise from the top; or a `curve` through 2 to 100 `points`, each `[x, y]` from
- * 0 to 1 across and down the chart, joined by straight segments.
+ * 0 to 1 across and down the area inside the track's labels, joined by straight segments.
  */
 export type TimelinePath =
   | { type: 'line' }
@@ -441,10 +442,11 @@ export interface XRangeSeries extends SeriesBase {
   shape?: 'rectangle' | 'rounded' | undefined;
   /** Fraction of the row's slot, from 0.05 to 1. Defaults to 0.6. */
   width?: number | undefined;
+  /** Overlay the row's centre instead of reserving a grouped slot. Defaults to false. */
   overlay?: boolean | undefined;
 }
 
-/** Numeric points joined in their supplied order, including loops and descending x. */
+/** Points joined in their supplied order, including loops and descending x, each read by its axis. */
 export interface XYLineSeries extends SeriesBase {
   type: 'xyLine';
   /** Show fitted values at marks. Labels can overlap in dense charts. */
@@ -467,7 +469,7 @@ export interface LinearGradient {
   stops: readonly { offset: number; color: string }[];
 }
 
-/** Supplied numeric confidence intervals, joined by straight edges. */
+/** Supplied confidence intervals, joined by straight edges, each read by its axis. */
 export interface XYAreaSeries extends SeriesBase {
   type: 'xyArea';
   /** X must increase strictly within each run; null starts a new run. */
@@ -481,7 +483,7 @@ export interface ScatterSeries extends SeriesBase {
   /** Show fitted values at marks. Labels can overlap in dense charts. */
   dataLabels?: boolean | undefined;
   symbol?: Marker | undefined;
-  /** Needs both axes to be linear. */
+  /** Needs both axes continuous: linear, log, square-root or time. */
   data: readonly (readonly [x: ChartValue, y: ChartValue])[];
 }
 
@@ -490,7 +492,7 @@ export interface BubbleSeries extends SeriesBase {
   /** Show fitted values at marks. Labels can overlap in dense charts. */
   dataLabels?: boolean | undefined;
   symbol?: Marker | undefined;
-  /** The size sets each bubble's area and must not be negative. Needs both axes to be linear. */
+  /** The size sets each bubble's area and must not be negative. Needs both axes continuous: linear, log, square-root or time. */
   data: readonly (readonly [x: ChartValue, y: ChartValue, size: number])[];
 }
 

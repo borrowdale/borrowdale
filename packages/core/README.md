@@ -140,7 +140,7 @@ to a drawing, or positions on a logarithmic scale):
 import { cos, log, sin } from '@borrowdale/core/math';
 
 const point = [cx + r * cos(angle), cy + r * sin(angle)];
-const decades = log(value) / log(10);
+const along = (log(value) - log(low)) / (log(high) - log(low));
 ```
 
 They give the same result in every JavaScript engine. That result can differ from `Math.sin`,
