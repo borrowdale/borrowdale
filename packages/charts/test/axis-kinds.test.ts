@@ -97,6 +97,12 @@ describe('a log axis', () => {
     expect(labels(spec).slice(6)).toEqual(expected);
   });
 
+  // Seven whole tens are too many for a short axis, one 5 × 10 is too few, and no power of ten is
+  // within the range.
+  it('ticks a range within one power of ten as a linear axis does when its powers are too few', () => {
+    expect(labels({ ...xy(linearX, { type: 'log', min: 30, max: 95 }, [[0, 40], [1, 90]], 'scatter'), height: 200 }).slice(6)).toEqual(['40', '60', '80']);
+  });
+
   it('places each power of ten an equal distance apart', () => {
     expect(place(scaleOf(axisOf('log'), [1, 1000], 300), [0, 300]).at(10)).toBeCloseTo(100, 9);
   });
@@ -109,6 +115,9 @@ describe('a log axis', () => {
     ['a min of 0', xy(linearX, { type: 'log', min: 0 }, [[0, 1]], 'scatter'), 'Invalid chart: axes.y.min must be a number from 1e-20 to 1e15 on a log axis, got 0'],
     ['a step', xy(linearX, { type: 'log', step: 10 }, [[0, 1]], 'scatter'), 'Invalid chart: axes.y has an unknown key, "step"'],
     ['a percent stack', xy(linearX, { type: 'log', percent: true }, [[0, 1]], 'scatter'), 'Invalid chart: axes.y has an unknown key, "percent"'],
+    ['a max at the least value it shows, with the data there too', xy(linearX, { type: 'log', max: 1e-20 }, [[0, 1e-20]], 'scatter'), 'Invalid chart: axes.y.max is 1e-20, the least a log axis shows, which leaves no room below it'],
+    ['ends whose logarithms are equal', xy(linearX, { type: 'log', min: 999999999999999.9, max: 1e15 }, [[0, 1e15]], 'scatter'), 'Invalid chart: axes.y cannot place values between 999999999999999.9 and 1000000000000000, whose logarithms are equal'],
+    ['data beyond a fixed end', xy(linearX, { type: 'log', max: 100 }, [[0, 400]], 'scatter'), 'Invalid chart: axes.y.max is 100, but the data reach 400'],
   ])('rejects %s', (_case, spec, message) => {
     expect(laying(spec)).toThrow(message);
   });
@@ -131,6 +140,10 @@ describe('a square-root axis', () => {
     ['a negative value as far below 0 as its positive is above', [-100, 100], -25, 25],
   ])('places %s', (_case, extent, value, at) => {
     expect(place(scaleOf(axisOf('sqrt', { min: extent[0], max: extent[1] }), extent, 300), [0, 100]).at(value)).toBeCloseTo(at, 9);
+  });
+
+  it('rejects ends whose square roots are equal', () => {
+    expect(laying(xy(linearX, { type: 'sqrt', min: 999999999999999.9, max: 1e15 }, [[0, 1e15]], 'scatter'))).toThrow('Invalid chart: axes.y cannot place values between 999999999999999.9 and 1000000000000000, whose square roots are equal');
   });
 
   it('rejects data past a fixed end with listed ticks, as without them', () => {

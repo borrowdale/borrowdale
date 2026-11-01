@@ -192,8 +192,24 @@ function linearFraction([from, to]: [number, number]): (value: number) => number
  */
 function sqrtScale(axis: CheckedLinearAxis, extent: [number, number], length: number): Scale {
   const scale = linearScale(axis, extent, length);
-  const [start, end] = scale.domain.map(signedRoot) as [number, number];
-  return { ...scale, fraction: (value) => (signedRoot(value) - start) / (end - start) };
+  return { ...scale, fraction: transformedFraction(axis, scale.domain, signedRoot, 'square roots') };
+}
+
+/**
+ * Where a value lies between the ends once both are transformed, by a logarithm or a square root.
+ * Ends close enough that their transforms are equal leave no room to place a value between them.
+ */
+function transformedFraction(
+  axis: CheckedLinearAxis,
+  [from, to]: [number, number],
+  transform: (value: number) => number,
+  transforms: string,
+): (value: number) => number {
+  const [start, end] = [transform(from), transform(to)];
+  if (!(end > start)) {
+    fail(axis.path, `cannot place values between ${from} and ${to}, whose ${transforms} are equal`);
+  }
+  return (value) => (transform(value) - start) / (end - start);
 }
 
 // Square roots are correctly rounded, so the same in every engine.
@@ -211,10 +227,7 @@ const DECADE_TICKS = [[1, 2, 3, 4, 5, 6, 7, 8, 9], [1, 2, 5], [1]] as const;
  * MIN_LOG. Positions come from the portable logarithm, so they are the same in every engine.
  */
 function logScale(axis: CheckedLinearAxis, [lo, hi]: [number, number], length: number): Scale {
-  const spacing = ([from, to]: [number, number]) => {
-    const [start, end] = [log(from), log(to)];
-    return (value: number) => (log(value) - start) / (end - start);
-  };
+  const spacing = (domain: [number, number]) => transformedFraction(axis, domain, log, 'logarithms');
   if (axis.ticks) {
     const listed = listedTicks(axis, axis.ticks, [lo, hi]);
     return { ...listed, fraction: spacing(listed.domain) };
@@ -222,7 +235,13 @@ function logScale(axis: CheckedLinearAxis, [lo, hi]: [number, number], length: n
   // Free ends round out to powers of ten; one value alone shows the power of ten it lies in.
   let domain: [number, number] = [axis.min ?? POWERS[decadeOf(lo) + EXPONENT_OFFSET]!, axis.max ?? powerAtOrAbove(hi)];
   if (!(domain[1] > domain[0])) {
-    domain = axis.max === undefined ? [domain[0], POWERS[decadeOf(domain[0]) + EXPONENT_OFFSET + 1]!] : [POWERS[decadeOf(domain[1]) + EXPONENT_OFFSET - 1]!, domain[1]];
+    // A fixed end the data all equal: the free end moves to the next power of ten out from it.
+    if (axis.max === undefined) {
+      domain = [domain[0], POWERS[decadeOf(domain[0]) + EXPONENT_OFFSET + 1]!];
+    } else {
+      const below = POWERS[decadeOf(domain[1]) + EXPONENT_OFFSET - 1];
+      domain = [below ?? fail(`${axis.path}.max`, `is ${axis.max}, the least a log axis shows, which leaves no room below it`), domain[1]];
+    }
   }
   const count = tickCountFor(length);
   const exponents = integersBetween(decadeOf(domain[0]), decadeOf(domain[1]));
@@ -233,8 +252,9 @@ function logScale(axis: CheckedLinearAxis, [lo, hi]: [number, number], length: n
   );
   const fitting = candidates.find((ticks) => ticks.length >= 2 && ticks.length <= count + 1);
   const fraction = spacing(domain);
-  if (!fitting && candidates[0]!.length < 2) {
-    // Within one power of ten: a linear axis' ticks, placed by their logarithms.
+  if (!fitting && candidates[2]!.length < 2) {
+    // Fewer than two powers of ten, and no denser ticks that fit: a linear axis' ticks, placed by
+    // their logarithms.
     const linear = linearScale(axis, domain, length);
     return { ...linear, fraction, labelled: (room, at) => keptApart(linear.ticks, room, at) };
   }
