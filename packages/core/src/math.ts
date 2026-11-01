@@ -4,23 +4,19 @@
 // other packages use these rather than a copy.
 import { exp as portableExp, log as portableLog } from './exponential.js';
 import { show } from './show.js';
-import { cos as engineCos, sin as engineSin } from './trig.js';
+import { cos as engineCos, MAX_ANGLE, sin as engineSin } from './trig.js';
+
+export { MAX_ANGLE };
 
 /**
- * The largest |x|, in radians, that `sin` and `cos` accept. Their argument reduction is exact to
- * about 2^20 · π/2, so every angle core draws with stays within this bound.
- */
-export const MAX_ANGLE = 1e6;
-
-/**
- * The sine of `x` radians. Throws a `RangeError` unless `x` is a finite number within ±1,000,000.
+ * The sine of `x` radians. Throws a `RangeError` unless `x` is a finite number within ±MAX_ANGLE.
  */
 export function sin(x: number): number {
   return engineSin(checkArgument('sin', x));
 }
 
 /**
- * The cosine of `x` radians. Throws a `RangeError` unless `x` is a finite number within ±1,000,000.
+ * The cosine of `x` radians. Throws a `RangeError` unless `x` is a finite number within ±MAX_ANGLE.
  */
 export function cos(x: number): number {
   return engineCos(checkArgument('cos', x));

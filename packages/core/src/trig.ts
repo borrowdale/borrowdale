@@ -5,7 +5,13 @@
 // |x| < 2^20 · π/2, sin, cos and asin are within 2 units in the last place of Math, except near
 // their zeros, where the absolute error stays below 1e-26; atan matches Math; tan, a quotient of
 // the two, is within about 3. Larger arguments are NOT reduced and give wrong results; validation
-// keeps every angle the engine computes within ±MAX_ANGLE (math.ts).
+// keeps every angle the engine computes within ±MAX_ANGLE.
+
+/**
+ * The largest |x|, in radians, that `sin` and `cos` accept. Their argument reduction is exact to
+ * about 2^20 · π/2, so every angle core draws with stays within this bound.
+ */
+export const MAX_ANGLE = 1e6;
 
 const INV_PIO2 = 6.36619772367581382433e-1;
 // π/2 split into three parts of 33 bits each, so n · part is exact for n < 2^20 (Cody–Waite).
