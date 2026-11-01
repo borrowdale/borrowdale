@@ -184,8 +184,9 @@ projects need `"dom"` in `compilerOptions.lib`, even when they only render on th
 
 ## License
 
-MIT. The stroke engine is ported from MIT-licensed code by Preet Shihn, and its trigonometry uses
-constants from fdlibm; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+MIT. The stroke engine is ported from MIT-licensed code by Preet Shihn; its trigonometry uses
+constants from fdlibm, and its logarithm is a port of fdlibm's; see
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 ### Validation without drawing
 

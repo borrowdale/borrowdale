@@ -1,6 +1,7 @@
 # Third-party notices
 
-`src/engine/` is a TypeScript port of the following packages. Their notices:
+`src/engine/` is a TypeScript port of the following packages, and `src/trig.ts` and
+`src/logarithm.ts` draw on fdlibm. Their notices:
 
 ## rough.js 4.6.6
 
