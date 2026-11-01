@@ -34,6 +34,12 @@ const placesOf = (spec: ChartSpec, text: string): [number, number][] =>
   layoutChart(spec)
     .nodes.flatMap((node) => (node.kind === 'mark' ? node.nodes : [node]))
     .flatMap((node) => (node.kind === 'text' && node.text.text === text ? [[node.text.x, node.text.y] as [number, number]] : []));
+// A hidden straight axis with listed ticks labelled `first` and `last`, which are not drawn.
+const hiddenTicks = (first: string, last: string): ChartSpec =>
+  ({ width: 400, height: 200, axes: { time: { type: 'linear', hidden: true, ticks: [{ value: 0, label: first }, { value: 100, label: last }] } }, series: [{ type: 'timeline', name: 'T', data: [{ at: 0 }, { at: 100 }] }] }) as ChartSpec;
+// Four labels at one moment on a hidden axis: three take the places on one side, the fourth the
+// first on the other, as close to the track as there are no tick labels to clear.
+const fourAtOnce = { width: 400, height: 240, axes: { time: { type: 'time', hidden: true } }, series: [{ type: 'timeline', name: 'T', dataLabels: true, data: [{ at: '2000-01-01' }, { at: '2010-01-01', label: 'A' }, { at: '2010-01-01', label: 'B' }, { at: '2010-01-01', label: 'C' }, { at: '2010-01-01', label: 'D' }, { at: '2020-01-01' }] }] } as ChartSpec;
 // A straight linear timeline from `from` to `to`, whose ticks are wide numbers.
 const wide = (from: number, to: number, size: [number, number]): ChartSpec =>
   ({ width: size[0], height: size[1], axes: { time: { type: 'linear' } }, series: [{ type: 'timeline', name: 'T', data: [{ at: from }, { at: to }] }] }) as ChartSpec;
@@ -87,6 +93,34 @@ describe('a timeline', () => {
     expect(labelsOutside(layoutChart(timeline(undefined, [300, 160], [{ at: '2000-01-01', label: 'A long label right at the very start' }, { at: '2020-01-01' }])))).toBe(0);
   });
 
+  it('lays a hidden axis out whatever its tick labels', () => {
+    expect(layoutChart(hiddenTicks('A very long label at the very start', 'And another at the end'))).toEqual(layoutChart(hiddenTicks('a', 'b')));
+  });
+
+  it('puts a label on the far side of a hidden axis as close to the track as on the near side', () => {
+    expect([placesOf(fourAtOnce, 'A'), placesOf(fourAtOnce, 'D')]).toEqual([[[195.97, 139.63]], [[195.34, 106.51]]]);
+  });
+
+  // The sides of a straight track widen for its last tick label, so both end labels are centred on
+  // their ticks, "Now" as far in from the left as the last one is from the right.
+  it('centres the long end labels of a straight track on their ticks', () => {
+    const straight = geologic({ type: 'line' }, [400, 120]);
+    expect([placesOf(straight, 'Now'), placesOf(straight, 'Start of the Cambrian')]).toEqual([[[61.56, 44.51]], [[261.79, 44.51]]]);
+  });
+
+  it('draws no event labels unless its dataLabels say so', () => {
+    expect(labels({ width: 400, height: 200, series: [{ type: 'timeline', name: 'T', data: [{ at: '2000-01-01', label: 'A' }, { at: '2010-01-01', label: 'B' }] }] } as ChartSpec)).toEqual(['2000', '2002', '2004', '2006', '2008', '2010']);
+  });
+
+  it('reaches the end of a period after the last moment', () => {
+    expect(labels(timeline(undefined, [400, 200], [{ at: '2000-01-01', to: '2030-01-01' }, { at: '2010-01-01' }]))).toEqual(['2000', '2010', '2020', '2030']);
+  });
+
+  // Its free end moves one step out from the min, as on any time axis.
+  it('starts at its min with no events', () => {
+    expect(labels({ width: 400, height: 200, axes: { time: { type: 'time', min: '2000-01-01' } }, series: [{ type: 'timeline', name: 'T', data: [] }] } as ChartSpec)).toEqual(['2000', '06:00']);
+  });
+
   it('keeps labels wider than the cells of its grid apart', () => {
     expect(overlappingTexts(layoutChart(wideLabels))).toEqual([]);
   });
@@ -111,6 +145,7 @@ describe('a timeline', () => {
     ['a serpentine of 3 rows at 200 × 300', geologic({ type: 'serpentine', rows: 3 }, [200, 300])],
     ['a straight track at 120 × 120', geologic({ type: 'line' }, [120, 120])],
     ['a spiral at 600 × 600', geologic({ type: 'spiral' }, [600, 600])],
+    ['a curve straight across at 400 × 160, whose sides do not widen', geologic({ type: 'curve', points: [[0, 0.5], [1, 0.5]] }, [400, 160])],
   ])('lays long listed tick labels out on %s, all on the chart', (_case, spec) => {
     expect(labelsOutside(layoutChart(spec))).toBe(0);
   });
@@ -150,6 +185,7 @@ describe('a timeline', () => {
     ['a curve of one point', timeline({ type: 'curve', points: [[0, 0]] }), 'Invalid chart: axes.time.path.points must have 2 to 100 entries, got 1'],
     ['a curve with no length', timeline({ type: 'curve', points: [[0.5, 0.5], [0.5, 0.5]] }), 'Invalid chart: axes.time.path.points must be spread out: on a 460 × 260 chart they make a track shorter than 1'],
     ['a curve point off the chart', timeline({ type: 'curve', points: [[0, 0], [1.5, 1]] }), 'Invalid chart: axes.time.path.points[1][0] must be a number from 0 to 1, got 1.5'],
+    ['a curve point below the chart', timeline({ type: 'curve', points: [[0, 0], [1, 1.5]] }), 'Invalid chart: axes.time.path.points[1][1] must be a number from 0 to 1, got 1.5'],
     ['an unknown track', timeline({ type: 'wave' }), 'Invalid chart: axes.time.path.type must be one of line, serpentine, spiral, curve, got "wave"'],
     ['a key of another track', timeline({ type: 'line', rows: 2 }), 'Invalid chart: axes.time.path has an unknown key, "rows"'],
     ['a period that ends before it starts', timeline(undefined, [460, 160], [{ at: '2000-01-01', to: '1999-01-01' }]), 'Invalid chart: series[0].data[0].to must be after at; leave it out for a moment'],

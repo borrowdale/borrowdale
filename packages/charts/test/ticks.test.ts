@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import '../../core/test/support/forbid-unportable-calls.js';
 import { layoutChart, type ChartSpec } from '@borrowdale/charts';
-import { labelsOutside, laying } from './support/layout.js';
+import { labelsOutside, laying, pointsOutside } from './support/layout.js';
 
 const months = { type: 'band', categories: ['Jan', 'Feb'] };
 const bars = (y: object): ChartSpec =>
@@ -25,6 +25,14 @@ describe('a step on a linear axis', () => {
     ['keeps the axis format', { step: 1, format: { prefix: '€' } }, ['€0', '€1', '€2']],
   ])('%s', (_case, y, labels) => {
     expect(valueLabels(bars(y))).toEqual(labels);
+  });
+
+  it('takes a step giving 1,000 ticks', () => {
+    expect(laying(points({ min: 0, max: 999, step: 1 }))).not.toThrow();
+  });
+
+  it('rejects a step giving 1,001 ticks', () => {
+    expect(laying(points({ min: 0, max: 1000, step: 1 }))).toThrow('Invalid chart: axes.x.step gives 1001 ticks from 0 to 1000, more than 1000');
   });
 
   it('labels a crowded step on multiples of a nice number of steps, counted from zero', () => {
@@ -82,8 +90,9 @@ describe('listed ticks on a linear axis', () => {
     expect(layoutChart({ ...dial(compass), width: 120, height: 120 }).labels).toEqual(['N', 'E', 'S', 'W', '3']);
   });
 
+  // The y axis' first label, 1.0, follows the x axis' labels.
   it('labels the first point alone where even it crowds the last', () => {
-    expect(layoutChart(points({ min: 0, max: 100, ticks: [0, { value: 1, label: 'the last tick' }] })).labels).not.toContain('the last tick');
+    expect(layoutChart(points({ min: 0, max: 100, ticks: [0, { value: 1, label: 'b' }] })).labels.slice(0, 2)).toEqual(['0', '1.0']);
   });
 
   it('labels a compass dial by its points', () => {
@@ -100,6 +109,12 @@ describe('listed ticks on a linear axis', () => {
 
   it('keeps every label on the chart', () => {
     expect(labelsOutside(layoutChart(longBeforeEnd))).toBe(0);
+  });
+
+  // The line starts at 0, before the first tick, which the axis' free start reaches past.
+  it('reaches data before the first tick', () => {
+    const before = { width: 400, height: 200, legend: 'none', axes: { x: { type: 'linear', ticks: [10, 20] }, y: { type: 'linear' } }, series: [{ type: 'xyLine', name: 'L', data: [[0, 1], [20, 2]] }] } as ChartSpec;
+    expect(pointsOutside(layoutChart(before))).toBe(0);
   });
 
   // A label is centred on its tick, so it has twice the way to the nearer side of the chart. The

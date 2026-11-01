@@ -78,6 +78,9 @@ describe('an xRange series', () => {
 
   it.each<[string, ChartSpec, string]>([
     ['an item in a row that is not a category', items([{ row: 'Test', from: '2026-01-01', to: '2026-01-02' }]), 'Invalid chart: series[0].data[0].row is not a category of axes.y, got "Test"'],
+    ['a row named constructor, which no category has', items([{ row: 'constructor', from: '2026-01-05' }]), 'Invalid chart: series[0].data[0].row is not a category of axes.y, got "constructor"'],
+    ['a row named __proto__, which no category has', items([{ row: '__proto__', from: '2026-01-05' }]), 'Invalid chart: series[0].data[0].row is not a category of axes.y, got "__proto__"'],
+    ['a row named toString, which no category has', items([{ row: 'toString', from: '2026-01-05' }]), 'Invalid chart: series[0].data[0].row is not a category of axes.y, got "toString"'],
     ['a row longer than 100 characters', items([{ row: 'x'.repeat(101), from: '2026-01-05' }]), 'Invalid chart: series[0].data[0].row must be a string of at most 100 characters, got a string of 101 characters'],
     ['a row with a line break, which no category has', items([{ row: 'Bu\nild', from: '2026-01-05' }]), 'Invalid chart: series[0].data[0].row is not a category of axes.y, got "Bu\\nild"'],
     ['a time longer than 40 characters', items([{ row: 'Build', from: '2026-01-05T00:00:00.00000000000000000000Z' }]), 'Invalid chart: series[0].data[0].from must be a string of at most 40 characters, got "2026-01-05T00:00:00.00000000000000000000Z"'],

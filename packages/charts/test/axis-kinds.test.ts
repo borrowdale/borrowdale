@@ -16,6 +16,9 @@ const plan: ChartSpec = {
   axes: { x: { type: 'time' }, y: { type: 'band', categories: ['Design', 'Build'] } },
   series: [{ type: 'interval', name: 'Plan', data: [['2026-01-05', '2026-01-20'], ['2026-01-15', '2026-02-10']] }],
 } as ChartSpec;
+// Where each text `text` is drawn across the chart.
+const xsOf = (spec: ChartSpec, text: string): number[] =>
+  layoutChart(spec).nodes.flatMap((node) => (node.kind === 'text' && node.text.text === text ? [node.text.x] : []));
 // The value labels, after the categories or before the y axis' labels.
 const labels = (spec: ChartSpec): string[] => layoutChart(spec).labels;
 const svg = (spec: ChartSpec): string => toSvgChart(layoutChart(spec));
@@ -69,6 +72,29 @@ describe('a time axis', () => {
     expect(svg(onTime({}, [[Date.UTC(2026, 10, 3), 1], [Date.UTC(2026, 10, 30), 2]]))).toBe(svg(onTime({}, [['2026-11-03', 1], ['2026-11-30', 2]])));
   });
 
+  // February's first is the only tick on the boundary of a coarser interval that the labels fit.
+  it('labels a crowded daily step by the one month it falls on', () => {
+    expect(labels({ ...onTime({ step: { unit: 'day' } }, [['2026-01-20', 1], ['2026-02-10', 2]], 200), height: 200 })).toEqual(['Feb', '1.0', '1.5', '2.0']);
+  });
+
+  // The month's boundary is the fixed max itself, so its tick is the axis' own.
+  it('keeps the interval its length chooses where the fixed ends hold one of its boundaries', () => {
+    const month = { width: 200, height: 200, legend: 'none', axes: { x: { type: 'time', min: '2026-01-02', max: '2026-02-01' }, y: linearY }, series: [{ type: 'scatter', name: 'S', data: [['2026-01-10', 1]] }] } as ChartSpec;
+    expect(labels(month)).toEqual(['Feb', '0.0', '0.5', '1.0']);
+  });
+
+  it('takes a daily step over 1,000 days', () => {
+    expect(laying(onTime({ min: '2026-01-01', max: '2028-09-26', step: { unit: 'day' } }, [['2026-02-01', 1]]))).not.toThrow();
+  });
+
+  // Both axes end at 06:00, where the label is drawn: a free end moves from a fixed min off a
+  // boundary to the next boundary, as data there would take it.
+  it('moves its free end from a fixed min off a boundary to the next boundary', () => {
+    const alone = onTime({ min: '2026-11-03T05:30Z', step: { unit: 'hour' } }, [['2026-11-03T05:30Z', 1]]);
+    const reaching = onTime({ min: '2026-11-03T05:30Z', step: { unit: 'hour' } }, [['2026-11-03T05:30Z', 1], ['2026-11-03T06:00Z', 1]]);
+    expect(xsOf(alone, '06:00')).toEqual(xsOf(reaching, '06:00'));
+  });
+
   it('writes a time in a tooltip as its date and time of day', () => {
     expect(svgTitles(xy({ type: 'time' }, linearY, [['2026-11-03T09:30Z', 5]], 'scatter'))).toEqual(['S: 2026-11-03 09:30, 5']);
   });
@@ -102,6 +128,10 @@ describe('a time axis', () => {
     ['a min at the latest time it shows, with the data there too', onTime({ min: '9999-12-31T23:59:59.999Z' }, [['9999-12-31T23:59:59.999Z', 1]]), 'Invalid chart: axes.x.min is 9999-12-31 23:59:59.999, the latest a time axis shows, which leaves no room after it'],
     ['data all at the latest time it shows, on a step that ends there', onTime({ step: { unit: 'millisecond' } }, [['9999-12-31T23:59:59.999Z', 1]]), 'Invalid chart: axes.x has all its data at 9999-12-31 23:59:59.999, the latest a time axis shows, which leaves no room after it'],
     ['data after a fixed max', onTime({ max: '2026-02-01' }, [['2026-03-01', 1]]), 'Invalid chart: axes.x.max is 2026-02-01, but the data reach 2026-03-01'],
+    ['a time with a line break, which is read as a time', onTime({}, [['2026-11-03\n', 1]]), 'Invalid chart: series[0].data[0][0] must be an ISO 8601 date such as "2026-11-01" or "2026-11-01T09:30Z", or milliseconds, got "2026-11-03\\n"'],
+    ['a time of 40 characters, which is read as a time', onTime({}, [['2026-11-03T09:30:15.250+01:00xxxxxxxxxxx', 1]]), 'Invalid chart: series[0].data[0][0] must be an ISO 8601 date such as "2026-11-01" or "2026-11-01T09:30Z", or milliseconds, got "2026-11-03T09:30:15.250+01:00xxxxxxxxxxx"'],
+    ['a time of 41 characters', onTime({}, [['2026-11-03T09:30:15.250+01:00xxxxxxxxxxxx', 1]]), 'Invalid chart: series[0].data[0][0] must be a string of at most 40 characters, got "2026-11-03T09:30:15.250+01:00xxxxxxxxxxxx"'],
+    ['a daily step over 1,001 days', onTime({ min: '2026-01-01', max: '2028-09-27', step: { unit: 'day' } }, [['2026-02-01', 1]]), 'Invalid chart: axes.x.step gives more than 1000 ticks from 2026-01-01 to 2028-09-27'],
     ['a time past 9999 once its offset is applied', onTime({}, [['9999-12-31T23:30-01:00', 1]]), 'Invalid chart: series[0].data[0][0] is outside 0000-01-01 to 9999-12-31 in UTC, got "9999-12-31T23:30-01:00"'],
     ['a step with listed ticks', onTime({ step: { unit: 'month' }, ticks: ['2026-01-01'] }, [['2026-01-01', 1]]), 'Invalid chart: axes.x cannot combine step and ticks'],
     ['a month name over 20 characters', onTime({ format: { months: ['m'.repeat(21), 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l'] } }, [['2026-01-01', 1]]), 'Invalid chart: axes.x.format.months[0] must be a string of at most 20 characters, got "mmmmmmmmmmmmmmmmmmmmm"'],
@@ -160,11 +190,38 @@ describe('a log axis', () => {
     expect(place(scaleOf(axisOf('log'), [1, 1000], 300), [0, 300]).at(10)).toBeCloseTo(100, 9);
   });
 
+  // 1, 2, 5 and 10 are one more than the three ticks the axis' length asks for, which is allowed.
+  it('labels 1, 2 and 5 times a power of ten on a short axis', () => {
+    expect(labels({ width: 200, height: 200, legend: 'none', axes: { x: { type: 'log' }, y: linearY }, series: [{ type: 'scatter', name: 'S', data: [[1, 1], [10, 2]] }] } as ChartSpec).slice(0, 4)).toEqual(['1', '2', '5', '10']);
+  });
+
+  // Linear ticks placed by their logarithms get closer up the axis, so the labels kept are not
+  // evenly spaced in value: 80 crowds 70, and 90 clears it.
+  it('labels the crowded linear ticks of a narrow range where each clears the last kept', () => {
+    const tall = { width: 400, height: 320, fontSize: 24, legend: 'none', axes: { x: { type: 'linear', hidden: true }, y: { type: 'log', min: 30, max: 95 } }, series: [{ type: 'scatter', name: 'S', data: [[0, 40], [1, 90]] }] } as ChartSpec;
+    expect(labels(tall)).toEqual(['30', '40', '50', '60', '70', '90']);
+  });
+
+  it('places listed ticks by their logarithms', () => {
+    const ticks = [{ value: 1, label: undefined }, { value: 10, label: undefined }, { value: 1000, label: undefined }];
+    expect(place(scaleOf(axisOf('log', { ticks }), [1, 1000], 300), [0, 300]).at(10)).toBeCloseTo(100, 9);
+  });
+
+  it('writes a value in a tooltip as a number', () => {
+    expect(svgTitles(xy({ type: 'log' }, linearY, [[10, 1], [1000, 2]], 'scatter'))).toEqual(['S: 10, 1', 'S: 1,000, 2']);
+  });
+
+  // A bubble's size is not on either axis.
+  it('takes a bubble of size 0 on a log axis', () => {
+    expect(laying(xy(linearX, { type: 'log' }, [[1, 10, 0], [2, 100, 5]], 'bubble'))).not.toThrow();
+  });
+
   it.each<[string, ChartSpec, string]>([
     ['a value of 0', xy(linearX, { type: 'log' }, [[0, 0]], 'scatter'), 'Invalid chart: series[0].data[0][1] must be a number from 1e-20 to 1e15 on a log axis, got 0'],
     ['a negative value of a line', { width: 400, height: 200, axes: { x: { type: 'band', categories: ['a'] }, y: { type: 'log' } }, series: [{ type: 'line', name: 'L', data: [-1] }] } as ChartSpec, 'Invalid chart: series[0].data[0] must be a number from 1e-20 to 1e15 on a log axis, got -1'],
     ['a bar series', { width: 400, height: 200, axes: { x: { type: 'band', categories: ['a'] }, y: { type: 'log' } }, series: [{ type: 'bar', name: 'B', data: [1] }] } as ChartSpec, 'Invalid chart: series[0] is a bar series on axes.y, a log axis, which cannot show the 0 it stands on'],
     ['an area series', { width: 400, height: 200, axes: { x: { type: 'band', categories: ['a'] }, y: { type: 'log' } }, series: [{ type: 'area', name: 'A', data: [1] }] } as ChartSpec, 'Invalid chart: series[0] is an area series on axes.y, a log axis, which cannot show the 0 it stands on'],
+    ['a value of 0 on y2', { width: 400, height: 200, axes: { x: { type: 'band', categories: ['a'] }, y: { type: 'linear' }, y2: { type: 'log' } }, series: [{ type: 'line', name: 'A', data: [1] }, { type: 'line', name: 'B', axis: 'y2', data: [0] }] } as ChartSpec, 'Invalid chart: series[1].data[0] must be a number from 1e-20 to 1e15 on a log axis, got 0'],
     ['a min of 0', xy(linearX, { type: 'log', min: 0 }, [[0, 1]], 'scatter'), 'Invalid chart: axes.y.min must be a number from 1e-20 to 1e15 on a log axis, got 0'],
     ['a step', xy(linearX, { type: 'log', step: 10 }, [[0, 1]], 'scatter'), 'Invalid chart: axes.y has an unknown key, "step"'],
     ['a percent stack', xy(linearX, { type: 'log', percent: true }, [[0, 1]], 'scatter'), 'Invalid chart: axes.y has an unknown key, "percent"'],

@@ -31,11 +31,13 @@ describe('time', () => {
     ['29 February in a common year', '2027-02-29', 'Invalid chart: axes.x.min is not a date in the calendar, got "2027-02-29"'],
     ['29 February in a century not divisible by 400', '1900-02-29', 'Invalid chart: axes.x.min is not a date in the calendar, got "1900-02-29"'],
     ['31 April', '2026-04-31', 'Invalid chart: axes.x.min is not a date in the calendar, got "2026-04-31"'],
+    ['31 November', '2026-11-31', 'Invalid chart: axes.x.min is not a date in the calendar, got "2026-11-31"'],
     ['month 13', '2026-13', 'Invalid chart: axes.x.min is not a date in the calendar, got "2026-13"'],
     ['day 0', '2026-01-00', 'Invalid chart: axes.x.min is not a date in the calendar, got "2026-01-00"'],
     ['hour 24', '2026-01-01T24:00Z', 'Invalid chart: axes.x.min is not a time of day, got "2026-01-01T24:00Z"'],
     ['a leap second', '2016-12-31T23:59:60Z', 'Invalid chart: axes.x.min is not a time of day, got "2016-12-31T23:59:60Z"'],
     ['an offset of 24 hours', '2026-01-01T00:00+24:00', 'Invalid chart: axes.x.min has an offset that is not a time of day, got "2026-01-01T00:00+24:00"'],
+    ['an offset of 60 minutes', '2026-01-01T00:00+01:60', 'Invalid chart: axes.x.min has an offset that is not a time of day, got "2026-01-01T00:00+01:60"'],
     ['a date and time without an offset', '2026-11-01T09:30', 'Invalid chart: axes.x.min must end in Z or an offset such as +01:00, since a time without one is local time, got "2026-11-01T09:30"'],
     ['English prose', 'March 1 2027', 'Invalid chart: axes.x.min must be an ISO 8601 date such as "2026-11-01" or "2026-11-01T09:30Z", or milliseconds, got "March 1 2027"'],
     ['a space before the time', '2026-11-01 09:30Z', 'Invalid chart: axes.x.min must be an ISO 8601 date such as "2026-11-01" or "2026-11-01T09:30Z", or milliseconds, got "2026-11-01 09:30Z"'],
@@ -114,6 +116,10 @@ describe('time labels', () => {
 
   it('writes a tooltip time with its milliseconds padded to three digits', () => {
     expect(formatTime(time('at', '2026-11-03T09:30:15.025Z'))).toBe('2026-11-03 09:30:15.025');
+  });
+
+  it('writes a tooltip time at half past midnight with its time of day', () => {
+    expect(formatTime(time('at', '2026-11-03T00:30Z'))).toBe('2026-11-03 00:30');
   });
 
   it('writes months in the names it is given', () => {

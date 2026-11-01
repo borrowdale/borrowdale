@@ -49,6 +49,11 @@ describe('sketch', () => {
     expect(sketch(rectangle, { fill: 'red', seed: 1, hachureAngle: angle })).toEqual(sketch(rectangle, { fill: 'red', seed: 1, hachureAngle: within }));
   });
 
+  // 1e20 is 280° past whole turns, which draws its strokes the other way from 100°.
+  it('draws a hachure angle of many turns as what is left of a whole turn, not of half a turn', () => {
+    expect(sketch(rectangle, { fill: 'red', seed: 1, hachureAngle: 1e20 })).not.toEqual(sketch(rectangle, { fill: 'red', seed: 1, hachureAngle: 100 }));
+  });
+
   // The cross-hatch adds 90° for its second set of lines, which would be lost on 1e20 itself.
   it('cross-hatches an angle of many turns in both directions, as what is left of the last turn', () => {
     expect(sketch(rectangle, { fill: 'red', fillStyle: 'cross-hatch', seed: 1, hachureAngle: 1e20 }))

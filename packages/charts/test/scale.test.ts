@@ -103,6 +103,12 @@ describe('a linear scale', () => {
     expect(scaleOf({ ...axis, min: 5, step: 2 }, [5, 5], 250)).toMatchObject({ domain: [5, 6], ticks: [6] });
   });
 
+  // Shown against zero, -5 gives a step of 1, which leaves one tick below the max: the step is
+  // chosen again for the range shown, -6 to -5.
+  it('ticks flat data at a fixed max by a step chosen for the range shown', () => {
+    expect(scaleOf({ ...axis, max: -5 }, [-5, -5], 250)).toMatchObject({ domain: [-6, -5], ticks: [-6, -5.8, -5.6, -5.4, -5.2, -5] });
+  });
+
   it('labels the first multiple of the largest smaller nice step alone, not the last', () => {
     expect(labelledTicks(scaleOf({ ...axis, min: 1, max: 4, step: 1 }, [1, 4], 250), 4)).toEqual([2]);
   });
