@@ -2,7 +2,7 @@
 // curve), with each series' moments and periods placed along it by arc length.
 import type { Point, Shape } from '@borrowdale/core';
 import { cos, sin } from '@borrowdale/core/math';
-import type { Drawing, Extent } from './drawing.js';
+import { CENTRED, type Drawing, type Extent } from './drawing.js';
 import { assertRoom, GAP, TICK, type Rect } from './frame.js';
 import { fail } from './read.js';
 import { POINT_SIZE, solid } from './marks.js';
@@ -51,7 +51,6 @@ export function layoutTimeline(drawing: Drawing, chart: CheckedTimelineChart, re
   const along = (value: number) => pointAt(track, scale.fraction(value) * track.length);
 
   const taken = new LabelRoom();
-  const centred = { anchor: 'middle', baseline: 'middle' } as const;
   if (!axis.hidden) {
     drawing.push(drawing.outline({ kind: 'linearPath', points: [...track.points] }, { stroke: INK, strokeWidth: TRACK_WIDTH }, ['track']));
     const room = Math.max(0, ...scale.labels.map((label) => drawing.width(label))) + GAP;
@@ -62,10 +61,10 @@ export function layoutTimeline(drawing: Drawing, chart: CheckedTimelineChart, re
       // A label also needs to clear those of other turns or rows near it, which can be close on the
       // chart however far along the track they are.
       const [x, y] = offset(point, normal, TICK + GAP + line / 2);
-      const box = boxAt(drawing.extent(scale.labels[i]!, centred), x, y);
+      const box = boxAt(drawing.extent(scale.labels[i]!, CENTRED), x, y);
       if (shown.has(i) && taken.clear(box)) {
         taken.add(box);
-        drawing.push(drawing.text(scale.labels[i]!, { x, y, ...centred }));
+        drawing.push(drawing.text(scale.labels[i]!, { x, y, ...CENTRED }));
       }
     });
   }
@@ -220,7 +219,7 @@ function stretch(track: Track, from: number, to: number): Point[] {
   return part;
 }
 
-/** A label's box on the chart, from its extent about the point it is centred on. */
+/** A label's box on the chart, from its extent about the point it is CENTRED on. */
 function boxAt({ left, right, up, down }: Extent, x: number, y: number): Rect {
   return { left: x - left, right: x + right, top: y - up, bottom: y + down };
 }

@@ -223,8 +223,10 @@ export interface SqrtAxis extends Omit<LinearAxis, 'type' | 'percent'> {
   type: 'sqrt';
 }
 
+export const TIME_UNITS = ['millisecond', 'second', 'minute', 'hour', 'day', 'week', 'month', 'year'] as const;
+
 /** A calendar unit of a time axis' step. */
-export type TimeUnit = 'millisecond' | 'second' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'year';
+export type TimeUnit = (typeof TIME_UNITS)[number];
 
 /**
  * Times, in UTC, as ISO 8601 strings ("2026-11-01", "2026-11-01T09:30Z", "2026-11-01T09:30+01:00")

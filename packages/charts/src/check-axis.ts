@@ -19,7 +19,8 @@ import {
   type Check,
   type Fields,
 } from './read.js';
-import { ENGLISH_MONTHS, formatTime, interval, time, TIME_UNITS, type TimeInterval } from './time.js';
+import { ENGLISH_MONTHS, interval, time, writtenOn, type TimeInterval } from './time.js';
+import { TIME_UNITS } from './types.js';
 
 export const MAX_CATEGORIES = 1_000;
 // Every mark's tooltip repeats its series and category names, so a long one multiplies the size of
@@ -30,13 +31,13 @@ const MAX_FORMAT_TEXT = 10;
 // For the name of a month on a time axis.
 const MAX_MONTH = 20;
 
-export const LINEAR_KEYS = ['type', 'title', 'min', 'max', 'step', 'ticks', 'percent', 'grid', 'hidden', 'format', 'labelAngle'];
+const LINEAR_KEYS = ['type', 'title', 'min', 'max', 'step', 'ticks', 'percent', 'grid', 'hidden', 'format', 'labelAngle'];
 const SQRT_KEYS = ['type', 'title', 'min', 'max', 'step', 'ticks', 'grid', 'hidden', 'format', 'labelAngle'];
 const LOG_KEYS = ['type', 'title', 'min', 'max', 'ticks', 'grid', 'hidden', 'format', 'labelAngle'];
 const TIME_KEYS = ['type', 'title', 'min', 'max', 'step', 'ticks', 'grid', 'hidden', 'format', 'labelAngle'];
 const MAX_LABEL_ANGLE = 90;
 /** The smallest value a log axis shows: its ticks are written down to this power of ten. */
-export const MIN_LOG = 1e-20;
+const MIN_LOG = 1e-20;
 // The most of a time unit one step of a time axis may take.
 const MAX_EVERY = 1_000;
 // The largest hole in a radius axis or a pie, as a share of the radius.
@@ -219,8 +220,7 @@ export function checkLinearAxis<X extends object = object>(
   kind: AxisKind = 'linear',
 ): Check<CheckedLinearAxis & X> {
   const value = valueReader(kind);
-  // How a value of this kind is written in a message.
-  const written = (at: number): string => (kind === 'time' ? formatTime(at) : String(at));
+  const written = (at: number): string => writtenOn(kind, at);
   return (path, raw) => {
     const r = fields(path, raw);
     r.allow(keys);

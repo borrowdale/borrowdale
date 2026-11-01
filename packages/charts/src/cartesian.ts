@@ -29,6 +29,10 @@ type MarkType = CartesianSeries['type'];
 // The share of a bar's slot left as a gap between bars side by side.
 const BAR_GAP = 0.1;
 const MAX_BUBBLE = 60;
+// A milestone's diamond is this many units across, or the width of its slot if that is less.
+const MILESTONE = 12;
+// Between an xRange item's label and the end of its bar or milestone.
+const LABEL_GAP = 4;
 
 /** What a series type is on a cartesian chart. A new type fails to compile until it has an entry. */
 interface Mark<S extends CartesianSeries> {
@@ -509,10 +513,6 @@ function drawIntervals(
   });
 }
 
-// A milestone's diamond is this many units across, or the width of its slot if that is less.
-const MILESTONE = 12;
-// Between an item's label and the end of its bar or milestone.
-const LABEL_GAP = 4;
 
 function drawXRange(
   { drawing, frame, slotCount, categories }: MarkContext,

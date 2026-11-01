@@ -402,7 +402,7 @@ export interface CheckedGaugeChart extends CheckedChartBase {
 }
 
 /** The track of a timeline, with its defaults filled in. */
-export type CheckedTimelinePath =
+type CheckedTimelinePath =
   | { type: 'line' }
   | { type: 'serpentine'; rows: number }
   | { type: 'spiral'; turns: number; innerRadius: number }

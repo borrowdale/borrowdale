@@ -2,9 +2,10 @@
 // engine's date parser, and calendar arithmetic in UTC from whole numbers only, so a time axis is the
 // same in every JavaScript engine and every time zone. The calendar is the proleptic Gregorian one;
 // weeks start on Monday, as in ISO 8601.
-import type { CheckedLinearAxis } from './check-axis.js';
+import type { AxisKind, CheckedLinearAxis } from './check-axis.js';
 import { fail, MAX_TICKS, show, type Check } from './read.js';
 import { keptApart, listedTicks, tickCountFor, type Scale } from './scale.js';
+import type { TimeUnit } from './types.js';
 
 const SECOND = 1000;
 const MINUTE = 60 * SECOND;
@@ -132,9 +133,6 @@ function civilFromDays(days: number): [year: number, month: number, day: number]
   return [yearOfEra + era * 400 + (month <= 2 ? 1 : 0), month, day];
 }
 
-export const TIME_UNITS = ['millisecond', 'second', 'minute', 'hour', 'day', 'week', 'month', 'year'] as const;
-
-export type TimeUnit = (typeof TIME_UNITS)[number];
 
 /** Ticks every `every` of a unit, on its boundaries in UTC. */
 export interface TimeInterval {
@@ -205,7 +203,7 @@ function mod(value: number, by: number): number {
 }
 
 /** The intervals an axis picks from, finest first. */
-export const INTERVALS: readonly TimeInterval[] = [
+const INTERVALS: readonly TimeInterval[] = [
   ...[1, 2, 5, 10, 20, 50, 100, 200, 500].map((every) => interval('millisecond', every)),
   ...[1, 5, 15, 30].map((every) => interval('second', every)),
   ...[1, 5, 15, 30].map((every) => interval('minute', every)),
@@ -287,6 +285,11 @@ export function formatTick(at: number, months: readonly string[]): string {
     return `${day} ${months[month - 1]}`;
   }
   return month !== 1 ? months[month - 1]! : yearText(year);
+}
+
+/** A value of an axis of `kind` as an error message writes it: a time in full, else the number. */
+export function writtenOn(kind: AxisKind, value: number): string {
+  return kind === 'time' ? formatTime(value) : String(value);
 }
 
 /** A time in a tooltip: the date, then the time of day to the minute, second or millisecond it has. */

@@ -25,7 +25,7 @@ export interface Extent {
 type TextOptions = Omit<LayoutOptions, 'font' | 'fontSize'> & { fontSize?: number | undefined };
 
 // A data label is centred on the point it is drawn at.
-const CENTRED = { anchor: 'middle', baseline: 'middle' } as const;
+export const CENTRED = { anchor: 'middle', baseline: 'middle' } as const;
 
 /** What tells one mark's strokes from another's: its series, category, part and the like. */
 export type SeedKey = readonly (string | number)[];

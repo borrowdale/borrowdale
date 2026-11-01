@@ -2,7 +2,7 @@ import { log } from '@borrowdale/core/math';
 import type { CheckedFormat, CheckedLinearAxis, CheckedTick } from './check-axis.js';
 import { decimalsOf } from './decimals.js';
 import { fail, MAX_DECIMALS, MAX_TICKS } from './read.js';
-import { formatTick, formatTime, timeScale } from './time.js';
+import { formatTick, formatTime, timeScale, writtenOn } from './time.js';
 
 // Powers of ten as literals, which are correctly rounded, rather than `10 ** n` or `Math.pow`, which
 // may differ in the last bit between JavaScript engines. Index i holds 10^(i - 20).
@@ -51,12 +51,11 @@ export interface Scale {
  */
 export function scaleOf(axis: CheckedLinearAxis, extent: [number, number], length: number): Scale {
   const [lo, hi] = extent;
-  const written = (value: number): string => (axis.kind === 'time' ? formatTime(value) : String(value));
   if (axis.min !== undefined && lo < axis.min) {
-    fail(`${axis.path}.min`, `is ${written(axis.min)}, but the data reach ${written(lo)}`);
+    fail(`${axis.path}.min`, `is ${writtenOn(axis.kind, axis.min)}, but the data reach ${writtenOn(axis.kind, lo)}`);
   }
   if (axis.max !== undefined && hi > axis.max) {
-    fail(`${axis.path}.max`, `is ${written(axis.max)}, but the data reach ${written(hi)}`);
+    fail(`${axis.path}.max`, `is ${writtenOn(axis.kind, axis.max)}, but the data reach ${writtenOn(axis.kind, hi)}`);
   }
   switch (axis.kind) {
     case 'linear':
@@ -153,8 +152,7 @@ export function listedTicks(axis: CheckedLinearAxis, listed: readonly CheckedTic
   const ticks = listed.map(({ value }) => value);
   const domain: [number, number] = [axis.min ?? Math.min(lo, ticks[0]!), axis.max ?? Math.max(hi, ticks.at(-1)!)];
   if (!(domain[1] > domain[0])) {
-    const value = axis.kind === 'time' ? formatTime(domain[0]) : String(domain[0]);
-    fail(`${axis.path}.ticks`, `and the data all equal ${value}: give a min, a max or another tick`);
+    fail(`${axis.path}.ticks`, `and the data all equal ${writtenOn(axis.kind, domain[0])}: give a min, a max or another tick`);
   }
   return {
     domain,
