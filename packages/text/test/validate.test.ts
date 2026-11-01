@@ -84,9 +84,9 @@ describe('measure options', () => {
   it.each<[string, unknown, string]>([
     ['null', null, 'Options must be an object, got null'],
     ['a string', 'big', 'Options must be an object, got "big"'],
-    ['an unknown key', { fontSzie: 12 }, 'Unknown option: fontSzie'],
-    ['a layout key', { x: 1 }, 'Unknown option: x'],
-    ['a key every object inherits', { constructor: 1 }, 'Unknown option: constructor'],
+    ['an unknown key', { fontSzie: 12 }, 'Unknown option: "fontSzie"'],
+    ['a layout key', { x: 1 }, 'Unknown option: "x"'],
+    ['a key every object inherits', { constructor: 1 }, 'Unknown option: "constructor"'],
     ['fontSize 0', { fontSize: 0 }, 'fontSize must be a number greater than 0 and at most 10000, got 0'],
     ['a negative fontSize', { fontSize: -1 }, 'fontSize must be a number greater than 0 and at most 10000, got -1'],
     ['fontSize over 10000', { fontSize: 10000.5 }, 'fontSize must be a number greater than 0 and at most 10000, got 10000.5'],
@@ -200,7 +200,7 @@ describe('layout options', () => {
     ['rotate past a full turn', { ...placed, rotate: 360.5 }, 'rotate must be a number from -360 to 360, got 360.5'],
     ['rotate below a full turn', { ...placed, rotate: -360.5 }, 'rotate must be a number from -360 to 360, got -360.5'],
     ['a NaN rotate', { ...placed, rotate: NaN }, 'rotate must be a number from -360 to 360, got NaN'],
-    ['a style key', { ...placed, fill: 'red' }, 'Unknown option: fill'],
+    ['a style key', { ...placed, fill: 'red' }, 'Unknown option: "fill"'],
   ])('rejects %s', (_case, options, message) => {
     expect(layingOut('A', options)).toThrow(message);
   });
@@ -280,7 +280,7 @@ describe('style', () => {
     ['a fill that is a function', { fill: String }, 'fill must be a string, got a function'],
     ['a fill with a NUL', { fill: 'red\u0000' }, 'fill contains U+0000, which SVG cannot hold'],
     ['a fill with an unpaired surrogate', { fill: '\uD800' }, 'fill contains U+D800, which SVG cannot hold'],
-    ['an unknown key', { stroke: 'red' }, 'Unknown option: stroke'],
+    ['an unknown key', { stroke: 'red' }, 'Unknown option: "stroke"'],
   ])('rejects %s', (_case, style, message) => {
     expect(rendering(style)).toThrow(message);
   });

@@ -73,7 +73,7 @@ be drawn throws an error naming the field or option, and the value where one was
   lie outside the drawn shape, so a path can be rejected even when everything it draws is in range.
 - `points` must be an array of `[x, y]` pairs: at least 3 for `polygon`, 2 for `linearPath` and
   `curve`. An arc's `stop` must be greater than its `start`, and `closed`, when given, a boolean.
-- Unknown option names are rejected (`Unknown option: roughnes`). `roughness` and `bowing` must be
+- Unknown option names are rejected (`Unknown option: "roughnes"`). `roughness` and `bowing` must be
   from 0 to 10, `curveTightness` and `curveFitting` from 0 to 1, `curveStepCount` an integer from 1
   to 1000, and `hachureAngle` within ±1,000,000. `strokeLineDash` must be a plain array of 1 to 16
   lengths from 0 to 1,000,000, with no holes, adding up to at least 1.

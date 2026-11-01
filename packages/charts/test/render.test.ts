@@ -72,7 +72,7 @@ describe('toSvgChart', () => {
 
   it('rejects font files of another family than the chart was laid out in', () => {
     expect(() => toSvgChart(otherFont, { fontFiles: excalifontFiles })).toThrow(
-      'Font files are for Excalifont, but the chart was laid out in Virgil',
+      'Font files are for "Excalifont", but the chart was laid out in "Virgil"',
     );
   });
 });

@@ -75,7 +75,7 @@ describe('pattern', () => {
   it('rejects a non-numeric tile size from untyped code instead of writing it into markup', () => {
     expect(() =>
       pattern({ kind: 'circles', id: 'p', size: '1" onload="x' as unknown as number }),
-    ).toThrow('Invalid pattern size: 1" onload="x');
+    ).toThrow('Invalid pattern size: "1\\" onload=\\"x"');
   });
 
   it('passes the stroke style to the tile strokes', () => {
@@ -111,12 +111,12 @@ describe('pattern', () => {
   });
 
   it('rejects an id that cannot be referenced from url(#…)', () => {
-    expect(() => pattern({ kind: 'lines', id: 'a) b' })).toThrow('Invalid pattern id: a) b');
+    expect(() => pattern({ kind: 'lines', id: 'a) b' })).toThrow('Invalid pattern id: "a) b"');
   });
 
   it('rejects an unknown kind', () => {
     expect(() => pattern({ kind: 'waves' } as unknown as PatternOptions)).toThrow(
-      'Unknown pattern kind: waves',
+      'Unknown pattern kind: "waves"',
     );
   });
 });

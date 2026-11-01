@@ -170,7 +170,7 @@ A value that cannot be drawn throws an error naming it:
   files must.
 - `fill` must be a string without characters an XML document cannot hold.
 - `fontFaceCss`'s labels must be an array, and each label must pass the checks for text above.
-- Unknown option names are rejected (`Unknown option: fontSzie`). An option set to `undefined`
+- Unknown option names are rejected (`Unknown option: "fontSzie"`). An option set to `undefined`
   counts as not set. Only an options object's own properties are read: inherited values, including
   any on `Object.prototype`, are ignored.
 

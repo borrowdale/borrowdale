@@ -4,6 +4,7 @@
 
 import { pointsOnBezierCurves, simplify } from './bezier.js';
 import { charge } from '../budget.js';
+import { show } from '../show.js';
 import { MAX_COORDINATE, type Point } from './core.js';
 import { asin, cos, sin, tan } from '../trig.js';
 
@@ -46,7 +47,7 @@ function tokenize(d: string): PathToken[] {
       tokens[tokens.length] = { type: NUMBER, text: `${parseFloat(match[1]!)}` };
       d = d.slice(match[1]!.length);
     } else {
-      throw new Error(`Invalid shape: path.d: unexpected ${JSON.stringify(d.slice(0, 20))}`);
+      throw new Error(`Invalid shape: path.d: unexpected ${show(d.slice(0, 20))}`);
     }
   }
   tokens[tokens.length] = { type: EOD, text: '' };

@@ -86,7 +86,7 @@ const OPTION_RULES: Record<keyof SketchOptions, OptionRule> = {
   fillStyle: {
     ok: (value) => (FILL_STYLES as readonly unknown[]).includes(value),
     expected: 'a fill style',
-    message: (value) => `Unknown fill style: ${typeof value === 'string' ? value : show(value)}`,
+    message: (value) => `Unknown fill style: ${show(value)}`,
   },
   fillWeight: FINITE,
   // In degrees, so its radians stay far inside the trigonometry's range.
@@ -129,7 +129,7 @@ function assertShape(shape: Shape): void {
   // The shape comes from callers' data, so its type is a claim until checked here.
   const raw = shape as unknown as Record<string, unknown>;
   if (typeof raw.kind !== 'string' || !Object.hasOwn(SHAPE_FIELDS, raw.kind)) {
-    throw new Error(`Unknown shape kind: ${typeof raw.kind === 'string' ? raw.kind : show(raw.kind)}`);
+    throw new Error(`Unknown shape kind: ${show(raw.kind)}`);
   }
   const fields: Record<string, FieldRule> = SHAPE_FIELDS[shape.kind];
   for (const [field, rule] of Object.entries(fields)) {
@@ -179,7 +179,7 @@ function assertPoints(kind: keyof typeof MIN_POINTS, points: unknown): void {
 
 function assertOption(key: string, value: unknown): void {
   if (!Object.hasOwn(OPTION_RULES, key)) {
-    throw new Error(`Unknown option: ${key}`);
+    throw new Error(`Unknown option: ${show(key)}`);
   }
   const rule = OPTION_RULES[key as keyof SketchOptions];
   if (!rule.ok(value)) {

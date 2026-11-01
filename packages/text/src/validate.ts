@@ -293,7 +293,7 @@ function checkKeys(options: unknown, keys: object): void {
   }
   for (const [key, value] of Object.entries(options)) {
     if (value !== undefined && !Object.hasOwn(keys, key)) {
-      throw new Error(`Unknown option: ${key}`);
+      throw new Error(`Unknown option: ${show(key)}`);
     }
   }
 }

@@ -370,7 +370,7 @@ describe('drawText', () => {
   it('rejects a style it cannot draw, and draws nothing', () => {
     const context = loadedContext();
 
-    expect(drawing(context, { stroke: 'red' })).toThrow('Unknown option: stroke');
+    expect(drawing(context, { stroke: 'red' })).toThrow('Unknown option: "stroke"');
     expect(context.fillText).not.toHaveBeenCalled();
   });
 

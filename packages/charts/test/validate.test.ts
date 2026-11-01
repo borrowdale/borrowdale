@@ -3,7 +3,9 @@ import { InvalidChartError, layoutChart, toSvgChart, type ChartSpec } from '@bor
 
 const bands = { x: { type: 'band', categories: ['a', 'b'] }, y: { type: 'linear' } };
 const longKey = 'k'.repeat(101);
-const longFillStyle = 'a'.repeat(300);
+// Core's message for a dash of one string, up to the string: 116 characters.
+const DASH_MESSAGE = 'Invalid style: strokeLineDash must be an array of 1 to 16 lengths from 0 to 1000000, adding up to at least 1, got ["';
+const dashOf = (entry: string) => ({ ...bars, style: { strokeLineDash: [entry] } });
 const manyBars = Array.from({ length: 28 }, (_, i) => ({ type: 'bar', name: `s${i}`, data: [1, 2] }));
 const oneTooMany = [...manyBars, { type: 'bar', name: 's28', data: [1, 2] }];
 const ownColour = [...manyBars, { type: 'bar', name: 'own', color: '#000', data: [1, 2] }];
@@ -30,8 +32,6 @@ function shiftingStroke(): object {
     },
   };
 }
-// Core's message for its style, "Unknown fill style: " and the style, is exactly 200 characters.
-const fillStyleOf200 = { ...bars, style: { fillStyle: 'a'.repeat(180) } };
 // A series made in code, whose name comes only from its prototype.
 const inheritedName = { ...bars, series: [Object.assign(Object.create({ name: 'A' }), { type: 'bar', data: [1, 2] })] };
 // JSON.parse makes "__proto__" an own key, where an object literal would set the prototype.
@@ -87,7 +87,7 @@ describe('chart validation', () => {
     ['too many data points in all', { ...bars, axes: xy, series: [{ type: 'scatter', name: 'A', data: Array(60000).fill([1, 1]) }, { type: 'scatter', name: 'B', data: Array(60000).fill([1, 1]) }] }, 'Invalid chart: series hold at least 120000 data points in all, more than 100000'],
     ['an unknown curve', { ...bars, series: [{ type: 'line', name: 'A', data: [1, 2], curve: 'spline' }] }, 'Invalid chart: series[0].curve must be one of linear, monotone, step, step-before, step-after, got "spline"'],
     ['a dash core rejects', { ...bars, series: [{ type: 'line', name: 'A', data: [1, 2], dash: [0] }] }, 'Invalid chart: series[0].dash is not valid: Invalid style: strokeLineDash must be an array of 1 to 16 lengths from 0 to 1000000, adding up to at least 1, got [0]'],
-    ['a series style core rejects', { ...bars, series: [{ type: 'bar', name: 'A', data: [1, 2], style: { fillStyle: 'crayon' } }] }, 'Invalid chart: series[0].style is not valid: Unknown fill style: crayon'],
+    ['a series style core rejects', { ...bars, series: [{ type: 'bar', name: 'A', data: [1, 2], style: { fillStyle: 'crayon' } }] }, 'Invalid chart: series[0].style is not valid: Unknown fill style: "crayon"'],
     ['an unknown value axis', { ...bars, series: [{ type: 'bar', name: 'A', data: [1, 2], axis: 'y3' }] }, 'Invalid chart: series[0].axis must be one of y, y2, got "y3"'],
     ['y2 that the chart lacks', { ...bars, series: [{ type: 'bar', name: 'A', data: [1, 2], axis: 'y2' }] }, 'Invalid chart: series[0].axis is y2, but the chart has no axes.y2'],
     ['a negative value in a stacked area', { ...bars, series: [{ type: 'area', name: 'A', stack: 's', data: [1, -2] }] }, 'Invalid chart: series[0].data[1] is negative, -2, which a stacked area cannot show'],
@@ -145,10 +145,10 @@ describe('chart validation', () => {
     ['an own "__proto__" key, as JSON.parse makes it', protoKey, 'Invalid chart: series[0] has an unknown key, "__proto__"'],
     ['a name the series only inherits', inheritedName, 'Invalid chart: series[0].name is missing'],
     ['an unknown key longer than 100 characters', { ...bars, [longKey]: 1 }, 'Invalid chart: unknown key a string of 101 characters'],
-    ['a style key with a line break', { ...bars, style: { 'a\nb': 1 } }, 'Invalid chart: style is not valid: Unknown option: a\\u000ab'],
-    ['a style value core repeats at length', { ...bars, style: { fillStyle: longFillStyle } }, `Invalid chart: style is not valid: Unknown fill style: ${'a'.repeat(180)}…`],
+    ['a style key with a line break', { ...bars, style: { 'a\nb': 1 } }, 'Invalid chart: style is not valid: Unknown option: "a\\nb"'],
+    ['a style value core repeats at length', dashOf('a'.repeat(100)), `Invalid chart: style is not valid: ${DASH_MESSAGE}${'a'.repeat(84)}…`],
     ['a paint reference as a colour', { ...bars, series: [{ type: 'bar', name: 'A', color: 'url(#x)', data: [1, 2] }] }, 'Invalid chart: series[0].color must be a colour (a hex code, a name, rgb() or hsl()), got "url(#x)"'],
-    ['a style value cut inside a surrogate pair', { ...bars, style: { fillStyle: `${'a'.repeat(179)}\u{1F600}${'a'.repeat(50)}` } }, `Invalid chart: style is not valid: Unknown fill style: ${'a'.repeat(179)}…`],
+    ['a style value cut inside a surrogate pair', dashOf(`${'a'.repeat(83)}\u{1F600}${'a'.repeat(10)}`), `Invalid chart: style is not valid: ${DASH_MESSAGE}${'a'.repeat(83)}…`],
     ['a paint reference as a slice colour', { ...pie, series: [{ type: 'pie', name: 'P', data: [{ name: 'a', value: 1, color: 'url(#x)' }] }] }, 'Invalid chart: series[0].data[0].color must be a colour (a hex code, a name, rgb() or hsl()), got "url(#x)"'],
     ['a paint reference as a series style stroke', { ...bars, series: [{ type: 'bar', name: 'A', style: { stroke: 'url(#x)' }, data: [1, 2] }] }, 'Invalid chart: series[0].style.stroke must be a colour (a hex code, a name, rgb() or hsl()), got "url(#x)"'],
     ['a paint reference as a style fill', { ...bars, style: { fill: 'url(https://example.com/p.svg#x)' } }, 'Invalid chart: style.fill must be a colour (a hex code, a name, rgb() or hsl()), got "url(https://example.com/p.svg#x)"'],
@@ -267,8 +267,9 @@ describe('chart validation', () => {
   });
 
   it('repeats a message from core of exactly 200 characters in full', () => {
-    expect(() => layoutChart(fillStyleOf200 as ChartSpec)).toThrow(
-      new InvalidChartError('style', `is not valid: Unknown fill style: ${'a'.repeat(180)}`),
+    // A string of 82 characters, its quotes and the bracket after them make 200.
+    expect(() => layoutChart(dashOf('a'.repeat(82)) as unknown as ChartSpec)).toThrow(
+      new InvalidChartError('style', `is not valid: ${DASH_MESSAGE}${'a'.repeat(82)}"]`),
     );
   });
 

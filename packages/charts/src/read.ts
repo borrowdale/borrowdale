@@ -194,8 +194,9 @@ export const coordinate: Check<number> = (path, value) =>
   typeof value === 'string' ? (text(MAX_TIME_TEXT)(path, value) as unknown as number) : number(-MAX_VALUE, MAX_VALUE)(path, value);
 
 /**
- * Runs another package's own check, reporting its error at `path`. The other package repeats what it
- * rejects as it is, so its message is escaped and cut short here.
+ * Runs another package's own check, reporting its error at `path`. The other package writes what it
+ * rejects with `show`, but a list it rejects can make its message long, so the message is cut short
+ * here, and escaped in case something else threw it.
  */
 export function probe(path: string, check: () => unknown): void {
   try {
