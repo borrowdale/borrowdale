@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { layoutChart, toSvgChart, type ChartSpec } from '@borrowdale/charts';
 import type { CheckedLinearAxis } from '../src/check-axis.js';
 import { place, scaleOf, PLAIN_FORMAT } from '../src/scale.js';
+import { shapesOf } from './support/layout.js';
 
 const xy = (x: object, y: object, data: unknown[], type = 'xyLine', width = 400): ChartSpec =>
   ({ width, height: 260, axes: { x, y }, series: [{ type, name: 'S', data }] }) as ChartSpec;
@@ -20,6 +21,9 @@ const titles = (spec: ChartSpec): string[] => [...toSvgChart(layoutChart(spec)).
 const laying = (spec: ChartSpec) => () => layoutChart(spec);
 const svg = (spec: ChartSpec): string => toSvgChart(layoutChart(spec));
 const yLabels = ['1.0', '1.5', '2.0', '2.5', '3.0'];
+// A bar from 0 to 100 with its data label, on a y axis of that kind fixed to those ends.
+const labelledBar = (type: string): ChartSpec =>
+  ({ width: 300, height: 200, legend: 'none', style: { roughness: 0 }, axes: { x: { type: 'band', categories: ['a'] }, y: { type, min: 0, max: 100 } }, series: [{ type: 'bar', name: 'B', dataLabels: true, data: [100] }] }) as ChartSpec;
 const axisOf = (kind: CheckedLinearAxis['kind'], fixed: object = {}): CheckedLinearAxis => ({
   type: 'linear', kind, path: 'axes.y', title: undefined, min: undefined, max: undefined, step: undefined, interval: undefined,
   ticks: undefined, percent: false, grid: true, hidden: false, labelAngle: 0, format: PLAIN_FORMAT, months: [], ...fixed,
@@ -113,6 +117,10 @@ describe('a square-root axis', () => {
     ['takes negative values', xy(linearX, { type: 'sqrt' }, [[0, -100], [1, 100]], 'scatter'), ['-100', '-50', '0', '50', '100']],
   ])('%s', (_case, spec, expected) => {
     expect(labels(spec).slice(6)).toEqual(expected);
+  });
+
+  it('puts the data label of a bar at the middle of the bar, as on a linear axis, not at its middle value', () => {
+    expect(shapesOf(layoutChart(labelledBar('sqrt')), 'B, a: 100')).toEqual(shapesOf(layoutChart(labelledBar('linear')), 'B, a: 100'));
   });
 
   it.each<[string, [number, number], number, number]>([

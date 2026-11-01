@@ -579,7 +579,8 @@ function drawBars(
         entry.style,
       )];
     if (entry.dataLabels) {
-      const [x, y] = frame.point([along + width * (1 - BAR_GAP) / 2, scale.at((span[0] + span[1]) / 2)]);
+      // At the middle of the bar as drawn, which on a square-root or log axis is not its middle value.
+      const [x, y] = frame.point([along + width * (1 - BAR_GAP) / 2, (scale.at(span[0]) + scale.at(span[1])) / 2]);
       nodes.push(drawing.label(formatAxisValue(value, placed.axis), x, y, frame.plot, `${entry.path}.dataLabels`));
     }
     drawing.mark(`${entry.name}, ${category}: ${formatAxisValue(value, placed.axis)}`, nodes);
