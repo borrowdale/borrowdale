@@ -22,6 +22,29 @@ const callDateWithout = () => Date();
 const newDate = (...args: unknown[]) => () => new (Date as unknown as new (...a: unknown[]) => Date)(...args);
 const newNumberFormat = () => new Intl.NumberFormat('en');
 const callMath = (name: string) => () => (Math[name as keyof Math] as MathFunction)(1, 1);
+const callCrypto = (name: string) => () => (crypto as unknown as Record<string, Method>)[name]!(new Uint8Array(1));
+const namesOf = (list: readonly (readonly [string, string, object])[]): string[] => list.map(([owner, name]) => `${owner}.${name}`);
+
+// The lists as ECMA-262 has them, written out so that moving a function from one of the guard's
+// lists to another fails here: the Math functions whose results it leaves to the engine
+// ("implementation-approximated"), and random; the Date methods that read or write LocalTime or
+// format by the locale; and the other methods that format or compare by the locale.
+const SPEC_UNPORTABLE = [
+  'random',
+  'sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'atan2',
+  'sinh', 'cosh', 'tanh', 'asinh', 'acosh', 'atanh',
+  'exp', 'expm1', 'log', 'log1p', 'log2', 'log10', 'pow', 'cbrt', 'hypot',
+];
+const SPEC_LOCAL_DATE = [
+  'getDate', 'getDay', 'getFullYear', 'getHours', 'getMilliseconds', 'getMinutes', 'getMonth', 'getSeconds',
+  'getTimezoneOffset', 'getYear',
+  'setDate', 'setFullYear', 'setHours', 'setMilliseconds', 'setMinutes', 'setMonth', 'setSeconds', 'setYear',
+  'toDateString', 'toLocaleDateString', 'toLocaleString', 'toLocaleTimeString', 'toString', 'toTimeString',
+];
+const SPEC_LOCALE_METHODS = [
+  'Object.toLocaleString', 'Number.toLocaleString', 'BigInt.toLocaleString', 'Array.toLocaleString',
+  'TypedArray.toLocaleString', 'String.localeCompare', 'String.toLocaleLowerCase', 'String.toLocaleUpperCase',
+];
 const cosAtLoadOf1 = () => cosAtLoad(1);
 
 describe('the unportable-call guard', () => {
@@ -29,7 +52,22 @@ describe('the unportable-call guard', () => {
     expect(MATH_FUNCTIONS).toEqual(CLASSIFIED);
   });
 
-  it.each(UNPORTABLE)('makes Math.%s throw', (name) => {
+  it.each<[string, readonly unknown[], readonly unknown[]]>([
+    ['Math functions', UNPORTABLE, SPEC_UNPORTABLE],
+    ['Date methods', LOCAL_DATE, SPEC_LOCAL_DATE],
+  ])('forbids exactly the %s the specification leaves to the engine or the locale', (_case, listed, spec) => {
+    expect(listed).toEqual(spec);
+  });
+
+  it('forbids exactly the other methods that format or compare by the locale', () => {
+    expect(namesOf(LOCALE_METHODS)).toEqual(SPEC_LOCALE_METHODS);
+  });
+
+  it.each(['getRandomValues', 'randomUUID'])('makes crypto.%s throw', (name) => {
+    expect(callCrypto(name)).toThrow(`crypto.${name}() called while drawing`);
+  });
+
+  it.each(SPEC_UNPORTABLE)('makes Math.%s throw', (name) => {
     expect(callMath(name)).toThrow(`Math.${name}() called while drawing`);
   });
 
@@ -51,7 +89,7 @@ describe('the unportable-call guard', () => {
     expect(DATE_METHODS).toEqual(DATE_CLASSIFIED);
   });
 
-  it.each(LOCAL_DATE)('makes Date.prototype.%s throw', (name) => {
+  it.each(SPEC_LOCAL_DATE)('makes Date.prototype.%s throw', (name) => {
     expect(callDate(name)).toThrow(`Date.prototype.${name}() called while drawing`);
   });
 

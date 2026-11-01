@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import '../../core/test/support/forbid-unportable-calls.js';
 import { layoutChart, toSvgChart, type ChartSpec } from '@borrowdale/charts';
-import { laying, shapesOf, svgTitles } from './support/layout.js';
+import { laying, pointsOnCurves, shapesOf, svgTitles } from './support/layout.js';
 
 const rows = { type: 'band', categories: ['Design', 'Build', 'Launch'] };
 const plan = {
@@ -18,6 +18,19 @@ const plan = {
 const gantt = (series: object[], extra: object = {}): ChartSpec =>
   ({ width: 480, height: 220, axes: { x: { type: 'time' }, y: rows }, series, ...extra }) as ChartSpec;
 const items = (data: object[]): ChartSpec => gantt([{ type: 'xRange', name: 'P', data }]);
+// One item in row A, whose label is drawn where it fits; and where each text `text` is drawn.
+const oneItem = (item: object): ChartSpec =>
+  ({ width: 400, height: 160, legend: 'none', axes: { x: { type: 'time', min: '2026-01-01', max: '2026-03-01' }, y: { type: 'band', categories: ['A'] } }, series: [{ type: 'xRange', name: 'S', dataLabels: true, data: [{ row: 'A', ...item }] }] }) as unknown as ChartSpec;
+const placesOf = (spec: ChartSpec, text: string): number[][] =>
+  layoutChart(spec).nodes.flatMap((node) => (node.kind === 'mark' ? node.nodes : [node])).flatMap((node) => (node.kind === 'text' && node.text.text === text ? [[node.text.x, node.text.y]] : []));
+// The least and greatest x each shape of the mark `title` passes through, to the nearest unit.
+const spansOf = (spec: ChartSpec, title: string): number[][] => {
+  const layout = layoutChart(spec);
+  return shapesOf(layout, title).flatMap((shape) => {
+    const xs = pointsOnCurves({ ...layout, nodes: [shape] }).map(([x]) => x);
+    return xs.length === 0 ? [] : [[Math.round(Math.min(...xs)), Math.round(Math.max(...xs))]];
+  });
+};
 const actual = { type: 'xRange', name: 'Actual', data: [{ row: 'Design', from: '2026-01-07', to: '2026-01-30' }] };
 // A milestone with its label on a vertical value axis, where labels go above their items.
 const upright = { width: 300, height: 400, axes: { x: { type: 'band', categories: ['a'] }, y: { type: 'linear', min: 0, max: 10 } },
@@ -37,6 +50,16 @@ describe('an xRange series', () => {
 
   it('labels its items and its time axis by month', () => {
     expect(layoutChart(gantt([plan])).labels).toEqual(['Sketches', 'Review', 'Prototype and production run', 'Go live', '2026', 'Feb', 'Mar', 'Apr', 'Design', 'Build', 'Launch']);
+  });
+
+  // Four days leave "Go" its width but not its gaps either side, so it is drawn past the item's end.
+  it('labels an item past its end where the label does not fit with its gaps', () => {
+    expect(placesOf(oneItem({ from: '2026-01-10', to: '2026-01-14', label: 'Go' }), 'Go')).toEqual([[109.19, 70.01]]);
+  });
+
+  // The bar, then its progress: a quarter of it, from its start.
+  it('draws an item\'s progress from its start', () => {
+    expect(spansOf(oneItem({ from: '2026-01-10', to: '2026-02-10', progress: 0.25 }), 'S, A: 2026-01-10 to 2026-02-10, 25% done')).toEqual([[79, 272], [79, 130]]);
   });
 
   it('accepts an arrow annotation between two tasks', () => {

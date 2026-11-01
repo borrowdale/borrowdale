@@ -102,6 +102,7 @@ describe('show', () => {
     ['a tag character, a pair of code units', 'a\u{E0041}b', 'a\\udb40\\udc41b'],
     ['a combining grapheme joiner', 'a\u034fb', 'a\\u034fb'],
     ['a Mongolian vowel separator', 'a\u180eb', 'a\\u180eb'],
+    ['a paragraph separator and the embedding and override marks', 'a\u2029\u202a\u202b\u202c\u202db', 'a\\u2029\\u202a\\u202b\\u202c\\u202db'],
     ['a word joiner and the invisible operators', 'a\u2060\u2061\u2064b', 'a\\u2060\\u2061\\u2064b'],
     ['the interlinear annotation marks', 'a\ufff9\ufffbb', 'a\\ufff9\\ufffbb'],
     ['the Hangul fillers', 'a\u115f\u1160\u3164\uffa0b', 'a\\u115f\\u1160\\u3164\\uffa0b'],

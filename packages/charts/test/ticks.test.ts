@@ -27,6 +27,15 @@ describe('a step on a linear axis', () => {
     expect(valueLabels(bars(y))).toEqual(labels);
   });
 
+  it('takes a step of exactly 20 decimals', () => {
+    const tiny = { width: 400, height: 300, axes: { x: { type: 'linear', min: 0, max: 1e-19, step: 1e-20 }, y: { type: 'linear' } }, series: [{ type: 'scatter', name: 'A', data: [[0, 1], [1e-19, 2]] }] } as ChartSpec;
+    expect(laying(tiny)).not.toThrow();
+  });
+
+  it('takes a step of exactly 1e15', () => {
+    expect(layoutChart(points({ min: 0, max: 1e15, step: 1e15 })).labels.slice(0, 2)).toEqual(['0', '1,000,000,000,000,000']);
+  });
+
   it('takes a step giving 1,000 ticks', () => {
     expect(laying(points({ min: 0, max: 999, step: 1 }))).not.toThrow();
   });
@@ -105,6 +114,12 @@ describe('listed ticks on a linear axis', () => {
     expect(laying(points({ min: 0, max: 100, ticks: [{ value: 99.9, label: 'A very long label' }, { value: 100, label: '' }] }))).not.toThrow();
   });
 
+  // A half dial has ends, so its last tick is labelled, leaving out the ones before it that crowd it.
+  // The dial's value, 3, is written under its hub.
+  it('labels the last listed tick of a half dial', () => {
+    expect(layoutChart({ ...dial({ min: 0, max: 100, startAngle: -90, endAngle: 90, ticks: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 99, 100] }), width: 160, height: 160 }).labels).toEqual(['0', '100', '3']);
+  });
+
   // The dial's value, 3, is written under its hub.
   it('labels a compass dial by its points', () => {
     const compass = { min: 0, max: 360, ticks: [{ value: 0, label: 'N' }, { value: 90, label: 'E' }, { value: 180, label: 'S' }, { value: 270, label: 'W' }] };
@@ -171,6 +186,11 @@ describe('listed ticks on a linear axis', () => {
     ['a time axis from 1970', lone({ type: 'time', ticks: ['2026-01-01'] }), ['2026', '0.0', '0.5', '1.0']],
   ])('labels a lone listed tick on %s with no data', (_case, spec, labels) => {
     expect(layoutChart(spec).labels).toEqual(labels);
+  });
+
+  // A radius starts at 0 with nothing on it too, so its first listed tick is out from the hub.
+  it('starts an empty radius with listed ticks at 0', () => {
+    expect(layoutChart({ width: 300, height: 300, legend: 'none', axes: { angle: { type: 'linear' }, radius: { type: 'linear', ticks: [10, 20] } }, series: [{ type: 'polarScatter', name: 'S', data: [] }] } as ChartSpec).labels).toEqual(expect.arrayContaining(['10', '20']));
   });
 
   it.each<[string, ChartSpec]>([

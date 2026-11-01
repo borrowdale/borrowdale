@@ -2,9 +2,11 @@ import { afterAll, vi } from 'vitest';
 
 // Importing this module makes every test in the importing file fail if drawing calls a function whose
 // result depends on more than its arguments: on the JavaScript engine (most Math functions), on the
-// clock (Math.random, Date.now, a new Date of now) or on the locale and time zone (Intl, the
-// toLocale methods, the local-time Date methods, parsing a date string). Drawings must come from
-// their input and the engine's own arithmetic alone.
+// clock or a source of randomness (Math.random, Date.now, a new Date of now, crypto.getRandomValues
+// and crypto.randomUUID) or on the locale and time zone (Intl, the toLocale methods, the local-time
+// Date methods, parsing a date string). Drawings must come from their input and the engine's own
+// arithmetic alone. performance.now reads the clock too, but the test runner calls it while it loads
+// the code under test, so it cannot be made to throw here.
 //
 // The functions are replaced when this module loads, not before each test, so import it before the
 // code under test: code that keeps its own reference (`const cos = Math.cos`) when it loads then
@@ -80,6 +82,8 @@ for (const name of INTL) {
 }
 forbid(Date, 'now', 'Date.now');
 forbid(Date, 'parse', 'Date.parse');
+forbid(crypto, 'getRandomValues', 'crypto.getRandomValues');
+forbid(crypto, 'randomUUID', 'crypto.randomUUID');
 
 // A Date may be made from a number of milliseconds, or copied from another Date. Called without
 // `new`, or made from nothing, a string or the parts of a local time, it reads the clock, parses

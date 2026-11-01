@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bandScale, formatNumber, formatValue, place, scaleOf, type Scale } from '../src/scale.js';
+import { bandScale, formatNumber, formatValue, keptApart, place, scaleOf, type Scale } from '../src/scale.js';
 import type { CheckedFormat, CheckedLinearAxis } from '../src/check-axis.js';
 
 const plain: CheckedFormat = { decimals: undefined, thousands: ',', decimal: '.', prefix: '', suffix: '' };
@@ -30,6 +30,8 @@ const labelledTicks = (scale: Scale, every: number): number[] =>
 // Places every tick at one place.
 const atOnePlace = (): number => 0;
 const scaling = (on: CheckedLinearAxis, extent: [number, number], length: number) => () => scaleOf(on, extent, length);
+// Places each value at itself.
+const itself = (value: number): number => value;
 
 describe('a linear scale', () => {
   it.each<[string, [number, number], number, [number, number], string[]]>([
@@ -93,6 +95,15 @@ describe('a linear scale', () => {
     ['multiples of 20 on a step-5 axis that needs every third', [0, 100], 1000, 3, [0, 20, 40, 60, 80, 100]],
   ])('labels %s', (_case, extent, length, every, labelled) => {
     expect(labelledTicks(scaleOf(axis, extent, length), every)).toEqual(labelled);
+  });
+
+  // A billionth and a quarter is more than a billionth of 1e9: told apart from equal, not shown against zero.
+  it('tells values a billionth and a quarter apart from equal', () => {
+    expect(scaleOf(axis, [1e9, 1e9 + 1.25], 250).domain).toEqual([1e9, 1000000001.4]);
+  });
+
+  it('keeps a label exactly room past the last one kept', () => {
+    expect(keptApart([0, 10, 20], 10, itself)).toEqual([0, 1, 2]);
   });
 
   it('labels the tick that is a multiple of the largest nice step alone when none is a multiple of the one needed', () => {

@@ -3,6 +3,7 @@ import '../../core/test/support/forbid-unportable-calls.js';
 import { layoutChart, toSvgChart, type ChartSpec } from '@borrowdale/charts';
 import { checkContinuousAxis, type CheckedLinearAxis } from '../src/check-axis.js';
 import { place, scaleOf, PLAIN_FORMAT } from '../src/scale.js';
+import { ENGLISH_MONTHS, time } from '../src/time.js';
 import { laying, shapesOf, svgTitles } from './support/layout.js';
 
 const xy = (x: object, y: object, data: unknown[], type = 'xyLine', width = 400): ChartSpec =>
@@ -78,6 +79,11 @@ describe('a time axis', () => {
   });
 
   // The month's boundary is the fixed max itself, so its tick is the axis' own.
+  // Eight days take 8 ticks of a day, which a 350-unit axis has just room for, at one per 50 units.
+  it('takes the finest interval whose ticks the length has room for, room for exactly them included', () => {
+    expect(scaleOf(axisOf('time', { months: ENGLISH_MONTHS }), [time('at', '2026-11-02'), time('at', '2026-11-09')], 350).labels).toEqual(['2 Nov', '3 Nov', '4 Nov', '5 Nov', '6 Nov', '7 Nov', '8 Nov', '9 Nov']);
+  });
+
   it('keeps the interval its length chooses where the fixed ends hold one of its boundaries', () => {
     const month = { width: 200, height: 200, legend: 'none', axes: { x: { type: 'time', min: '2026-01-02', max: '2026-02-01' }, y: linearY }, series: [{ type: 'scatter', name: 'S', data: [['2026-01-10', 1]] }] } as ChartSpec;
     expect(labels(month)).toEqual(['Feb', '0.0', '0.5', '1.0']);
@@ -209,6 +215,17 @@ describe('a log axis', () => {
     expect(laying(justAbove)).not.toThrow();
   });
 
+  // Too short for even 2 and 9's labels apart, it labels its first tick alone.
+  it('labels the first tick of a short log axis where none of its ticks has room', () => {
+    expect(labels({ width: 300, height: 70, legend: 'none', axes: { x: { type: 'linear' }, y: { type: 'log', min: 2, max: 9 } }, series: [{ type: 'scatter', name: 'S', data: [[0, 2], [1, 9]] }] } as ChartSpec)).toEqual(['0.0', '0.2', '0.4', '0.6', '0.8', '1.0', '2']);
+  });
+
+  // 1 to 10 placed over 450 units, with labels 25 apart: 1, 2, 5 and 10 clear each other, 3 and 4 do not.
+  it('labels 1, 2 and 5 times a power of ten where every tick crowds but those do not', () => {
+    const placed = place(scaleOf(axisOf('log'), [1, 10], 450), [0, 450]);
+    expect(placed.labelled(25, placed.at)).toEqual([0, 1, 4, 9]);
+  });
+
   it('places listed ticks by their logarithms', () => {
     const ticks = [{ value: 1, label: undefined }, { value: 10, label: undefined }, { value: 1000, label: undefined }];
     expect(place(scaleOf(axisOf('log', { ticks }), [1, 1000], 300), [0, 300]).at(10)).toBeCloseTo(100, 9);
@@ -287,6 +304,12 @@ describe('a square-root axis', () => {
 
   it('rejects data past a fixed end with listed ticks, as without them', () => {
     expect(laying(xy(linearX, { type: 'sqrt', max: 100, ticks: [0, 50, 100] }, [[0, 10], [1, 400]], 'scatter'))).toThrow('Invalid chart: axes.y.max is 100, but the data reach 400');
+  });
+
+  // Square roots spread the ticks out near 0 and close them up near 100: the labels kept are as far
+  // apart as the narrowest spacing needs.
+  it('thins the labels of a crowded square-root axis by its narrowest spacing', () => {
+    expect(labels({ width: 300, height: 110, legend: 'none', axes: { x: { type: 'linear' }, y: { type: 'sqrt' } }, series: [{ type: 'scatter', name: 'S', data: [[0, 0], [1, 100]] }] } as ChartSpec)).toEqual(['0.0', '0.2', '0.4', '0.6', '0.8', '1.0', '0', '100']);
   });
 
   it('places listed ticks by their square roots', () => {

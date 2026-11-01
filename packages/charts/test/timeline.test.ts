@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import '../../core/test/support/forbid-unportable-calls.js';
 import { layoutChart, toSvgChart, type ChartSpec } from '@borrowdale/charts';
-import { labelsOutside, laying, overlappingTexts, svgTitles } from './support/layout.js';
+import { labelsOutside, laying, mark, overlappingTexts, pointsOnCurves, svgTitles } from './support/layout.js';
 
 const events = [
   { at: '1969-07-20', label: 'Moon landing' },
@@ -40,6 +40,19 @@ const hiddenTicks = (first: string, last: string): ChartSpec =>
 // Four labels at one moment on a hidden axis: three take the places on one side, the fourth the
 // first on the other, as close to the track as there are no tick labels to clear.
 const fourAtOnce = { width: 400, height: 240, axes: { time: { type: 'time', hidden: true } }, series: [{ type: 'timeline', name: 'T', dataLabels: true, data: [{ at: '2000-01-01' }, { at: '2010-01-01', label: 'A' }, { at: '2010-01-01', label: 'B' }, { at: '2010-01-01', label: 'C' }, { at: '2010-01-01', label: 'D' }, { at: '2020-01-01' }] }] } as ChartSpec;
+// How many points the track of a timeline passes through, and those of the mark `title`.
+const trackPoints = (spec: ChartSpec): number => {
+  const layout = layoutChart(spec);
+  return pointsOnCurves({ ...layout, nodes: layout.nodes.filter((node) => node.kind === 'sketch').slice(0, 1) }).length;
+};
+const markPoints = (spec: ChartSpec, title: string): number => {
+  const layout = layoutChart(spec);
+  return pointsOnCurves({ ...layout, nodes: [mark(layout, title)] }).length;
+};
+// Six labels at one moment, on a track along the bottom of the chart.
+const sixAtOnce = timeline({ type: 'curve', points: [[0, 1], [1, 1]] }, [400, 200], [{ at: '2000-01-01' }, { at: '2010-01-01', label: 'A' }, { at: '2010-01-01', label: 'B' }, { at: '2010-01-01', label: 'C' }, { at: '2010-01-01', label: 'D' }, { at: '2010-01-01', label: 'E' }, { at: '2010-01-01', label: 'F' }, { at: '2020-01-01' }]);
+// A straight track whose first tick label is a hundred characters long.
+const hundred = { width: 400, height: 120, axes: { time: { type: 'linear', ticks: [{ value: 0, label: 'x'.repeat(100) }, { value: 541, label: 'Cambrian' }] } }, series: [{ type: 'timeline', name: 'T', data: [{ at: 0 }, { at: 541 }] }] } as ChartSpec;
 // A straight linear timeline from `from` to `to`, whose ticks are wide numbers.
 const wide = (from: number, to: number, size: [number, number]): ChartSpec =>
   ({ width: size[0], height: size[1], axes: { time: { type: 'linear' } }, series: [{ type: 'timeline', name: 'T', data: [{ at: from }, { at: to }] }] }) as ChartSpec;
@@ -111,6 +124,25 @@ describe('a timeline', () => {
   it('centres the long end labels of a straight track on their ticks', () => {
     const straight = geologic({ type: 'line' }, [400, 120]);
     expect([placesOf(straight, 'Now'), placesOf(straight, 'Start of the Cambrian')]).toEqual([[[61.56, 44.51]], [[261.79, 44.51]]]);
+  });
+
+  // 1.01 turns of 64 points each round up to 65, so the track reaches its end.
+  it('draws a spiral of a fractional number of turns all the way to its end', () => {
+    expect(trackPoints(timeline({ type: 'spiral', turns: 1.01 }, [360, 360], [{ at: '2000-01-01' }, { at: '2020-01-01' }]))).toBe(260);
+  });
+
+  it('draws a period that ends on the end of the track through no point twice', () => {
+    const atEnd = { width: 400, height: 200, axes: { time: { type: 'time', min: '2000-01-01', max: '2010-01-01' } }, series: [{ type: 'timeline', name: 'T', data: [{ at: '2005-01-01', to: '2010-01-01' }] }] } as ChartSpec;
+    expect(markPoints(atEnd, 'T: 2005-01-01 to 2010-01-01')).toBe(4);
+  });
+
+  it('keeps labels moved out below a track along the bottom on the chart', () => {
+    expect(labelsOutside(layoutChart(sixAtOnce))).toBe(0);
+  });
+
+  // Widening the sides for it would leave the track no room, so they are not, and the label is cut.
+  it('lays out a straight track whose first tick label is wider than the sides can take', () => {
+    expect(laying(hundred)).not.toThrow();
   });
 
   it('draws no event labels unless its dataLabels say so', () => {
@@ -193,6 +225,7 @@ describe('a timeline', () => {
     ['a curve with no length', timeline({ type: 'curve', points: [[0.5, 0.5], [0.5, 0.5]] }), 'Invalid chart: axes.time.path.points must be spread out: on a 460 × 260 chart they make a track shorter than 1'],
     ['a curve point off the chart', timeline({ type: 'curve', points: [[0, 0], [1.5, 1]] }), 'Invalid chart: axes.time.path.points[1][0] must be a number from 0 to 1, got 1.5'],
     ['a curve point below the chart', timeline({ type: 'curve', points: [[0, 0], [1, 1.5]] }), 'Invalid chart: axes.time.path.points[1][1] must be a number from 0 to 1, got 1.5'],
+    ['a curve shorter than 1 but longer than 0', timeline({ type: 'curve', points: [[0.5, 0.5], [0.502, 0.5]] }), 'Invalid chart: axes.time.path.points must be spread out: on a 460 × 260 chart they make a track shorter than 1'],
     ['an unknown track', timeline({ type: 'wave' }), 'Invalid chart: axes.time.path.type must be one of line, serpentine, spiral, curve, got "wave"'],
     ['a key of another track', timeline({ type: 'line', rows: 2 }), 'Invalid chart: axes.time.path has an unknown key, "rows"'],
     ['a period that ends before it starts', timeline(undefined, [460, 160], [{ at: '2000-01-01', to: '1999-01-01' }]), 'Invalid chart: series[0].data[0].to must be after at; leave it out for a moment'],
