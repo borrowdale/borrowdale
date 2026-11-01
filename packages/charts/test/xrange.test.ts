@@ -87,8 +87,8 @@ describe('an xRange series', () => {
     ['an unknown key in an item', items([{ row: 'Build', start: '2026-01-05' }]), 'Invalid chart: series[0].data[0] has an unknown key, "start"'],
     ['progress beyond 1', items([{ row: 'Build', from: '2026-01-05', to: '2026-01-06', progress: 2 }]), 'Invalid chart: series[0].data[0].progress must be a number from 0 to 1, got 2'],
     ['a time on a linear value axis', { ...items([{ row: 'Build', from: '2026-01-05' }]), axes: { x: { type: 'linear' }, y: rows } } as ChartSpec, 'Invalid chart: series[0].data[0].from must be a number, since axes.x is not a time axis, got "2026-01-05"'],
-    ['a percent value axis', { width: 400, height: 200, axes: { x: { type: 'linear', percent: true }, y: { type: 'band', categories: ['a'] } }, series: [{ type: 'xRange', name: 'R', data: [{ row: 'a', from: 2, to: 5 }] }] } as ChartSpec, 'Invalid chart: series[0] is a xRange series on axes.x, a percent axis, which only stacking series (bar, area) can use'],
-    ['a chart without a band axis', { width: 400, height: 200, axes: { x: { type: 'time' }, y: { type: 'linear' } }, series: [{ type: 'xRange', name: 'P', data: [] }] } as ChartSpec, 'Invalid chart: series[0] is a xRange series, which needs one band axis'],
+    ['a percent value axis', { width: 400, height: 200, axes: { x: { type: 'linear', percent: true }, y: { type: 'band', categories: ['a'] } }, series: [{ type: 'xRange', name: 'R', data: [{ row: 'a', from: 2, to: 5 }] }] } as ChartSpec, 'Invalid chart: series[0] is an xRange series on axes.x, a percent axis, which only stacking series (bar, area) can use'],
+    ['a chart without a band axis', { width: 400, height: 200, axes: { x: { type: 'time' }, y: { type: 'linear' } }, series: [{ type: 'xRange', name: 'P', data: [] }] } as ChartSpec, 'Invalid chart: series[0] is an xRange series, which needs one band axis'],
   ])('rejects %s', (_case, spec, message) => {
     expect(laying(spec)).toThrow(message);
   });

@@ -113,6 +113,8 @@ describe('chart validation', () => {
     ['a line on a percent axis', { ...bars, axes: { x: bands.x, y: { type: 'linear', percent: true } }, series: [{ type: 'line', name: 'A', data: [1, 2] }] }, 'Invalid chart: series[0] is a line series on axes.y, a percent axis, which only stacking series (bar, area) can use'],
     ['a scatter series on a band axis', { ...bars, series: [{ type: 'scatter', name: 'A', data: [[1, 2]] }] }, 'Invalid chart: series[0] is a scatter series, which needs both axes continuous: linear, time, log or sqrt'],
     ['a bar series with two linear axes', { ...bars, axes: xy }, 'Invalid chart: series[0] is a bar series, which needs one band axis'],
+    ['an interval series with two linear axes', { ...bars, axes: xy, series: [{ type: 'interval', name: 'I', data: [[1, 2]] }] }, 'Invalid chart: series[0] is an interval series, which needs one band axis'],
+    ['an xyLine series on a band axis', { ...bars, series: [{ type: 'xyLine', name: 'L', data: [[1, 2]] }] }, 'Invalid chart: series[0] is an xyLine series, which needs both axes continuous: linear, time, log or sqrt'],
     ['a pie series with axes', { ...pie, axes: bands }, 'Invalid chart: axes must be left out: a pie chart has no axes'],
     ['a bar series with no axes', { ...bars, axes: undefined }, 'Invalid chart: axes is missing'],
     ['a radar series with x and y axes', { ...radar, axes: bands }, 'Invalid chart: axes has an unknown key, "x"'],

@@ -555,7 +555,7 @@ function seriesOf<S extends System>(series: readonly CheckedSeries[], system: S)
   return series.map((entry) =>
     isIn(entry, system)
       ? entry
-      : fail(entry.path, `is a ${entry.type} series, which cannot share a chart with series[0], a ${first} series`),
+      : fail(entry.path, `is ${aSeries(entry.type)}, which cannot share a chart with series[0], ${aSeries(first)}`),
   );
 }
 
@@ -581,15 +581,15 @@ function checkCartesianChart(
   for (const entry of series) {
     const rule = SERIES_RULES[entry.type];
     if (rule.band && !band) {
-      fail(entry.path, `is a ${entry.type} series, which needs one band axis`);
+      fail(entry.path, `is ${aSeries(entry.type)}, which needs one band axis`);
     }
     if (!rule.band && band) {
-      fail(entry.path, `is a ${entry.type} series, which needs both axes continuous: linear, time, log or sqrt`);
+      fail(entry.path, `is ${aSeries(entry.type)}, which needs both axes continuous: linear, time, log or sqrt`);
     }
     const onAxis = roles.band && valueAxisOf(entry, roles);
     if (onAxis && onAxis.percent && !isStacking(entry)) {
       const which = `a percent axis, which only stacking series (${STACKING}) can use`;
-      fail(entry.path, `is a ${entry.type} series on ${onAxis.path}, ${which}`);
+      fail(entry.path, `is ${aSeries(entry.type)} on ${onAxis.path}, ${which}`);
     }
     if (!('axis' in entry)) {
       continue;
@@ -639,9 +639,15 @@ function resolveValues(series: readonly SeriesOf<'cartesian'>[], roles: AxisRole
     } else {
       // Each other pairing of a series and the chart's axes was rejected before: a series here is
       // of a type this does not read, whose values would be left unread.
-      throw new Error(`Unread chart values: ${entry.path}, a ${entry.type} series`);
+      throw new Error(`Unread chart values: ${entry.path}, ${aSeries(entry.type)}`);
     }
   }
+}
+
+// A series type as a message names it, with the article it is read with: "a bar series", "an area
+// series", "an xRange series".
+function aSeries(type: string): string {
+  return `${/^[aeiox]/.test(type) ? 'an' : 'a'} ${type} series`;
 }
 
 /** A cartesian chart's axes by role: a band axis and the value axes across it, or two continuous axes. */
@@ -674,10 +680,10 @@ function valueAxisOf(entry: SeriesOf<'cartesian'>, roles: Extract<AxisRoles, { b
 // The values of a series drawn one per category against `axis`.
 function resolveOnAxis(entry: Extract<SeriesOf<'cartesian'>, { axis: unknown }>, axis: CheckedLinearAxis): void {
   if (axis.kind === 'time' && entry.type !== 'interval') {
-    fail(entry.path, `is a ${entry.type} series on ${axis.path}, a time axis, which only interval and xRange series can use`);
+    fail(entry.path, `is ${aSeries(entry.type)} on ${axis.path}, a time axis, which only interval and xRange series can use`);
   }
   if (axis.kind === 'log' && (entry.type === 'bar' || entry.type === 'area')) {
-    fail(entry.path, `is a ${entry.type} series on ${axis.path}, a log axis, which cannot show the 0 it stands on`);
+    fail(entry.path, `is ${aSeries(entry.type)} on ${axis.path}, a log axis, which cannot show the 0 it stands on`);
   }
   const value = readerOn(axis);
   if (entry.type === 'interval' || entry.type === 'rangeArea') {
@@ -759,7 +765,7 @@ function checkPolarChart(r: Fields, base: CheckedChartBase, series: SeriesOf<'po
       if (axis.type !== needs[key]) {
         fail(
           entry.path,
-          `is a ${entry.type} series, which needs a ${needs[key]} ${key} axis, but axes.${key} is ${axis.type}`,
+          `is ${aSeries(entry.type)}, which needs a ${needs[key]} ${key} axis, but axes.${key} is ${axis.type}`,
         );
       }
     }
@@ -782,7 +788,7 @@ function checkPolarChart(r: Fields, base: CheckedChartBase, series: SeriesOf<'po
   const spokes = angle.type === 'band' ? angle.categories.length : 0;
   const polygonal = series.find((entry) => SERIES_RULES[entry.type].polar.polygon);
   if (spokes < 3 && (polygonal || radius.shape === 'polygon')) {
-    const what = polygonal ? `${polygonal.path}, a ${polygonal.type} series` : 'the polygon gridlines of axes.radius';
+    const what = polygonal ? `${polygonal.path}, ${aSeries(polygonal.type)}` : 'the polygon gridlines of axes.radius';
     fail('axes.angle.categories', `must have at least 3 categories for ${what}, got ${spokes}`);
   }
   const band = angle.type === 'band' ? angle : radius.type === 'band' ? radius : undefined;
@@ -806,7 +812,7 @@ function checkPolarChart(r: Fields, base: CheckedChartBase, series: SeriesOf<'po
       if (typeof value === 'number' && value < 0 && (outward || radius.min === undefined)) {
         const at = Array.isArray(item) ? `${entry.path}.data[${i}][${item.length - 1}]` : `${entry.path}.data[${i}]`;
         const reason = outward
-          ? `which a ${stacked ? 'stacked ' : ''}${entry.type} series cannot show`
+          ? `which ${stacked ? `a stacked ${entry.type} series` : aSeries(entry.type)} cannot show`
           : 'but axes.radius starts at 0 unless its min is set';
         fail(at, `is negative, ${value}, ${reason}`);
       }
