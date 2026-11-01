@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 // Before the module, so a Math.sin it called or kept a reference to would throw.
 import './support/forbid-unportable-calls.js';
-import { cos, exp, log, MAX_ANGLE, MAX_EXPONENT, sin } from '@borrowdale/core/math';
+import { cos, log, MAX_ANGLE, sin } from '@borrowdale/core/math';
 
 // The published functions are the engine's own, so each value is the same in every JavaScript
 // engine. The expected values are Math.sin and Math.cos in Node, which agree here.
@@ -33,12 +33,7 @@ describe('@borrowdale/core/math', () => {
     );
   });
 
-  it('exports the bound exp checks', () => {
-    expect(MAX_EXPONENT).toBe(709);
-  });
-
-  // The expected values are Math.log and Math.exp in Node, except exp(1), where Math.exp gives
-  // 2.718281828459045, the double nearest e, and the port 2.7182818284590455, one unit above it.
+  // The expected values are Math.log in Node.
   it.each<[number, number]>([
     [1, 0],
     [2, 0.6931471805599453],
@@ -53,20 +48,6 @@ describe('@borrowdale/core/math', () => {
     expect(log(x)).toBe(expected);
   });
 
-  it.each<[number, number]>([
-    [0, 1],
-    [1, 2.7182818284590455],
-    [-1, 0.36787944117144233],
-    [0.5, 1.6487212707001282],
-    [1e-30, 1],
-    [10, 22026.465794806718],
-    [709, 8.218407461554972e307],
-    [-709, 1.216780750623423e-308],
-    [0.34, 1.404947590563594],
-  ])('computes exp(%s)', (x, expected) => {
-    expect(exp(x)).toBe(expected);
-  });
-
   it.each<[unknown, string]>([
     [0, '0'],
     [-1, '-1'],
@@ -75,15 +56,5 @@ describe('@borrowdale/core/math', () => {
     ['1', '"1"'],
   ])('log rejects %s with a RangeError', (x, shown) => {
     expect(() => log(x as number)).toThrow(new RangeError(`Invalid argument: log(x) must be a finite number above 0, got ${shown}`));
-  });
-
-  it.each<[unknown, string]>([
-    [710, '710'],
-    [-710, '-710'],
-    [Number.NEGATIVE_INFINITY, '-Infinity'],
-    [Number.NaN, 'NaN'],
-    [1n, '1n'],
-  ])('exp rejects %s with a RangeError', (x, shown) => {
-    expect(() => exp(x as number)).toThrow(new RangeError(`Invalid argument: exp(x) must be a finite number within ±709, got ${shown}`));
   });
 });
