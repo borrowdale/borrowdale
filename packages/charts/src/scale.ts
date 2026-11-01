@@ -309,8 +309,8 @@ function logScale(axis: CheckedLinearAxis, [lo, hi]: [number, number], length: n
   const fraction = spacing(domain);
   if (!fitting && candidates[2]!.length < 2) {
     // Fewer than two powers of ten, and no denser ticks that fit: a linear axis' ticks, placed by
-    // their logarithms.
-    const linear = linearScale(axis, domain, length);
+    // their logarithms, between the ends decided here, so none falls at or below 0 or past them.
+    const linear = linearScale({ ...axis, min: domain[0], max: domain[1] }, domain, length);
     return { ...linear, fraction, labelled: (room, at) => keptApart(linear.ticks, room, at) };
   }
   const chosen = fitting ?? candidates[2]!;

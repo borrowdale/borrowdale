@@ -202,6 +202,13 @@ describe('a log axis', () => {
     expect(labels(tall)).toEqual(['30', '40', '50', '60', '70', '90']);
   });
 
+  // A billionth above 1,000, the max leaves less than a power of ten, so linear ticks are placed
+  // instead, between the ends the log axis has decided: none at 0, which has no logarithm.
+  it('ticks a fixed max just above a power of ten within the log axis\' ends', () => {
+    const justAbove = { width: 400, height: 200, axes: { x: { type: 'band', categories: ['a', 'b'] }, y: { type: 'log', max: 1000.000001 } }, series: [{ type: 'line', name: 'L', data: [1000, 1000.0000005] }] } as ChartSpec;
+    expect(laying(justAbove)).not.toThrow();
+  });
+
   it('places listed ticks by their logarithms', () => {
     const ticks = [{ value: 1, label: undefined }, { value: 10, label: undefined }, { value: 1000, label: undefined }];
     expect(place(scaleOf(axisOf('log', { ticks }), [1, 1000], 300), [0, 300]).at(10)).toBeCloseTo(100, 9);
