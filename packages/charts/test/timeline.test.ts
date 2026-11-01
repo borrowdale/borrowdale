@@ -21,6 +21,10 @@ const timeline = (path: object | undefined, size: [number, number] = [460, 260],
 const labels = (spec: ChartSpec): string[] => layoutChart(spec).labels;
 const names = events.map(({ label }) => label);
 const svg = (spec: ChartSpec): string => toSvgChart(layoutChart(spec));
+// Listed ticks with long labels, on a linear axis over the last 541 million years.
+const eras = [{ value: 0, label: 'Now' }, { value: 66, label: 'End of the Cretaceous' }, { value: 252, label: 'End of the Permian' }, { value: 541, label: 'Start of the Cambrian' }];
+const geologic = (path: object, size: [number, number]): ChartSpec =>
+  ({ width: size[0], height: size[1], axes: { time: { type: 'linear', ticks: eras, path } }, series: [{ type: 'timeline', name: 'T', data: [{ at: 0 }, { at: 541 }] }] }) as ChartSpec;
 // A straight linear timeline from `from` to `to`, whose ticks are wide numbers.
 const wide = (from: number, to: number, size: [number, number]): ChartSpec =>
   ({ width: size[0], height: size[1], axes: { time: { type: 'linear' } }, series: [{ type: 'timeline', name: 'T', data: [{ at: from }, { at: to }] }] }) as ChartSpec;
@@ -82,6 +86,14 @@ describe('a timeline', () => {
 
   it('draws a curve with a turn at a point that shares only its x with the one before', () => {
     expect(svg(timeline({ type: 'curve', points: [[0, 0], [0, 1], [1, 1]] }))).not.toBe(svg(timeline({ type: 'curve', points: [[0, 0], [1, 1]] })));
+  });
+
+  it.each<[string, ChartSpec]>([
+    ['a serpentine of 3 rows at 200 × 300', geologic({ type: 'serpentine', rows: 3 }, [200, 300])],
+    ['a straight track at 120 × 120', geologic({ type: 'line' }, [120, 120])],
+    ['a spiral at 600 × 600', geologic({ type: 'spiral' }, [600, 600])],
+  ])('lays long listed tick labels out on %s, all on the chart', (_case, spec) => {
+    expect(labelsOutside(layoutChart(spec))).toBe(0);
   });
 
   it('draws a curve with a repeated point as the curve without it', () => {

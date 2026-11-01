@@ -42,9 +42,7 @@ export function layoutTimeline(drawing: Drawing, chart: CheckedTimelineChart, re
     }
   }
   const end = axis.min ?? axis.max ?? 0;
-  // Tick labels on the track's left and event labels on its right each take a line and a gap. At the
-  // sides the track's ends need half the widest tick label, centred on them, when that is more; it
-  // is measured on the axis laid out once without it.
+  // Tick labels on the track's left and event labels on its right each take a line and a gap.
   const margin = line + TICK + GAP;
   const layOut = (side: number) => {
     const area: Rect = { left: rect.left + side, top: rect.top + margin, right: rect.right - side, bottom: rect.bottom - margin };
@@ -53,9 +51,20 @@ export function layoutTimeline(drawing: Drawing, chart: CheckedTimelineChart, re
     return { track, scale: scaleOf(axis, low > high ? [end, end] : [low, high], track.length) };
   };
   let { track, scale } = layOut(margin);
-  const half = axis.hidden ? 0 : Math.max(0, ...scale.labels.map((label) => drawing.width(label))) / 2;
-  if (half > margin) {
-    ({ track, scale } = layOut(half));
+  // A straight track ends at the sides, where a label centred on a tick near an end can reach past
+  // the margin: the sides then take what the labels drawn there need, measured on the track laid out
+  // once without it, while the area keeps its room. Elsewhere labelSpot keeps labels on the chart.
+  if (axis.track.type === 'line' && !axis.hidden) {
+    const room = Math.max(0, ...scale.labels.map((label) => drawing.width(label))) + GAP;
+    const shown = scale.labelled(room, (value) => scale.fraction(value) * track.length);
+    const needs = shown.map((i) => {
+      const [half, at] = [drawing.width(scale.labels[i]!) / 2, scale.fraction(scale.ticks[i]!) * track.length];
+      return Math.max(half - at, half - (track.length - at));
+    });
+    const side = Math.max(margin, ...needs);
+    if (side > margin && rect.right - rect.left - 2 * side >= 1) {
+      ({ track, scale } = layOut(side));
+    }
   }
   const along = (value: number) => pointAt(track, scale.fraction(value) * track.length);
 
