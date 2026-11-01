@@ -17,11 +17,6 @@ import {
 // them make a cluster of their own.
 const CLUSTER = /[^\p{M}\u200D][\p{M}\u200D]*|[\p{M}\u200D]+/gu;
 
-/** The clusters of `text`, in order, as it is measured and drawn. */
-export function clustersOf(text: string): string[] {
-  return text.match(CLUSTER) ?? [];
-}
-
 // Where text may be cut: a character with the marks, emoji modifiers and tags after it, and through a
 // zero-width joiner the character after that; a pair of regional indicators, which make one flag; or
 // marks with no character before them. So a cut never splits a surrogate pair, an accent from its
@@ -29,6 +24,11 @@ export function clustersOf(text: string): string[] {
 const ATTACHED = String.raw`\p{M}\p{Emoji_Modifier}\u{E0020}-\u{E007F}`;
 const BASE = String.raw`\p{Regional_Indicator}{2}|[^${ATTACHED}\u200D]`;
 const CUT_UNIT = new RegExp(String.raw`(?:${BASE})(?:[${ATTACHED}]|\u200D(?:${BASE})?)*|[${ATTACHED}\u200D]+`, 'gu');
+
+/** The units of `text`, in order, that it is cut between and drawn one at a time by. */
+export function unitsOf(text: string): string[] {
+  return text.match(CUT_UNIT) ?? [];
+}
 const ELLIPSIS = '…';
 
 // How far left of `x` the text starts, as a share of its width.
@@ -63,7 +63,7 @@ export function fitText(text: string, maxWidth: number, options?: MeasureOptions
   }
   const { font } = checked;
   const ellipsis = advanceOf(font, 0x2026) === undefined && advanceOf(font, 0x2e) !== undefined ? '...' : ELLIPSIS;
-  const units = checked.text.match(CUT_UNIT) ?? [];
+  const units = unitsOf(checked.text);
   // The text cut after its first `count` units, without the spaces before the cut.
   const cut = (count: number): string => `${units.slice(0, count).join('').trimEnd()}${ellipsis}`;
   if (widthOf(cut(0)) > checked.maxWidth) {

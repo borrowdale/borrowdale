@@ -210,6 +210,14 @@ describe('drawText', () => {
     expect(context.fillText.mock.calls).toEqual([['q\u0301', 100, 50], ['x', 120, 50]]);
   });
 
+  it('fills a flag, an emoji with a skin tone and a joined emoji pair whole, each once', () => {
+    const context = loadedContext();
+
+    drawText(context as unknown as CanvasRenderingContext2D, layoutText('\u{1F1ED}\u{1F1FA}\u{1F44D}\u{1F3FD}\u{1F468}\u200D\u{1F469}', at));
+
+    expect(context.fillText.mock.calls).toEqual([['\u{1F1ED}\u{1F1FA}', 100, 50], ['\u{1F44D}\u{1F3FD}', 140, 50], ['\u{1F468}\u200D\u{1F469}', 180, 50]]);
+  });
+
   it('turns extra spacing off, and aligns the text by its left end on the baseline', () => {
     const context = loadedContext();
 

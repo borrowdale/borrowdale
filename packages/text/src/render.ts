@@ -1,7 +1,7 @@
 import { escapeAttribute, svgElement } from '@borrowdale/core';
 import type { SvgAttributes } from '@borrowdale/core';
 import { facesOf } from './embed.js';
-import { clustersOf } from './measure.js';
+import { unitsOf } from './measure.js';
 import type { TextLayout, TextStyle } from './types.js';
 import { checkStyle, cssFamily } from './validate.js';
 
@@ -73,14 +73,16 @@ export function drawText(
     context.rotate((layout.rotate * Math.PI) / 180);
     context.translate(-pivotX, -pivotY);
   }
-  // Each cluster where the one before it ends, by the canvas's own measure of it. Drawn whole, the
-  // text would be kerned by WebKit's canvas, which cannot turn kerning off, and form ligatures in
-  // Firefox's, and come out narrower than its layout. Measured in Chromium, Firefox and WebKit: the
-  // advances of the clusters add up to the measured width in all three.
+  // Each unit a cut keeps whole (a character and its marks, an emoji sequence or a flag) where the
+  // one before it ends, by the canvas's own measure of it. Drawn whole, the text would be kerned by
+  // WebKit's canvas, which cannot turn kerning off, and form ligatures in Firefox's, and come out
+  // narrower than its layout; drawn by smaller pieces, a flag or an emoji sequence would come apart.
+  // Measured in Chromium, Firefox and WebKit: the advances of the units add up to the measured width
+  // in all three.
   let x = layout.x;
-  for (const cluster of clustersOf(layout.text)) {
-    context.fillText(cluster, x, layout.y);
-    x += context.measureText(cluster).width;
+  for (const unit of unitsOf(layout.text)) {
+    context.fillText(unit, x, layout.y);
+    x += context.measureText(unit).width;
   }
   context.restore();
 }
