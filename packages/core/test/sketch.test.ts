@@ -41,6 +41,20 @@ describe('sketch', () => {
     );
   });
 
+  it.each<[string, number, number]>([
+    ['400° as 40°', 400, 40],
+    ['-400° as -40°', -400, -40],
+    ['an angle of many turns as what is left of the last turn', 1e20, 280],
+  ])('draws a hachure angle of %s', (_case, angle, within) => {
+    expect(sketch(rectangle, { fill: 'red', seed: 1, hachureAngle: angle })).toEqual(sketch(rectangle, { fill: 'red', seed: 1, hachureAngle: within }));
+  });
+
+  // The cross-hatch adds 90° for its second set of lines, which would be lost on 1e20 itself.
+  it('cross-hatches an angle of many turns in both directions, as what is left of the last turn', () => {
+    expect(sketch(rectangle, { fill: 'red', fillStyle: 'cross-hatch', seed: 1, hachureAngle: 1e20 }))
+      .toEqual(sketch(rectangle, { fill: 'red', fillStyle: 'cross-hatch', seed: 1, hachureAngle: 280 }));
+  });
+
   it('draws different strokes for a different seed', () => {
     expect(sketch(rectangle, { seed: 'a' }).paths[0]?.d).not.toBe(
       sketch(rectangle, { seed: 'b' }).paths[0]?.d,
@@ -159,7 +173,7 @@ describe('validation', () => {
     ['a fractional curveStepCount', rectangle, { curveStepCount: 2.5 }, 'curveStepCount must be an integer from 1 to 1000, got 2.5'],
     ['a curveTightness above 1', wave, { curveTightness: 1e308 }, 'curveTightness must be a number from 0 to 1, got 1e+308'],
     ['a negative curveFitting', { kind: 'ellipse', cx: 0, cy: 0, width: 10, height: 10 }, { curveFitting: -0.1 }, 'curveFitting must be a number from 0 to 1, got -0.1'],
-    ['a hachure angle too large for the engine trigonometry', rectangle, { fill: 'red', hachureAngle: 1e300 }, 'hachureAngle must be a finite number within ±1000000, got 1e+300'],
+    ['a hachure angle that is not finite', rectangle, { fill: 'red', hachureAngle: Number.POSITIVE_INFINITY }, 'hachureAngle must be a finite number, got Infinity'],
     ['a dash that is not an array', rectangle, { strokeLineDash: 4 }, 'strokeLineDash must be an array of 1 to 16 lengths from 0 to 1000000, adding up to at least 1, got 4'],
     ['an empty dash', rectangle, { strokeLineDash: [] }, 'strokeLineDash must be an array of 1 to 16 lengths from 0 to 1000000, adding up to at least 1, got '],
     ['a dash pattern shorter than one unit', rectangle, { strokeLineDash: [0.005, 0] }, 'strokeLineDash must be an array of 1 to 16 lengths from 0 to 1000000, adding up to at least 1, got [0.005, 0]'],

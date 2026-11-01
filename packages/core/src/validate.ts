@@ -9,8 +9,6 @@ const MAX_DASHES = 16;
 // The shortest dash pattern, dash and gap lengths added up.
 const MIN_DASH_PATTERN = 1;
 const MAX_ROUGHNESS = 10;
-// Degrees, so its radians stay far inside the trigonometry's range.
-const MAX_HACHURE_ANGLE = 1e6;
 
 // A number or a size must be finite and within ±MAX_COORDINATE, and a size not negative; an angle, in
 // radians, must be finite and within ±MAX_ANGLE.
@@ -92,7 +90,8 @@ const OPTION_RULES: Record<keyof SketchOptions, OptionRule> = {
     message: (value) => `Unknown fill style: ${show(value)}`,
   },
   fillWeight: FINITE,
-  hachureAngle: { ok: (value) => isWithin(value, MAX_HACHURE_ANGLE), expected: `a finite number within ±${MAX_HACHURE_ANGLE}` },
+  // In degrees, any number of turns: the engine takes it within one (engine.ts).
+  hachureAngle: FINITE,
   hachureGap: FINITE,
   dashOffset: FINITE,
   dashGap: FINITE,
