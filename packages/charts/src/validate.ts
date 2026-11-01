@@ -743,6 +743,14 @@ function checkPolarChart(r: Fields, base: CheckedChartBase, series: SeriesOf<'po
   if (radius.shape === 'polygon' && angle.type !== 'band') {
     fail('axes.radius.shape', 'is polygon, which needs a band angle axis for its corners');
   }
+  if (radius.type === 'linear' && radius.min === undefined) {
+    // Like a value below 0, a tick there would take the radius below where it starts.
+    radius.ticks?.forEach(({ value }, i) => {
+      if (value < 0) {
+        fail(`${radius.path}.ticks[${i}]`, `is negative, ${value}, but axes.radius starts at 0 unless its min is set`);
+      }
+    });
+  }
   const spokes = angle.type === 'band' ? angle.categories.length : 0;
   const polygonal = series.find((entry) => SERIES_RULES[entry.type].polar.polygon);
   if (spokes < 3 && (polygonal || radius.shape === 'polygon')) {

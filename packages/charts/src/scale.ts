@@ -154,7 +154,8 @@ export function listedTicks(
   const ticks = listed.map(({ value }) => value);
   const domain: [number, number] = [axis.min ?? Math.min(lo, ticks[0]!), axis.max ?? Math.max(hi, ticks.at(-1)!)];
   if (!(domain[1] > domain[0])) {
-    fail(`${axis.path}.ticks`, `and the data all equal ${tickText(axis, domain[0])}: give a min, a max or another tick`);
+    const value = axis.kind === 'time' ? formatTime(domain[0]) : String(domain[0]);
+    fail(`${axis.path}.ticks`, `and the data all equal ${value}: give a min, a max or another tick`);
   }
   return {
     domain,

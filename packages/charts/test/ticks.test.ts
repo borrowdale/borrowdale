@@ -100,6 +100,9 @@ describe('step and ticks', () => {
     ['a tick with an unknown key', bars({ ticks: [{ value: 1, text: 'a' }] }), 'Invalid chart: axes.y.ticks[0] has an unknown key, "text"'],
     ['a tick label over 100 characters', bars({ ticks: [{ value: 1, label: 'x'.repeat(101) }] }), 'Invalid chart: axes.y.ticks[0].label must be a string of at most 100 characters, got a string of 101 characters'],
     ['one tick equal to all the data', points({ ticks: [5] }), 'Invalid chart: axes.x.ticks and the data all equal 5: give a min, a max or another tick'],
+    ['one tick equal to all the data, in a format', points({ ticks: [5], format: { prefix: '$' } }), 'Invalid chart: axes.x.ticks and the data all equal 5: give a min, a max or another tick'],
+    ['one tick equal to all the times', { ...points({}), axes: { x: { type: 'time', ticks: ['2026-11-03'] }, y: { type: 'linear' } }, series: [{ type: 'scatter', name: 'A', data: [['2026-11-03', 1]] }] } as ChartSpec, 'Invalid chart: axes.x.ticks and the data all equal 2026-11-03: give a min, a max or another tick'],
+    ['a radius tick below 0 when the radius starts at 0', radius({ ticks: [-1, 2] }), 'Invalid chart: axes.radius.ticks[0] is negative, -1, but axes.radius starts at 0 unless its min is set'],
     ['a step on a band axis', { ...bars({}), axes: { x: { ...months, step: 1 }, y: { type: 'linear' } } } as ChartSpec, 'Invalid chart: axes.x has an unknown key, "step"'],
   ])('rejects %s', (_case, spec, message) => {
     expect(laying(spec)).toThrow(message);
