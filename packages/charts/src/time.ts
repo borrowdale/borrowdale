@@ -226,9 +226,9 @@ export function timeScale(axis: CheckedLinearAxis, [lo, hi]: [number, number], l
   }
   const [low, high] = [axis.min ?? lo, axis.max ?? hi];
   const count = tickCountFor(length);
-  // One moment alone, or a fixed end it equals, shows the day it falls in.
+  // One moment alone, or a fixed end it equals, chooses its interval as if the axis were a day long.
   const span = high > low ? high - low : DAY;
-  const step = axis.interval ?? INTERVALS.find((candidate) => candidate.length * count >= span) ?? INTERVALS.at(-1)!;
+  let step = axis.interval ?? INTERVALS.find((candidate) => candidate.length * count >= span) ?? INTERVALS.at(-1)!;
   let domain: [number, number] = [axis.min ?? step.floor(low), axis.max ?? ceiling(step, high)];
   if (!(domain[1] > domain[0])) {
     // A fixed end the data all equal: the free end moves one step out from it, if there is room.
@@ -239,6 +239,12 @@ export function timeScale(axis: CheckedLinearAxis, [lo, hi]: [number, number], l
     } else {
       fail(`${axis.path}.max`, `is ${formatTime(domain[1])}, the earliest a time axis shows, which leaves no room before it`);
     }
+  }
+  if (axis.interval === undefined && ceiling(step, domain[0]) > domain[1]) {
+    // Fixed ends closer together than the interval chosen for the axis' length: the coarsest finer
+    // interval with a boundary between them.
+    const chosen = step;
+    step = INTERVALS.filter((candidate) => candidate.length < chosen.length && ceiling(candidate, domain[0]) <= domain[1]).at(-1) ?? chosen;
   }
   const ticks: number[] = [];
   for (let at = ceiling(step, domain[0]); at <= domain[1]; at = step.next(at)) {
