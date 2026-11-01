@@ -125,7 +125,7 @@ With `y` as the band axis, bars and lines run horizontally. A sparkline is a sma
 Where tick labels would overlap, an axis labels fewer of its ticks and keeps every tick and
 gridline. Evenly spaced ticks are labelled on multiples of a nice number of steps counted from zero,
 so a crowded axis with a step of 2 shows 0, 10, 20; listed ticks keep each label that clears the last
-one kept.
+one kept, and always the last tick, leaving out the labels before it that would crowd it.
 
 Numbers are never formatted with the locale data of the JavaScript engine, which differs between
 engines; set `thousands` and `decimal` to write them for another language. Bars and areas always

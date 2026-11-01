@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import '../../core/test/support/forbid-unportable-calls.js';
 import { layoutChart, type ChartSpec } from '@borrowdale/charts';
-import { laying } from './support/layout.js';
+import { labelsOutside, laying } from './support/layout.js';
 
 const months = { type: 'band', categories: ['Jan', 'Feb'] };
 const bars = (y: object): ChartSpec =>
@@ -79,6 +79,17 @@ describe('listed ticks on a linear axis', () => {
   it('labels a compass dial by its points', () => {
     const compass = { min: 0, max: 360, ticks: [{ value: 0, label: 'N' }, { value: 90, label: 'E' }, { value: 180, label: 'S' }, { value: 270, label: 'W' }] };
     expect(layoutChart(dial(compass)).labels).toEqual(['N', 'E', 'S', 'W', '3']);
+  });
+
+  // The long label just before the end would run past the end, where the axis leaves room only for
+  // the last label.
+  const longBeforeEnd = points({ ticks: [{ value: 0, label: 'a' }, { value: 99, label: 'a very long label indeed here' }, { value: 100, label: 'b' }] });
+  it('always labels the last tick, leaving out the labels before it that crowd it', () => {
+    expect(layoutChart(longBeforeEnd).labels.slice(0, 2)).toEqual(['a', 'b']);
+  });
+
+  it('keeps every label on the chart', () => {
+    expect(labelsOutside(layoutChart(longBeforeEnd))).toBe(0);
   });
 
   it('keeps a label only where it clears the last one kept, however unevenly the ticks are spaced', () => {
