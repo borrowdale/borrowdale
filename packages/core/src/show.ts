@@ -75,7 +75,8 @@ function shownObject(value: object): string {
   }
   if (ArrayBuffer.isView(value)) {
     const typed = TYPED_ARRAYS.find(({ kind }) => value instanceof (kind as abstract new () => unknown));
-    return typed === undefined ? 'a typed array' : `a ${typed.name}`;
+    // An Int8Array, Int16Array or Int32Array is read with "an", every other kind with "a".
+    return typed === undefined ? 'a typed array' : `${typed.name.startsWith('Int') ? 'an' : 'a'} ${typed.name}`;
   }
   return 'an object';
 }
