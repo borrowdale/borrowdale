@@ -28,6 +28,7 @@ const STYLE_PROPERTIES = [
   'fillStyle',
   'textAlign',
   'textBaseline',
+  'textRendering',
   'letterSpacing',
   'wordSpacing',
   'direction',
@@ -49,6 +50,7 @@ function fakeContext(fonts: unknown) {
     fillStyle: '',
     textAlign: '',
     textBaseline: '',
+    textRendering: '',
     letterSpacing: '',
     wordSpacing: '',
     direction: '',
@@ -69,6 +71,19 @@ function fakeContext(fonts: unknown) {
 
 function loadedContext() {
   return fakeContext(fontSet(true, loadedFace('Hand Test')));
+}
+
+// A loaded context with no `textRendering` at all, as WebKit's canvas has none. The other properties
+// keep their accessors, so writes are still recorded.
+function contextWithoutTextRendering(): Omit<ReturnType<typeof loadedContext>, 'textRendering'> {
+  const { textRendering, ...own } = Object.getOwnPropertyDescriptors(loadedContext());
+  return Object.defineProperties({}, own) as Omit<ReturnType<typeof loadedContext>, 'textRendering'>;
+}
+
+// A loaded context that inherits `textRendering` from its prototype, as Chromium's and Firefox's do.
+function contextInheritingTextRendering(): ReturnType<typeof loadedContext> {
+  const { textRendering, ...own } = Object.getOwnPropertyDescriptors(loadedContext());
+  return Object.create(Object.defineProperties({}, { textRendering }), own);
 }
 
 // Each returns the call, unmade, for `expect(...).toThrow`.
@@ -168,6 +183,10 @@ describe('appendText', () => {
     expect(element.style.getPropertyValue('font-variant-ligatures')).toBe('none');
   });
 
+  it('requests fractional glyph advances through the CSSOM', () => {
+    expect(appendText(svgRoot(), layoutText('AB', at)).style.getPropertyValue('text-rendering')).toMatch(/^geometricprecision$/i);
+  });
+
   it('sets the direction through the CSSOM, which a stylesheet rule overrides only with !important', () => {
     expect(appendText(svgRoot(), layoutText('AB', at)).style.getPropertyValue('direction')).toBe('ltr');
   });
@@ -240,6 +259,38 @@ describe('drawText', () => {
     });
   });
 
+  it('requests fractional glyph advances on the canvas', () => {
+    const context = loadedContext();
+
+    drawText(context as unknown as CanvasRenderingContext2D, layoutText('AB', at));
+
+    expect(context.write).toHaveBeenCalledWith('textRendering', 'geometricPrecision');
+  });
+
+  it('requests fractional glyph advances on a canvas that inherits the property', () => {
+    const context = contextInheritingTextRendering();
+
+    drawText(context as unknown as CanvasRenderingContext2D, layoutText('AB', at));
+
+    expect(context.write).toHaveBeenCalledWith('textRendering', 'geometricPrecision');
+  });
+
+  it('draws each unit on a canvas that has no textRendering', () => {
+    const context = contextWithoutTextRendering();
+
+    drawText(context as unknown as CanvasRenderingContext2D, layoutText('AB', at));
+
+    expect(context.fillText.mock.calls).toEqual([['A', 100, 50], ['B', 110, 50]]);
+  });
+
+  it('leaves no textRendering property on a canvas that has none', () => {
+    const context = contextWithoutTextRendering();
+
+    drawText(context as unknown as CanvasRenderingContext2D, layoutText('AB', at));
+
+    expect(Object.hasOwn(context, 'textRendering')).toBe(false);
+  });
+
   it('fills with the style colour', () => {
     const context = loadedContext();
 
@@ -274,6 +325,14 @@ describe('drawText', () => {
 
     expect(context.save).toHaveBeenCalledTimes(1);
     expect(Number(context.save.mock.invocationCallOrder[0])).toBeLessThan(Number(context.write.mock.invocationCallOrder[0]));
+  });
+
+  it('sets every property before it fills the first unit', () => {
+    const context = loadedContext();
+
+    drawText(context as unknown as CanvasRenderingContext2D, layoutText('AB', at));
+
+    expect(Number(context.write.mock.invocationCallOrder.at(-1))).toBeLessThan(Number(context.fillText.mock.invocationCallOrder[0]));
   });
 
   it('restores the context after drawing', () => {

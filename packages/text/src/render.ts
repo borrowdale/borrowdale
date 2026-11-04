@@ -10,12 +10,14 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
 // Set as the element's own style, which a stylesheet rule overrides only with `!important`. A
 // right-to-left page or rule would anchor the text at its right end. Browsers also kern and form
 // ligatures by default, which would make the drawn text narrower than its measurement. Measured in
-// Chromium: `font-kerning` and `font-variant-ligatures` are the only switch SVG text honours; the
-// `font-kerning` and `text-rendering` attributes are ignored.
+// Chromium: `font-kerning` and `font-variant-ligatures` are the only switch SVG text honours, and
+// the `font-kerning` attribute is ignored. The CSS `text-rendering` property asks for fractional
+// advances even when full font hinting would round each glyph to a whole pixel.
 const OWN_STYLE = [
   ['direction', 'ltr'],
   ['font-kerning', 'none'],
   ['font-variant-ligatures', 'none'],
+  ['text-rendering', 'geometricPrecision'],
 ] as const;
 
 /**
@@ -64,6 +66,12 @@ export function drawText(
   context.direction = 'ltr';
   context.textAlign = 'left';
   context.textBaseline = 'alphabetic';
+  // Keep the measured advances fractional when the browser uses full font hinting. WebKit's canvas
+  // has no such property, and setting it there would leave one on the caller's context that
+  // restore() does not remove.
+  if ('textRendering' in context) {
+    context.textRendering = 'geometricPrecision';
+  }
   // A caller's spacing survives a change of `font`, and would widen the text past its measurement.
   context.letterSpacing = '0px';
   context.wordSpacing = '0px';
