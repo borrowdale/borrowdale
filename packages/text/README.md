@@ -89,9 +89,12 @@ Kerning and ligatures are not applied when measuring, and no renderer applies th
 text is as wide as measured: SVG text switches them off, and `drawText` draws each character with
 its marks where the one before it ends. The test suite draws every reference label the font covers
 in Chromium, Firefox and WebKit, through all three renderers, and requires the drawn width to match
-the measured width within 0.05 user units. The suite runs in headless browsers on macOS and Linux.
-The renderers request `geometricPrecision` so browsers can use fractional glyph advances even
-when the system uses full font hinting.
+the measured width within 0.05 user units. SVG text asks for `text-rendering: geometricPrecision`,
+and `drawText` does where the canvas supports it (WebKit's does not), so Chromium keeps fractional
+glyph advances even under full font hinting. Where the request is lost, as under a
+Content-Security-Policy that blocks `toSvgText`'s `style` attribute, a browser that rounds each
+glyph to whole pixels draws text wider or narrower: by about 2 units across the test suite's
+labels, and more on longer text.
 
 ## Rendering
 
@@ -152,9 +155,11 @@ than measured.
 
 `toSvgText` sets the direction, switches kerning and ligatures off and requests fractional glyph
 advances with a `style` attribute, and embedded fonts arrive in a `<style>` element. A
-Content-Security-Policy without `'unsafe-inline'` in `style-src` blocks both, and the embedded fonts
-also need `data:` in `font-src`: use `appendText`, which sets the same properties through the CSSOM,
-and load the font with `loadFont`.
+Content-Security-Policy blocks both unless its `style-src` allows `'unsafe-inline'` with no nonce
+or hash, since a nonce or hash makes browsers ignore `'unsafe-inline'`; a `style-src-attr` or
+`style-src-elem` directive takes the place of `style-src` for the attribute or the element. The
+embedded fonts also need `data:` in `font-src`. Under such a policy, use `appendText`, which sets
+the same properties through the CSSOM, and load the font with `loadFont`.
 
 ## Validation
 
