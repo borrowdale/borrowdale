@@ -8,6 +8,7 @@ import {
   type Shape,
   type SketchStyle,
 } from '@borrowdale/core';
+import { show } from '@borrowdale/core/show';
 
 export type PatternKind = 'lines' | 'crosshatch' | 'circles';
 
@@ -42,11 +43,11 @@ export function pattern(options: PatternOptions): Pattern {
   const patternId = id ?? `borrowdale-${kind}-${toSeed(optionsKey)}`;
   // Validated rather than escaped: the id must also be safe inside CSS url(#…).
   if (!VALID_ID.test(patternId)) {
-    throw new Error(`Invalid pattern id: ${patternId}`);
+    throw new Error(`Invalid pattern id: ${show(patternId)}`);
   }
   // SVG silently skips a pattern tile of zero or negative size.
   if (!(Number.isFinite(size) && size > 0)) {
-    throw new Error(`Invalid pattern size: ${String(size)}`);
+    throw new Error(`Invalid pattern size: ${show(size)}`);
   }
 
   const backdrop =
@@ -99,5 +100,5 @@ function fallingDiagonals(s: number): Shape[] {
 }
 
 function unknownKind(kind: never): never {
-  throw new Error(`Unknown pattern kind: ${String(kind)}`);
+  throw new Error(`Unknown pattern kind: ${show(kind)}`);
 }

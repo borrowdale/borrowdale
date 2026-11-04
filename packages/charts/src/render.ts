@@ -3,6 +3,7 @@ import { paintedSketch } from './gradients.js';
 import { appendSketch, drawSketch, escapeAttribute, svgElement, toSvgPaths } from '@borrowdale/core';
 import { appendText, drawText, fontFaceCss, toSvgText, type FontFiles } from '@borrowdale/text';
 import { imageAttributes, resolveImages, type ChartImage, type ChartRenderOptions } from './images.js';
+import { show } from './read.js';
 import type { ChartLayout, ChartNode } from './types.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -22,7 +23,7 @@ export function toSvgChart(layout: ChartLayout, options: SvgChartOptions = {}): 
   const images = resolveImages(layout.nodes, options);
   const resources = svgResources(layout.nodes, images, options);
   if (fontFiles !== undefined && fontFiles.family !== layout.family) {
-    throw new Error(`Font files are for ${fontFiles.family}, but the chart was laid out in ${layout.family}`);
+    throw new Error(`Font files are for ${show(fontFiles.family)}, but the chart was laid out in ${show(layout.family)}`);
   }
   const title = layout.title === undefined ? '' : svgElement('title', {}, escapeAttribute(layout.title));
   // The rules hold no caller text, so they are safe as markup.

@@ -46,7 +46,7 @@ function withFont(font: unknown) {
 describe('text', () => {
   it.each<[string, unknown, string]>([
     ['a number', 42, 'Text must be a string, got 42'],
-    ['an object', {}, 'Text must be a string, got object'],
+    ['an object', {}, 'Text must be a string, got an object'],
     ['missing', undefined, 'Text must be a string, got undefined'],
     ['one character too long', 'A'.repeat(1001), 'Text is too long (more than 1000 characters)'],
     ['text that composing makes too long', '\uFB2C'.repeat(334), 'Text is too long (more than 1000 characters)'],
@@ -84,9 +84,9 @@ describe('measure options', () => {
   it.each<[string, unknown, string]>([
     ['null', null, 'Options must be an object, got null'],
     ['a string', 'big', 'Options must be an object, got "big"'],
-    ['an unknown key', { fontSzie: 12 }, 'Unknown option: fontSzie'],
-    ['a layout key', { x: 1 }, 'Unknown option: x'],
-    ['a key every object inherits', { constructor: 1 }, 'Unknown option: constructor'],
+    ['an unknown key', { fontSzie: 12 }, 'Unknown option: "fontSzie"'],
+    ['a layout key', { x: 1 }, 'Unknown option: "x"'],
+    ['a key every object inherits', { constructor: 1 }, 'Unknown option: "constructor"'],
     ['fontSize 0', { fontSize: 0 }, 'fontSize must be a number greater than 0 and at most 10000, got 0'],
     ['a negative fontSize', { fontSize: -1 }, 'fontSize must be a number greater than 0 and at most 10000, got -1'],
     ['fontSize over 10000', { fontSize: 10000.5 }, 'fontSize must be a number greater than 0 and at most 10000, got 10000.5'],
@@ -136,7 +136,7 @@ describe('fonts', () => {
     ['a descender below -32768', { ...handFont, descender: -32769 }, 'Invalid font: descender must be a number from -32768 to 0, got -32769'],
     ['a descender as a string', { ...handFont, descender: '-2' }, 'Invalid font: descender must be a number from -32768 to 0, got "-2"'],
     ['files that are not a list', { ...handFont, files: 'latin' }, 'Invalid font: files must be a list of one or more files, got "latin"'],
-    ['an empty list of files', { ...handFont, files: [] }, 'Invalid font: files must be a list of one or more files, got object'],
+    ['an empty list of files', { ...handFont, files: [] }, 'Invalid font: files must be a list of one or more files, got []'],
     ['a list of files with a hole', { ...handFont, files: [, { ranges: [[0x41, 0x41]] }] }, 'Invalid font: files[0].ranges must be'],
     ['a file whose ranges have a hole', { ...handFont, files: [{ ranges: [, [0x41, 0x41]] }] }, 'Invalid font: files[0].ranges must be'],
     ['a pair claiming 2^32-1 ends', { ...handFont, files: [{ ranges: [sparse(2 ** 32 - 1)] }] }, 'Invalid font: files[0].ranges must be'],
@@ -200,7 +200,7 @@ describe('layout options', () => {
     ['rotate past a full turn', { ...placed, rotate: 360.5 }, 'rotate must be a number from -360 to 360, got 360.5'],
     ['rotate below a full turn', { ...placed, rotate: -360.5 }, 'rotate must be a number from -360 to 360, got -360.5'],
     ['a NaN rotate', { ...placed, rotate: NaN }, 'rotate must be a number from -360 to 360, got NaN'],
-    ['a style key', { ...placed, fill: 'red' }, 'Unknown option: fill'],
+    ['a style key', { ...placed, fill: 'red' }, 'Unknown option: "fill"'],
   ])('rejects %s', (_case, options, message) => {
     expect(layingOut('A', options)).toThrow(message);
   });
@@ -271,16 +271,16 @@ describe('style', () => {
   });
 
   it('names a function as a function, not its source', () => {
-    expect(rendering({ fill: String })).toThrow(/^fill must be a string, got function$/);
+    expect(rendering({ fill: String })).toThrow(/^fill must be a string, got a function$/);
   });
 
   it.each<[string, unknown, string]>([
     ['null', null, 'Options must be an object, got null'],
     ['a fill that is not a string', { fill: 1 }, 'fill must be a string, got 1'],
-    ['a fill that is a function', { fill: String }, 'fill must be a string, got function'],
+    ['a fill that is a function', { fill: String }, 'fill must be a string, got a function'],
     ['a fill with a NUL', { fill: 'red\u0000' }, 'fill contains U+0000, which SVG cannot hold'],
     ['a fill with an unpaired surrogate', { fill: '\uD800' }, 'fill contains U+D800, which SVG cannot hold'],
-    ['an unknown key', { stroke: 'red' }, 'Unknown option: stroke'],
+    ['an unknown key', { stroke: 'red' }, 'Unknown option: "stroke"'],
   ])('rejects %s', (_case, style, message) => {
     expect(rendering(style)).toThrow(message);
   });
@@ -317,7 +317,7 @@ describe('font files', () => {
   });
 
   it('rejects labels given as one string rather than a list', () => {
-    expect(embedding(handFiles, 'Zürich')).toThrow('Labels must be an array, got string');
+    expect(embedding(handFiles, 'Zürich')).toThrow('Labels must be an array, got "Zürich"');
   });
 
   it('rejects a label that is not a string', () => {

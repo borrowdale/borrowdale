@@ -26,8 +26,6 @@ function loadedFace(family: string): Face {
 const STYLE_PROPERTIES = [
   'font',
   'fillStyle',
-  'fontKerning',
-  'textRendering',
   'textAlign',
   'textBaseline',
   'letterSpacing',
@@ -44,11 +42,11 @@ function fakeContext(fonts: unknown) {
     translate: vi.fn(),
     rotate: vi.fn(),
     fillText: vi.fn(),
+    // Ten units per UTF-16 code unit, so a unit's width shows how many code units it has.
+    measureText: vi.fn((text: string) => ({ width: text.length * 10 })),
     write: vi.fn(),
     font: '',
     fillStyle: '',
-    fontKerning: '',
-    textRendering: '',
     textAlign: '',
     textBaseline: '',
     letterSpacing: '',
@@ -194,24 +192,46 @@ describe('appendText', () => {
 });
 
 describe('drawText', () => {
-  it('fills the text at the layout position, in the layout font', () => {
+  it('fills each unit at the layout position or where the one before it ends, in the layout font', () => {
     const context = loadedContext();
 
     drawText(context as unknown as CanvasRenderingContext2D, layoutText('AB', at));
 
-    expect(context.fillText).toHaveBeenCalledWith('AB', 100, 50);
+    expect(context.fillText.mock.calls).toEqual([['A', 100, 50], ['B', 110, 50]]);
     expect(context.font).toBe('20px "Hand Test"');
     expect(context.fillStyle).toBe('#000');
   });
 
-  it('turns kerning, ligatures and extra spacing off, and aligns the text by its left end on the baseline', () => {
+  it('fills a letter and its combining mark together, and moves on by their width', () => {
+    const context = loadedContext();
+
+    drawText(context as unknown as CanvasRenderingContext2D, layoutText('q\u0301x', at));
+
+    expect(context.fillText.mock.calls).toEqual([['q\u0301', 100, 50], ['x', 120, 50]]);
+  });
+
+  it('fills nothing for empty text', () => {
+    const context = loadedContext();
+
+    drawText(context as unknown as CanvasRenderingContext2D, layoutText('', at));
+
+    expect(context.fillText).not.toHaveBeenCalled();
+  });
+
+  it('fills a flag, an emoji with a skin tone and a joined emoji pair whole, each once', () => {
+    const context = loadedContext();
+
+    drawText(context as unknown as CanvasRenderingContext2D, layoutText('\u{1F1ED}\u{1F1FA}\u{1F44D}\u{1F3FD}\u{1F468}\u200D\u{1F469}', at));
+
+    expect(context.fillText.mock.calls).toEqual([['\u{1F1ED}\u{1F1FA}', 100, 50], ['\u{1F44D}\u{1F3FD}', 140, 50], ['\u{1F468}\u200D\u{1F469}', 180, 50]]);
+  });
+
+  it('turns extra spacing off, and aligns the text by its left end on the baseline', () => {
     const context = loadedContext();
 
     drawText(context as unknown as CanvasRenderingContext2D, layoutText('AB', at));
 
     expect(context).toMatchObject({
-      fontKerning: 'none',
-      textRendering: 'optimizeSpeed',
       letterSpacing: '0px',
       wordSpacing: '0px',
       direction: 'ltr',
@@ -262,7 +282,7 @@ describe('drawText', () => {
     drawText(context as unknown as CanvasRenderingContext2D, layoutText('AB', at));
 
     expect(context.restore).toHaveBeenCalledTimes(1);
-    expect(Number(context.restore.mock.invocationCallOrder[0])).toBeGreaterThan(Number(context.fillText.mock.invocationCallOrder[0]));
+    expect(Number(context.restore.mock.invocationCallOrder[0])).toBeGreaterThan(Number(context.fillText.mock.invocationCallOrder.at(-1)));
   });
 
   it('asks the page whether the faces for this text and size have loaded', () => {
@@ -294,7 +314,7 @@ describe('drawText', () => {
 
     drawText(context as unknown as CanvasRenderingContext2D, layoutText('AB', at));
 
-    expect(context.fillText).toHaveBeenCalledTimes(1);
+    expect(context.fillText).toHaveBeenCalledTimes(2);
   });
 
   it('finds the loaded face among faces of other families', () => {
@@ -302,7 +322,7 @@ describe('drawText', () => {
 
     drawText(context as unknown as CanvasRenderingContext2D, layoutText('AB', at));
 
-    expect(context.fillText).toHaveBeenCalledTimes(1);
+    expect(context.fillText).toHaveBeenCalledTimes(2);
   });
 
   it('accepts a face whose family differs only in letter case, as CSS does', () => {
@@ -310,7 +330,7 @@ describe('drawText', () => {
 
     drawText(context as unknown as CanvasRenderingContext2D, layoutText('AB', at));
 
-    expect(context.fillText).toHaveBeenCalledTimes(1);
+    expect(context.fillText).toHaveBeenCalledTimes(2);
   });
 
   it('accepts a face whose family the page reports in quotes', () => {
@@ -318,7 +338,7 @@ describe('drawText', () => {
 
     drawText(context as unknown as CanvasRenderingContext2D, layoutText('AB', at));
 
-    expect(context.fillText).toHaveBeenCalledTimes(1);
+    expect(context.fillText).toHaveBeenCalledTimes(2);
   });
 
   it('draws without checking when there is no FontFaceSet to ask', () => {
@@ -326,7 +346,7 @@ describe('drawText', () => {
 
     drawText(context as unknown as CanvasRenderingContext2D, layoutText('AB', at));
 
-    expect(context.fillText).toHaveBeenCalledTimes(1);
+    expect(context.fillText).toHaveBeenCalledTimes(2);
   });
 
   it("asks the page's fonts when the canvas has no document, as an OffscreenCanvas has none", () => {
@@ -358,7 +378,7 @@ describe('drawText', () => {
   it('rejects a style it cannot draw, and draws nothing', () => {
     const context = loadedContext();
 
-    expect(drawing(context, { stroke: 'red' })).toThrow('Unknown option: stroke');
+    expect(drawing(context, { stroke: 'red' })).toThrow('Unknown option: "stroke"');
     expect(context.fillText).not.toHaveBeenCalled();
   });
 

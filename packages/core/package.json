@@ -15,6 +15,11 @@
       "@borrowdale/source": "./src/math.ts",
       "types": "./dist/math.d.ts",
       "default": "./dist/math.js"
+    },
+    "./show": {
+      "@borrowdale/source": "./src/show.ts",
+      "types": "./dist/show.d.ts",
+      "default": "./dist/show.js"
     }
   },
   "files": [

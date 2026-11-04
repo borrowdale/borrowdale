@@ -1,6 +1,7 @@
 # Third-party notices
 
-`src/engine/` is a TypeScript port of the following packages. Their notices:
+`src/engine/` is a TypeScript port of the following packages, and `src/trig.ts` and
+`src/logarithm.ts` draw on fdlibm. Their notices:
 
 ## rough.js 4.6.6
 
@@ -149,8 +150,9 @@ SOFTWARE.
 
 ## fdlibm 5.3
 
-<https://www.netlib.org/fdlibm/>. `src/engine/math.ts` uses its polynomial coefficients and
-range-reduction constants for sin, cos and atan.
+<https://www.netlib.org/fdlibm/>. `src/trig.ts` uses its polynomial coefficients and
+range-reduction constants for sin, cos and atan, and `src/logarithm.ts` is a port of its natural
+logarithm (`e_log.c`).
 
 ```
 Copyright (C) 1993 by Sun Microsystems, Inc. All rights reserved.

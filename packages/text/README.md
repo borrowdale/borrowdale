@@ -85,13 +85,12 @@ one character (a Cyrillic stress mark, for example) is drawn in a fallback font 
 `measureText('приве́т').missing` is `['е́']`. It is measured at Excalifont's widths, so the
 measurement is then approximate.
 
-Kerning and ligatures are not applied when measuring, and every renderer switches them off, so the
-drawn text is as wide as measured. The test suite draws every reference label the font covers in
-Chromium, through all three renderers, and requires the drawn width to match the measured width
-within 0.05 user units. That is verified in headless Chromium on macOS. Other browsers and
-platforms are not tested: a browser that rounds each glyph to whole pixels draws text a little
-wider or narrower, and on a canvas other browsers rely on `fontKerning` and `textRendering` where
-they support them.
+Kerning and ligatures are not applied when measuring, and no renderer applies them, so the drawn
+text is as wide as measured: SVG text switches them off, and `drawText` draws each character with
+its marks where the one before it ends. The test suite draws every reference label the font covers
+in Chromium, Firefox and WebKit, through all three renderers, and requires the drawn width to match
+the measured width within 0.05 user units. That is verified in the headless browsers on macOS; a
+browser that rounds each glyph to whole pixels draws text a little wider or narrower.
 
 ## Rendering
 
@@ -171,7 +170,7 @@ A value that cannot be drawn throws an error naming it:
   files must.
 - `fill` must be a string without characters an XML document cannot hold.
 - `fontFaceCss`'s labels must be an array, and each label must pass the checks for text above.
-- Unknown option names are rejected (`Unknown option: fontSzie`). An option set to `undefined`
+- Unknown option names are rejected (`Unknown option: "fontSzie"`). An option set to `undefined`
   counts as not set. Only an options object's own properties are read: inherited values, including
   any on `Object.prototype`, are ignored.
 

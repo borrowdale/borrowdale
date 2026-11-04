@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Budget, sketch, type Shape } from '@borrowdale/core';
-import { charge, drawWithin, MAX_OPERATIONS } from '../src/engine/budget.js';
+import { charge, drawWithin, MAX_OPERATIONS } from '../src/budget.js';
 
 // One unit per stroke, and rough draws a line with two.
 const line: Shape = { kind: 'line', x1: 0, y1: 0, x2: 10, y2: 10 };
@@ -116,7 +116,7 @@ describe('a budget shared by several sketch() calls', () => {
 
   it('rejects maxOperations given as an object that cannot become a string, by its kind', () => {
     expect(() => new Budget(Object.create(null) as number)).toThrow(
-      'Invalid budget: maxOperations must be a whole number from 1 to 9007199254740991, got object',
+      'Invalid budget: maxOperations must be a whole number from 1 to 9007199254740991, got an object',
     );
   });
 

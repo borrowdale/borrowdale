@@ -1,10 +1,10 @@
 // Ported from rough.js 4.6.6 (src/renderer.ts). MIT License, Copyright (c) 2019 Preet Shihn.
 // See THIRD_PARTY_NOTICES.md.
 
-import { charge } from './budget.js';
+import { charge } from '../budget.js';
 import type { Op, OpSet, Point, ResolvedOptions } from './core.js';
 import { splineSegment } from './bezier.js';
-import { cos, sin, square } from './math.js';
+import { cos, sin, square } from '../trig.js';
 import type { Segment } from './path-data.js';
 import { cloneOptionsAlterSeed, doubleLine, randomOffset, randomOffsetAround, strokeLine } from './strokes.js';
 

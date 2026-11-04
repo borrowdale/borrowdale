@@ -55,6 +55,8 @@ function fakeContext(status = 'loaded') {
     translate: vi.fn(),
     rotate: vi.fn(),
     fillText: vi.fn(),
+    // Ten units a character, so where each one starts shows the width before it.
+    measureText: vi.fn((text: string) => ({ width: text.length * 10 })),
   };
 }
 
@@ -160,13 +162,13 @@ describe('drawChart', () => {
     expect(context.strokes).toEqual([context.gradient]);
   });
 
-  it('draws text with the font loaded', () => {
+  it('draws text with the font loaded, a character at a time', () => {
     vi.stubGlobal('Path2D', RecordingPath2D);
     const context = fakeContext();
 
     drawChart(context as unknown as CanvasRenderingContext2D, layout);
 
-    expect(context.fillText).toHaveBeenCalledWith('Hi', 1, 2);
+    expect(context.fillText.mock.calls).toEqual([['H', 1, 2], ['i', 11, 2]]);
   });
 
   it('throws when the font has not loaded', () => {

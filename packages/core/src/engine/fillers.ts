@@ -2,10 +2,10 @@
 // See THIRD_PARTY_NOTICES.md. The dots filler draws its jitter from the seeded random stream,
 // where rough.js used Math.random() regardless of the seed.
 
-import { charge } from './budget.js';
+import { charge } from '../budget.js';
 import { fillWeight, lineLength, type Line, type Op, type OpSet, type Point, type ResolvedOptions } from './core.js';
 import { hachureLines } from './hachure.js';
-import { atan, cos, sin, square } from './math.js';
+import { atan, cos, sin, square } from '../trig.js';
 import { ellipseWithParams, generateEllipseParams, normalizedArc } from './renderer.js';
 import { doubleLineFillOps, nextRandom } from './strokes.js';
 

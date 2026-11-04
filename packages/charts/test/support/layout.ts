@@ -1,5 +1,5 @@
 // Reading a chart layout back in tests: its marks, texts and the points its shapes pass through.
-import type { ChartLayout, ChartNode } from '@borrowdale/charts';
+import { layoutChart, toSvgChart, type ChartLayout, type ChartNode, type ChartSpec } from '@borrowdale/charts';
 import { textBounds } from '@borrowdale/text';
 import { PAD } from '../../src/frame.js';
 
@@ -39,7 +39,8 @@ export function pointsOutside(layout: ChartLayout, margin = 0): number {
 
 /** How many labels reach outside the chart's padding. */
 export function labelsOutside(layout: ChartLayout): number {
-  const labels = layout.nodes.flatMap((node) => (node.kind === 'text' ? [textBounds(node.text)] : []));
+  const drawn = layout.nodes.flatMap((node) => (node.kind === 'mark' ? node.nodes : [node]));
+  const labels = drawn.flatMap((node) => (node.kind === 'text' ? [textBounds(node.text)] : []));
   const [low, right, bottom] = [PAD - 0.01, layout.width - PAD + 0.01, layout.height - PAD + 0.01];
   return labels.filter((box) => box.x < low || box.y < low || box.x + box.width > right || box.y + box.height > bottom)
     .length;
@@ -49,6 +50,27 @@ export function titles(layout: ChartLayout): string[] {
   return layout.nodes.flatMap((node) => (node.kind === 'mark' ? [node.title] : []));
 }
 
+/** Each pair of drawn texts, in marks or not, whose boxes overlap, as "first / second". */
+export function overlappingTexts(layout: ChartLayout): string[] {
+  const drawn = layout.nodes.flatMap((node) => (node.kind === 'mark' ? node.nodes : [node]));
+  const boxes = drawn.flatMap((node) => (node.kind === 'text' ? [{ text: node.text.text, ...textBounds(node.text) }] : []));
+  return boxes.flatMap((a, i) =>
+    boxes.slice(i + 1).flatMap((b) =>
+      a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height ? [`${a.text} / ${b.text}`] : [],
+    ),
+  );
+}
+
 export function texts(layout: ChartLayout): string[] {
   return layout.nodes.flatMap((node) => (node.kind === 'text' ? [node.text.text] : []));
+}
+
+/** Laying a spec out, to be called by `toThrow`. */
+export function laying(spec: unknown): () => ChartLayout {
+  return () => layoutChart(spec as ChartSpec);
+}
+
+/** The tooltips of a spec's marks, as its SVG writes them. */
+export function svgTitles(spec: ChartSpec): string[] {
+  return [...toSvgChart(layoutChart(spec)).matchAll(/<title>([^<]*)<\/title>/g)].map((match) => match[1]!);
 }

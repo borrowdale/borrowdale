@@ -1,10 +1,11 @@
 import type { Point, Shape } from '@borrowdale/core';
 import type { Drawing } from './drawing.js';
-import { assertRoom, GAP, TICK, type Rect } from './frame.js';
+import { aChart, assertRoom, GAP, TICK, type Rect } from './frame.js';
 import {
   alignTowards,
   fitSweep,
   isWholeTurn,
+  labelledRim,
   polarFrame,
   RADIANS,
   RIM_SHARE,
@@ -14,7 +15,7 @@ import {
 import { solid } from './marks.js';
 import { GRID, GRID_WIDTH, hatched, INK, type Paint } from './palette.js';
 import { fail } from './read.js';
-import { formatValue, linearScale, place } from './scale.js';
+import { formatValue, place, scaleOf } from './scale.js';
 import type { CheckedGaugeChart, SeriesOf } from './validate.js';
 
 type GaugeSeries = SeriesOf<'gauge'>;
@@ -70,7 +71,7 @@ export function layoutGauge(drawing: Drawing, chart: CheckedGaugeChart, rect: Re
     [low, high] = [Math.min(low, value), Math.max(high, value)];
   }
   const rimLength = radius * (endAngle - startAngle) * RADIANS * RIM_SHARE;
-  const scale = place(linearScale(axis, [low, high], rimLength), [startAngle, endAngle]);
+  const scale = place(scaleOf(axis, [low, high], rimLength), [startAngle, endAngle]);
   const [first, last] = scale.domain;
   const origin = Math.min(Math.max(0, first), last);
 
@@ -86,7 +87,7 @@ export function layoutGauge(drawing: Drawing, chart: CheckedGaugeChart, rect: Re
     const [where, problem] =
       bars.length > 0
         ? ['series', `holds ${bars.length} gauge bars, more rings than the dial has room for`]
-        : ['', `a ${chart.width} × ${chart.height} chart leaves no room for the dial's ticks around its hub`];
+        : ['', `${aChart(chart.width, chart.height)} leaves no room for the dial's ticks around its hub`];
     fail(where, problem);
   }
   const grid = { stroke: GRID, strokeWidth: GRID_WIDTH };
@@ -101,13 +102,18 @@ export function layoutGauge(drawing: Drawing, chart: CheckedGaugeChart, rect: Re
   if (!axis.hidden) {
     const ink = { stroke: INK, strokeWidth: 1 };
     const { ticks, labels } = rimTicks(scale, whole);
+    const labelRadius = inner - TICK - GAP;
+    const size: [number, number] = [Math.max(0, ...labels.map((label) => drawing.width(label))) + GAP, drawing.lineHeight() + GAP / 2];
+    const shown = new Set(labelledRim(scale, ticks.length, labelRadius, size, whole));
     ticks.forEach((tick, i) => {
       const at = scale.at(tick);
       const [[x1, y1], [x2, y2]] = [point(at, inner), point(at, inner - TICK)];
       drawing.push(drawing.outline({ kind: 'line', x1, y1, x2, y2 }, ink, ['tick', tick]));
-      // Inside the rim, so each label is placed towards the centre.
-      const [px, py] = point(at, inner - TICK - GAP);
-      drawing.push(drawing.text(labels[i]!, { x: px, y: py, ...alignTowards(at, false) }));
+      if (shown.has(i)) {
+        // Inside the rim, so each label is placed towards the centre.
+        const [px, py] = point(at, labelRadius);
+        drawing.push(drawing.text(labels[i]!, { x: px, y: py, ...alignTowards(at, false) }));
+      }
     });
   }
 

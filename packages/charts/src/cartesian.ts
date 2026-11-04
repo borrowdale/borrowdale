@@ -18,7 +18,7 @@ import { assertRoom, BAND_PADDING, type Rect } from './frame.js';
 import { loneDot, piecesOf, POINT_SIZE, runsOf, solid } from './marks.js';
 import { hatched, LINE_WIDTH, type Paint } from './palette.js';
 import { stackGroup, stackSpans, type Span } from './stack.js';
-import { bandScale, formatValue, formatAxisValue, linearScale, place, type BandScale, type PlacedScale } from './scale.js';
+import { bandScale, emptyExtent, formatAxisValue, formatShare, formatValue, place, scaleOf, type BandScale, type PlacedScale } from './scale.js';
 import { markerNode } from './symbols.js';
 import type { ChartNode, Curve } from './types.js';
 import { isStacking, type CheckedCartesianChart, type SeriesOf } from './validate.js';
@@ -29,6 +29,10 @@ type MarkType = CartesianSeries['type'];
 // The share of a bar's slot left as a gap between bars side by side.
 const BAR_GAP = 0.1;
 const MAX_BUBBLE = 60;
+// A milestone's diamond is this many units across, or the width of its slot if that is less.
+const MILESTONE = 12;
+// Between an xRange item's label and the end of its bar or milestone.
+const LABEL_GAP = 4;
 
 /** What a series type is on a cartesian chart. A new type fails to compile until it has an entry. */
 interface Mark<S extends CartesianSeries> {
@@ -54,6 +58,7 @@ const MARKS: { [K in MarkType]: Mark<Extract<CartesianSeries, { type: K }>> } = 
   area: { zero: true, slot: false, legend: 'box', reach: none, draw: drawArea },
   rangeArea: { zero: false, slot: false, legend: 'box', reach: none, draw: drawArea },
   interval: { zero: false, slot: true, legend: 'box', reach: () => POINT_SIZE / 2, draw: drawIntervals },
+  xRange: { zero: false, slot: true, legend: 'box', reach: () => MILESTONE / 2, draw: drawXRange },
   xyLine: {
     zero: false, slot: false, legend: 'line',
     reach: (_size, entry, style) => Math.max(POINT_SIZE,
@@ -96,12 +101,12 @@ export function layoutCartesian(drawing: Drawing, chart: CheckedCartesianChart, 
     'axis' in entry && entry.axis === 'y2' ? 'y2' : horizontal ? 'x' : 'y';
   const spans = spansOf(series, valueAxisOf, linear);
   const cuts = areaCutsOf(series, valueAxisOf);
-  // An axis with nothing drawn on it starts at its fixed end, or shows 0 to 1.
+  // A linear axis with nothing drawn on it spans its listed ticks, or starts at its fixed end, at 0,
+  // or at 1 on a log axis.
   const extentOf = (key: AxisKey): [number, number] => {
-    const end = linear[key]?.min ?? linear[key]?.max ?? 0;
     const data = extent(key, series, spans, valueAxisOf);
     const values = chart.annotations.flatMap(annotationValues).filter((item) => item.axis === key && typeof item.value === 'number').map((item) => item.value as number);
-    if (values.length === 0) return data ?? [end, end];
+    if (values.length === 0) return data ?? emptyExtent(linear[key]!);
     return [Math.min(data?.[0] ?? Infinity, ...values), Math.max(data?.[1] ?? -Infinity, ...values)];
   };
 
@@ -125,13 +130,13 @@ export function layoutCartesian(drawing: Drawing, chart: CheckedCartesianChart, 
     const top = rect.top + Math.max(reserve.up, room.top.outside);
     const bottom = rect.bottom - Math.max(reserve.bottom, reserve.down, room.bottom.outside);
     assertRoom({ left: rect.left, top, right: rect.right, bottom }, chart.width, chart.height);
-    const yScale = linear.y && linearScale(linear.y, extentOf('y'), bottom - top);
-    const y2Scale = y2 && linearScale(y2, extentOf('y2'), bottom - top);
+    const yScale = linear.y && scaleOf(linear.y, extentOf('y'), bottom - top);
+    const y2Scale = y2 && scaleOf(y2, extentOf('y2'), bottom - top);
     const left = guide('left', 'y', y, yScale, drawing, line);
     const right = y2 && guide('right', 'y2', y2, y2Scale, drawing, line);
     let plotLeft = rect.left + (y.hidden ? 0 : left.depth);
     let plotRight = rect.right - (!right || right.axis.hidden ? 0 : right.depth);
-    const xScale = linear.x && linearScale(linear.x, extentOf('x'), plotRight - plotLeft);
+    const xScale = linear.x && scaleOf(linear.x, extentOf('x'), plotRight - plotLeft);
     const below = guide('bottom', 'x', x, xScale, drawing, line);
     // The first and last x labels reach past the ends of the axis.
     plotLeft = Math.max(plotLeft, rect.left + below.ends.left, rect.left + room.left.outside);
@@ -153,9 +158,9 @@ export function layoutCartesian(drawing: Drawing, chart: CheckedCartesianChart, 
   // for ticks over the whole chart first, then again, once, for the plot's own ticks should they
   // reach further, which only rotated labels can.
   const first = reserveFor([
-    guide('bottom', 'x', x, linear.x && linearScale(linear.x, extentOf('x'), rect.right - rect.left), drawing, line),
-    guide('left', 'y', y, linear.y && linearScale(linear.y, extentOf('y'), rect.bottom - rect.top), drawing, line),
-    ...(y2 ? [guide('right', 'y2', y2, linearScale(y2, extentOf('y2'), rect.bottom - rect.top), drawing, line)] : []),
+    guide('bottom', 'x', x, linear.x && scaleOf(linear.x, extentOf('x'), rect.right - rect.left), drawing, line),
+    guide('left', 'y', y, linear.y && scaleOf(linear.y, extentOf('y'), rect.bottom - rect.top), drawing, line),
+    ...(y2 ? [guide('right', 'y2', y2, scaleOf(y2, extentOf('y2'), rect.bottom - rect.top), drawing, line)] : []),
   ]);
   let fitted = fitPlot(first);
   const needed = reserveFor(fitted.guides);
@@ -211,7 +216,7 @@ export function layoutCartesian(drawing: Drawing, chart: CheckedCartesianChart, 
   });
   drawAnnotations(drawing, chart.annotations, 'front', plot, annotationAt);
   for (const entry of guides) {
-    drawGuide(drawing, plot, entry, scales[entry.key], bands, line);
+    drawGuide(drawing, plot, rect, entry, scales[entry.key], bands, line);
   }
 }
 
@@ -264,6 +269,8 @@ interface MarkContext {
 /** The plot and its orientation: marks give positions as [along, value] and get [x, y] back. */
 interface Frame {
   plot: Rect;
+  /** Whether the value axis runs across, with the bands stacked down the plot. */
+  horizontal: boolean;
   /** The centre of category `index`'s band, along the band axis. */
   center: (index: number) => number;
   /** Where category `index`'s band starts, and how wide it is. */
@@ -277,9 +284,26 @@ interface Frame {
   area: (high: readonly Point[], low: readonly Point[], curve: Curve) => Shape;
 }
 
+/**
+ * Where a mark of a series with slots sits in category `index`'s band: across its own slot of
+ * `slotCount`, or the whole band for an overlay, as a centre and the slot's width times the series'.
+ */
+function slotIn(
+  frame: Frame,
+  index: number,
+  slot: number,
+  slotCount: number,
+  entry: { overlay: boolean; width: number },
+): { center: number; width: number } {
+  const band = frame.band(index);
+  const slotWidth = band.width / (entry.overlay ? 1 : slotCount);
+  return { center: entry.overlay ? frame.center(index) : band.start + (slot + 0.5) * slotWidth, width: slotWidth * entry.width };
+}
+
 function makeFrame(plot: Rect, horizontal: boolean, bands: BandScale | undefined): Frame {
   return {
     plot,
+    horizontal,
     center: (i) => bands!.start(i) + bands!.width(i) / 2,
     band: (i) => ({ start: bands!.start(i), width: bands!.width(i) }),
     point: ([along, value]) => (horizontal ? [value, along] : [along, value]),
@@ -403,6 +427,13 @@ function extent(
     high = Math.max(high, value);
   };
   for (const entry of series) {
+    if (entry.type === 'xRange') {
+      for (const item of valueAxisOf(entry) === key ? entry.data : []) {
+        take(item.from);
+        take(item.to ?? item.from);
+      }
+      continue;
+    }
     if (entry.type === 'scatter' || entry.type === 'bubble' || entry.type === 'xyLine' || entry.type === 'xyArea') {
       for (const point of key === 'y2' ? [] : entry.data) {
         if (point === null) continue;
@@ -435,7 +466,7 @@ function slotsOf(
   const keyOf = (entry: CartesianSeries): string =>
     'stack' in entry ? stackOf(entry, valueAxisOf) : `#${entry.index}`;
   const keys = [...new Set(series.filter((entry) => markOf(entry).slot &&
-    !(entry.type === 'interval' && entry.overlay)).map(keyOf))];
+    !((entry.type === 'interval' || entry.type === 'xRange') && entry.overlay)).map(keyOf))];
   return { slotOf: (entry) => keys.indexOf(keyOf(entry)), count: keys.length };
 }
 
@@ -456,10 +487,7 @@ function drawIntervals(
 ): void {
   entry.data.forEach((pair, i) => {
     if (!pair) return;
-    const band = frame.band(i);
-    const slotWidth = band.width / (entry.overlay ? 1 : slotCount);
-    const center = entry.overlay ? frame.center(i) : band.start + (slot + 0.5) * slotWidth;
-    const width = slotWidth * entry.width;
+    const { center, width } = slotIn(frame, i, slot, slotCount, entry);
     const [from, to] = pair.map((value) => scale.at(value)) as [number, number];
     const key = [entry.name, categories[i]!, 'interval'];
     const outline = { stroke: paint.color, strokeWidth: LINE_WIDTH };
@@ -491,6 +519,55 @@ function drawIntervals(
   });
 }
 
+function drawXRange(
+  { drawing, frame, slotCount, categories }: MarkContext,
+  { entry, scale, slot, axis }: Placed<Extract<CartesianSeries, { type: 'xRange' }>>,
+  paint: Paint,
+): void {
+  const { horizontal } = frame;
+  // Along the value axis, a label of `text` is this long: its width across a horizontal value axis,
+  // its height up a vertical one.
+  const lengthOf = (text: string): number => (horizontal ? drawing.width(text) : drawing.lineHeight());
+  entry.data.forEach((item, i) => {
+    const { center, width } = slotIn(frame, item.category, slot, slotCount, entry);
+    const row = categories[item.category]!;
+    const key = [entry.name, row, 'xRange', i];
+    const from = scale.at(item.from);
+    const named = item.label === undefined ? '' : `${item.label}, `;
+    const nodes: ChartNode[] = [];
+    // Centred on the item where it fits, else past its end, in the direction the item runs.
+    const label = (start: number, end: number, direction: number): void => {
+      if (!entry.dataLabels || item.label === undefined) return;
+      const length = lengthOf(item.label);
+      const at = Math.abs(end - start) >= length + 2 * LABEL_GAP ? (start + end) / 2 : end + direction * (LABEL_GAP + length / 2);
+      const [x, y] = frame.point([center, at]);
+      nodes.push(drawing.label(item.label, x, y, frame.plot, `${entry.path}.dataLabels`));
+    };
+    if (item.to === undefined) {
+      const size = Math.min(MILESTONE, width);
+      nodes.push(markerNode(drawing, 'diamond', frame.point([center, from]), size, solid(paint.color), key, entry.style));
+      // Rightwards along a horizontal value axis, upwards along a vertical one.
+      const direction = horizontal ? 1 : -1;
+      label(from, from + (direction * size) / 2, direction);
+      drawing.mark(`${entry.name}, ${row}: ${named}${formatAxisValue(item.from, axis)}`, nodes);
+      return;
+    }
+    const to = scale.at(item.to);
+    const bar = barShape(entry.shape, center - width / 2, width, from, to, frame.point, frame.box);
+    nodes.push(drawing.shape(bar, hatched(paint), key, entry.style));
+    const done = item.progress ?? 0;
+    if (done > 0) {
+      // Solid, half as thick, along the start of the bar.
+      const part = frame.box(center - width / 4, width / 2, from, from + (to - from) * done);
+      nodes.push(drawing.shape(part, solid(paint.color), [...key, 'progress'], entry.style));
+    }
+    label(from, to, Math.sign(to - from));
+    const progress = item.progress === undefined ? '' : `, ${formatShare(item.progress)}% done`;
+    const span = `${formatAxisValue(item.from, axis)} to ${formatAxisValue(item.to, axis)}`;
+    drawing.mark(`${entry.name}, ${row}: ${named}${span}${progress}`, nodes);
+  });
+}
+
 function drawBars(
   context: MarkContext,
   placed: Placed<Extract<CartesianSeries, { type: 'bar' }>>,
@@ -514,7 +591,8 @@ function drawBars(
         entry.style,
       )];
     if (entry.dataLabels) {
-      const [x, y] = frame.point([along + width * (1 - BAR_GAP) / 2, scale.at((span[0] + span[1]) / 2)]);
+      // At the middle of the bar as drawn, which on a square-root axis is not its middle value.
+      const [x, y] = frame.point([along + width * (1 - BAR_GAP) / 2, (scale.at(span[0]) + scale.at(span[1])) / 2]);
       nodes.push(drawing.label(formatAxisValue(value, placed.axis), x, y, frame.plot, `${entry.path}.dataLabels`));
     }
     drawing.mark(`${entry.name}, ${category}: ${formatAxisValue(value, placed.axis)}`, nodes);

@@ -50,7 +50,7 @@ export function shapeSets(shape: Shape, o: ResolvedOptions): OpSet[] {
 
 function unknownKind(shape: never): never {
   const { kind } = shape as { kind?: unknown };
-  throw new Error(`Unknown shape kind: ${typeof kind === 'string' ? kind : show(kind)}`);
+  throw new Error(`Unknown shape kind: ${show(kind)}`);
 }
 
 // The fill code rotates polygons in place, so the engine always works on its own copy.

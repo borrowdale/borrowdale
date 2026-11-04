@@ -1,8 +1,8 @@
 import type { Point } from '@borrowdale/core';
-import type { CheckedAxis } from './check-axis.js';
+import { valueReader, type CheckedAxis } from './check-axis.js';
 import type { Drawing } from './drawing.js';
 import type { Rect } from './frame.js';
-import { fail, fields, list, number, oneOf, text, MAX_VALUE, type Check, type Fields } from './read.js';
+import { fail, fields, list, oneOf, text, type Check, type Fields } from './read.js';
 import type { Annotation, ChartCoordinate, ChartPosition } from './types.js';
 
 type AxisKey = 'x' | 'y' | 'y2';
@@ -12,7 +12,7 @@ export function checkAnnotations(r: Fields, axes: Record<AxisKey, CheckedAxis | 
   const coordinate = (axis: AxisKey): Check<ChartCoordinate> => (path, raw) => {
     const target = axes[axis];
     if (!target) return fail(path, `needs axes.${axis}`);
-    if (target.type === 'linear') return number(-MAX_VALUE, MAX_VALUE)(path, raw);
+    if (target.type === 'linear') return valueReader(target.kind)(path, raw);
     const name = text(100)(path, raw);
     if (!target.categories.includes(name)) fail(path, `is not a category of axes.${axis}`);
     return name;
