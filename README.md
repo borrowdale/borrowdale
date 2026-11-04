@@ -46,6 +46,12 @@ Node's byte for byte, so each golden is checked in V8, SpiderMonkey and JavaScri
 they also require the width each browser draws to match the measured width. They fail, rather than
 skip, when a browser is not installed.
 
+## Contributing
+
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the workspace, conventions and pull requests, and the
+[code of conduct](CODE_OF_CONDUCT.md). Report security problems privately, as
+[`SECURITY.md`](SECURITY.md) describes.
+
 ## License
 
 MIT, except the Excalifont files bundled in `packages/text`, which are licensed under the SIL Open
