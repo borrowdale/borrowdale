@@ -150,10 +150,11 @@ there only its `direction` attribute remains, and a stylesheet rule overrides th
 `lang` can switch on a language's own letter forms: on a Catalan (`ca`) page, `l·l` draws narrower
 than measured.
 
-`toSvgText` sets the direction and switches kerning and ligatures off with a `style` attribute, and
-embedded fonts arrive in a `<style>` element. A Content-Security-Policy without `'unsafe-inline'`
-in `style-src` blocks both, and the embedded fonts also need `data:` in `font-src`: use
-`appendText`, which sets the same properties through the CSSOM, and load the font with `loadFont`.
+`toSvgText` sets the direction, switches kerning and ligatures off and requests fractional glyph
+advances with a `style` attribute, and embedded fonts arrive in a `<style>` element. A
+Content-Security-Policy without `'unsafe-inline'` in `style-src` blocks both, and the embedded fonts
+also need `data:` in `font-src`: use `appendText`, which sets the same properties through the CSSOM,
+and load the font with `loadFont`.
 
 ## Validation
 

@@ -9,9 +9,11 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
 
 // Set as the element's own style, which a stylesheet rule overrides only with `!important`. A
 // right-to-left page or rule would anchor the text at its right end. Browsers also kern and form
-// ligatures by default, which would make the drawn text narrower than its measurement. The CSS
-// text-rendering property asks for fractional advances even when full font hinting would round
-// each glyph to a whole pixel. Set it through CSS rather than relying on an SVG attribute.
+// ligatures by default, which would make the drawn text narrower than its measurement. Measured in
+// Chromium: `font-kerning` and `font-variant-ligatures` are the only switch SVG text honours, and
+// the `font-kerning` attribute is ignored. The CSS text-rendering property asks for fractional
+// advances even when full font hinting would round each glyph to a whole pixel. Set it through CSS
+// rather than relying on an SVG attribute.
 const OWN_STYLE = [
   ['direction', 'ltr'],
   ['font-kerning', 'none'],
