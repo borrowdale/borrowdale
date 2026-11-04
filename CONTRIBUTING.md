@@ -1,38 +1,139 @@
 # Contributing to BorrowdaleJS
 
-Contributions can improve code, documentation, examples, accessibility or reproducible bug reports. Start with a focused change and include enough context for someone else to verify it.
+Contributions can improve code, documentation, examples, accessibility or bug reports. Start with a
+focused change and include enough context for someone else to check it. Everyone taking part follows
+the [code of conduct](CODE_OF_CONDUCT.md).
 
 ## Set up the workspace
 
-Node.js 24 is required. Clone the repository, then run:
+Development uses Node.js 24 (see `.nvmrc`). Clone the repository, then run:
 
 ```sh
 nvm use
 npm ci
-npx playwright-core install chromium-headless-shell
+npx playwright-core install chromium firefox webkit   # once: the parity tests render in all three
 npm run build
 npm test
 npm run typecheck
 ```
 
-The browser download is needed for parity tests. `npm test` and `npm run typecheck` cover the website too. For website work, run `npm run site` to preview it and `npm run site:build` to build and check the static pages.
+The parity tests draw every golden in headless Chromium, Firefox and WebKit and compare the output
+with Node's byte for byte. They fail, rather than skip, when a browser is not installed. After each
+merge to `main`, continuous integration runs the same steps on Node.js 22, 24 and 26. `npm test`
+and `npm run typecheck` cover the website too. To work on it, run `npm run site` to preview it and
+`npm run site:build` to build it and check the static pages.
+
+| Path | What it holds |
+|---|---|
+| `packages/core`, `packages/fills`, `packages/text`, `packages/charts` | The published packages: `src/`, `test/`, and a `README.md` that is the package's reference |
+| `packages/*/test/golden/` | The golden corpora: `corpus.json` lists the inputs, `goldens.json` the expected output |
+| `apps/examples` | Runnable examples that load the built packages |
+| `apps/site` | The website: the guides in `content/`, and pages built from the package READMEs and the golden corpora |
+| `scripts/` | Recording the goldens and generating the bundled font modules |
+| `.changeset/` | Release notes waiting for the next release |
 
 ## Report a bug
 
-[Open a GitHub issue](https://github.com/borrowdale/borrowdale/issues) with a minimal chart or shape spec, expected and actual output, package revision, browser and operating system. Include the seed when reporting a drawing difference. Remove private data and credentials before posting.
+[Open an issue](https://github.com/borrowdale/borrowdale/issues/new/choose) with the bug form. Give
+the smallest input that shows the problem, the output you expected and the output you got, the
+package version or commit, and the runtime or browser and operating system. Include the seed when a
+drawing differs. Remove private data and credentials before posting.
+
+Report a security problem privately instead, as [the security policy](SECURITY.md) describes.
 
 ## Propose a change
 
-For a substantial API or behavior change, explain the use case in an issue first. Keep pull requests focused. Add a regression test for a bug fix, and update the public documentation alongside changed behavior.
+For a new feature, or a change to an API or to drawn output, explain the use case in an issue first.
+Small fixes and documentation improvements can go straight to a pull request.
 
-Only regenerate golden output after checking that the visual change is intentional. Use `npm run goldens` and inspect the resulting diff; replacing a baseline is not a substitute for diagnosing a failure.
+## Making a change
 
-## Improve the website and documentation
+### Keep drawings deterministic
 
-Shared guides live in `apps/site/content/`. Package references are the existing `packages/*/README.md` files. The website renders these sources directly. The playground examples come from the golden corpora in `packages/*/test/golden/`, so adding, renaming or removing a golden case also changes a public page and its URL. When a package is first published, replace the "Unpublished" note in its README with installation instructions. Keep examples executable and use public data with clear provenance.
+The same input must give the same drawing, byte for byte, on every render, in Node and in every
+browser. Drawing code therefore never reads the clock, a random source, the locale or the time zone,
+and never calls a `Math` function whose result the engine is free to approximate. Use
+`@borrowdale/core/math` for `sin`, `cos` and `log`, and take randomness from the seed. The test
+guard in `packages/core/test/support/forbid-unportable-calls.ts` makes such calls throw while a
+golden is drawn.
 
-Do not commit credentials, machine-specific paths, private review material or tool-specific working notes to this public repository.
+Inputs that would make drawing hang or run out of memory must fail with a named error instead, and
+the limit must be documented in the package README.
+
+### Change drawn output on purpose only
+
+Golden output changes only when a drawing is meant to change. Regenerate it with `npm run goldens`,
+then read the diff of `goldens.json`: replacing a baseline is not a substitute for finding out why a
+test failed. A change to drawn output is visible to every user, so it needs a changeset (below).
+
+### Write tests that read as data and checks
+
+- Every bug fix comes with a test that fails without the fix.
+- A test body holds its data and its checks only: no loops, conditionals or inline functions. Shared
+  data and helpers are defined beside the tests, at module level, and a table of cases goes through
+  `it.each`.
+- A comment that describes a test sits directly above it.
+- A case that only some runtimes can run says so with `it.runIf`, with a comment naming the runtimes.
+
+### Update the documentation with the code
+
+The package `README.md` files are the reference documentation. Change them in the same pull request
+as the behaviour they describe. Keep examples runnable, state limits as numbers, and say what has
+been measured rather than what is expected.
+
+### Keep the website in step
+
+The website renders the package READMEs and the guides in `apps/site/content/` directly, and builds
+its playground from the golden corpora in `packages/*/test/golden/`. Adding, renaming or removing a
+golden case therefore also changes a public page and its URL. Keep the examples runnable, and use
+public data whose source is stated.
+
+### Add a changeset for anything a package user can notice
+
+Run `npx changeset` for a new or changed API, a change to drawn output, a new or changed error, or a
+change to supported runtimes, and describe the change for someone reading the changelog. The four
+packages share one version and are released together. While the version is 0.x, a breaking change
+is a minor release and anything else a patch. Changes to tests, CI or development tooling need no
+changeset.
+
+## Commits
+
+Subjects follow `[scope] TYPE: sentence`:
+
+- **scope:** `core`, `fills`, `text`, `charts` or `site`, or `repo` for anything across the
+  repository;
+- **TYPE:** `FEAT`, `FIX`, `REFACTOR`, `TEST`, `DOCS`, `STYLE` or `CHORE`;
+- **sentence:** lower case, in the imperative, with no full stop at the end.
+
+For example: `[charts] FIX: end a free time axis no later than year 9999`. Explain in the body why
+the change is needed when that is not obvious from the diff. Keep each commit to one concern.
+
+## Pull requests
+
+- Open pull requests against `main`, and keep each one to a single change.
+- Fill in the template: what changed and why, the risks, and how it was tested.
+- Continuous integration runs after a merge to `main`, not on pull requests, so run `npm run build`,
+  `npm run typecheck` and `npm test` yourself before asking for a merge, with the browsers
+  installed, and `npm run site:build` too when the website changes. After the merge, the Library
+  workflow runs the same on Node.js 22, 24 and 26; a merge that changes only documentation
+  (Markdown, the licence files and the issue forms) starts no run.
+- A maintainer merges the pull request once it is approved.
+
+## What not to commit
+
+Credentials or tokens, `.env` files, machine-specific paths, personal data, build output (`dist/`,
+`apps/examples/out/`) and private working notes.
+
+## Licence
+
+Contributions are licensed under the [MIT License](LICENSE). Code or data taken from another project
+needs a compatible licence, and its notice goes into the package's `THIRD_PARTY_NOTICES.md` (create
+one, and list it in the package's `files`, if the package has none yet). The
+bundled Excalifont files keep their own [SIL Open Font License 1.1](packages/text/OFL.txt). Credits
+for incorporated code, fonts and datasets are on the website's
+[License & credits page](apps/site/content/license.md).
 
 ## Contributors
 
-See the [public GitHub contributor history](https://github.com/borrowdale/borrowdale/graphs/contributors) for the people behind the project. Credits for incorporated code, fonts and datasets are listed on the [License & credits page](apps/site/content/license.md).
+The [contributor history](https://github.com/borrowdale/borrowdale/graphs/contributors) lists
+the people behind the project.

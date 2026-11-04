@@ -1,13 +1,18 @@
 import { Budget, sketch, type Shape, type SketchStyle } from '@borrowdale/core';
-import { layoutText, measureText, textBounds, type LayoutOptions } from '@borrowdale/text';
+import { fitText, layoutText, measureText, textBounds, type LayoutOptions } from '@borrowdale/text';
 import { INK } from './palette.js';
+import { fail } from './read.js';
 import type { ChartNode } from './types.js';
 import type { CheckedChart } from './validate.js';
+import type { Rect } from './frame.js';
 
 // Bounds the stroke engine's work for the whole chart: twice what one `sketch` call may do. Measured,
 // a work unit takes 0.4 to 2.3 µs depending on the fill, so this stays under about a second; 200
 // hachure-filled bars use about 130,000 units and 1,000 scatter points about 76,000.
 const MAX_OPERATIONS = 400_000;
+// Data labels and image markers draw no strokes, so the budget never sees them: this caps them
+// instead, at about 3 MB of SVG.
+const MAX_PLACED = 10_000;
 
 /** Distances from a point, in each direction. */
 export interface Extent {
@@ -19,11 +24,18 @@ export interface Extent {
 
 type TextOptions = Omit<LayoutOptions, 'font' | 'fontSize'> & { fontSize?: number | undefined };
 
+// A data label is centred on the point it is drawn at.
+export const CENTRED = { anchor: 'middle', baseline: 'middle' } as const;
+
+/** What tells one mark's strokes from another's: its series, category, part and the like. */
+export type SeedKey = readonly (string | number)[];
+
 /** Draws shapes and text for one chart, with one budget, and keeps every label it laid out. */
 export class Drawing {
   readonly nodes: ChartNode[] = [];
   readonly #chart: CheckedChart;
   readonly #budget = new Budget(MAX_OPERATIONS);
+  #placed = 0;
   readonly #labels = new Set<string>();
   readonly #missing = new Set<string>();
   // Measurements by their text and options: layout measures an axis' labels more than once as it
@@ -59,13 +71,34 @@ export class Drawing {
   }
 
   /**
-   * A shape in its `defaults` style, then the chart's style, then its series' `own` style, seeded
-   * from the chart seed and `key`, so a mark keeps its strokes when other marks change.
+   * `text` whole if it is at most `room` wide, else cut short with an ellipsis to fit. Throws for the
+   * spec at `path` when not even the ellipsis fits.
    */
-  shape(shape: Shape, defaults: SketchStyle, key: string, own: SketchStyle = {}): ChartNode {
-    const seed = `${this.#chart.seed}|${key}`;
-    const style = { ...defaults, ...this.#chart.style, ...own, seed };
-    return { kind: 'sketch', sketch: sketch(shape, style, this.#budget) };
+  fit(text: string, room: number, path: string, fontSize = this.#chart.fontSize): string {
+    const fitted = fitText(text, Math.max(0, room), { font: this.#chart.font, fontSize });
+    return fitted ?? fail(path, `does not fit even cut short: there are ${Math.max(0, Math.floor(room))} units for it`);
+  }
+
+  /**
+   * A shape in its `defaults` style, then the chart's style, then its series' `own` style, seeded
+   * from the chart seed and `key`, so a mark keeps its strokes when other marks change. Each part is
+   * written with its length, so a separator inside a name never makes two keys alike.
+   */
+  shape(shape: Shape, defaults: SketchStyle, key: SeedKey, own: SketchStyle = {}): ChartNode {
+    return this.#sketch(shape, { ...defaults, ...this.#chart.style, ...own }, key);
+  }
+
+  #sketch(shape: Shape, style: SketchStyle, key: SeedKey): ChartNode {
+    const seed = [this.#chart.seed, ...key].map((part) => `${String(part).length}:${part}`).join('');
+    return { kind: 'sketch', sketch: sketch(shape, { ...style, seed }, this.#budget) };
+  }
+
+  /**
+   * A shape drawn as an outline only, as `shape` draws it but never filled, whatever fill the chart's
+   * or the series' style gives: lines, the edges of areas, gridlines, axes, ticks and tracks.
+   */
+  outline(shape: Shape, defaults: SketchStyle, key: SeedKey, own: SketchStyle = {}): ChartNode {
+    return this.#sketch(shape, { ...defaults, ...this.#chart.style, ...own, fill: 'none' }, key);
   }
 
   /**
@@ -90,6 +123,41 @@ export class Drawing {
       this.#missing.add(missing);
     }
     return { kind: 'text', text: layout, fill: INK };
+  }
+
+  /** A centred data label, fitted and kept inside the supplied plotting rectangle. */
+  label(text: string, x: number, y: number, rect: Rect, path: string): ChartNode {
+    this.#place();
+    const spot = this.labelSpot(text, x, y, rect, path);
+    return this.text(spot.text, { ...CENTRED, x: spot.x, y: spot.y });
+  }
+
+  /**
+   * Where `label` draws a label asked for at (x, y): cut to fit across `rect` and moved inside it,
+   * with the extent it has there, so a caller can check the room it takes before drawing it.
+   */
+  labelSpot(text: string, x: number, y: number, rect: Rect, path: string): { text: string; x: number; y: number; extent: Extent } {
+    const fitted = this.fit(text, rect.right - rect.left, path);
+    const extent = this.extent(fitted, CENTRED);
+    if (extent.up + extent.down > rect.bottom - rect.top) fail(path, 'has no vertical room for its label');
+    return {
+      text: fitted,
+      x: Math.max(rect.left + extent.left, Math.min(rect.right - extent.right, x)),
+      y: Math.max(rect.top + extent.up, Math.min(rect.bottom - extent.down, y)),
+      extent,
+    };
+  }
+
+  /** A trusted image, named by `asset`, fitted inside the box. */
+  image(asset: string, x: number, y: number, width: number, height: number): ChartNode {
+    this.#place();
+    return { kind: 'image', asset, x, y, width, height };
+  }
+
+  #place(): void {
+    if (++this.#placed > MAX_PLACED) {
+      throw new Error(`Drawing too complex (more than ${MAX_PLACED} data labels and images)`);
+    }
   }
 
   push(...nodes: ChartNode[]): void {

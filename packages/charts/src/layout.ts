@@ -7,7 +7,9 @@ import { layoutGauge } from './gauge.js';
 import { layoutPie } from './pie.js';
 import { layoutPolar, polarLegendOf } from './polar.js';
 import { fail } from './read.js';
-import type { ChartLayout, ChartOptions, ChartSpec, LegendPosition } from './types.js';
+import { markerNode } from './symbols.js';
+import { layoutTimeline } from './timeline.js';
+import type { ChartLayout, ChartOptions, ChartSpec, LegendPosition, Marker } from './types.js';
 import { checkChart, type CheckedChart } from './validate.js';
 
 const SWATCH = 10;
@@ -18,11 +20,14 @@ const TITLE_GROWTH = 4;
 
 interface LegendEntry {
   name: string;
+  /** Where the name is in the spec. */
+  path: string;
   paint: Paint;
   /** A series drawn as a line is shown by a line; anything else by a hatched box. */
   line: boolean;
   dash: number[] | undefined;
   style: SketchStyle;
+  symbol?: Marker | undefined;
 }
 
 /**
@@ -39,7 +44,8 @@ export function layoutChart(spec: ChartSpec, options: ChartOptions = {}): ChartL
   if (chart.title !== undefined) {
     const size = chart.fontSize + TITLE_GROWTH;
     const position = { x: chart.width / 2, y: rect.top, anchor: 'middle' as const, baseline: 'top' as const };
-    drawing.push(drawing.text(chart.title, { ...position, fontSize: size }));
+    const title = drawing.fit(chart.title, rect.right - rect.left, 'title', size);
+    drawing.push(drawing.text(title, { ...position, fontSize: size }));
     rect.top += drawing.lineHeight(size) + GAP;
   }
   drawLegend(drawing, entries, chart.legend ?? (entries.length >= 2 ? 'top' : 'none'), rect);
@@ -57,6 +63,9 @@ export function layoutChart(spec: ChartSpec, options: ChartOptions = {}): ChartL
       break;
     case 'gauge':
       layoutGauge(drawing, chart, rect, entryPaints);
+      break;
+    case 'timeline':
+      layoutTimeline(drawing, chart, rect, entryPaints);
       break;
     default:
       unknownSystem(chart);
@@ -94,6 +103,7 @@ function legendEntries(chart: CheckedChart): LegendEntry[] {
     const slices = [...first.values()];
     return paints(slices).map((paint, i) => ({
       name: slices[i]!.name,
+      path: `${slices[i]!.path}.name`,
       paint,
       line: false,
       dash: undefined,
@@ -110,7 +120,8 @@ function legendEntries(chart: CheckedChart): LegendEntry[] {
   return paints(series).map((paint, i) => {
     const entry = series[i]!;
     const dash = 'dash' in entry ? entry.dash : undefined;
-    return { name: entry.name, paint, line: lines[i]!, dash, style: entry.style };
+    const symbol = 'symbol' in entry && entry.symbol !== 'circle' ? entry.symbol : undefined;
+    return { name: entry.name, path: `${entry.path}.name`, paint, line: lines[i]!, dash, style: entry.style, symbol };
   });
 }
 
@@ -124,7 +135,10 @@ function drawLegend(drawing: Drawing, entries: readonly LegendEntry[], position:
     return;
   }
   const rowHeight = Math.max(drawing.lineHeight(), SWATCH);
-  const widths = entries.map((entry) => SWATCH + SWATCH_GAP + drawing.width(entry.name));
+  // A name too long for a row is cut short; a legend on the right takes at most half the width.
+  const room = (position === 'right' ? (rect.right - rect.left) / 2 : rect.right - rect.left) - SWATCH - SWATCH_GAP;
+  const names = entries.map((entry) => drawing.fit(entry.name, room, entry.path));
+  const widths = names.map((name) => SWATCH + SWATCH_GAP + drawing.width(name));
   if (position === 'right') {
     // One column, which must fit: unlike a legend above or below, it cannot wrap.
     const height = entries.length * rowHeight + (entries.length - 1) * ROW_GAP;
@@ -134,7 +148,7 @@ function drawLegend(drawing: Drawing, entries: readonly LegendEntry[], position:
     }
     const left = rect.right - Math.max(...widths);
     entries.forEach((entry, i) => {
-      drawEntry(drawing, entry, left, rect.top + i * (rowHeight + ROW_GAP) + rowHeight / 2);
+      drawEntry(drawing, entry, names[i]!, left, rect.top + i * (rowHeight + ROW_GAP) + rowHeight / 2);
     });
     rect.right = left - GAP;
     return;
@@ -156,7 +170,7 @@ function drawLegend(drawing: Drawing, entries: readonly LegendEntry[], position:
     const rowWidth = row.reduce((sum, i) => sum + widths[i]!, 0) + (row.length - 1) * ENTRY_SPACING;
     let left = (rect.left + rect.right) / 2 - rowWidth / 2;
     for (const i of row) {
-      drawEntry(drawing, entries[i]!, left, top + r * (rowHeight + ROW_GAP) + rowHeight / 2);
+      drawEntry(drawing, entries[i]!, names[i]!, left, top + r * (rowHeight + ROW_GAP) + rowHeight / 2);
       left += widths[i]! + ENTRY_SPACING;
     }
   });
@@ -167,21 +181,24 @@ function drawLegend(drawing: Drawing, entries: readonly LegendEntry[], position:
   }
 }
 
-function drawEntry(drawing: Drawing, entry: LegendEntry, left: number, middle: number): void {
-  const key = `legend|${entry.name}`;
+function drawEntry(drawing: Drawing, entry: LegendEntry, name: string, left: number, middle: number): void {
+  const key = ['legend', entry.name];
   const swatch = entry.line
-    ? drawing.shape(
+    ? drawing.outline(
         { kind: 'line', x1: left, y1: middle, x2: left + SWATCH, y2: middle },
         { stroke: entry.paint.color, strokeWidth: LINE_WIDTH, ...(entry.dash ? { strokeLineDash: entry.dash } : {}) },
         key,
         entry.style,
       )
-    : drawing.shape(
+    : entry.symbol
+      ? markerNode(drawing, entry.symbol, [left + SWATCH / 2, middle], SWATCH,
+          { ...hatched(entry.paint), hachureGap: 2.5 }, key, entry.style)
+      : drawing.shape(
         { kind: 'rectangle', x: left, y: middle - SWATCH / 2, width: SWATCH, height: SWATCH },
         { ...hatched(entry.paint), hachureGap: 2.5 },
         key,
         entry.style,
       );
   const label = { x: left + SWATCH + SWATCH_GAP, y: middle, anchor: 'start' as const, baseline: 'middle' as const };
-  drawing.push(swatch, drawing.text(entry.name, label));
+  drawing.push(swatch, drawing.text(name, label));
 }

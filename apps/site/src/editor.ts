@@ -1,14 +1,12 @@
 import { localPath, siteUrl, examplePath, exampleSlug } from './routing';
-import type { ChartSpec } from '@borrowdale/charts';
 import { fontFaceCss } from '@borrowdale/text';
 import { excalifontFiles } from '@borrowdale/text/excalifont-files';
 import style from './style.css?inline';
-import { examples, recipes, type Example } from './gallery';
-import chartCases from '../../../packages/charts/test/golden/corpus.json';
+import { examples, recipes, chartExamples, type Example } from './gallery';
 import coreCases from '../../../packages/core/test/golden/corpus.json';
 import textCases from '../../../packages/text/test/golden/corpus.json';
 import fillCases from '../../../packages/fills/test/golden/corpus.json';
-import { escape, seed } from './drawing';
+import { escape, seed, exampleSeed } from './drawing';
 export const exampleLink = (example: Example) => siteUrl(examplePath(example));
 const drafts = new Map<string, string>();
 let worker: Worker | undefined;
@@ -35,12 +33,13 @@ export function findExample(path = location.pathname) {
 const json = (x: unknown) => JSON.stringify(x, null, 2);
 export function editorCode(e: Example) {
   if (e.category === 'charts') {
-    const spec = chartCases.find((x) => x.name === e.name)!.spec as ChartSpec;
-    return `import { layoutChart, toSvgChart } from '@borrowdale/charts';\nimport { excalifontFiles } from '@borrowdale/text/excalifont-files';\n\nconst spec = ${json({ ...spec, seed })};\n\nconst svg = toSvgChart(layoutChart(spec), { fontFiles: excalifontFiles });\nrender(svg);`;
+    const { spec, images } = chartExamples.find((x) => x.name === e.name)!;
+    const assets = images ? `const images = new Map(Object.entries(${json(images)}).map(([name, dataUrl]) => [name, { dataUrl }]));\n\n` : '';
+    return `import { layoutChart, toSvgChart } from '@borrowdale/charts';\nimport { excalifontFiles } from '@borrowdale/text/excalifont-files';\n\n${assets}const spec = ${json({ ...spec, seed })};\n\nconst svg = toSvgChart(layoutChart(spec), { ${images ? 'images, ' : ''}fontFiles: excalifontFiles });\nrender(svg);`;
   }
   if (e.category === 'shapes') {
     const entry = coreCases.find((x) => x.name === e.name)!;
-    return `import { sketch, toSvgPaths } from '@borrowdale/core';\n\nconst shape = ${json(entry.shape)};\nconst options = ${json({ seed, ...entry.options })};\n\nconst drawing = sketch(shape, options);\nrender(\`<svg data-fit viewBox="0 0 300 240">\${toSvgPaths(drawing)}</svg>\`);\n// data-fit fits the preview to the drawn strokes.`;
+    return `import { sketch, toSvgPaths } from '@borrowdale/core';\n\nconst shape = ${json(entry.shape)};\nconst options = ${json({ ...entry.options, seed: exampleSeed(entry.options.seed) })};\n\nconst drawing = sketch(shape, options);\nrender(\`<svg data-fit viewBox="0 0 300 240">\${toSvgPaths(drawing)}</svg>\`);\n// data-fit fits the preview to the drawn strokes.`;
   }
   if (e.category === 'text') {
     const entry = textCases.find((x) => x.name === e.name)!;
@@ -48,7 +47,7 @@ export function editorCode(e: Example) {
   }
   if (e.category === 'patterns') {
     const entry = fillCases.find((x) => x.name === e.name)!;
-    return `import { pattern } from '@borrowdale/fills';\n\nconst options = ${json(entry.options)};\nconst tile = pattern(options);\n\nrender(\`<svg viewBox="0 0 300 200"><defs>\${tile.def}</defs>\n  <rect width="300" height="200" fill="\${tile.fill}"/>\n</svg>\`);`;
+    return `import { pattern } from '@borrowdale/fills';\n\nconst options = ${json({ ...entry.options, seed: exampleSeed(entry.options.seed) })};\nconst tile = pattern(options);\n\nrender(\`<svg viewBox="0 0 300 200"><defs>\${tile.def}</defs>\n  <rect width="300" height="200" fill="\${tile.fill}"/>\n</svg>\`);`;
   }
   return componentCode(e);
 }

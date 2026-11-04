@@ -20,6 +20,15 @@ export interface Rect {
 /** Throws when titles, legends and labels have left no room for the plot itself. */
 export function assertRoom({ left, top, right, bottom }: Rect, width: number, height: number): void {
   if (right - left < 1 || bottom - top < 1) {
-    fail(`a ${width} × ${height} chart`, 'leaves no room for the plot after its title, legend and labels');
+    fail('', `${aChart(width, height)} leaves no room for the plot after its title, legend and labels`);
   }
+}
+
+/**
+ * A chart's size as a message names it, with the article its width is read with: "a 400 × 300
+ * chart", "an 800 × 600 chart". A chart is at most 10,000 wide, so only a width read from eight,
+ * eleven or eighteen takes "an".
+ */
+export function aChart(width: number, height: number): string {
+  return `${/^(?:8|1[18](?!\d))/.test(String(width)) ? 'an' : 'a'} ${width} × ${height} chart`;
 }

@@ -1,3 +1,4 @@
+import { platform } from 'node:os';
 import { beforeAll, describe, expect, it } from 'vitest';
 import {
   fontFaceCss,
@@ -8,14 +9,15 @@ import {
   type TextStyle,
 } from '@borrowdale/text';
 import { excalifontFiles } from '@borrowdale/text/excalifont-files';
-import { evaluateInChromium } from '../../core/test/support/chromium.js';
+import { ENGINES, evaluateIn, type Engine } from '../../core/test/support/browsers.js';
 import corpus from './golden/corpus.json' with { type: 'json' };
 import goldens from './golden/goldens.json' with { type: 'json' };
 
-// Lays out the golden corpus in headless Chromium, with Excalifont loaded, and checks two things:
-// the layout and markup are byte for byte the goldens Node produces, and the text Chromium actually
-// draws, through each of the three renderers, is as wide as measureText said. The second check is
-// what proves the advance table matches the font, because Chromium measures with the font itself.
+// Lays out the golden corpus in headless Chromium, Firefox and WebKit, with Excalifont loaded, and
+// checks two things: the layout and markup are byte for byte the goldens Node produces, and the text
+// each browser actually draws, through each of the three renderers, is as wide as measureText said.
+// The second check is what proves the advance table matches the font, because a browser measures
+// with the font itself.
 // The corpus page forbids fetching fonts, so its font can only come from loadFont's bytes; two more
 // pages load the font through fontFaceCss instead, each with only the files its label needs. Two
 // right-to-left pages check that the renderers keep text left to right: one whose own stylesheet
@@ -29,19 +31,26 @@ type Golden = TextLayout & { svg: string };
 type Drawn = { golden: Golden; svgWidth: number; domWidth: number; canvasWidth: number; shapedWidth: number };
 type Embedded = { faces: number; width: number };
 // What the right-to-left pages measure: whether drawText threw and how wide it drew, and where
-// Chromium puts the left edge of each renderer's text.
+// the browser starts the first character of each renderer's text. Not the bounding box, which
+// Firefox starts 2 units before the text (measured).
 type Ruled = { drawError: string; canvasWidth: number; svgX: number; attributeX: number; domX: number };
 type Strict = { svgX: number; domX: number; domRuleX: number; svgRuleX: number };
 type Text = typeof import('@borrowdale/text');
 
 const cases = corpus as unknown as Case[];
 const expected = goldens as unknown as Record<string, Golden>;
-// What `missing` lists is drawn by Chromium in a fallback font, at its own width.
+// What `missing` lists is drawn by the browser in a fallback font, at its own width.
 const covered = cases.filter(({ name }) => expected[name]?.missing.length === 0);
 const uncovered = cases.filter((entry) => !covered.includes(entry)).map(({ name }) => name);
 // The cases whose width kerning or ligatures would change, if the renderers left them on.
 const shaped = cases.filter(({ name }) => name === 'kerning-pairs' || name === 'ligatures');
 const shapedNames = shaped.map(({ name }) => name);
+// Measured on macOS and Linux: Firefox draws the stressed letter's mark from a fallback font without
+// an advance of its own, so the width does not show the fallback there. WebKit on macOS neither kerns
+// SVG text nor forms these ligatures unless asked, so leaving them on changes nothing there; WebKit
+// on Linux does both, as Chromium and Firefox do.
+const FALLBACK_CHANGES_WIDTH: Record<Engine, boolean> = { chromium: true, firefox: false, webkit: true };
+const SVG_SHAPES_BY_DEFAULT: Record<Engine, boolean> = { chromium: true, firefox: true, webkit: platform() === 'linux' };
 
 const SOURCE = new URL('../src/index.ts', import.meta.url);
 const zurich = expected['category-zurich'] as Golden;
@@ -57,8 +66,9 @@ const tickLayout = expected[tick.name] as Golden;
 const RIGHT_TO_LEFT = 'text{direction:rtl}';
 
 // Draws a label on a page that embeds only the files fontFaceCss picks for it.
-function embed(label: Golden): Promise<Embedded> {
-  return evaluateInChromium(
+function embed(engine: Engine, label: Golden): Promise<Embedded> {
+  return evaluateIn(
+    engine,
     SOURCE,
     'borrowdaleText',
     `<style>${fontFaceCss(excalifontFiles, [label.text])}</style>` +
@@ -72,12 +82,13 @@ function embed(label: Golden): Promise<Embedded> {
   );
 }
 
-describe('Chromium parity', () => {
+describe.each(ENGINES)('%s parity', (engine) => {
   let drawn: Record<string, Drawn> = {};
   let corpusFaces = NaN;
 
   beforeAll(async () => {
-    ({ drawn, faces: corpusFaces } = await evaluateInChromium(
+    ({ drawn, faces: corpusFaces } = await evaluateIn(
+      engine,
       SOURCE,
       'borrowdaleText',
       `<meta http-equiv="Content-Security-Policy" content="font-src 'none'">` +
@@ -97,11 +108,12 @@ describe('Chromium parity', () => {
           svg.innerHTML = markup;
           return (svg.firstElementChild as SVGTextElement).getComputedTextLength();
         };
-        // Measured at the moment drawText fills, so with exactly the settings it drew with.
-        let canvasWidth = NaN;
+        // Where drawText's last fill ends, measured at the moment it fills, so with exactly the
+        // settings it drew with. Empty text fills nothing and ends where it starts.
+        let drawnTo = NaN;
         const fillText = context.fillText.bind(context);
         context.fillText = (text: string, x: number, y: number) => {
-          canvasWidth = context.measureText(text).width;
+          drawnTo = x + context.measureText(text).width;
           fillText(text, x, y);
         };
         const drawn = Object.fromEntries(
@@ -113,8 +125,9 @@ describe('Chromium parity', () => {
             const shapedWidth = widthOf(markup.replace(/ style="[^"]*"/, ''));
             svg.replaceChildren();
             const domWidth = appendText(svg, layout, style).getComputedTextLength();
-            canvasWidth = NaN;
+            drawnTo = layout.x;
             drawText(context, layout, style);
+            const canvasWidth = drawnTo - layout.x;
             return [name, { golden: { ...layout, svg: markup }, svgWidth, domWidth, canvasWidth, shapedWidth }];
           }),
         );
@@ -124,7 +137,7 @@ describe('Chromium parity', () => {
     ));
   }, 120_000);
 
-  it('lays out exactly the corpus in Chromium', () => {
+  it(`lays out exactly the corpus in ${engine}`, () => {
     expect(Object.keys(drawn)).toEqual(Object.keys(expected));
   });
 
@@ -132,15 +145,17 @@ describe('Chromium parity', () => {
     expect(uncovered).toEqual(['uncovered-characters', 'cyrillic-stress-mark']);
   });
 
-  it('draws a letter whose mark is in another Excalifont file in a fallback font, which is why it is listed', () => {
-    expect(Math.abs(Number(drawn['cyrillic-stress-mark']?.svgWidth) - stressed.width)).toBeGreaterThan(0.05);
+  it('draws a letter whose mark is in another Excalifont file at another width exactly where this engine falls back for it', () => {
+    expect(Math.abs(Number(drawn['cyrillic-stress-mark']?.svgWidth) - stressed.width) > 0.05).toBe(
+      FALLBACK_CHANGES_WIDTH[engine],
+    );
   });
 
   it('adds no file a second time when loadFont is called again', () => {
     expect(corpusFaces).toBe(7);
   });
 
-  it.each(cases)('$name is laid out and rendered byte for byte the same in Chromium', ({ name }) => {
+  it.each(cases)(`$name is laid out and rendered byte for byte the same in ${engine}`, ({ name }) => {
     expect(drawn[name]?.golden).toEqual(expected[name]);
   });
 
@@ -160,18 +175,20 @@ describe('Chromium parity', () => {
     expect(shapedNames).toEqual(['kerning-pairs', 'ligatures']);
   });
 
-  it.each(shaped)('$name would be drawn at another width with kerning and ligatures left on', ({ name }) => {
-    expect(Math.abs(Number(drawn[name]?.shapedWidth) - Number(expected[name]?.width))).toBeGreaterThan(0.05);
+  it.each(shaped)('$name is drawn at another width with kerning and ligatures left on exactly where this engine shapes SVG text', ({ name }) => {
+    expect(Math.abs(Number(drawn[name]?.shapedWidth) - Number(expected[name]?.width)) > 0.05).toBe(
+      SVG_SHAPES_BY_DEFAULT[engine],
+    );
   });
 });
 
-describe('Chromium, with only the files fontFaceCss picks for a label', () => {
+describe.each(ENGINES)('%s, with only the files fontFaceCss picks for a label', (engine) => {
   let embedded: Embedded = { faces: NaN, width: NaN };
   let embeddedGreek: Embedded = { faces: NaN, width: NaN };
 
   beforeAll(async () => {
-    embedded = await embed(zurich);
-    embeddedGreek = await embed(hyphenated);
+    embedded = await embed(engine, zurich);
+    embeddedGreek = await embed(engine, hyphenated);
   }, 120_000);
 
   it('embeds through fontFaceCss only the file a Latin label needs', () => {
@@ -191,11 +208,12 @@ describe('Chromium, with only the files fontFaceCss picks for a label', () => {
   });
 });
 
-describe('Chromium, with fontFaceCss rules and a right-to-left rule in the page stylesheet', () => {
+describe.each(ENGINES)('%s, with fontFaceCss rules and a right-to-left rule in the page stylesheet', (engine) => {
   let ruled: Ruled = { drawError: '', canvasWidth: NaN, svgX: NaN, attributeX: NaN, domX: NaN };
 
   beforeAll(async () => {
-    ruled = await evaluateInChromium(
+    ruled = await evaluateIn(
+      engine,
       SOURCE,
       'borrowdaleText',
       `<html dir="rtl"><head><style>${fontFaceCss(excalifontFiles, [tickLayout.text])}${RIGHT_TO_LEFT}</style></head>` +
@@ -209,10 +227,10 @@ describe('Chromium, with fontFaceCss rules and a right-to-left rule in the page 
         // Drawn first, before laying out SVG text could load the rules' faces by itself.
         const canvas = document.querySelector('canvas') as HTMLCanvasElement;
         const context = canvas.getContext('2d') as CanvasRenderingContext2D;
-        let canvasWidth = NaN;
+        let drawnTo = layout.x;
         const fillText = context.fillText.bind(context);
         context.fillText = (text: string, x: number, y: number) => {
-          canvasWidth = context.measureText(text).width;
+          drawnTo = x + context.measureText(text).width;
           fillText(text, x, y);
         };
         let drawError = '';
@@ -222,17 +240,17 @@ describe('Chromium, with fontFaceCss rules and a right-to-left rule in the page 
           drawError = String(error);
         }
         const svg = document.querySelector('svg') as SVGSVGElement;
-        const leftOf = (markup: string) => {
+        const startOf = (markup: string) => {
           svg.innerHTML = markup;
-          return (svg.firstElementChild as SVGTextElement).getBBox().x;
+          return (svg.firstElementChild as SVGTextElement).getStartPositionOfChar(0).x;
         };
         const markup = toSvgText(layout);
-        const svgX = leftOf(markup);
+        const svgX = startOf(markup);
         // The same markup with only the direction attribute: the control that shows the rule applies.
-        const attributeX = leftOf(markup.replace(/ style="[^"]*"/, ''));
+        const attributeX = startOf(markup.replace(/ style="[^"]*"/, ''));
         svg.replaceChildren();
-        const domX = appendText(svg, layout).getBBox().x;
-        return { drawError, canvasWidth, svgX, attributeX, domX };
+        const domX = appendText(svg, layout).getStartPositionOfChar(0).x;
+        return { drawError, canvasWidth: drawnTo - layout.x, svgX, attributeX, domX };
       },
       { entry: tick, files: excalifontFiles },
     );
@@ -259,11 +277,12 @@ describe('Chromium, with fontFaceCss rules and a right-to-left rule in the page 
   });
 });
 
-describe('Chromium, right to left under a Content-Security-Policy that blocks style attributes', () => {
+describe.each(ENGINES)('%s, right to left under a Content-Security-Policy that blocks style attributes', (engine) => {
   let strict: Strict = { svgX: NaN, domX: NaN, domRuleX: NaN, svgRuleX: NaN };
 
   beforeAll(async () => {
-    strict = await evaluateInChromium(
+    strict = await evaluateIn(
+      engine,
       SOURCE,
       'borrowdaleText',
       `<html dir="rtl"><head><meta http-equiv="Content-Security-Policy" content="style-src 'none'; font-src 'none'"></head>` +
@@ -277,17 +296,17 @@ describe('Chromium, right to left under a Content-Security-Policy that blocks st
         const svg = document.querySelector('svg') as SVGSVGElement;
         // The policy blocks the markup's style attribute, so only its direction attribute applies.
         svg.innerHTML = toSvgText(layout);
-        const svgX = (svg.firstElementChild as SVGTextElement).getBBox().x;
+        const svgX = (svg.firstElementChild as SVGTextElement).getStartPositionOfChar(0).x;
         svg.replaceChildren();
         const element = appendText(svg, layout);
-        const domX = element.getBBox().x;
+        const domX = element.getStartPositionOfChar(0).x;
         // A stylesheet rule, which the policy still allows from script.
         const sheet = new CSSStyleSheet();
         sheet.replaceSync(rule);
         document.adoptedStyleSheets = [sheet];
-        const domRuleX = element.getBBox().x;
+        const domRuleX = element.getStartPositionOfChar(0).x;
         svg.insertAdjacentHTML('beforeend', toSvgText(layout));
-        const svgRuleX = (svg.lastElementChild as SVGTextElement).getBBox().x;
+        const svgRuleX = (svg.lastElementChild as SVGTextElement).getStartPositionOfChar(0).x;
         return { svgX, domX, domRuleX, svgRuleX };
       },
       { entry: tick, files: excalifontFiles, rule: RIGHT_TO_LEFT },

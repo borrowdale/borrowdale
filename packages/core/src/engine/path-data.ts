@@ -3,9 +3,10 @@
 // See THIRD_PARTY_NOTICES.md.
 
 import { pointsOnBezierCurves, simplify } from './bezier.js';
-import { charge } from './budget.js';
+import { charge } from '../budget.js';
+import { show } from '../show.js';
 import { MAX_COORDINATE, type Point } from './core.js';
-import { asin, cos, sin, tan } from './math.js';
+import { asin, cos, sin, tan } from '../trig.js';
 
 export interface Segment {
   key: string;
@@ -46,7 +47,7 @@ function tokenize(d: string): PathToken[] {
       tokens[tokens.length] = { type: NUMBER, text: `${parseFloat(match[1]!)}` };
       d = d.slice(match[1]!.length);
     } else {
-      throw new Error(`Invalid shape: path.d: unexpected ${JSON.stringify(d.slice(0, 20))}`);
+      throw new Error(`Invalid shape: path.d: unexpected ${show(d.slice(0, 20))}`);
     }
   }
   tokens[tokens.length] = { type: EOD, text: '' };
@@ -91,7 +92,7 @@ export function parsePath(d: string): Segment[] {
         if (isType(numberToken, NUMBER)) {
           params[params.length] = +numberToken.text;
         } else {
-          throw new Error(`Invalid shape: path.d: ${mode} needs a number, got ${numberToken.text}`);
+          throw new Error(`Invalid shape: path.d: ${mode} needs a number, got ${show(numberToken.text)}`);
         }
       }
       if (typeof PARAMS[mode] === 'number') {
@@ -495,7 +496,7 @@ function assertWithinRange(segments: Segment[], verb: string): Segment[] {
   for (const { data } of segments) {
     for (const value of data) {
       if (!(Number.isFinite(value) && Math.abs(value) <= MAX_COORDINATE)) {
-        throw new Error(`Invalid shape: path.d ${verb} ${value}, outside ±${MAX_COORDINATE}`);
+        throw new Error(`Invalid shape: path.d ${verb} ${show(value)}, outside ±${MAX_COORDINATE}`);
       }
     }
   }

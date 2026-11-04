@@ -1,12 +1,16 @@
+import { markerNode } from './symbols.js';
 import type { Point, Shape, SketchStyle } from '@borrowdale/core';
 import type { TextAnchor, TextBaseline } from '@borrowdale/text';
+import type { CheckedFormat, CheckedLinearAxis } from './check-axis.js';
 import { coordinate } from './curves.js';
-import type { Drawing } from './drawing.js';
-import { assertRoom, BAND_PADDING, GAP, type Rect } from './frame.js';
+import type { Drawing, SeedKey } from './drawing.js';
+import { aChart, assertRoom, BAND_PADDING, GAP, type Rect } from './frame.js';
 import {
   alignTowards,
   fitSweep,
   isWholeTurn,
+  labelledRim,
+  onCircle,
   polarFrame,
   RADIANS,
   RIM_SHARE,
@@ -17,16 +21,10 @@ import {
 import { loneDot, POINT_SIZE, runsOf, solid } from './marks.js';
 import { GRID, GRID_WIDTH, hatched, LINE_WIDTH, type Paint } from './palette.js';
 import { fail } from './read.js';
-import { bandScale, formatValue, linearScale, place, PLAIN_FORMAT, type PlacedScale } from './scale.js';
+import { bandScale, emptyExtent, formatValue, place, PLAIN_FORMAT, scaleOf, type PlacedScale } from './scale.js';
 import { stackGroup, stackSpans, type Span } from './stack.js';
 import type { ChartNode } from './types.js';
-import {
-  isStacking,
-  type CheckedFormat,
-  type CheckedLinearAxis,
-  type CheckedPolarChart,
-  type SeriesOf,
-} from './validate.js';
+import { isStacking, type CheckedPolarChart, type SeriesOf } from './validate.js';
 
 // How far past the chart's box a label may reach and still count as inside: rounding.
 const FIT_TOLERANCE = 0.01;
@@ -71,6 +69,7 @@ interface Spoke {
 
 interface PolarContext {
   drawing: Drawing;
+  rect: Rect;
   frame: PolarFrame;
   /** Angles, in degrees clockwise from the top. */
   angle: PolarScale;
@@ -79,12 +78,19 @@ interface PolarContext {
   categories: readonly string[];
   /** How tooltips write values on each axis. */
   formats: { angle: CheckedFormat; radius: CheckedFormat };
-  /** Where each value of a stacking series starts and ends. */
-  spansOf: (entry: PolarSeries) => Span[];
-  /** Series that take a share of their own beside others in each category, as bars do. */
-  slots: { slotOf: (entry: PolarSeries) => number; count: number };
+  /** How many shares each category is split into, for series that take one of their own, as bars do. */
+  slotCount: number;
   /** Whether the angle axis goes the whole way round, so a line through every category closes. */
   whole: boolean;
+}
+
+/** A series with everything resolved about where it is drawn, once, before it is drawn. */
+interface PolarPlaced<S extends PolarSeries = PolarSeries> {
+  entry: S;
+  /** Where each value of a stacking series starts and ends; empty for every other series. */
+  spans: Span[];
+  /** Its share beside other series in each category; -1 for a series without one. */
+  slot: number;
 }
 
 /** What a series type is on a polar chart. A new type fails to compile until it has an entry. */
@@ -98,7 +104,7 @@ interface PolarMark<S extends PolarSeries> {
   slot: boolean;
   /** How the legend shows it. */
   legend: 'line' | 'box';
-  draw: (context: PolarContext, entry: S, paint: Paint) => void;
+  draw: (context: PolarContext, placed: PolarPlaced<S>, paint: Paint) => void;
 }
 
 const spanValues = (_entry: unknown, spans: Span[] | undefined): number[] =>
@@ -173,7 +179,7 @@ export function layoutPolar(drawing: Drawing, chart: CheckedPolarChart, rect: Re
   // half of the arc, measured before the labels decide the radius.
   const rimLength = (Math.min(rect.right - rect.left, rect.bottom - rect.top) / 2) * sweep * RADIANS * RIM_SHARE;
   const angleScale =
-    angleAxis.type === 'linear' ? linearScale(angleAxis, endsOf(angleAxis, extentOf('angle')), rimLength) : undefined;
+    angleAxis.type === 'linear' ? scaleOf(angleAxis, endsOf(angleAxis, extentOf('angle')), rimLength) : undefined;
   const rim = angleScale && rimTicks(angleScale, whole);
   const rimLabels = angleAxis.hidden ? [] : angleAxis.type === 'band' ? angleAxis.categories : rim!.labels;
   // The labels around the rim decide how much room the circle leaves.
@@ -208,7 +214,7 @@ export function layoutPolar(drawing: Drawing, chart: CheckedPolarChart, rect: Re
         ? {
             type: 'linear',
             path: radiusAxis.path,
-            scale: place(linearScale(radiusAxis, endsOf(radiusAxis, extentOf('radius'), true), radius - hole), [
+            scale: place(scaleOf(radiusAxis, endsOf(radiusAxis, extentOf('radius'), true), radius - hole), [
               hole,
               radius,
             ]),
@@ -224,12 +230,12 @@ export function layoutPolar(drawing: Drawing, chart: CheckedPolarChart, rect: Re
   let fitted = fitIn(rect);
   let box = rect;
   for (let round = 0; ; round++) {
-    const over = overflowOf(drawing, startLabels(fitted.frame, fitted.radiusPlace, radiusAxis, startAngle), rect);
+    const over = overflowOf(drawing, startLabels(drawing, fitted.frame, fitted.radiusPlace, radiusAxis, startAngle), rect);
     if (!Object.values(over).some((by) => by > FIT_TOLERANCE)) {
       break;
     }
     if (round === MAX_REFITS) {
-      fail(`a ${chart.width} × ${chart.height} chart`, 'leaves no room for the labels of axes.radius');
+      fail('', `${aChart(chart.width, chart.height)} leaves no room for the labels of axes.radius`);
     }
     box = {
       left: box.left + over.left,
@@ -265,19 +271,24 @@ export function layoutPolar(drawing: Drawing, chart: CheckedPolarChart, rect: Re
         radiusAxis.shape === 'polygon'
           ? { kind: 'polygon', points: spokes.map((spoke) => frame.point(spoke.angle, distance)) }
           : circleOrArc(frame, distance, startAngle, endAngle, whole);
-      drawing.push(drawing.shape(shape, grid, `grid|radius|${tick}`));
+      drawing.push(drawing.outline(shape, grid, ['grid', 'radius', tick]));
     }
   }
   // A visible band angle axis draws its spokes, a radar's web; a linear one only as gridlines.
   if (!angleAxis.hidden && (angleAxis.type === 'band' || angleAxis.grid)) {
     for (const spoke of spokes) {
       const [[x1, y1], [x2, y2]] = [frame.point(spoke.angle, hole), frame.point(spoke.angle, radius)];
-      drawing.push(drawing.shape({ kind: 'line', x1, y1, x2, y2 }, grid, `spoke|${spoke.key}`));
+      drawing.push(drawing.outline({ kind: 'line', x1, y1, x2, y2 }, grid, ['spoke', spoke.key]));
     }
   }
 
   const band = angleAxis.type === 'band' ? angleAxis : radiusAxis.type === 'band' ? radiusAxis : undefined;
+  const slots = slotsOf(
+    series.filter((entry) => polarMarkOf(entry).slot),
+    (entry) => ('stack' in entry ? stackGroup(entry, 'polar') : `#${entry.index}`),
+  );
   const context: PolarContext = {
+    rect,
     drawing,
     frame,
     angle,
@@ -287,23 +298,29 @@ export function layoutPolar(drawing: Drawing, chart: CheckedPolarChart, rect: Re
       angle: angleAxis.type === 'linear' ? angleAxis.format : PLAIN_FORMAT,
       radius: radiusAxis.type === 'linear' ? radiusAxis.format : PLAIN_FORMAT,
     },
-    spansOf: (entry) => spans.get(entry)!,
-    slots: slotsOf(
-      series.filter((entry) => polarMarkOf(entry).slot),
-      (entry) => ('stack' in entry ? stackGroup(entry, 'polar') : `#${entry.index}`),
-    ),
+    slotCount: slots.count,
     whole,
   };
-  series.forEach((entry, i) => polarMarkOf(entry).draw(context, entry, paints[i]!));
+  series.forEach((entry, i) => {
+    const placed: PolarPlaced = { entry, spans: spans.get(entry) ?? [], slot: slots.slotOf(entry) };
+    polarMarkOf(entry).draw(context, placed, paints[i]!);
+  });
 
-  for (const { text, ...position } of startLabels(frame, radiusPlace, radiusAxis, startAngle)) {
+  for (const { text, ...position } of startLabels(drawing, frame, radiusPlace, radiusAxis, startAngle)) {
     drawing.push(drawing.text(text, position));
   }
   if (!angleAxis.hidden) {
-    for (const spoke of spokes) {
-      const [px, py] = frame.point(spoke.angle, radius + GAP);
-      drawing.push(drawing.text(spoke.label, { x: px, y: py, ...alignTowards(spoke.angle, true) }));
-    }
+    // A band axis labels every category; a linear one only the ticks whose labels do not overlap.
+    const shown =
+      angle.type === 'linear'
+        ? new Set(labelledRim(angle.scale, spokes.length, radius + GAP, [widest + GAP, line + GAP / 2], whole))
+        : undefined;
+    spokes.forEach((spoke, i) => {
+      if (shown?.has(i) ?? true) {
+        const [px, py] = frame.point(spoke.angle, radius + GAP);
+        drawing.push(drawing.text(spoke.label, { x: px, y: py, ...alignTowards(spoke.angle, true) }));
+      }
+    });
   }
 }
 
@@ -317,9 +334,11 @@ interface StartLabel {
 
 /**
  * The radius axis' labels along the start of the sweep: a linear axis' ticks beside the spoke, past
- * the hole, or a band axis' categories before it, at their rings.
+ * the hole, those that would overlap the one before left out, or a band axis' categories before it,
+ * at their rings.
  */
 function startLabels(
+  drawing: Drawing,
   frame: PolarFrame,
   radius: PolarScale,
   axis: CheckedPolarChart['radius'],
@@ -330,16 +349,18 @@ function startLabels(
   }
   if (radius.type === 'linear') {
     const { scale } = radius;
-    return scale.ticks.flatMap((tick, i) => {
-      const [px, py] = frame.point(startAngle, scale.at(tick));
-      const label = {
-        text: scale.labels[i]!,
-        x: px + GAP / 2,
-        y: py,
-        anchor: 'start' as const,
-        baseline: 'middle' as const,
-      };
-      return tick > scale.domain[0] ? [label] : [];
+    // Labels along the spoke clear each other when they are a label's width apart across the chart
+    // or a line apart down it.
+    const [across, down] = onCircle(startAngle).map(Math.abs) as [number, number];
+    const widest = Math.max(0, ...scale.labels.map((label) => drawing.width(label)));
+    const room = Math.min((widest + GAP) / across, (drawing.lineHeight() + GAP / 2) / down);
+    // The start is not labelled, so when it is all that thinning leaves, the outermost tick is.
+    const past = scale.labelled(room, scale.at).filter((i) => scale.ticks[i]! > scale.domain[0]);
+    const last = scale.ticks.length - 1;
+    const shown = past.length > 0 || last < 0 || !(scale.ticks[last]! > scale.domain[0]) ? past : [last];
+    return shown.map((i) => {
+      const [px, py] = frame.point(startAngle, scale.at(scale.ticks[i]!));
+      return { text: scale.labels[i]!, x: px + GAP / 2, y: py, anchor: 'start', baseline: 'middle' };
     });
   }
   const names = axis.type === 'band' ? axis.categories : [];
@@ -365,13 +386,10 @@ function overflowOf(drawing: Drawing, labels: readonly StartLabel[], box: Rect):
   );
 }
 
-/** The data's extent on a value axis, from 0 on a radius axis that sets no `min`. */
+/** The data's extent on a value axis, or its emptyExtent, from 0 on a radius axis that sets no `min`. */
 function endsOf(axis: CheckedLinearAxis, extent: [number, number] | undefined, fromZero = false): [number, number] {
-  if (!extent) {
-    const end = axis.min ?? axis.max ?? 0;
-    return [end, end];
-  }
-  return [fromZero && axis.min === undefined ? 0 : extent[0], extent[1]];
+  const [low, high] = extent ?? emptyExtent(axis);
+  return [fromZero && axis.min === undefined ? 0 : low, high];
 }
 
 /** Categories around the circle: on a whole turn the first at the start, else each centred in its share. */
@@ -413,18 +431,25 @@ function circleOrArc(frame: PolarFrame, distance: number, from: number, to: numb
 }
 
 /** Series that take a share of their own stand side by side in each category: the share of each, and how many. */
-function slotsOf(series: readonly PolarSeries[], keyOf: (entry: PolarSeries) => string): PolarContext['slots'] {
+function slotsOf(
+  series: readonly PolarSeries[],
+  keyOf: (entry: PolarSeries) => string,
+): { slotOf: (entry: PolarSeries) => number; count: number } {
   const keys = [...new Set(series.map(keyOf))];
   return { slotOf: (entry) => keys.indexOf(keyOf(entry)), count: keys.length };
 }
 
 /** A radar's outline through its values on the spokes, or a range radar's band between its pairs. */
-function drawRadar(context: PolarContext, entry: Extract<PolarSeries, { type: 'radar' }>, paint: Paint): void {
+function drawRadar(
+  context: PolarContext,
+  { entry }: PolarPlaced<Extract<PolarSeries, { type: 'radar' }>>,
+  paint: Paint,
+): void {
   const { drawing, frame, angle, radius } = context;
   const around = (values: readonly number[]): Point[] =>
     values.map((value, k) => frame.point(bandOf(angle)(k).middle, linearOf(radius).at(value)));
   const style = { ...hatched(paint), strokeWidth: LINE_WIDTH };
-  const key = `${entry.name}|radar`;
+  const key = [entry.name, 'radar'];
   if (isRanges(entry.data)) {
     const [low, high] = [around(entry.data.map(([value]) => value)), around(entry.data.map(([, value]) => value))];
     // The inner outline a hole in the outer, by the even-odd rule the engine fills paths with.
@@ -448,22 +473,21 @@ function isRanges(
  */
 function drawWedges(
   context: PolarContext,
-  entry: Extract<PolarSeries, { type: 'rose' | 'radialBar' }>,
+  { entry, spans, slot }: PolarPlaced<Extract<PolarSeries, { type: 'rose' | 'radialBar' }>>,
   paint: Paint,
 ): void {
-  const { drawing, frame, slots } = context;
+  const { drawing, frame, slotCount } = context;
   const [across, along, format] =
     entry.type === 'rose'
       ? [context.angle, context.radius, context.formats.radius]
       : [context.radius, context.angle, context.formats.angle];
-  const slot = slots.slotOf(entry);
-  context.spansOf(entry).forEach((span, i) => {
+  spans.forEach((span, i) => {
     const value = entry.data[i];
     if (!span || value === null || value === undefined || span[0] === span[1]) {
       return;
     }
     const { middle, half } = bandOf(across)(i);
-    const width = (2 * half) / slots.count;
+    const width = (2 * half) / slotCount;
     const start = middle - half + slot * width;
     const [a, b] = [linearOf(along).at(span[0]), linearOf(along).at(span[1])];
     const [low, high] = [Math.min(a, b), Math.max(a, b)];
@@ -473,12 +497,16 @@ function drawWedges(
         : sliceShape(frame.center, start + width, start, low, high);
     const category = context.categories[i]!;
     drawing.mark(`${entry.name}, ${category}: ${formatValue(value, format)}`, [
-      drawing.shape(shape, hatched(paint), `${entry.name}|${category}|${entry.type}`, entry.style),
+      drawing.shape(shape, hatched(paint), [entry.name, category, entry.type], entry.style),
     ]);
   });
 }
 
-function drawPolarLine(context: PolarContext, entry: Extract<PolarSeries, { type: 'polarLine' }>, paint: Paint): void {
+function drawPolarLine(
+  context: PolarContext,
+  { entry }: PolarPlaced<Extract<PolarSeries, { type: 'polarLine' }>>,
+  paint: Paint,
+): void {
   const { drawing, frame, angle, radius } = context;
   const [slot, at] = [bandOf(angle), linearOf(radius).at];
   const points = entry.data.map((value, k) => (value === null ? null : frame.point(slot(k).middle, at(value))));
@@ -486,21 +514,25 @@ function drawPolarLine(context: PolarContext, entry: Extract<PolarSeries, { type
   drawing.mark(
     entry.name,
     polarRuns(points, context.whole).map((run, r) =>
-      polyline(drawing, run, style, `${entry.name}|polarLine|${r}`, entry.style),
+      polyline(drawing, run, style, [entry.name, 'polarLine', r], entry.style),
     ),
   );
 }
 
-function drawPolarArea(context: PolarContext, entry: Extract<PolarSeries, { type: 'polarArea' }>, paint: Paint): void {
+function drawPolarArea(
+  context: PolarContext,
+  { entry, spans }: PolarPlaced<Extract<PolarSeries, { type: 'polarArea' }>>,
+  paint: Paint,
+): void {
   const { drawing, frame, angle, radius } = context;
   const outline = { stroke: paint.color, strokeWidth: LINE_WIDTH };
   const [slot, at] = [bandOf(angle), linearOf(radius).at];
-  const edges = context.spansOf(entry).map((span, k) => {
+  const edges = spans.map((span, k) => {
     const a = slot(k).middle;
     return span && { from: frame.point(a, at(span[0])), to: frame.point(a, at(span[1])) };
   });
   const nodes = polarRuns(edges, context.whole).flatMap((run, r) => {
-    const key = `${entry.name}|polarArea|${r}`;
+    const key = [entry.name, 'polarArea', r];
     const to = run.points.map((edge) => edge.to);
     if (to.length === 1) {
       return [polyline(drawing, { points: to, closed: false }, outline, key, entry.style)];
@@ -510,8 +542,8 @@ function drawPolarArea(context: PolarContext, entry: Extract<PolarSeries, { type
       ? { kind: 'path', d: `${pathThrough(to)} Z ${pathThrough(from)} Z` }
       : { kind: 'polygon', points: [...to, ...from.reverse()] };
     return [
-      drawing.shape(fill, { ...hatched(paint), stroke: 'none' }, `${key}|fill`, entry.style),
-      polyline(drawing, { points: to, closed: run.closed }, outline, `${key}|high`, entry.style),
+      drawing.shape(fill, { ...hatched(paint), stroke: 'none' }, [...key, 'fill'], entry.style),
+      polyline(drawing, { points: to, closed: run.closed }, outline, [...key, 'high'], entry.style),
     ];
   });
   drawing.mark(entry.name, nodes);
@@ -519,19 +551,21 @@ function drawPolarArea(context: PolarContext, entry: Extract<PolarSeries, { type
 
 function drawPolarPoints(
   context: PolarContext,
-  entry: Extract<PolarSeries, { type: 'polarScatter' }>,
+  { entry }: PolarPlaced<Extract<PolarSeries, { type: 'polarScatter' }>>,
   paint: Paint,
 ): void {
   const { drawing, frame, angle, radius, formats } = context;
   entry.data.forEach(([a, r], i) => {
     const [cx, cy] = frame.point(linearOf(angle).at(a), linearOf(radius).at(r));
     drawing.mark(`${entry.name}: ${formatValue(a, formats.angle)}, ${formatValue(r, formats.radius)}`, [
-      drawing.shape(
-        { kind: 'circle', cx, cy, diameter: POINT_SIZE },
+      markerNode(
+        drawing, entry.symbol, [cx, cy], POINT_SIZE,
         solid(paint.color),
-        `${entry.name}|${i}`,
+        [entry.name, i],
         entry.style,
       ),
+      ...(entry.dataLabels ? [drawing.label(formatValue(r, formats.radius), cx, cy,
+        context.rect, `${entry.path}.dataLabels`)] : []),
     ]);
   });
 }
@@ -557,14 +591,14 @@ function polyline(
   drawing: Drawing,
   { points, closed }: { points: Point[]; closed: boolean },
   style: SketchStyle & { stroke: string },
-  key: string,
+  key: SeedKey,
   own: SketchStyle,
 ): ChartNode {
   if (points.length === 1) {
     return loneDot(drawing, points[0]!, style.stroke, key, own);
   }
   const shape: Shape = closed ? { kind: 'polygon', points } : { kind: 'linearPath', points };
-  return drawing.shape(shape, closed ? { ...style, fill: 'none' } : style, key, own);
+  return drawing.outline(shape, style, key, own);
 }
 
 function pathThrough(points: readonly Point[]): string {

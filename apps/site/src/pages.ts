@@ -1,8 +1,8 @@
 import type { ChartSpec } from '@borrowdale/charts';
-import { chart, chartSpec, shapeSvg, scribble, patternSvg, escape, decorative } from './drawing';
+import { chart, chartSpec, shapeSvg, fixedShapeSvg, scribble, patternSvg, escape, decorative } from './drawing';
 // Every drawing on these pages is ornament: the text beside it carries the meaning.
 const ornament = (...args: Parameters<typeof shapeSvg>) => decorative(shapeSvg(...args));
-import { gallery, examples, codeBlock, chartCode } from './gallery';
+import { gallery, galleryState, examples, codeBlock, chartCode } from './gallery';
 // The dashboards and their datasets are most of the site's code, so they load only on the pages that
 // show them: call loadDashboards before rendering one.
 let dashboardsModule: typeof import('./dashboards') | undefined;
@@ -37,23 +37,26 @@ const demoSpec = chartSpec(
   ],
   { legend: 'top', width: 510, height: 300 },
 );
+// Seed 7 whatever the re-sketch seed, so the header mark always matches `public/favicon.svg`.
 function logo() {
-  return `<a class="brand" href="/" aria-label="BorrowdaleJS home"><span class="brand-symbol">${ornament(
-    {
-      kind: 'polygon',
-      points: [
-        [4, 25],
-        [15, 3],
-        [27, 25],
-      ],
-    },
-    { fill: '#efbc47', fillStyle: 'solid', roughness: 1 },
-    32,
-    30,
+  return `<a class="brand" href="/" aria-label="BorrowdaleJS home"><span class="brand-symbol">${decorative(
+    fixedShapeSvg(
+      {
+        kind: 'polygon',
+        points: [
+          [4, 25],
+          [15, 3],
+          [27, 25],
+        ],
+      },
+      { fill: '#efbc47', fillStyle: 'solid', roughness: 1, seed: 7 },
+      32,
+      30,
+    ),
   )}</span>Borrowdale<span class="brand-js">JS</span><span class="brand-period">.</span></a>`;
 }
 function nav(r: string) {
-  return `<header class="site-header">${logo()}<nav aria-label="Main navigation"><a class="${r === 'docs' ? 'active' : ''}" href="/docs/">Docs</a><a class="${r === 'gallery' || r === 'example' ? 'active' : ''}" href="/playground/">Playground <span>${examples.length}</span></a><a class="${['examples', 'world', 'climate', 'earthquakes'].includes(r) ? 'active' : ''}" href="/examples/">Examples</a></nav><a class="github" href="https://github.com/borrowdale/borrowdale" target="_blank" rel="noreferrer">GitHub ↗</a><button ${r === 'docs' ? 'hidden' : ''} id="resketch" class="resketch" title="Draw again with a different seed" aria-label="Re-sketch">⤨ <span>Re-sketch</span></button></header>`;
+  return `<header class="site-header">${logo()}<nav aria-label="Main navigation"><a class="${r === 'docs' ? 'active' : ''}" href="/docs/">Docs</a><a class="${r === 'gallery' || r === 'example' ? 'active' : ''}" href="/playground/">Playground <span>${examples.length}</span></a><a class="${['examples', 'world', 'climate', 'earthquakes'].includes(r) ? 'active' : ''}" href="/examples/">Examples</a></nav><a class="github" href="https://github.com/borrowdale/borrowdale" target="_blank" rel="noreferrer">GitHub ↗</a><button ${r === 'docs' || (r === 'gallery' && galleryState.category === 'text') ? 'hidden' : ''} id="resketch" class="resketch" title="Draw again with a different seed" aria-label="Re-sketch">⤨ <span>Re-sketch</span></button></header>`;
 }
 function dashboardNav(activeRoute: string) {
   return `<nav class="dashboard-nav" aria-label="Demo dashboards"><span>REAL DATA, DIFFERENT PERSPECTIVES</span>${['world', 'climate', 'earthquakes'].map((r, i) => `<a href="/examples/${r}/" class="${r === activeRoute ? 'selected' : ''}" ${r === activeRoute ? 'aria-current="page"' : ''}><small>0${i + 1}</small> ${names[r]}</a>`).join('')}</nav>`;

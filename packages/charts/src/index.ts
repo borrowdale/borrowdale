@@ -1,10 +1,16 @@
 export { layoutChart } from './layout.js';
+export { InvalidChartError } from './read.js';
 export { appendChart, drawChart, toSvgChart, type SvgChartOptions } from './render.js';
 export type {
+  Annotation,
+  ChartCoordinate,
+  ChartValue,
+  ChartPosition,
   AngleBandAxis,
   AngleLinearAxis,
   AreaSeries,
   Axis,
+  AxisTick,
   BandAxis,
   BarSeries,
   BubbleSeries,
@@ -20,7 +26,11 @@ export type {
   GaugeSeries,
   LegendPosition,
   LinearAxis,
+  LogAxis,
   LineSeries,
+  LinearGradient,
+  MarkerSymbol,
+  Marker,
   NumberFormat,
   PieSeries,
   PieSlice,
@@ -33,9 +43,24 @@ export type {
   RadiusBandAxis,
   RadiusLinearAxis,
   RangeAreaSeries,
+  IntervalSeries,
+  XYLineSeries,
+  XYAreaSeries,
+  XRangeItem,
+  XRangeSeries,
   RoseSeries,
   ScatterSeries,
+  SqrtAxis,
   Series,
   SeriesType,
   Sweep,
+  TimeAxis,
+  TimelineAxes,
+  TimelineAxis,
+  TimelineEvent,
+  TimelinePath,
+  TimelineSeries,
+  TimeUnit,
 } from './types.js';
+
+export type { ChartImage, ChartRenderOptions } from './images.js';

@@ -1,9 +1,11 @@
 import { Marked } from 'marked';
 import { escape } from './drawing';
-import { codeBlock } from './gallery';
+import { codeBlock, examples } from './gallery';
+import { examplePath } from './routing';
 import introduction from '../content/README.md?raw';
 import gettingStarted from '../content/getting-started.md?raw';
 import rendering from '../content/rendering.md?raw';
+import cartesian from '../content/cartesian.md?raw';
 import accessibility from '../content/accessibility.md?raw';
 import about from '../content/about.md?raw';
 import contributing from '../../../CONTRIBUTING.md?raw';
@@ -40,6 +42,13 @@ export const docs = [
     title: 'Rendering and fonts',
     source: 'apps/site/content/rendering.md',
     body: rendering,
+    group: 'Guides',
+  },
+  {
+    url: '/docs/cartesian/',
+    title: 'Cartesian charts and annotations',
+    source: 'apps/site/content/cartesian.md',
+    body: cartesian,
     group: 'Guides',
   },
   {
@@ -123,6 +132,10 @@ export function documentPage(path: string) {
       if (/^(https?:|mailto:|#)/.test(token.href)) return;
       const url = new URL(token.href, `https://repo.invalid/${page.source}`);
       const source = url.pathname.slice(1);
+      if (examples.some((example) => examplePath(example) === url.pathname)) {
+        token.href = url.pathname + url.search + url.hash;
+        return;
+      }
       const internal = docs.find((d) => d.source === source);
       token.href = internal
         ? internal.url + url.hash
@@ -133,6 +146,7 @@ export function documentPage(path: string) {
   const related: Record<string, string> = {
     '/docs/getting-started/': '/playground/charts/bars-grouped/',
     '/docs/charts/': '/playground/?category=charts',
+    '/docs/cartesian/': '/playground/?category=charts',
     '/docs/core/': '/playground/?category=shapes',
     '/docs/text/': '/playground/?category=text',
     '/docs/fills/': '/playground/?category=patterns',

@@ -63,9 +63,12 @@ export function layoutPie(
         drawing.shape(
           sliceShape(pulled, reach, hole, from + pad, angle - pad, pie.cornerRadius),
           hatched(paintOf.get(slice.name)!),
-          `${pie.name}|${slice.name}|slice`,
+          [pie.name, slice.name, 'slice'],
           pie.style,
         ),
+        ...(pie.dataLabels ? [drawing.label(`${slice.name}: ${formatValue(slice.value)}`,
+          pulled[0] + dx * (hole + reach) / 2, pulled[1] + dy * (hole + reach) / 2,
+          rect, `${pie.path}.dataLabels`)] : []),
       ]);
     });
   }

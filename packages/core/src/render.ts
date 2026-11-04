@@ -1,4 +1,4 @@
-import type { Sketch } from './types.js';
+import type { Sketch, SketchPath } from './types.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -30,17 +30,20 @@ export function svgElement(tag: string, attributes: SvgAttributes, children?: st
 /** Renders a sketch as `<path>` markup. Needs no DOM, so it works for SSR. */
 export function toSvgPaths(sketch: Sketch): string {
   return sketch.paths
-    .map((path) =>
-      svgElement('path', {
-        d: path.d,
-        stroke: path.stroke,
-        'stroke-width': path.strokeWidth,
-        ...(path.strokeLineDash ? { 'stroke-dasharray': path.strokeLineDash.join(' ') } : {}),
-        fill: path.fill,
-        ...(path.fillRule ? { 'fill-rule': path.fillRule } : {}),
-      }),
-    )
+    .map((path) => svgElement('path', pathAttributes(path)))
     .join('');
+}
+
+// One mapping from a sketch path to its SVG attributes, in output order, for both renderers.
+function pathAttributes(path: SketchPath): SvgAttributes {
+  return {
+    d: path.d,
+    stroke: path.stroke,
+    'stroke-width': path.strokeWidth,
+    ...(path.strokeLineDash ? { 'stroke-dasharray': path.strokeLineDash.join(' ') } : {}),
+    fill: path.fill,
+    ...(path.fillRule ? { 'fill-rule': path.fillRule } : {}),
+  };
 }
 
 export function toSvgDocument({ width, height, defs = [], body }: SvgDocumentOptions): string {
@@ -57,15 +60,8 @@ export function appendSketch(parent: Element, sketch: Sketch): SVGPathElement[] 
   const document = parent.ownerDocument;
   return sketch.paths.map((path) => {
     const element = document.createElementNS(SVG_NS, 'path');
-    element.setAttribute('d', path.d);
-    element.setAttribute('stroke', path.stroke);
-    element.setAttribute('stroke-width', String(path.strokeWidth));
-    if (path.strokeLineDash) {
-      element.setAttribute('stroke-dasharray', path.strokeLineDash.join(' '));
-    }
-    element.setAttribute('fill', path.fill);
-    if (path.fillRule) {
-      element.setAttribute('fill-rule', path.fillRule);
+    for (const [name, value] of Object.entries(pathAttributes(path))) {
+      element.setAttribute(name, String(value));
     }
     parent.appendChild(element);
     return element;
@@ -73,23 +69,35 @@ export function appendSketch(parent: Element, sketch: Sketch): SVGPathElement[] 
 }
 
 /** Draws a sketch into a 2D canvas context. Requires `Path2D`. */
-export function drawSketch(context: CanvasRenderingContext2D, sketch: Sketch): void {
+export function drawSketch(
+  context: CanvasRenderingContext2D, sketch: Sketch,
+  paint: { stroke?: string | CanvasGradient | CanvasPattern; fill?: string | CanvasGradient | CanvasPattern } = {},
+): void {
   for (const path of sketch.paths) {
     const outline = new Path2D(path.d);
     context.save();
-    if (path.fill !== 'none') {
-      context.fillStyle = path.fill;
-      context.fill(outline, path.fillRule ?? 'nonzero');
+    try {
+      if (path.fill !== 'none') {
+        context.fillStyle = paint.fill ?? path.fill;
+        context.fill(outline, path.fillRule ?? 'nonzero');
+      }
+      if (path.stroke !== 'none' && path.strokeWidth !== 0) {
+        context.strokeStyle = paint.stroke ?? path.stroke;
+        context.lineWidth = path.strokeWidth;
+        context.lineCap = 'butt';
+        context.lineJoin = 'miter';
+        context.miterLimit = 4;
+        // Canvas ignores malformed numeric dash lists. Start solid so none can inherit a dash.
+        context.setLineDash([]);
+        if (path.strokeLineDash) {
+          context.setLineDash(path.strokeLineDash);
+        }
+        context.lineDashOffset = 0;
+        context.stroke(outline);
+      }
+    } finally {
+      context.restore();
     }
-    if (path.stroke !== 'none') {
-      context.strokeStyle = path.stroke;
-      context.lineWidth = path.strokeWidth;
-      // `||`, not `??`: a falsy dash on a hand-built sketch draws solid, as the SVG renderers draw it.
-      context.setLineDash(path.strokeLineDash || []);
-      context.lineDashOffset = 0;
-      context.stroke(outline);
-    }
-    context.restore();
   }
 }
 

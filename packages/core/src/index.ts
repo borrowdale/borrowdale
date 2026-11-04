@@ -1,5 +1,6 @@
+export { assertDrawable } from './validate.js';
 export { sketch } from './sketch.js';
-export { Budget } from './engine/budget.js';
+export { Budget } from './budget.js';
 export { stableKey, toSeed } from './seed.js';
 export {
   appendSketch,

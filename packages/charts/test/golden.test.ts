@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 // Before the package, so the guard also reaches Math references it takes when it loads.
-import '../../core/test/support/forbid-unportable-math.js';
+import '../../core/test/support/forbid-unportable-calls.js';
 import { layoutChart, toSvgChart, type ChartSpec } from '@borrowdale/charts';
 import corpus from './golden/corpus.json' with { type: 'json' };
 import goldens from './golden/goldens.json' with { type: 'json' };
+import cartesianExamples from '../../../apps/examples/cartesian-cases.json' with { type: 'json' };
+import timeExamples from '../../../apps/examples/time-cases.json' with { type: 'json' };
 
 // Recorded from this package with `npm run goldens charts`, and reviewed, after each deliberate
 // change to what a chart looks like.
@@ -14,6 +16,11 @@ const names = cases.map((entry) => entry.name);
 describe('golden charts', () => {
   it('has exactly one golden per corpus case, in corpus order', () => {
     expect(Object.keys(expected)).toEqual(names);
+  });
+
+  // The example scripts render these, so they are recorded and reviewed here too.
+  it.each([...cartesianExamples, ...timeExamples])('holds the example $name', (example) => {
+    expect(corpus).toContainEqual(example);
   });
 
   it.each(cases)('$name', ({ name, spec }) => {

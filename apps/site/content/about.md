@@ -12,4 +12,4 @@ The toolkit is written in TypeScript. Public package names use the `@borrowdale`
 
 The playground contains individual reference examples with editable code. The examples section combines charts into complete dashboards using saved public datasets from the World Bank, NASA GISS and USGS.
 
-BorrowdaleJS is still in early development and has not been published to npm. The website runs from the local workspace. Start with the [documentation](README.md), or read how to [contribute](../../../CONTRIBUTING.md).
+BorrowdaleJS is in early development: the first release, 0.1.0, is in preparation and not yet on npm. The website is built from the source workspace. Start with the [documentation](README.md), or read how to [contribute](../../../CONTRIBUTING.md).

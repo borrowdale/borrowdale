@@ -1,0 +1,71 @@
+name: Library
+
+# Runs on each merge to main only, to keep Actions minutes down: pull requests are built and tested
+# locally before they are merged (see CONTRIBUTING.md). A merge that changes only documentation
+# starts no run. No test reads these files; if one ever does, take its files off the list.
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**/*.md'
+      - LICENSE
+      - packages/text/OFL.txt
+      - .github/ISSUE_TEMPLATE/**
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Node ${{ matrix.node }}
+    runs-on: ubuntu-latest
+    # A whole job normally takes 2 to 3 minutes.
+    timeout-minutes: 15
+    strategy:
+      # Every supported Node version reports, even when another one fails.
+      fail-fast: false
+      matrix:
+        node: [22, 24, 26]
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      # The parity tests draw in all three engines and fail, rather than skip, without them. Their system
+      # libraries come from Ubuntu's package mirror, which sometimes stops sending data or slows to a
+      # trickle. apt drops a connection that is silent for 15 seconds and retries it, and an attempt
+      # that still runs past 120 seconds (normally 30 to 70) is stopped and started once more, so a
+      # stalled mirror costs at most about 5 minutes. The timeout runs as root, as apt-get does: as the
+      # runner user it cannot stop apt-get, which would then hold the package lock and fail the retry.
+      - name: Install the browsers' system libraries
+        timeout-minutes: 5
+        run: |
+          printf '%s\n' 'Acquire::Retries "2";' 'Acquire::http::Timeout "15";' 'Acquire::https::Timeout "15";' \
+            | sudo tee /etc/apt/apt.conf.d/99-stalled-mirror > /dev/null
+          node_bin=$(command -v node)
+          for attempt in 1 2; do
+            if sudo timeout --kill-after=10 120 "$node_bin" node_modules/playwright-core/cli.js \
+                install-deps chromium firefox webkit; then
+              exit 0
+            fi
+            echo "Attempt $attempt failed or ran past 120 seconds."
+            sudo dpkg --configure -a || true
+          done
+          exit 1
+      # Playwright drops a download that is silent for 15 seconds and moves to its next mirror.
+      - name: Download the browsers
+        timeout-minutes: 3
+        env:
+          PLAYWRIGHT_DOWNLOAD_CONNECTION_TIMEOUT: '15000'
+        run: npx --no playwright-core install chromium firefox webkit
+      - run: npm run build
+      # The examples load the built packages, as an installed copy does; the tests load the source.
+      - run: npm run example
+      - run: npm run example:text
+      - run: npm run example:charts
+      - run: npm run typecheck
+      - run: npm test

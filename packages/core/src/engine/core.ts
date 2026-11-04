@@ -1,7 +1,7 @@
 // Ported from rough.js 4.6.6 (src/core.ts, src/geometry.ts, src/math.ts).
 // MIT License, Copyright (c) 2019 Preet Shihn. See THIRD_PARTY_NOTICES.md.
 
-import { square } from './math.js';
+import { square } from '../trig.js';
 
 export type Point = [number, number];
 export type Line = [Point, Point];

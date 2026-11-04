@@ -5,7 +5,9 @@ of [rough.js](https://roughjs.com) 4.6.6 and has no runtime dependencies. It dra
 seeded random generator and its own trigonometry, so its output does not depend on the JavaScript
 engine.
 
-> **Unpublished:** use the [local workspace setup](https://github.com/borrowdale/borrowdale/blob/main/apps/site/content/getting-started.md). Package installation instructions will be added when releases are available.
+```sh
+npm install @borrowdale/core
+```
 
 ```js
 import { sketch, toSvgDocument, toSvgPaths } from '@borrowdale/core';
@@ -26,11 +28,9 @@ the shape itself.
 
 The engine never calls `Math.random`, and computes sine, cosine and arctangent with plain
 arithmetic instead of `Math.sin` and friends, whose last bit can differ between JavaScript engines.
-The test suite draws every reference drawing of this package in Node.js and in Chromium and
-requires identical output. Both run V8, so the test checks the build and the browser environment
-rather than a different JavaScript engine; for Firefox and Safari the guarantee rests on the engine
-using only exactly specified arithmetic. Coordinates are rounded to two decimals, which keeps the
-markup small.
+The test suite draws every reference drawing of this package in Node.js and in Chromium, Firefox
+and WebKit, so in the V8, SpiderMonkey and JavaScriptCore engines, and requires identical output.
+Coordinates are rounded to two decimals, which keeps the markup small.
 
 The drawing depends on the exact version of the stroke engine, which ships inside this package.
 Use the same `@borrowdale/core` version on the server and in the browser.
@@ -73,9 +73,10 @@ be drawn throws an error naming the field or option, and the value where one was
   lie outside the drawn shape, so a path can be rejected even when everything it draws is in range.
 - `points` must be an array of `[x, y]` pairs: at least 3 for `polygon`, 2 for `linearPath` and
   `curve`. An arc's `stop` must be greater than its `start`, and `closed`, when given, a boolean.
-- Unknown option names are rejected (`Unknown option: roughnes`). `roughness` and `bowing` must be
-  from 0 to 10, `curveTightness` and `curveFitting` from 0 to 1, `curveStepCount` an integer from 1
-  to 1000, and `hachureAngle` within ±1,000,000. `strokeLineDash` must be a plain array of 1 to 16
+- Unknown option names are rejected (`Unknown option: "roughnes"`). `roughness` and `bowing` must be
+  from 0 to 10, `curveTightness` and `curveFitting` from 0 to 1, and `curveStepCount` an integer from
+  1 to 1000. `hachureAngle` may be any finite number of degrees: 400 draws as 40 does.
+  `strokeLineDash` must be a plain array of 1 to 16
   lengths from 0 to 1,000,000, with no holes, adding up to at least 1.
 
 Valid input can still describe an enormous amount of work, such as a dashed fill with no dash
@@ -129,21 +130,32 @@ Only pass markup you built yourself, never text from users.
 
 `escapeAttribute(value)` escapes a single string for use inside a double-quoted attribute.
 
-## Portable sine and cosine
+## Portable maths
 
-`@borrowdale/core/math` exports the engine's own `sin` and `cos`, for coordinates that must be the
-same in every JavaScript engine (for example points on a circle placed next to a drawing):
+`@borrowdale/core/math` exports the engine's own `sin` and `cos`, and a natural logarithm `log`, for
+numbers that must be the same in every JavaScript engine (for example points on a circle placed next
+to a drawing, or positions on a logarithmic scale):
 
 ```js
-import { cos, sin } from '@borrowdale/core/math';
+import { cos, log, sin } from '@borrowdale/core/math';
 
 const point = [cx + r * cos(angle), cy + r * sin(angle)];
+const along = (log(value) - log(low)) / (log(high) - log(low));
 ```
 
-They give the same result in every JavaScript engine. That result can differ from `Math.sin` and
-`Math.cos` in the last bits. They accept a finite number of radians within ±1,000,000 and throw a
-`RangeError` for anything else. Not far past that range the result would be wrong without any sign
-of it.
+They give the same result in every JavaScript engine. That result can differ from `Math.sin`,
+`Math.cos` and `Math.log` in the last bit; `log` is within one unit in the last place of the true
+value. `sin` and `cos` accept a finite number of radians within ±1,000,000, exported as `MAX_ANGLE`;
+not far past that range the result would be wrong without any sign of it. `log` accepts a finite
+number above 0. Each throws a `RangeError` for anything else.
+
+## Values in error messages
+
+`@borrowdale/core/show` exports `show(value)`, which every `@borrowdale` package uses to write a
+rejected value into an error message: strings quoted and escaped, a short array in brackets, and
+anything that could throw or run code when converted named by its kind. It also exports
+`escaped(message)`, which writes every character of a message that could break or disguise a line of
+a log, such as a line break or a bidirectional override, as its `\u` escape.
 
 ## Rendering
 
@@ -152,17 +164,30 @@ of it.
 | `toSvgPaths(sketch)` | `<path>` markup string | nothing (SSR-safe) |
 | `toSvgDocument({ width, height, defs?, body })` | complete `<svg>` string | nothing |
 | `appendSketch(parent, sketch)` | appends `<path>` elements to an SVG element | a DOM |
-| `drawSketch(context2d, sketch)` | draws into a canvas | `Path2D` |
+| `drawSketch(context2d, sketch, paint?)` | draws into a canvas | `Path2D` |
 
 A dashed outline keeps its `strokeLineDash` in the sketch. `toSvgPaths` and `appendSketch` write
-it as `stroke-dasharray`, and `drawSketch` sets it with `setLineDash`. For a sketch from `sketch()`,
+it as `stroke-dasharray`, and `drawSketch` sets it with `setLineDash`.
 `drawSketch` draws every outline with its own dash, starting at its beginning, and a solid one solid,
-whatever dash the canvas had, and puts the canvas's own dash back afterwards.
+whatever dash the canvas had. Outlines use butt caps, miter joins and a miter limit of 4, matching
+SVG defaults. A hand-built sketch's dash list with negative or non-finite entries draws solid.
+The caller's canvas state is restored even if drawing throws; the error still propagates and any
+pixels already drawn remain. Caller transforms, clipping, opacity and compositing still apply.
+
+The optional `paint` argument to `drawSketch` supplies `stroke` and/or `fill` overrides as
+colours, `CanvasGradient` or `CanvasPattern` objects. It replaces existing paints without
+enabling a stroke or fill whose value is `none`. Canvas state is restored after each path,
+including when drawing throws.
 
 The type declarations refer to DOM types (`Element`, `CanvasRenderingContext2D`), so TypeScript
 projects need `"dom"` in `compilerOptions.lib`, even when they only render on the server.
 
 ## License
 
-MIT. The stroke engine is ported from MIT-licensed code by Preet Shihn, and its trigonometry uses
-constants from fdlibm; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+MIT. The stroke engine is ported from MIT-licensed code by Preet Shihn; its trigonometry uses
+constants from fdlibm, and its logarithm is a port of fdlibm's; see
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+### Validation without drawing
+
+`assertDrawable(shape, options)` checks the same shape and style rules as `sketch`, without generating strokes. It returns a shallow options object with undefined entries removed and throws on invalid input. This checks input structure and ranges; drawing still enforces its separate work budget.

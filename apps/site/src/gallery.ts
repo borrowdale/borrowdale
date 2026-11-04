@@ -1,3 +1,4 @@
+import { presentationExamples, type ChartExample } from './chart-examples';
 import coreCases from '../../../packages/core/test/golden/corpus.json';
 import chartCases from '../../../packages/charts/test/golden/corpus.json';
 import textCases from '../../../packages/text/test/golden/corpus.json';
@@ -29,12 +30,13 @@ const shapes: Example[] = coreCases.map((e) => ({
   tag: e.shape.kind,
   render: () => shapeSvg(e.shape as Shape, e.options as SketchOptions, 300, 180, true),
 }));
-const charts: Example[] = chartCases.map((e) => ({
+export const chartExamples = [...chartCases, ...presentationExamples] as ChartExample[];
+const charts: Example[] = chartExamples.map((e) => ({
   name: e.name,
   category: 'charts',
   tag: [...new Set(e.spec.series.map((s) => s.type))].join(' + '),
   families: [...new Set(e.spec.series.map((s) => s.type))],
-  render: (renderer) => chart(e.spec as ChartSpec, renderer),
+  render: (renderer) => chart(e.spec, renderer, e.images),
 }));
 const texts: Example[] = textCases.map((e) => ({
   name: e.name,

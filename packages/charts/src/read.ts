@@ -1,50 +1,45 @@
 // Reading a chart spec that came from JSON: through own properties only, arrays by index, and every
 // problem reported as one named error that says where in the spec it is.
+import { escaped, show } from '@borrowdale/core/show';
 import { measureText } from '@borrowdale/text';
 
 // The longest text @borrowdale/text lays out.
 const MAX_TEXT = 1000;
-// The longest string an error message repeats; a longer one is described by its length.
-const MAX_SHOWN = 100;
 // The longest message from another package's check that an error repeats.
 const MAX_MESSAGE = 200;
-// Characters that could break or disguise a line of a log: controls, line separators, and
-// bidirectional marks and overrides.
-const UNSAFE = /[\u0000-\u001f\u007f-\u009f\u061c\u200e\u200f\u2028\u2029\u202a-\u202e\u2066-\u2069]/g;
 /** Large enough for any count or amount, and small enough that `toFixed` never uses exponent notation. */
 export const MAX_VALUE = 1e15;
 /** The most decimals a number is written with. */
 export const MAX_DECIMALS = 20;
+/** The most ticks an axis may have, whether listed in `ticks` or made by its `step`. */
+export const MAX_TICKS = 1_000;
+// The longest string read where a time may be given: "2026-11-01T09:30:15.250+01:00" is 29.
+const MAX_TIME_TEXT = 40;
+
+export { show };
 
 /** Reads a value at `path`, returning it checked, or throws. */
 export type Check<T> = (path: string, value: unknown) => T;
 
-/** Throws the error every spec problem becomes: "Invalid chart: <path> <problem>". */
-export function fail(path: string, problem: string): never {
-  throw new Error(`Invalid chart: ${path === '' ? '' : `${path} `}${problem}`);
-}
-
 /**
- * A rejected value, for an error message. Strings are quoted so `"10"` is visibly not the number 10;
- * a long string is described by its length, and anything but a string, number, boolean or null by
- * its kind, since converting it to a string could throw or run code from the spec.
+ * What every spec problem throws. Its message is "Invalid chart: <path> <problem>"; `path` is the
+ * place in the spec, such as `series[2].data[5]`, or `''` for the spec itself.
  */
-export function show(value: unknown): string {
-  if (typeof value === 'string') {
-    return value.length > MAX_SHOWN ? `a string of ${value.length} characters` : escaped(JSON.stringify(value));
+export class InvalidChartError extends Error {
+  override readonly name = 'InvalidChartError';
+  readonly path: string;
+  readonly problem: string;
+
+  constructor(path: string, problem: string) {
+    super(`Invalid chart: ${path === '' ? '' : `${path} `}${problem}`);
+    this.path = path;
+    this.problem = problem;
   }
-  if (Array.isArray(value)) {
-    return `an array of ${value.length}`;
-  }
-  if (typeof value === 'object' && value !== null) {
-    return 'an object';
-  }
-  return typeof value === 'function' || typeof value === 'symbol' ? `a ${typeof value}` : String(value);
 }
 
-// Each unsafe character written as its \u escape.
-function escaped(message: string): string {
-  return message.replace(UNSAFE, (char) => `\\u${char.charCodeAt(0).toString(16).padStart(4, '0')}`);
+/** Throws an `InvalidChartError` for the spec at `path`. */
+export function fail(path: string, problem: string): never {
+  throw new InvalidChartError(path, problem);
 }
 
 /** The fields of one spec object. A field set to `undefined` counts as not set, as in core. */
@@ -89,21 +84,24 @@ function join(path: string, key: string): string {
 
 /**
  * An array of `min` to `max` entries, read by index, so a hole is undefined and is rejected. Each
- * entry's check also gets its index.
+ * entry's check also gets its index. `reserve` receives the validated length before allocation.
  */
 export function list<T>(
   min: number,
   max: number,
   entry: (path: string, value: unknown, index: number) => T,
+  reserve?: (count: number) => void,
 ): Check<T[]> {
   return (path, value) => {
     if (!Array.isArray(value)) {
       fail(path, `must be an array, got ${show(value)}`);
     }
-    if (value.length < min || value.length > max) {
-      fail(path, `must have ${min === max ? min : `${min} to ${max}`} entries, got ${value.length}`);
+    const length = value.length;
+    if (!Number.isInteger(length) || length < min || length > max) {
+      fail(path, `must have ${min === max ? min : `${min} to ${max}`} entries, got ${show(length)}`);
     }
-    return Array.from({ length: value.length }, (_, i) => entry(`${path}[${i}]`, value[i] as unknown, i));
+    reserve?.(length);
+    return Array.from({ length }, (_, i) => entry(`${path}[${i}]`, value[i] as unknown, i));
   };
 }
 
@@ -117,8 +115,8 @@ export function number(min: number, max: number, alternative = ''): Check<number
   };
 }
 
-// ±MAX_VALUE written the way a reader writes it.
-function bound(value: number): string {
+/** A bound in a message, ±MAX_VALUE written the way a reader writes it. */
+export function bound(value: number): string {
   return Math.abs(value) === MAX_VALUE ? `${value < 0 ? '-' : ''}1e15` : String(value);
 }
 
@@ -141,11 +139,23 @@ export function nullable<T>(check: Check<T>): Check<T | null> {
  * character SVG cannot hold is rejected here even where the string only reaches a tooltip.
  */
 export function text(max = MAX_TEXT): Check<string> {
+  const short = shortText(max);
+  return (path, value) => {
+    const string = short(path, value);
+    probe(path, () => measureText(string));
+    return string;
+  };
+}
+
+/**
+ * A string of at most `max` characters, not measured: for one that is checked another way before
+ * anything draws it, as a time is parsed or a row matched to a category, which costs far less.
+ */
+export function shortText(max: number): Check<string> {
   return (path, value) => {
     if (typeof value !== 'string' || value.length > max) {
       fail(path, `must be a string of at most ${max} characters, got ${show(value)}`);
     }
-    probe(path, () => measureText(value));
     return value;
   };
 }
@@ -178,8 +188,30 @@ export function tuple<const N extends readonly string[]>(names: N): Check<{ [K i
 }
 
 /**
- * Runs another package's own check, reporting its error at `path`. The other package repeats what it
- * rejects as it is, so its message is escaped and cut short here.
+ * Like `tuple`, but an entry may also be a string: a time, for a value on a time axis. The strings
+ * are carried as they are until the axes are known, when each is read as a time or rejected
+ * (`resolveValues` in validate.ts); the type says number because nothing reads them before then.
+ */
+export function coordinates<const N extends readonly string[]>(names: N): Check<{ [K in keyof N]: number }> {
+  return (path, value) => {
+    if (!Array.isArray(value) || value.length !== names.length) {
+      fail(path, `must be a [${names.join(', ')}] array, got ${show(value)}`);
+    }
+    return names.map((_, i) => coordinate(`${path}[${i}]`, value[i] as unknown)) as { [K in keyof N]: number };
+  };
+}
+
+/**
+ * One entry of `coordinates`: a number, or a string carried until it is read as a time, which takes
+ * only the characters of ISO 8601, or rejected on an axis that is not a time axis.
+ */
+export const coordinate: Check<number> = (path, value) =>
+  typeof value === 'string' ? (shortText(MAX_TIME_TEXT)(path, value) as unknown as number) : number(-MAX_VALUE, MAX_VALUE)(path, value);
+
+/**
+ * Runs another package's own check, reporting its error at `path`. The other package writes what it
+ * rejects with `show`, but a list it rejects can make its message long, so the message is cut short
+ * here, and escaped in case something else threw it.
  */
 export function probe(path: string, check: () => unknown): void {
   try {
@@ -190,4 +222,15 @@ export function probe(path: string, check: () => unknown): void {
     const short = `${message.slice(0, MAX_MESSAGE).replace(/[\ud800-\udbff]$/, '')}…`;
     fail(path, `is not valid: ${message.length > MAX_MESSAGE ? short : message}`);
   }
+}
+
+/** Throws at the first name that repeats one before it. */
+export function unique(names: readonly string[], pathOf: (index: number) => string): void {
+  const seen = new Set<string>();
+  names.forEach((name, i) => {
+    if (seen.has(name)) {
+      fail(pathOf(i), `repeats ${show(name)}`);
+    }
+    seen.add(name);
+  });
 }

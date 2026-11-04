@@ -1,6 +1,7 @@
 import { escapeAttribute, svgElement } from '@borrowdale/core';
 import type { SvgAttributes } from '@borrowdale/core';
 import { facesOf } from './embed.js';
+import { unitsOf } from './measure.js';
 import type { TextLayout, TextStyle } from './types.js';
 import { checkStyle, cssFamily } from './validate.js';
 
@@ -9,12 +10,14 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
 // Set as the element's own style, which a stylesheet rule overrides only with `!important`. A
 // right-to-left page or rule would anchor the text at its right end. Browsers also kern and form
 // ligatures by default, which would make the drawn text narrower than its measurement. Measured in
-// Chromium: `font-kerning` and `font-variant-ligatures` are the only switch SVG text honours; the
-// `font-kerning` and `text-rendering` attributes are ignored.
+// Chromium: `font-kerning` and `font-variant-ligatures` are the only switch SVG text honours, and
+// the `font-kerning` attribute is ignored. The CSS `text-rendering` property asks for fractional
+// advances even when full font hinting would round each glyph to a whole pixel.
 const OWN_STYLE = [
   ['direction', 'ltr'],
   ['font-kerning', 'none'],
   ['font-variant-ligatures', 'none'],
+  ['text-rendering', 'geometricPrecision'],
 ] as const;
 
 /**
@@ -60,12 +63,15 @@ export function drawText(
   context.save();
   context.font = font;
   context.fillStyle = fill;
-  // Measured in Chromium: both are needed to turn off kerning and ligatures on a canvas.
-  context.fontKerning = 'none';
-  context.textRendering = 'optimizeSpeed';
   context.direction = 'ltr';
   context.textAlign = 'left';
   context.textBaseline = 'alphabetic';
+  // Keep the measured advances fractional when the browser uses full font hinting. WebKit's canvas
+  // has no such property, and setting it there would leave one on the caller's context that
+  // restore() does not remove.
+  if ('textRendering' in context) {
+    context.textRendering = 'geometricPrecision';
+  }
   // A caller's spacing survives a change of `font`, and would widen the text past its measurement.
   context.letterSpacing = '0px';
   context.wordSpacing = '0px';
@@ -75,7 +81,17 @@ export function drawText(
     context.rotate((layout.rotate * Math.PI) / 180);
     context.translate(-pivotX, -pivotY);
   }
-  context.fillText(layout.text, layout.x, layout.y);
+  // Each unit a cut keeps whole (a character and its marks, an emoji sequence or a flag) where the
+  // one before it ends, by the canvas's own measure of it. Drawn whole, the text would be kerned by
+  // WebKit's canvas, which cannot turn kerning off, and form ligatures in Firefox's, and come out
+  // narrower than its layout; drawn by smaller pieces, a flag or an emoji sequence would come apart.
+  // Measured in Chromium, Firefox and WebKit: the advances of the units add up to the measured width
+  // in all three.
+  let x = layout.x;
+  for (const unit of unitsOf(layout.text)) {
+    context.fillText(unit, x, layout.y);
+    x += context.measureText(unit).width;
+  }
   context.restore();
 }
 

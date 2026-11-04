@@ -24,6 +24,19 @@ export function areaPath(top: readonly Point[], bottom: readonly Point[], curve:
     .join('')} Z`;
 }
 
+/**
+ * The corners of a line through the points, as [x, y], for a curve made of straight segments; none
+ * for a curve that bends between them.
+ */
+export function straightPoints(points: readonly Point[], curve: Curve, horizontal: boolean): Point[] | undefined {
+  if (curve === 'monotone') {
+    return undefined;
+  }
+  return [points[0]!, ...commands(points, curve).map((command) => command.to)].map(([along, value]) =>
+    horizontal ? [value, along] : [along, value],
+  );
+}
+
 function commands(points: readonly Point[], curve: Curve): Command[] {
   switch (curve) {
     case 'linear':

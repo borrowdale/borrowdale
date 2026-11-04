@@ -1,0 +1,66 @@
+name: Bug report
+description: Something draws, measures or throws differently from what the documentation says.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for the report. For a security problem, please follow the security policy instead of opening an issue.
+  - type: dropdown
+    id: package
+    attributes:
+      label: Package
+      options:
+        - "@borrowdale/core"
+        - "@borrowdale/fills"
+        - "@borrowdale/text"
+        - "@borrowdale/charts"
+        - Documentation or examples
+        - Not sure
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      placeholder: "0.1.0, or a commit hash"
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Where it runs
+      description: Node.js version, or browser and version, and the operating system.
+      placeholder: "Node.js 24.11 on Linux, or Firefox 151 on macOS"
+    validations:
+      required: true
+  - type: textarea
+    id: input
+    attributes:
+      label: Smallest input that shows it
+      description: The spec, shape or text, with the seed if a drawing differs.
+      render: js
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened
+      description: The output, the error message, or a screenshot.
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched the existing issues.
+          required: true
+        - label: The report contains no private data or credentials.
+          required: true

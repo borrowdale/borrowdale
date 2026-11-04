@@ -14,6 +14,45 @@
   --paper: #fffefa;
   --line: #dcded2;
 }
+/* Keep native scrollbar sizing and interaction, using the page's paper and ink. */
+:root {
+  --scroll-thumb: #697b6d;
+  --scroll-track: #f7f5ef;
+  scrollbar-color: var(--scroll-thumb) var(--scroll-track);
+}
+.editor-code-panel textarea {
+  --scroll-thumb: #a6b59b;
+  --scroll-track: #22352d;
+  scrollbar-color: var(--scroll-thumb) var(--scroll-track);
+}
+.editor-code-panel textarea:hover,
+.editor-code-panel textarea:focus {
+  --scroll-thumb: #eac05e;
+}
+@supports not (scrollbar-color: auto) {
+  ::-webkit-scrollbar {
+    width: 14px;
+    height: 14px;
+  }
+  ::-webkit-scrollbar-track,
+  ::-webkit-scrollbar-corner {
+    background: var(--scroll-track);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--scroll-thumb);
+    border: 3px solid var(--scroll-track);
+    border-radius: 8px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #397e92;
+  }
+}
+@media (forced-colors: active) {
+  :root,
+  .editor-code-panel textarea {
+    scrollbar-color: auto;
+  }
+}
 * {
   box-sizing: border-box;
 }
@@ -201,6 +240,10 @@ main h1:focus {
   border-color: #9da89a;
   background: transparent;
   padding: 10px 12px;
+}
+.site-header .resketch[hidden] {
+  display: inline-block !important;
+  visibility: hidden;
 }
 .hero {
   display: grid;
