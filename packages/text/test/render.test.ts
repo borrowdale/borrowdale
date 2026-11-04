@@ -3,8 +3,8 @@ import { fontFaceCss, layoutText, toSvgText } from '@borrowdale/text';
 import { excalifontFiles } from '@borrowdale/text/excalifont-files';
 import { at, handFiles } from './support/hand-font.js';
 
-// How every element ends: left to right, as an attribute and in the style, with kerning and ligatures off.
-const LTR_UNSHAPED = 'direction="ltr" style="direction:ltr;font-kerning:none;font-variant-ligatures:none"';
+// How every element ends: left to right, with kerning and ligatures off and fractional advances.
+const LTR_UNSHAPED = 'direction="ltr" style="direction:ltr;font-kerning:none;font-variant-ligatures:none;text-rendering:geometricPrecision"';
 // The start tag of every element laid out `at` with the default anchor, up to its fill.
 const START_TAG = '<text x="100" y="50" font-family="&quot;Hand Test&quot;" font-size="20"';
 const LATIN_RULE =

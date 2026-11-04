@@ -89,8 +89,9 @@ Kerning and ligatures are not applied when measuring, and no renderer applies th
 text is as wide as measured: SVG text switches them off, and `drawText` draws each character with
 its marks where the one before it ends. The test suite draws every reference label the font covers
 in Chromium, Firefox and WebKit, through all three renderers, and requires the drawn width to match
-the measured width within 0.05 user units. That is verified in the headless browsers on macOS; a
-browser that rounds each glyph to whole pixels draws text a little wider or narrower.
+the measured width within 0.05 user units. The suite runs in headless browsers on macOS and Linux.
+The renderers request `geometricPrecision` so browsers can use fractional glyph advances even
+when the system uses full font hinting.
 
 ## Rendering
 

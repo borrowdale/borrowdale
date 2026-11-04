@@ -44,7 +44,7 @@ describe('toSvgChart', () => {
         '<path d="M0 0 L1 1" stroke="#000" stroke-width="1" fill="none"/>' +
         '<g><title>Bar &quot;1&quot; &lt;x&gt;</title><path d="M0 0 L1 1" stroke="#000" stroke-width="1" fill="none"/></g>' +
         '<text x="1" y="2" font-family="&quot;Excalifont&quot;" font-size="12" fill="#333" direction="ltr"' +
-        ' style="direction:ltr;font-kerning:none;font-variant-ligatures:none">Hi</text>' +
+        ' style="direction:ltr;font-kerning:none;font-variant-ligatures:none;text-rendering:geometricPrecision">Hi</text>' +
         '</svg>',
     );
   });

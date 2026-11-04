@@ -28,6 +28,7 @@ const STYLE_PROPERTIES = [
   'fillStyle',
   'textAlign',
   'textBaseline',
+  'textRendering',
   'letterSpacing',
   'wordSpacing',
   'direction',
@@ -49,6 +50,7 @@ function fakeContext(fonts: unknown) {
     fillStyle: '',
     textAlign: '',
     textBaseline: '',
+    textRendering: '',
     letterSpacing: '',
     wordSpacing: '',
     direction: '',
@@ -168,6 +170,10 @@ describe('appendText', () => {
     expect(element.style.getPropertyValue('font-variant-ligatures')).toBe('none');
   });
 
+  it('requests fractional glyph advances through the CSSOM', () => {
+    expect(appendText(svgRoot(), layoutText('AB', at)).style.getPropertyValue('text-rendering')).toBe('geometricPrecision');
+  });
+
   it('sets the direction through the CSSOM, which a stylesheet rule overrides only with !important', () => {
     expect(appendText(svgRoot(), layoutText('AB', at)).style.getPropertyValue('direction')).toBe('ltr');
   });
@@ -237,6 +243,7 @@ describe('drawText', () => {
       direction: 'ltr',
       textAlign: 'left',
       textBaseline: 'alphabetic',
+      textRendering: 'geometricPrecision',
     });
   });
 
