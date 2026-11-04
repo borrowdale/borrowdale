@@ -1,0 +1,108 @@
+name: Website
+
+# Runs after each merge to main that changes what the site is built from, to keep Actions minutes
+# down: pull requests are built and tested locally before they are merged (see CONTRIBUTING.md). The
+# library's own changes are tested by the Library workflow, which also runs the site's tests.
+on:
+  push:
+    branches: [main]
+    paths:
+      - apps/site/**
+      - apps/examples/*-cases.json
+      - packages/*/README.md
+      - packages/*/THIRD_PARTY_NOTICES.md
+      - packages/*/test/golden/corpus.json
+      - packages/text/OFL.txt
+      - CONTRIBUTING.md
+      - CHANGELOG.md
+      - LICENSE
+      - package.json
+      - package-lock.json
+      - tsconfig.base.json
+      - .github/workflows/site.yml
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: Publish the website to GitHub Pages from main
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate website
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # A run is never cancelled once it starts. While one runs, GitHub keeps only the newest waiting run
+    # in the group and cancels any older one still waiting, so pushes and manual runs have separate
+    # groups: a merge cannot replace a manual run that is waiting to publish.
+    concurrency:
+      group: website-validate-${{ github.event_name }}-${{ github.ref }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm test --workspace @borrowdale/site
+      # Validation only: the origin exercises the root-path output (robots.txt, sitemap, canonical URLs)
+      # that a custom domain would publish. Nothing built here is uploaded.
+      - name: Build at the domain root
+        run: npm run site:build
+        env:
+          SITE_BASE: /
+          SITE_ORIGIN: https://example.org
+      - name: Build at the project path
+        run: npm run site:build
+        env:
+          SITE_BASE: /${{ github.event.repository.name }}/
+          SITE_ORIGIN: https://${{ github.repository_owner }}.github.io
+
+  deploy:
+    name: Publish website
+    if: github.event_name == 'workflow_dispatch' && inputs.deploy && github.ref == 'refs/heads/main'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Read Pages settings
+        id: pages
+        uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
+        with:
+          enablement: false
+      - name: Build for the configured Pages URL
+        run: npm run site:build
+        env:
+          SITE_ORIGIN: ${{ steps.pages.outputs.origin }}
+          SITE_BASE: ${{ format('{0}/', steps.pages.outputs.base_path) }}
+      - name: Upload website
+        uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
+        with:
+          path: apps/site/dist
+      - name: Deploy website
+        id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
