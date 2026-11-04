@@ -78,13 +78,17 @@ describe('show', () => {
     ['describes an array whose length is not a whole number only as an array', wordy, 'an array'],
     ['describes an array whose length is negative only as an array', negative, 'an array'],
     ['describes an array in an array whose length is not a whole number only as an array', [negative], '[an array]'],
-    ['names a Float16Array', new Float16Array([1]), 'a Float16Array'],
     ['names an Int16Array with the article it is read with', new Int16Array(1), 'an Int16Array'],
     ['names a DataView', new DataView(new ArrayBuffer(2)), 'a DataView'],
     ['writes a string of 100 characters in full', 'x'.repeat(100), `"${'x'.repeat(100)}"`],
     ['writes an array of 8 entries in brackets', [1, 2, 3, 4, 5, 6, 7, 8], '[1, 2, 3, 4, 5, 6, 7, 8]'],
   ])('%s', (_case, value, shown) => {
     expect(show(value)).toBe(shown);
+  });
+
+  // Node 22 has no Float16Array, so this runs only where the engine provides one.
+  it.runIf(typeof Float16Array === 'function')('names a Float16Array', () => {
+    expect(show(new Float16Array([1]))).toBe('a Float16Array');
   });
 
   it.each<[string, string, string]>([
