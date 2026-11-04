@@ -1,4 +1,9 @@
-# BorrowdaleJS
+<h1>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="apps/site/public/borrowdale-logo-dark.svg">
+    <img src="apps/site/public/borrowdale-logo.svg" alt="BorrowdaleJS" width="309" height="51">
+  </picture>
+</h1>
 
 Hand-drawn charts, components, text and backgrounds for the web.
 
