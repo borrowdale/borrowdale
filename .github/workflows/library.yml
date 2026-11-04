@@ -1,9 +1,16 @@
 name: Library
 
+# Runs on each merge to main only, to keep Actions minutes down: pull requests are built and tested
+# locally before they are merged (see CONTRIBUTING.md). A merge that changes only documentation
+# starts no run. No test reads these files; if one ever does, take its files off the list.
 on:
-  pull_request:
   push:
     branches: [main]
+    paths-ignore:
+      - '**/*.md'
+      - LICENSE
+      - packages/text/OFL.txt
+      - .github/ISSUE_TEMPLATE/**
 
 permissions:
   contents: read
@@ -14,10 +21,6 @@ jobs:
     runs-on: ubuntu-latest
     # A whole job normally takes 2 to 3 minutes.
     timeout-minutes: 15
-    # A newer push to a pull request cancels its earlier run; every push to main is tested to the end.
-    concurrency:
-      group: library-${{ github.event_name == 'pull_request' && github.ref || github.sha }}-node-${{ matrix.node }}
-      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     strategy:
       # Every supported Node version reports, even when another one fails.
       fail-fast: false
@@ -27,52 +30,17 @@ jobs:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           persist-credentials: false
-          # The whole history, so the change can be compared with what it is based on.
-          fetch-depth: 0
-      # A change to documentation only skips every later step, and the job still reports its check, so
-      # a required check is met. A filter on the trigger would leave the check waiting instead. No
-      # test reads these files; if one ever does, take its files off the list.
-      - name: Find out whether anything but documentation changed
-        id: changes
-        env:
-          EVENT: ${{ github.event_name }}
-          BEFORE: ${{ github.event.before }}
-        run: |
-          # A pull request is checked out as a merge commit: its first parent is the base branch.
-          if [ "$EVENT" = pull_request ]; then
-            base=HEAD^1
-          else
-            base=$BEFORE
-          fi
-          if ! files=$(git diff --name-only "$base" HEAD 2>/dev/null) || [ -z "$files" ]; then
-            echo "Cannot tell what changed, so everything runs."
-            echo "code=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          code=false
-          while IFS= read -r file; do
-            case "$file" in
-              *.md | LICENSE | packages/text/OFL.txt | .github/ISSUE_TEMPLATE/*) ;;
-              *) code=true ;;
-            esac
-          done <<< "$files"
-          echo "code=$code" >> "$GITHUB_OUTPUT"
-      - if: steps.changes.outputs.code != 'true'
-        run: echo "Only documentation changed, so there is nothing to build or test."
-      - if: steps.changes.outputs.code == 'true'
-        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: ${{ matrix.node }}
           cache: npm
-      - if: steps.changes.outputs.code == 'true'
-        run: npm ci
+      - run: npm ci
       # The parity tests draw in all three engines and fail, rather than skip, without them. Their system
       # libraries come from Ubuntu's package mirror, which sometimes stops sending data. apt drops a
       # connection that is silent for 15 seconds and retries it, and an attempt that still runs past 90
       # seconds (normally about 30) is stopped and started once more, so a stalled mirror costs at
       # most about 3 minutes.
       - name: Install the browsers' system libraries
-        if: steps.changes.outputs.code == 'true'
         timeout-minutes: 4
         run: |
           printf '%s\n' 'Acquire::Retries "2";' 'Acquire::http::Timeout "15";' 'Acquire::https::Timeout "15";' \
@@ -87,21 +55,14 @@ jobs:
           exit 1
       # Playwright drops a download that is silent for 15 seconds and moves to its next mirror.
       - name: Download the browsers
-        if: steps.changes.outputs.code == 'true'
         timeout-minutes: 3
         env:
           PLAYWRIGHT_DOWNLOAD_CONNECTION_TIMEOUT: '15000'
         run: npx --no playwright-core install chromium firefox webkit
-      - if: steps.changes.outputs.code == 'true'
-        run: npm run build
+      - run: npm run build
       # The examples load the built packages, as an installed copy does; the tests load the source.
-      - if: steps.changes.outputs.code == 'true'
-        run: npm run example
-      - if: steps.changes.outputs.code == 'true'
-        run: npm run example:text
-      - if: steps.changes.outputs.code == 'true'
-        run: npm run example:charts
-      - if: steps.changes.outputs.code == 'true'
-        run: npm run typecheck
-      - if: steps.changes.outputs.code == 'true'
-        run: npm test
+      - run: npm run example
+      - run: npm run example:text
+      - run: npm run example:charts
+      - run: npm run typecheck
+      - run: npm test

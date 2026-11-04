@@ -18,8 +18,8 @@ npm run typecheck
 ```
 
 The parity tests draw every golden in headless Chromium, Firefox and WebKit and compare the output
-with Node's byte for byte. They fail, rather than skip, when a browser is not installed. Continuous
-integration runs the same steps on Node.js 22, 24 and 26.
+with Node's byte for byte. They fail, rather than skip, when a browser is not installed. After each
+merge to `main`, continuous integration runs the same steps on Node.js 22, 24 and 26.
 
 | Path | What it holds |
 |---|---|
@@ -102,10 +102,11 @@ the change is needed when that is not obvious from the diff. Keep each commit to
 
 - Open pull requests against `main`, and keep each one to a single change.
 - Fill in the template: what changed and why, the risks, and how it was tested.
-- The Library workflow must pass on Node.js 22, 24 and 26. Each push runs all three jobs again, so
-  push when the change is ready rather than commit by commit. A change to documentation only
-  (Markdown, the licence files and the issue forms) skips the build and tests, and the checks still
-  pass.
+- Continuous integration runs after a merge to `main`, not on pull requests, so run
+  `npm run build`, `npm run typecheck` and `npm test` yourself before asking for a merge, with the
+  browsers installed. After the merge, the Library workflow runs the same on Node.js 22, 24 and 26;
+  a merge that changes only documentation (Markdown, the licence files and the issue forms) starts
+  no run.
 - A maintainer merges the pull request once it is approved.
 
 ## What not to commit
