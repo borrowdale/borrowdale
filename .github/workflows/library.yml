@@ -36,20 +36,23 @@ jobs:
           cache: npm
       - run: npm ci
       # The parity tests draw in all three engines and fail, rather than skip, without them. Their system
-      # libraries come from Ubuntu's package mirror, which sometimes stops sending data. apt drops a
-      # connection that is silent for 15 seconds and retries it, and an attempt that still runs past 90
-      # seconds (normally about 30) is stopped and started once more, so a stalled mirror costs at
-      # most about 3 minutes.
+      # libraries come from Ubuntu's package mirror, which sometimes stops sending data or slows to a
+      # trickle. apt drops a connection that is silent for 15 seconds and retries it, and an attempt
+      # that still runs past 120 seconds (normally 30 to 70) is stopped and started once more, so a
+      # stalled mirror costs at most about 5 minutes. The timeout runs as root, as apt-get does: as the
+      # runner user it cannot stop apt-get, which would then hold the package lock and fail the retry.
       - name: Install the browsers' system libraries
-        timeout-minutes: 4
+        timeout-minutes: 5
         run: |
           printf '%s\n' 'Acquire::Retries "2";' 'Acquire::http::Timeout "15";' 'Acquire::https::Timeout "15";' \
             | sudo tee /etc/apt/apt.conf.d/99-stalled-mirror > /dev/null
+          node_bin=$(command -v node)
           for attempt in 1 2; do
-            if timeout --kill-after=10 90 npx --no playwright-core install-deps chromium firefox webkit; then
+            if sudo timeout --kill-after=10 120 "$node_bin" node_modules/playwright-core/cli.js \
+                install-deps chromium firefox webkit; then
               exit 0
             fi
-            echo "Attempt $attempt failed or ran past 90 seconds."
+            echo "Attempt $attempt failed or ran past 120 seconds."
             sudo dpkg --configure -a || true
           done
           exit 1
