@@ -29,7 +29,7 @@ before installing dependencies.
 
 ```sh
 npm ci
-npx playwright-core install chromium-headless-shell firefox webkit   # once: the parity tests render in all three
+npx playwright-core install chromium firefox webkit   # once: the parity tests render in all three
 npm run build
 npm test
 npm run typecheck
