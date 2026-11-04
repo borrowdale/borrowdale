@@ -25,6 +25,10 @@
     "url": "git+https://github.com/borrowdale/borrowdale.git",
     "directory": "packages/fills"
   },
+  "homepage": "https://borrowdalejs.com/",
+  "bugs": {
+    "url": "https://github.com/borrowdale/borrowdale/issues"
+  },
   "keywords": [
     "hand-drawn",
     "sketch",
@@ -32,6 +36,9 @@
     "pattern",
     "texture"
   ],
+  "engines": {
+    "node": ">=22"
+  },
   "publishConfig": {
     "access": "public"
   },

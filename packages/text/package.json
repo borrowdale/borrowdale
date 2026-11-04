@@ -31,6 +31,10 @@
     "url": "git+https://github.com/borrowdale/borrowdale.git",
     "directory": "packages/text"
   },
+  "homepage": "https://borrowdalejs.com/",
+  "bugs": {
+    "url": "https://github.com/borrowdale/borrowdale/issues"
+  },
   "keywords": [
     "hand-drawn",
     "handwriting",
@@ -39,6 +43,9 @@
     "canvas",
     "font"
   ],
+  "engines": {
+    "node": ">=22"
+  },
   "publishConfig": {
     "access": "public"
   },
