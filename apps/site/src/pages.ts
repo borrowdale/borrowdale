@@ -1,5 +1,5 @@
 import type { ChartSpec } from '@borrowdale/charts';
-import { chart, chartSpec, shapeSvg, scribble, patternSvg, escape, decorative } from './drawing';
+import { chart, chartSpec, shapeSvg, fixedShapeSvg, scribble, patternSvg, escape, decorative } from './drawing';
 // Every drawing on these pages is ornament: the text beside it carries the meaning.
 const ornament = (...args: Parameters<typeof shapeSvg>) => decorative(shapeSvg(...args));
 import { gallery, galleryState, examples, codeBlock, chartCode } from './gallery';
@@ -37,19 +37,22 @@ const demoSpec = chartSpec(
   ],
   { legend: 'top', width: 510, height: 300 },
 );
+// Seed 7 whatever the re-sketch seed, so the header mark always matches `public/favicon.svg`.
 function logo() {
-  return `<a class="brand" href="/" aria-label="BorrowdaleJS home"><span class="brand-symbol">${ornament(
-    {
-      kind: 'polygon',
-      points: [
-        [4, 25],
-        [15, 3],
-        [27, 25],
-      ],
-    },
-    { fill: '#efbc47', fillStyle: 'solid', roughness: 1 },
-    32,
-    30,
+  return `<a class="brand" href="/" aria-label="BorrowdaleJS home"><span class="brand-symbol">${decorative(
+    fixedShapeSvg(
+      {
+        kind: 'polygon',
+        points: [
+          [4, 25],
+          [15, 3],
+          [27, 25],
+        ],
+      },
+      { fill: '#efbc47', fillStyle: 'solid', roughness: 1, seed: 7 },
+      32,
+      30,
+    ),
   )}</span>Borrowdale<span class="brand-js">JS</span><span class="brand-period">.</span></a>`;
 }
 function nav(r: string) {
