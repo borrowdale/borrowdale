@@ -5,7 +5,7 @@ Hand-drawn charts, components, text and backgrounds for the web.
 Named after Borrowdale in the English Lake District, where the graphite that started the pencil
 industry was found.
 
-> **Status:** early development. Packages are not yet published.
+> **Status:** early development. The first release, 0.1.0, is in preparation and not yet on npm.
 
 ## Packages
 
@@ -18,10 +18,14 @@ industry was found.
 
 Planned: `@borrowdale/svg`, `@borrowdale/react`, `@borrowdale/elements`.
 
+The four packages share one version and are released together. Used in Node.js, they need version
+22 or later.
+
 ## Development
 
-Node.js 24 or later is required for development, builds and tests. Use `nvm use` with the included
-`.nvmrc`, or select Node 24 or later through your version manager, before installing dependencies.
+Development uses Node.js 24 (see `.nvmrc`); the packages are built and tested on Node.js 22, 24 and
+26. Use `nvm use` with the included `.nvmrc`, or select Node 24 or later through your version manager,
+before installing dependencies.
 
 ```sh
 npm ci
