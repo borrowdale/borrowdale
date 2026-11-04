@@ -18,6 +18,7 @@ on:
       - LICENSE
       - package.json
       - package-lock.json
+      - tsconfig.base.json
       - .github/workflows/site.yml
   workflow_dispatch:
     inputs:
@@ -35,9 +36,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     # A run is never cancelled once it starts. While one runs, GitHub keeps only the newest waiting run
-    # in the group and cancels any older one still waiting.
+    # in the group and cancels any older one still waiting, so pushes and manual runs have separate
+    # groups: a merge cannot replace a manual run that is waiting to publish.
     concurrency:
-      group: website-validate-${{ github.ref }}
+      group: website-validate-${{ github.event_name }}-${{ github.ref }}
       cancel-in-progress: false
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
