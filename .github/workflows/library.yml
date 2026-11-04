@@ -12,7 +12,8 @@ jobs:
   test:
     name: Node ${{ matrix.node }}
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # A whole job normally takes 2 to 3 minutes.
+    timeout-minutes: 15
     # A newer push to a pull request cancels its earlier run; every push to main is tested to the end.
     concurrency:
       group: library-${{ github.event_name == 'pull_request' && github.ref || github.sha }}-node-${{ matrix.node }}
@@ -65,9 +66,32 @@ jobs:
           cache: npm
       - if: steps.changes.outputs.code == 'true'
         run: npm ci
-      # The parity tests draw in all three engines and fail, rather than skip, without them.
-      - if: steps.changes.outputs.code == 'true'
-        run: npx --no playwright-core install --with-deps chromium firefox webkit
+      # The parity tests draw in all three engines and fail, rather than skip, without them. Their system
+      # libraries come from Ubuntu's package mirror, which sometimes stops sending data. apt drops a
+      # connection that is silent for 15 seconds and retries it, and an attempt that still runs past 90
+      # seconds (normally about 30) is stopped and started once more, so a stalled mirror costs at
+      # most about 3 minutes.
+      - name: Install the browsers' system libraries
+        if: steps.changes.outputs.code == 'true'
+        timeout-minutes: 4
+        run: |
+          printf '%s\n' 'Acquire::Retries "2";' 'Acquire::http::Timeout "15";' 'Acquire::https::Timeout "15";' \
+            | sudo tee /etc/apt/apt.conf.d/99-stalled-mirror > /dev/null
+          for attempt in 1 2; do
+            if timeout --kill-after=10 90 npx --no playwright-core install-deps chromium firefox webkit; then
+              exit 0
+            fi
+            echo "Attempt $attempt failed or ran past 90 seconds."
+            sudo dpkg --configure -a || true
+          done
+          exit 1
+      # Playwright drops a download that is silent for 15 seconds and moves to its next mirror.
+      - name: Download the browsers
+        if: steps.changes.outputs.code == 'true'
+        timeout-minutes: 3
+        env:
+          PLAYWRIGHT_DOWNLOAD_CONNECTION_TIMEOUT: '15000'
+        run: npx --no playwright-core install chromium firefox webkit
       - if: steps.changes.outputs.code == 'true'
         run: npm run build
       # The examples load the built packages, as an installed copy does; the tests load the source.
