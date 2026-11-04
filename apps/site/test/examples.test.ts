@@ -7,7 +7,13 @@ import { worldAt, countryValue, world, climate, quakes, median, dailyCounts } fr
 import { dashboardState, worldDashboard, climateDashboard, quakeDashboard } from '../src/dashboards';
 import { chart, chartSpec, reseed } from '../src/drawing';
 import cartesianCases from '../../examples/cartesian-cases.json';
+import timeCases from '../../examples/time-cases.json';
 import type { ChartSpec } from '@borrowdale/charts';
+
+// The gallery's chart examples with a name, and the spec the gallery holds under it.
+const galleryCharts = (name: string) =>
+  examples.filter((example) => example.category === 'charts' && example.name === name);
+const gallerySpec = (name: string) => chartExamples.find((example) => example.name === name)?.spec;
 
 // Tests change the shared dashboard and gallery state; each starts from the state the site loads with.
 const initialDashboard = { ...dashboardState };
@@ -46,6 +52,12 @@ describe('gallery coverage and actual rendering', () => {
       expect(chartExamples.find((example) => example.name === entry.name)!.spec).toEqual(entry.spec);
       expect(executeExample(editorCode(matches[0]!))).toContain('<svg');
     }
+  });
+
+  it.each(timeCases)('includes the $name time composition in the editable gallery', ({ name, spec }) => {
+    expect(galleryCharts(name)).toHaveLength(1);
+    expect(gallerySpec(name)).toEqual(spec);
+    expect(executeExample(editorCode(galleryCharts(name)[0]!))).toContain('<svg');
   });
 
   it('ships image markers with embedded raster assets in gallery and editable code', () => {
