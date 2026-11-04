@@ -1,7 +1,24 @@
 name: Website
 
+# Runs after each merge to main that changes what the site is built from, to keep Actions minutes
+# down: pull requests are built and tested locally before they are merged (see CONTRIBUTING.md). The
+# library's own changes are tested by the Library workflow, which also runs the site's tests.
 on:
-  pull_request:
+  push:
+    branches: [main]
+    paths:
+      - apps/site/**
+      - apps/examples/*-cases.json
+      - packages/*/README.md
+      - packages/*/THIRD_PARTY_NOTICES.md
+      - packages/*/test/golden/corpus.json
+      - packages/text/OFL.txt
+      - CONTRIBUTING.md
+      - CHANGELOG.md
+      - LICENSE
+      - package.json
+      - package-lock.json
+      - .github/workflows/site.yml
   workflow_dispatch:
     inputs:
       deploy:
@@ -17,10 +34,11 @@ jobs:
     name: Validate website
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    # A newer push to the same pull request replaces its pending validation; publishing runs are never cancelled.
+    # A run is never cancelled once it starts. While one runs, GitHub keeps only the newest waiting run
+    # in the group and cancels any older one still waiting.
     concurrency:
       group: website-validate-${{ github.ref }}
-      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
