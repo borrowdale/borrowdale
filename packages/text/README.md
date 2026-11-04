@@ -86,15 +86,15 @@ one character (a Cyrillic stress mark, for example) is drawn in a fallback font 
 measurement is then approximate.
 
 Kerning and ligatures are not applied when measuring, and no renderer applies them, so the drawn
-text is as wide as measured: SVG text switches them off, and `drawText` draws each character with
-its marks where the one before it ends. The test suite draws every reference label the font covers
-in Chromium, Firefox and WebKit, through all three renderers, and requires the drawn width to match
-the measured width within 0.05 user units. SVG text asks for `text-rendering: geometricPrecision`,
-and `drawText` does where the canvas supports it (WebKit's does not), so Chromium keeps fractional
-glyph advances even under full font hinting. Where the request is lost, as under a
-Content-Security-Policy that blocks `toSvgText`'s `style` attribute, a browser that rounds each
-glyph to whole pixels draws text wider or narrower: by about 2 units across the test suite's
-labels, and more on longer text.
+text is as wide as measured: SVG text switches them off, and `drawText` draws each piece that
+`fitText` keeps whole (a character with its marks, an emoji sequence, a flag) where the one before
+it ends. The test suite draws every reference label the font covers in Chromium, Firefox and WebKit,
+through all three renderers, and requires the drawn width to match the measured width within 0.05
+user units. SVG text asks for `text-rendering: geometricPrecision`, and `drawText` does where the
+canvas supports it (WebKit's does not), so Chromium keeps fractional glyph advances even under full
+font hinting. Where the request is lost, as under a Content-Security-Policy that blocks
+`toSvgText`'s `style` attribute, a browser that rounds each glyph to whole pixels draws text wider
+or narrower: by about 2 units across the test suite's labels, and more on longer text.
 
 ## Rendering
 
