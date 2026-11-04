@@ -75,9 +75,9 @@ function loadedContext() {
 
 // A loaded context with no `textRendering` at all, as WebKit's canvas has none. The other properties
 // keep their accessors, so writes are still recorded.
-function contextWithoutTextRendering(): ReturnType<typeof loadedContext> {
+function contextWithoutTextRendering(): Omit<ReturnType<typeof loadedContext>, 'textRendering'> {
   const { textRendering, ...own } = Object.getOwnPropertyDescriptors(loadedContext());
-  return Object.defineProperties({}, own) as ReturnType<typeof loadedContext>;
+  return Object.defineProperties({}, own) as Omit<ReturnType<typeof loadedContext>, 'textRendering'>;
 }
 
 // A loaded context that inherits `textRendering` from its prototype, as Chromium's and Firefox's do.
@@ -264,7 +264,7 @@ describe('drawText', () => {
 
     drawText(context as unknown as CanvasRenderingContext2D, layoutText('AB', at));
 
-    expect(context.textRendering).toBe('geometricPrecision');
+    expect(context.write).toHaveBeenCalledWith('textRendering', 'geometricPrecision');
   });
 
   it('requests fractional glyph advances on a canvas that inherits the property', () => {
@@ -272,7 +272,7 @@ describe('drawText', () => {
 
     drawText(context as unknown as CanvasRenderingContext2D, layoutText('AB', at));
 
-    expect(context.textRendering).toBe('geometricPrecision');
+    expect(context.write).toHaveBeenCalledWith('textRendering', 'geometricPrecision');
   });
 
   it('draws each unit on a canvas that has no textRendering', () => {
