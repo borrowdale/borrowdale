@@ -19,13 +19,16 @@ npm run typecheck
 
 The parity tests draw every golden in headless Chromium, Firefox and WebKit and compare the output
 with Node's byte for byte. They fail, rather than skip, when a browser is not installed. After each
-merge to `main`, continuous integration runs the same steps on Node.js 22, 24 and 26.
+merge to `main`, continuous integration runs the same steps on Node.js 22, 24 and 26. `npm test`
+and `npm run typecheck` cover the website too. To work on it, run `npm run site` to preview it and
+`npm run site:build` to build it and check the static pages.
 
 | Path | What it holds |
 |---|---|
 | `packages/core`, `packages/fills`, `packages/text`, `packages/charts` | The published packages: `src/`, `test/`, and a `README.md` that is the package's reference |
 | `packages/*/test/golden/` | The golden corpora: `corpus.json` lists the inputs, `goldens.json` the expected output |
 | `apps/examples` | Runnable examples that load the built packages |
+| `apps/site` | The website: the guides in `content/`, and pages built from the package READMEs and the golden corpora |
 | `scripts/` | Recording the goldens and generating the bundled font modules |
 | `.changeset/` | Release notes waiting for the next release |
 
@@ -78,6 +81,13 @@ The package `README.md` files are the reference documentation. Change them in th
 as the behaviour they describe. Keep examples runnable, state limits as numbers, and say what has
 been measured rather than what is expected.
 
+### Keep the website in step
+
+The website renders the package READMEs and the guides in `apps/site/content/` directly, and builds
+its playground from the golden corpora in `packages/*/test/golden/`. Adding, renaming or removing a
+golden case therefore also changes a public page and its URL. Keep the examples runnable, and use
+public data whose source is stated.
+
 ### Add a changeset for anything a package user can notice
 
 Run `npx changeset` for a new or changed API, a change to drawn output, a new or changed error, or a
@@ -102,11 +112,11 @@ the change is needed when that is not obvious from the diff. Keep each commit to
 
 - Open pull requests against `main`, and keep each one to a single change.
 - Fill in the template: what changed and why, the risks, and how it was tested.
-- Continuous integration runs after a merge to `main`, not on pull requests, so run
-  `npm run build`, `npm run typecheck` and `npm test` yourself before asking for a merge, with the
-  browsers installed. After the merge, the Library workflow runs the same on Node.js 22, 24 and 26;
-  a merge that changes only documentation (Markdown, the licence files and the issue forms) starts
-  no run.
+- Continuous integration runs after a merge to `main`, not on pull requests, so run `npm run build`,
+  `npm run typecheck` and `npm test` yourself before asking for a merge, with the browsers
+  installed, and `npm run site:build` too when the website changes. After the merge, the Library
+  workflow runs the same on Node.js 22, 24 and 26; a merge that changes only documentation
+  (Markdown, the licence files and the issue forms) starts no run.
 - A maintainer merges the pull request once it is approved.
 
 ## What not to commit
@@ -119,4 +129,11 @@ Credentials or tokens, `.env` files, machine-specific paths, personal data, buil
 Contributions are licensed under the [MIT License](LICENSE). Code or data taken from another project
 needs a compatible licence, and its notice goes into the package's `THIRD_PARTY_NOTICES.md` (create
 one, and list it in the package's `files`, if the package has none yet). The
-bundled Excalifont files keep their own [SIL Open Font License 1.1](packages/text/OFL.txt).
+bundled Excalifont files keep their own [SIL Open Font License 1.1](packages/text/OFL.txt). Credits
+for incorporated code, fonts and datasets are on the website's
+[License & credits page](apps/site/content/license.md).
+
+## Contributors
+
+The [contributor history](https://github.com/borrowdale/borrowdale/graphs/contributors) lists
+the people behind the project.

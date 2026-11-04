@@ -1,4 +1,9 @@
-# BorrowdaleJS
+<h1>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="apps/site/public/borrowdale-logo-dark.svg">
+    <img src="apps/site/public/borrowdale-logo.svg" alt="BorrowdaleJS" width="309" height="51">
+  </picture>
+</h1>
 
 Hand-drawn charts, components, text and backgrounds for the web.
 
@@ -21,7 +26,18 @@ Planned: `@borrowdale/svg`, `@borrowdale/react`, `@borrowdale/elements`.
 The four packages share one version and are released together. Used in Node.js, they need version
 22 or later.
 
+## Documentation
+
+Start with the [shared documentation](apps/site/content/README.md), the
+[contributing guide](CONTRIBUTING.md), the [changelog](CHANGELOG.md), or
+[license and credits](apps/site/content/license.md). The website renders these same Markdown
+sources.
+
 ## Development
+
+The [website](apps/site/README.md) includes the interactive collection and three open-data
+dashboards. Run `npm run site` after installing dependencies; the packages resolve directly from the
+workspace.
 
 Development uses Node.js 24 (see `.nvmrc`); the packages are built and tested on Node.js 22, 24 and
 26. Use `nvm use` with the included `.nvmrc`, or select Node 24 or later through your version manager,
