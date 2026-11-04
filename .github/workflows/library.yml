@@ -26,17 +26,58 @@ jobs:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           persist-credentials: false
-      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+          # The whole history, so the change can be compared with what it is based on.
+          fetch-depth: 0
+      # A change to documentation only skips every later step, and the job still reports its check, so
+      # a required check is met. A filter on the trigger would leave the check waiting instead. No
+      # test reads these files; if one ever does, take its files off the list.
+      - name: Find out whether anything but documentation changed
+        id: changes
+        env:
+          EVENT: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          # A pull request is checked out as a merge commit: its first parent is the base branch.
+          if [ "$EVENT" = pull_request ]; then
+            base=HEAD^1
+          else
+            base=$BEFORE
+          fi
+          if ! files=$(git diff --name-only "$base" HEAD 2>/dev/null) || [ -z "$files" ]; then
+            echo "Cannot tell what changed, so everything runs."
+            echo "code=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          code=false
+          while IFS= read -r file; do
+            case "$file" in
+              *.md | LICENSE | packages/text/OFL.txt | .github/ISSUE_TEMPLATE/*) ;;
+              *) code=true ;;
+            esac
+          done <<< "$files"
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+      - if: steps.changes.outputs.code != 'true'
+        run: echo "Only documentation changed, so there is nothing to build or test."
+      - if: steps.changes.outputs.code == 'true'
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: ${{ matrix.node }}
           cache: npm
-      - run: npm ci
+      - if: steps.changes.outputs.code == 'true'
+        run: npm ci
       # The parity tests draw in all three engines and fail, rather than skip, without them.
-      - run: npx --no playwright-core install --with-deps chromium firefox webkit
-      - run: npm run build
+      - if: steps.changes.outputs.code == 'true'
+        run: npx --no playwright-core install --with-deps chromium firefox webkit
+      - if: steps.changes.outputs.code == 'true'
+        run: npm run build
       # The examples load the built packages, as an installed copy does; the tests load the source.
-      - run: npm run example
-      - run: npm run example:text
-      - run: npm run example:charts
-      - run: npm run typecheck
-      - run: npm test
+      - if: steps.changes.outputs.code == 'true'
+        run: npm run example
+      - if: steps.changes.outputs.code == 'true'
+        run: npm run example:text
+      - if: steps.changes.outputs.code == 'true'
+        run: npm run example:charts
+      - if: steps.changes.outputs.code == 'true'
+        run: npm run typecheck
+      - if: steps.changes.outputs.code == 'true'
+        run: npm test

@@ -103,7 +103,9 @@ the change is needed when that is not obvious from the diff. Keep each commit to
 - Open pull requests against `main`, and keep each one to a single change.
 - Fill in the template: what changed and why, the risks, and how it was tested.
 - The Library workflow must pass on Node.js 22, 24 and 26. Each push runs all three jobs again, so
-  push when the change is ready rather than commit by commit.
+  push when the change is ready rather than commit by commit. A change to documentation only
+  (Markdown, the licence files and the issue forms) skips the build and tests, and the checks still
+  pass.
 - A maintainer merges the pull request once it is approved.
 
 ## What not to commit
