@@ -1,6 +1,6 @@
 # Getting started
 
-BorrowdaleJS currently runs from its source workspace. The packages are not published to npm yet. **Node.js 24 is required** for development, builds and tests; it is not a browser runtime requirement.
+The first release, 0.1.0, is in preparation and not yet on npm, so for now BorrowdaleJS runs from its source workspace; the install commands in the package references work once it is released. Using the packages in Node.js needs version 22 or later, and developing BorrowdaleJS (building and testing the workspace) uses **Node.js 24**. Neither is a browser requirement.
 
 ## Run the website locally
 
