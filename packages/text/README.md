@@ -155,11 +155,15 @@ than measured.
 
 `toSvgText` sets the direction, switches kerning and ligatures off and requests fractional glyph
 advances with a `style` attribute, and embedded fonts arrive in a `<style>` element. A
-Content-Security-Policy blocks both unless its `style-src` allows `'unsafe-inline'` with no nonce
-or hash, since a nonce or hash makes browsers ignore `'unsafe-inline'`; a `style-src-attr` or
-`style-src-elem` directive takes the place of `style-src` for the attribute or the element. The
-embedded fonts also need `data:` in `font-src`. Under such a policy, use `appendText`, which sets
-the same properties through the CSSOM, and load the font with `loadFont`.
+Content-Security-Policy that restricts styles, through `style-src` or else `default-src`, blocks
+both unless it allows them. `'unsafe-inline'` allows both, but browsers ignore it once the directive
+also lists a nonce or hash. A hash of a `<style>` element's content allows that element, and a hash
+of the attribute's value allows the attribute when the directive also lists `'unsafe-hashes'`; the
+value is the same in every `toSvgText` output, so one hash covers every text element. A
+`style-src-attr` or `style-src-elem` directive takes the place of `style-src` for the attribute or
+the element. The embedded fonts also need `data:` in `font-src`. Under a policy that blocks them,
+use `appendText`, which sets the same properties through the CSSOM, and load the font with
+`loadFont`.
 
 ## Validation
 
