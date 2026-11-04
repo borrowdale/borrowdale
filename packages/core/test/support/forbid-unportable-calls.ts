@@ -6,7 +6,11 @@ import { afterAll, vi } from 'vitest';
 // and crypto.randomUUID) or on the locale and time zone (Intl, the toLocale methods, the local-time
 // Date methods, parsing a date string). Drawings must come from their input and the engine's own
 // arithmetic alone. performance.now reads the clock too, but the test runner calls it while it loads
-// the code under test, so it cannot be made to throw here.
+// the code under test, so it cannot be made to throw here. Temporal, in the engines that have it, is
+// not guarded yet: Temporal.Now reads the clock and the time zone, its toLocaleString methods the
+// locale, and its time zone conversions the engine's time zone data. A Date reaches it through
+// toTemporalInstant, so guarding it means guarding its prototypes, not only the global. No package
+// calls Temporal; guard it before one does.
 //
 // The functions are replaced when this module loads, not before each test, so import it before the
 // code under test: code that keeps its own reference (`const cos = Math.cos`) when it loads then
@@ -40,7 +44,7 @@ export const UTC_DATE = [
   'getUTCSeconds',
   'setTime', 'setUTCDate', 'setUTCFullYear', 'setUTCHours', 'setUTCMilliseconds', 'setUTCMinutes', 'setUTCMonth',
   'setUTCSeconds',
-  'toGMTString', 'toISOString', 'toJSON', 'toUTCString', 'valueOf',
+  'toGMTString', 'toISOString', 'toJSON', 'toTemporalInstant', 'toUTCString', 'valueOf',
 ] as const;
 
 /** The methods outside Date that format or compare by the locale. */

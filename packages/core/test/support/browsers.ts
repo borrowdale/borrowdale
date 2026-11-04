@@ -1,5 +1,5 @@
 import { fileURLToPath } from 'node:url';
-import { chromium, firefox, webkit, type Browser, type BrowserType } from 'playwright-core';
+import { chromium, firefox, webkit, type Browser, type BrowserType, type LaunchOptions } from 'playwright-core';
 import { build, defaultClientConditions, type Rolldown } from 'vite';
 
 /** The browser engines the parity tests run in: Blink, Gecko and WebKit, beside Node's V8. */
@@ -8,8 +8,12 @@ export const ENGINES = ['chromium', 'firefox', 'webkit'] as const;
 export type Engine = (typeof ENGINES)[number];
 
 const BROWSERS: Record<Engine, BrowserType> = { chromium, firefox, webkit };
-// What Playwright downloads for each engine; the headless shell is enough for Chromium.
-const DOWNLOADS: Record<Engine, string> = { chromium: 'chromium-headless-shell', firefox: 'firefox', webkit: 'webkit' };
+// Chromium runs as the full browser in headless mode, the build its users install. The separate
+// headless shell forces full font hinting on Linux, which rounds every glyph advance to a whole pixel,
+// so text there is drawn up to 2 units wider or narrower than the browser itself draws it.
+const LAUNCH: Record<Engine, LaunchOptions> = { chromium: { channel: 'chromium' }, firefox: {}, webkit: {} };
+// What Playwright downloads for each engine.
+const DOWNLOADS: Record<Engine, string> = { chromium: 'chromium', firefox: 'firefox', webkit: 'webkit' };
 
 // One bundle per entry and global name, shared by every page and engine that loads it.
 const bundles = new Map<string, Promise<string>>();
@@ -73,7 +77,7 @@ async function bundleSource(entry: URL, name: string): Promise<string> {
 
 async function launch(engine: Engine): Promise<Browser> {
   try {
-    return await BROWSERS[engine].launch();
+    return await BROWSERS[engine].launch(LAUNCH[engine]);
   } catch (error) {
     const install = `npx playwright-core install ${DOWNLOADS[engine]}`;
     throw new Error(`The browser tests need ${engine}. Install it with: ${install}\n\n${String(error)}`);

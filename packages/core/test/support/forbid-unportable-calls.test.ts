@@ -14,6 +14,14 @@ const CLASSIFIED = [...UNPORTABLE, ...EXACT].sort();
 const DATE_METHODS = Object.getOwnPropertyNames(Date.prototype).sort();
 const DATE_CLASSIFIED = [...LOCAL_DATE, ...UTC_DATE].sort();
 
+// The classified names only the newer supported runtimes have: Node 22 has no Math.f16round, and only
+// runtimes with Temporal have Date.prototype.toTemporalInstant. Such a name can be exact or UTC only,
+// never forbidden, because the guard replaces every forbidden name when it loads.
+const NEWER_MATH = ['f16round'];
+const NEWER_DATE = ['toTemporalInstant'];
+const MATH_NAMES = [...new Set([...MATH_FUNCTIONS, ...NEWER_MATH])].sort();
+const DATE_NAMES = [...new Set([...DATE_METHODS, ...NEWER_DATE])].sort();
+
 // Calls, made only when a test runs them, so the guard is in place.
 const epoch = (): Record<string, Method> => new Date(0) as unknown as Record<string, Method>;
 const callDate = (name: string) => () => epoch()[name]!();
@@ -49,7 +57,7 @@ const cosAtLoadOf1 = () => cosAtLoad(1);
 
 describe('the unportable-call guard', () => {
   it('classifies every Math function as unportable or exact', () => {
-    expect(MATH_FUNCTIONS).toEqual(CLASSIFIED);
+    expect(MATH_NAMES).toEqual(CLASSIFIED);
   });
 
   it.each<[string, readonly unknown[], readonly unknown[]]>([
@@ -86,7 +94,7 @@ describe('the unportable-call guard', () => {
   });
 
   it('classifies every Date method as local or UTC', () => {
-    expect(DATE_METHODS).toEqual(DATE_CLASSIFIED);
+    expect(DATE_NAMES).toEqual(DATE_CLASSIFIED);
   });
 
   it.each(SPEC_LOCAL_DATE)('makes Date.prototype.%s throw', (name) => {

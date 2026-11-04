@@ -1,0 +1,42 @@
+name: Library
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Node ${{ matrix.node }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # A newer push to a pull request cancels its earlier run; every push to main is tested to the end.
+    concurrency:
+      group: library-${{ github.event_name == 'pull_request' && github.ref || github.sha }}-node-${{ matrix.node }}
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+    strategy:
+      # Every supported Node version reports, even when another one fails.
+      fail-fast: false
+      matrix:
+        node: [22, 24, 26]
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      # The parity tests draw in all three engines and fail, rather than skip, without them.
+      - run: npx --no playwright-core install --with-deps chromium firefox webkit
+      - run: npm run build
+      # The examples load the built packages, as an installed copy does; the tests load the source.
+      - run: npm run example
+      - run: npm run example:text
+      - run: npm run example:charts
+      - run: npm run typecheck
+      - run: npm test

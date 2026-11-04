@@ -1,3 +1,4 @@
+import { platform } from 'node:os';
 import { beforeAll, describe, expect, it } from 'vitest';
 import {
   fontFaceCss,
@@ -44,11 +45,12 @@ const uncovered = cases.filter((entry) => !covered.includes(entry)).map(({ name 
 // The cases whose width kerning or ligatures would change, if the renderers left them on.
 const shaped = cases.filter(({ name }) => name === 'kerning-pairs' || name === 'ligatures');
 const shapedNames = shaped.map(({ name }) => name);
-// Measured: Firefox draws the stressed letter's mark from a fallback font without an advance of its
-// own, so the width does not show the fallback there; WebKit neither kerns SVG text nor forms these
-// ligatures unless asked, so leaving them on changes nothing there.
+// Measured on macOS and Linux: Firefox draws the stressed letter's mark from a fallback font without
+// an advance of its own, so the width does not show the fallback there. WebKit on macOS neither kerns
+// SVG text nor forms these ligatures unless asked, so leaving them on changes nothing there; WebKit
+// on Linux does both, as Chromium and Firefox do.
 const FALLBACK_CHANGES_WIDTH: Record<Engine, boolean> = { chromium: true, firefox: false, webkit: true };
-const SVG_SHAPES_BY_DEFAULT: Record<Engine, boolean> = { chromium: true, firefox: true, webkit: false };
+const SVG_SHAPES_BY_DEFAULT: Record<Engine, boolean> = { chromium: true, firefox: true, webkit: platform() === 'linux' };
 
 const SOURCE = new URL('../src/index.ts', import.meta.url);
 const zurich = expected['category-zurich'] as Golden;
