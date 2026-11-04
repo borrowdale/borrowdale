@@ -44,7 +44,7 @@ SITE_BASE=/borrowdale/ npm run site:build
 
 To generate canonical URLs and a sitemap, set `SITE_ORIGIN` to the HTTPS origin the site is served from. `SITE_BASE` must start and end with `/`. Search engines read `robots.txt` only at the root of a host, so the build writes it only when `SITE_BASE` is `/`; under a project path, submit `sitemap.xml` to the search engines directly.
 
-The [Website workflow](../../.github/workflows/site.yml) runs the workspace tests and static builds for both root and project paths on pull requests. It has no push-triggered deployment. A manual run validates by default; publishing requires selecting `main` and enabling the `deploy` input. Other branches cannot deploy.
+The [Website workflow](../../.github/workflows/site.yml) runs the site's tests and static builds for both root and project paths after each merge to `main` that changes what the site is built from. It never deploys on its own. A manual run validates by default; publishing requires selecting `main` and enabling the `deploy` input. Other branches cannot deploy.
 
 Before publishing, enable GitHub Pages with **GitHub Actions** as its source and allow `main` to deploy through the `github-pages` environment. The repository must be eligible for Pages: public on GitHub Free, or on a plan supporting private-repository Pages. The workflow does not enable Pages automatically.
 
