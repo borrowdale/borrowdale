@@ -112,11 +112,11 @@ the change is needed when that is not obvious from the diff. Keep each commit to
 
 - Open pull requests against `main`, and keep each one to a single change.
 - Fill in the template: what changed and why, the risks, and how it was tested.
-- Continuous integration runs after a merge to `main`, not on pull requests, so run
-  `npm run build`, `npm run typecheck` and `npm test` yourself before asking for a merge, with the
-  browsers installed. After the merge, the Library workflow runs the same on Node.js 22, 24 and 26;
-  a merge that changes only documentation (Markdown, the licence files and the issue forms) starts
-  no run.
+- Continuous integration runs after a merge to `main`, not on pull requests, so run `npm run build`,
+  `npm run typecheck` and `npm test` yourself before asking for a merge, with the browsers
+  installed, and `npm run site:build` too when the website changes. After the merge, the Library
+  workflow runs the same on Node.js 22, 24 and 26; a merge that changes only documentation
+  (Markdown, the licence files and the issue forms) starts no run.
 - A maintainer merges the pull request once it is approved.
 
 ## What not to commit
@@ -132,3 +132,8 @@ one, and list it in the package's `files`, if the package has none yet). The
 bundled Excalifont files keep their own [SIL Open Font License 1.1](packages/text/OFL.txt). Credits
 for incorporated code, fonts and datasets are on the website's
 [License & credits page](apps/site/content/license.md).
+
+## Contributors
+
+The [contributor history](https://github.com/borrowdale/borrowdale/graphs/contributors) lists
+the people behind the project.
