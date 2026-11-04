@@ -2,7 +2,9 @@ name: Library
 
 # Runs on each merge to main only, to keep Actions minutes down: pull requests are built and tested
 # locally before they are merged (see CONTRIBUTING.md). A merge that changes only documentation
-# starts no run. No test reads these files; if one ever does, take its files off the list.
+# starts no Library run. The website's tests read some of these files (the package READMEs,
+# CONTRIBUTING.md, CHANGELOG.md and the licence files), and the Website workflow runs them when those
+# files change.
 on:
   push:
     branches: [main]

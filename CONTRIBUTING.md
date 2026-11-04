@@ -115,8 +115,10 @@ the change is needed when that is not obvious from the diff. Keep each commit to
 - Continuous integration runs after a merge to `main`, not on pull requests, so run `npm run build`,
   `npm run typecheck` and `npm test` yourself before asking for a merge, with the browsers
   installed, and `npm run site:build` too when the website changes. After the merge, the Library
-  workflow runs the same on Node.js 22, 24 and 26; a merge that changes only documentation
-  (Markdown, the licence files and the issue forms) starts no run.
+  workflow runs the same on Node.js 22, 24 and 26. A merge that changes only documentation
+  (Markdown, the licence files and the issue forms) starts no Library run; the Website workflow
+  builds and tests the website when what it is built from changes, the package READMEs,
+  `CONTRIBUTING.md`, `CHANGELOG.md` and the licence files included.
 - A maintainer merges the pull request once it is approved.
 
 ## What not to commit
