@@ -54,7 +54,11 @@ describe('gallery coverage and actual rendering', () => {
     }
   });
 
-  it.each(timeCases)('includes the $name time composition in the editable gallery', ({ name, spec }) => {
+  it('has time examples to check', () => {
+    expect(timeCases.length).toBeGreaterThan(0);
+  });
+
+  it.each(timeCases)('includes the $name composition of the time examples in the editable gallery', ({ name, spec }) => {
     expect(galleryCharts(name)).toHaveLength(1);
     expect(gallerySpec(name)).toEqual(spec);
     expect(executeExample(editorCode(galleryCharts(name)[0]!))).toContain('<svg');
