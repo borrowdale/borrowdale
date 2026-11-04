@@ -107,6 +107,8 @@ describe('gallery coverage and actual rendering', () => {
         'rangeArea',
         'rose',
         'scatter',
+        'timeline',
+        'xRange',
       ].sort(),
     );
     expect([...new Set(examples.filter((x) => x.category === 'shapes').map((x) => x.tag))].sort()).toEqual(
