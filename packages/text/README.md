@@ -5,7 +5,9 @@ no DOM, so a chart can size its axes from the labels it is about to draw, on the
 browser, and get the same numbers in both. The default font is
 [Excalifont](https://plus.excalidraw.com/excalifont), bundled with the package.
 
-> **Unpublished:** use the [local workspace setup](https://github.com/borrowdale/borrowdale/blob/main/apps/site/content/getting-started.md). Package installation instructions will be added when releases are available.
+```sh
+npm install @borrowdale/text
+```
 
 ```js
 import { svgElement, toSvgDocument } from '@borrowdale/core';
@@ -83,13 +85,16 @@ one character (a Cyrillic stress mark, for example) is drawn in a fallback font 
 `measureText('приве́т').missing` is `['е́']`. It is measured at Excalifont's widths, so the
 measurement is then approximate.
 
-Kerning and ligatures are not applied when measuring, and every renderer switches them off, so the
-drawn text is as wide as measured. The test suite draws every reference label the font covers in
-Chromium, through all three renderers, and requires the drawn width to match the measured width
-within 0.05 user units. That is verified in headless Chromium on macOS. Other browsers and
-platforms are not tested: a browser that rounds each glyph to whole pixels draws text a little
-wider or narrower, and on a canvas other browsers rely on `fontKerning` and `textRendering` where
-they support them.
+Kerning and ligatures are not applied when measuring, and no renderer applies them, so the drawn
+text is as wide as measured: SVG text switches them off, and `drawText` draws each piece that
+`fitText` keeps whole (a character with its marks, an emoji sequence, a flag) where the one before
+it ends. The test suite draws every reference label the font covers in Chromium, Firefox and WebKit,
+through all three renderers, and requires the drawn width to match the measured width within 0.05
+user units. SVG text asks for `text-rendering: geometricPrecision`, and `drawText` does where the
+canvas supports it (WebKit's does not), so Chromium keeps fractional glyph advances even under full
+font hinting. Where the request is lost, as under a Content-Security-Policy that blocks
+`toSvgText`'s `style` attribute, a browser that rounds each glyph to whole pixels draws text wider
+or narrower: by about 2 units across the test suite's labels, and more on longer text.
 
 ## Rendering
 
@@ -148,10 +153,17 @@ there only its `direction` attribute remains, and a stylesheet rule overrides th
 `lang` can switch on a language's own letter forms: on a Catalan (`ca`) page, `l·l` draws narrower
 than measured.
 
-`toSvgText` sets the direction and switches kerning and ligatures off with a `style` attribute, and
-embedded fonts arrive in a `<style>` element. A Content-Security-Policy without `'unsafe-inline'`
-in `style-src` blocks both, and the embedded fonts also need `data:` in `font-src`: use
-`appendText`, which sets the same properties through the CSSOM, and load the font with `loadFont`.
+`toSvgText` sets the direction, switches kerning and ligatures off and requests fractional glyph
+advances with a `style` attribute, and embedded fonts arrive in a `<style>` element. A
+Content-Security-Policy that restricts styles, through `style-src` or else `default-src`, blocks
+both unless it allows them. `'unsafe-inline'` allows both, but browsers ignore it once the directive
+also lists a nonce or hash. A hash of a `<style>` element's content allows that element, and a hash
+of the attribute's value allows the attribute when the directive also lists `'unsafe-hashes'`; the
+value is the same in every `toSvgText` output, so one hash covers every text element. A
+`style-src-attr` or `style-src-elem` directive takes the place of `style-src` for the attribute or
+the element. The embedded fonts also need `data:` in `font-src`. Under a policy that blocks them,
+use `appendText`, which sets the same properties through the CSSOM, and load the font with
+`loadFont`.
 
 ## Validation
 
@@ -169,7 +181,7 @@ A value that cannot be drawn throws an error naming it:
   files must.
 - `fill` must be a string without characters an XML document cannot hold.
 - `fontFaceCss`'s labels must be an array, and each label must pass the checks for text above.
-- Unknown option names are rejected (`Unknown option: fontSzie`). An option set to `undefined`
+- Unknown option names are rejected (`Unknown option: "fontSzie"`). An option set to `undefined`
   counts as not set. Only an options object's own properties are read: inherited values, including
   any on `Object.prototype`, are ignored.
 

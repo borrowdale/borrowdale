@@ -1,5 +1,5 @@
 import { drawShape } from './engine.js';
-import { isBudget, type Budget } from './engine/budget.js';
+import { isBudget, type Budget } from './budget.js';
 import { stableKey, toSeed } from './seed.js';
 import type { Shape, Sketch, SketchOptions } from './types.js';
 import { assertDrawable } from './validate.js';

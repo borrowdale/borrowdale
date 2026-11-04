@@ -6,7 +6,7 @@ import type { TextAnchor, TextBaseline } from '@borrowdale/text';
 import { TURN_ROUNDING } from './check-axis.js';
 import { coordinate } from './curves.js';
 import type { Rect } from './frame.js';
-import type { Scale } from './scale.js';
+import type { PlacedScale, Scale } from './scale.js';
 
 /** Degrees to radians. */
 export const RADIANS = Math.PI / 180;
@@ -175,4 +175,27 @@ export function rimTicks(scale: Scale, whole: boolean): { ticks: number[]; label
   const repeats =
     whole && last > 0 && scale.fraction(scale.ticks[last]!) === 1 && scale.fraction(scale.ticks[0]!) === 0;
   return repeats ? { ticks: scale.ticks.slice(0, last), labels: scale.labels.slice(0, last) } : scale;
+}
+
+/**
+ * Which of the first `count` ticks of an angle scale to label, around a circle of `radius`, so labels
+ * `width` × `height` do not overlap: thinned as along a straight axis of the arc's length, with room
+ * for the label's diagonal, the most it needs whichever way its neighbour lies; and on a whole turn
+ * without the last labels that would crowd the first across the start.
+ */
+export function labelledRim(
+  scale: PlacedScale,
+  count: number,
+  radius: number,
+  [width, height]: [number, number],
+  whole: boolean,
+): number[] {
+  const room = Math.sqrt(width * width + height * height);
+  const along = (value: number): number => scale.at(value) * RADIANS * radius;
+  const shown = scale.labelled(room, along, !whole).filter((i) => i < count);
+  const turn = 360 * RADIANS * radius;
+  while (whole && shown.length > 1 && along(scale.ticks[shown[0]!]!) + turn - along(scale.ticks[shown.at(-1)!]!) < room) {
+    shown.pop();
+  }
+  return shown;
 }

@@ -4,7 +4,9 @@ Hand-drawn charts for SVG and canvas. A chart is plain data, so it can come stra
 `layoutChart` measures every label, picks scales and ticks and draws every stroke with no DOM, and
 the result is the same on the server and in the browser, down to the byte.
 
-> **Unpublished:** use the [local workspace setup](https://github.com/borrowdale/borrowdale/blob/main/apps/site/content/getting-started.md). Package installation instructions will be added when releases are available.
+```sh
+npm install @borrowdale/charts @borrowdale/text
+```
 
 ```js
 import { layoutChart, toSvgChart } from '@borrowdale/charts';
@@ -39,13 +41,14 @@ cannot share a chart:
 
 | Series types | Axes |
 |---|---|
-| `bar`, `line`, `area`, `rangeArea`, `interval`, in any mix | `x` and `y`, one of them `band` |
-| `scatter`, `bubble`, `xyLine`, `xyArea`, in any mix | `x` and `y`, both `linear` |
+| `bar`, `line`, `area`, `rangeArea`, `interval`, `xRange`, in any mix | `x` and `y`, one of them `band` |
+| `scatter`, `bubble`, `xyLine`, `xyArea`, in any mix | `x` and `y`, both continuous: `linear`, `time`, `log` or `sqrt` |
 | `radar`, `rose`, `polarLine`, `polarArea`, in any mix | `angle` (`band`), and optionally `radius` (`linear`) |
 | `radialBar` | `angle` (`linear`) and `radius` (`band`) |
 | `polarScatter` | `angle` and `radius`, both `linear` |
 | `pie`, up to 10 as nested rings | none |
 | `gauge`, any number sharing the dial | optionally `angle` (`linear`) |
+| `timeline`, any number sharing the track | optionally `time` (`time` or `linear`), with its `path` |
 
 | `type` | `data` | Options |
 |---|---|---|
@@ -54,7 +57,8 @@ cannot share a chart:
 | `area` | a value or `null` per category | `stack`, `curve`, `axis: 'y2'`. Stacked values must not be negative. Areas of one stack share a `curve` |
 | `rangeArea` | a `[low, high]` pair or `null` per category, high not below low | `curve`, `axis: 'y2'` |
 | `interval` | a `[from, to]` pair or `null` per category | `display`, `width`, `overlay`, endpoint symbols, `shape`, `dataLabels`, `axis: 'y2'`; see [additional marks](#additional-cartesian-marks) |
-| `xyLine` | numeric `[x, y]` pairs or `null` between runs | `symbol`, `dash`, `dataLabels`, `segments`, `widths`, `gradient`; see [widths and colours](#widths-crossings-and-colours) |
+| `xRange` | `{ row, from, to?, label?, progress? }` items, any number per category | a Gantt or x-range chart; see [time](#time-log-and-square-root-axes) |
+| `xyLine` | `[x, y]` pairs, each read by its axis (a time on a time axis), or `null` between runs | `symbol`, `dash`, `dataLabels`, `segments`, `widths`, `gradient`; see [widths and colours](#widths-crossings-and-colours) |
 | `xyArea` | `[x, low, high]` intervals or `null` between runs, x increasing within each run | `difference` permits crossing boundaries; see [widths and colours](#widths-crossings-and-colours) |
 | `scatter` | `[x, y]` points | |
 | `bubble` | `[x, y, size]` points: the size sets the area, and is not negative | |
@@ -66,6 +70,7 @@ cannot share a chart:
 | `polarArea` | a value or `null` per category of the angle axis | `stack`. Stacked values must not be negative |
 | `polarScatter` | `[angle, radius]` points | |
 | `gauge` | `value`, a number on the dial | `display`: `needle` (default) or `bar`; `length`: a needle's length as a share of the radius, 0.1 to 1 (default 0.8) |
+| `timeline` | `{ at, to?, label? }` moments and periods | `dataLabels`; see [timelines](#timelines) |
 
 A slice's `offset` (0 to 0.5 of the radius) pulls it out from the centre. Give every slice of a pie
 a `radius`, or none: each slice then reaches out in proportion to it, the largest to the full
@@ -108,12 +113,20 @@ With `y` as the band axis, bars and lines run horizontally. A sparkline is a sma
 |---|---|
 | `type: 'band'`, `categories` | one band per category, each name at most 100 characters and at most once |
 | `type: 'linear'` | rounded out from the data to ticks of 1, 2 or 5 × 10ⁿ, about one per 50 units |
-| `y2` | a second linear axis on the right, for series with `axis: 'y2'`. Only when `x` is the band axis |
+| `y2` | a second value axis on the right, `linear`, `log` or `sqrt`, for series with `axis: 'y2'`. Only when `x` is the band axis |
 | `min`, `max` | fix an end of a linear axis; `max` must be above `min`, and data outside them is an error |
+| `step` | a tick at every multiple of it, counted from zero, with free ends rounded out to one, but no further than ±1e15: a number above 0, at most 1e15, with at most 20 decimals, giving at most 1,000 ticks |
+| `ticks` | ticks exactly at these values, increasing and within any fixed end: a number, written in the axis format, or `{ value, label }` with a label of at most 100 characters. Free ends reach the outermost tick or value. 1 to 1,000; not with `step` |
 | `percent` | stacks on the axis show each value as its share of the stack's total. Only bar and area series may use it, on a chart with a band axis |
 | `grid` | gridlines at the ticks; on by default, except on `y2` |
 | `title`, `hidden` | |
 | `format` | `decimals` (0 to 20; by default tick labels get the fewest that tell the ticks apart, and tooltips every decimal a value has), `thousands` (default `,`), `decimal` (default `.`), `prefix`, `suffix` (default `%` on a percent axis), each text at most 10 characters |
+
+Where tick labels would overlap, an axis labels fewer of its ticks and keeps every tick and
+gridline. Evenly spaced ticks are labelled on multiples of a nice number of steps counted from zero,
+so a crowded axis with a step of 2 shows 0, 10, 20; listed ticks keep each label that clears the last
+one kept, and on an axis with an end the last tick, leaving out the labels before it that would crowd
+it; where even the first would, they label whichever of the two is nearer its own end.
 
 Numbers are never formatted with the locale data of the JavaScript engine, which differs between
 engines; set `thousands` and `decimal` to write them for another language. Bars and areas always
@@ -146,18 +159,83 @@ default:
 | `radius`: `type: 'band'`, `categories` | rings, the first outermost, labelled beside the start of the angle axis |
 | `radius`: `innerRadius` | a hole in the middle, 0 to 0.95 of the radius |
 | `radius`: `shape` | `polygon` gridlines through the spokes (the default when every series is a radar; needs a band angle axis of at least 3 categories), or `circle` |
-| `min`, `max`, `grid`, `hidden`, `format` | as on a cartesian axis |
+| `min`, `max`, `step`, `ticks`, `grid`, `hidden`, `format` | as on a cartesian axis |
 
 Polar axes take no `title`, `percent` or `labelAngle`. The radius axis' labels run along the start of
 the sweep, wherever it points, and the circle shrinks to keep them on the chart; a chart too small for
 them throws an error naming `axes.radius`.
 
 A gauge's dial is its `angle` axis: by default 0 to 100 over −120 to 120 degrees. It takes `min`,
-`max`, `hidden`, `format`, `startAngle`, `endAngle`, and `bands`: up to 100 `{ from, to, color }`
+`max`, `step`, `ticks`, `hidden`, `format`, `startAngle`, `endAngle`, and `bands`: up to 100 `{ from, to, color }`
 stretches, in order and not overlapping. Without `min` and `max` it reaches from 0 to the values
 and bands; it shows 0 unless `min` or `max` leaves it out. Ticks and labels are inside the rim; bars
 take rings inside the track, or the track itself when there are no bands, and a dial holds as many
-rings as fit outside its hub; a lone gauge writes its value under the centre.
+rings as fit outside its hub; a lone gauge writes its value under the centre. On a whole turn the
+last tick would fall on the first, so it is left out: a clock dial is `min: 0, max: 12` over a whole
+turn with `ticks` at 0 to 11, the one at 0 labelled 12; a compass is `min: 0, max: 360` with `ticks`
+labelled N, E, S and W.
+
+## Time, log and square-root axes
+
+A cartesian `x` or `y` axis may be `time`, `log` or `sqrt` as well as `band` or `linear`, and `y2`
+`log` or `sqrt`. Each takes `title`, `min`, `max`, `ticks`, `grid`, `hidden` and `labelAngle` as a
+linear axis does. `log` and `sqrt` take the number `format` and `sqrt` also `step`; a time axis takes
+its own `step` and `format`, below. `percent` is for linear axes only.
+
+| `type` | Values | Ticks |
+|---|---|---|
+| `time` | ISO 8601 strings (`"2026-11-01"`, `"2026-11"`, `"2026-11-01T09:30Z"`, `"2026-11-01T09:30:15.250+01:00"`) or whole milliseconds since 1970-01-01T00:00Z, from year 0000 to 9999 | calendar boundaries in UTC, from milliseconds to millennia, about one per 50 units; `step: { unit, every }` picks them, `unit` one of `millisecond`, `second`, `minute`, `hour`, `day`, `week`, `month`, `year` and `every` a whole number from 1 to 1,000 (default 1), giving at most 1,000 ticks |
+| `log` | numbers from 1e-20 to 1e15 | powers of ten, with 1, 2 and 5 times them, or every one to nine times, where there is room; where none of those fits and fewer than two powers of ten lie between its ends, a linear axis' ticks; free ends round out to powers of ten within those bounds, so a value alone at 1e15 shows the power below it; no `step` |
+| `sqrt` | numbers, negative ones mirroring positive ones | a linear axis' ticks, placed by their square roots |
+
+Times are read without the JavaScript engine's date parser, which differs between engines and
+accepts dates that do not exist: an impossible day such as `2027-02-30` is an error. A date and time
+must end in `Z` or an offset from UTC such as `+01:00`, since one without would be read as local time,
+which differs between viewers. A date alone is midnight UTC. Ticks and labels are in UTC, and weeks
+start on Monday. Labels are written without locale data, each at the coarsest level it falls on:
+`2026` on a year, `Nov` on a month, `3 Nov` on a day, `09:30` on a minute; `format: { months }` gives
+the 12 month names, each at most 20 characters, in another language. Tooltips write a time as
+`2026-11-03 09:30`.
+
+A step counts every `every` of its unit from the epoch for units of fixed length (from midnight
+for hours that divide a day, from a Monday for weeks), from January of year 0 for months, and from
+year 0 for years, so `{ unit: 'month', every: 3 }` falls on quarters, and a number of months that
+does not divide 12 runs on across the years. Where labels would overlap, a time axis
+labels every tick of its step when they fit, and otherwise only the ticks on the boundaries of a
+coarser interval, such as whole months or years.
+
+On a time axis only `interval` and `xRange` series take values on the value axis of a band chart:
+range bars and Gantt rows. Values a log axis cannot show are errors, and so are `bar` and `area`
+series on one, since they stand on 0.
+
+An `xRange` series lays items along the rows of the band axis: each `{ row, from, to, label,
+progress }`, `row` a category, `to` after `from`, `progress` 0 to 1 drawn solid along its start.
+Without `to` an item is a milestone, a diamond at `from`. `dataLabels` writes each label on its item,
+or past its end where it does not fit, where in a crowded row it can overlap the next; `width` (0.05 to 1 of the row's slot, default 0.6), `shape`
+(`rectangle` or `rounded`) and `overlay` work as on an interval. Arrows between items are `arrow`
+annotations, such as `{ type: 'arrow', from: ['2026-02-06', 'Design'], to: ['2026-02-09', 'Build'] }`;
+they point at the middle of a row, so between the slots where several series share it.
+
+Annotations take times on a time axis: `{ type: 'line', axis: 'x', value: '2026-06-15', label: 'A' }`.
+
+## Timelines
+
+A `timeline` series places moments, `{ at, label }`, and periods, `{ at, to, label }`, along one
+axis, `axes.time`: a `time` axis by default, or `linear`, taking `min`, `max`, `step`, `ticks`,
+`hidden` and `format`. Its `path` lays the axis out as a track, earliest first:
+
+| `path` | Track |
+|---|---|
+| `{ type: 'line' }` | straight across the chart (the default) |
+| `{ type: 'serpentine', rows }` | `rows` (1 to 20, default 3) left to right and back, joined by half turns; a chart too short for them, or too narrow for their turns, is an error |
+| `{ type: 'spiral', turns, innerRadius }` | `turns` (1 to 20, default 3) out from `innerRadius` (0 to 0.9 of the radius, default 0.2), clockwise from the top |
+| `{ type: 'curve', points }` | through 2 to 100 `[x, y]` points, each 0 to 1 across and down the area inside the track's labels, joined by straight segments |
+
+Values are placed by their distance along the track, and ticks fall about every 50 units of it,
+labelled on its left where they clear the labels before them. Moments are dots and periods thick
+stretches of the track; with `dataLabels`, labels go on its right, moving out up to two lines to clear
+the labels placed before them, and then to its left, beyond the tick labels. On a crowded track,
+such as a tightly wound spiral, some labels can still overlap.
 
 ## Chart options
 
@@ -176,8 +254,9 @@ chart's `style` over them, and a series' own `style` over all of these. So
 
 A chart title, an axis title or a legend name too long for its room is cut short with "…" between
 whole characters (see `fitText` in `@borrowdale/text`): the chart title to the chart's width, an
-axis title to the length of the plot, a legend name to the width of a legend row, or half the
-chart's width for a legend on the right. Tooltips and the drawing's accessible name keep the whole text. Where not even
+axis title to the length of the plot, a label below the plot to twice the way from its tick to the
+nearer side of the chart, a legend name to the width of a legend row, or half the chart's width for
+a legend on the right. Tooltips and the drawing's accessible name keep the whole text. Where not even
 "…" fits, it is an error naming the text's place in the spec.
 
 The font is not part of the spec, since a spec may come from anyone: pass a `@borrowdale/text` font
@@ -282,8 +361,9 @@ bars, choosing equal errors for symmetric bars. A single endpoint marker on
 `[value, value]` makes a Cleveland dot. `error` on equal endpoints makes a target
 cap for a bullet chart.
 
-`xyLine` takes numeric `[x, y]` pairs, with `null` between runs. It connects points
-in their given order, including descending x and loops, and needs two linear axes.
+`xyLine` takes `[x, y]` pairs, each read by the axis it is on, with `null` between runs. It
+connects points in their given order, including descending x and loops, and needs two continuous
+axes: `linear`, `time`, `log` or `sqrt`.
 `symbol` adds markers, and `dash` controls the line. A lone point remains visible.
 `xyArea` takes `[x, low, high]` intervals; x increases strictly within each run.
 Use it for supplied confidence bands, with an `xyLine` for the estimate. Statistical
@@ -298,7 +378,7 @@ The area of equally shaped bubbles remains proportional to their size value.
 A tick is a vertical stroke. New symbol choices are also shown in point legends.
 
 `dataLabels: true` adds values to bars, intervals, lines, numeric lines, scatter,
-bubbles and polar scatter; pies show slice names and values. Defaults stay off.
+bubbles and polar scatter, and labels to xRange items and timeline events; pies show slice names and values. Defaults stay off.
 Labels use the relevant value-axis format where available, retain raw values for
 percent bars, fit the plotting rectangle, and can overlap in dense charts. Pie
 labels use each actual slice's offset and radius. A label that cannot fit even
@@ -327,7 +407,7 @@ SVG output embeds each referenced raster once and positions it through reference
 ### Annotations
 
 Cartesian `annotations` accept up to 100 entries. Coordinates are numbers on
-linear axes or category names on band axes. Numeric annotation coordinates
+linear, log and sqrt axes, times on time axes, and category names on band axes. Numeric annotation coordinates
 contribute to automatic domains, and values beyond fixed bounds are errors.
 Bands on category axes extend between category centres.
 
@@ -345,7 +425,7 @@ Line/band axes are `x`, `y` or `y2`. Region, arrow and label entries use `axis: 
 for their second coordinate when needed. `color` sets the shape paint; annotation
 text keeps the chart's text ink. `layer` is `back` or `front`; bands and regions
 start behind the grid, other annotations above the data. Labels stay inside the
-plot. Polar and pie annotations are not supported.
+plot. Polar, pie, gauge and timeline charts take no annotations.
 
 ### Widths, crossings and colours
 
@@ -386,7 +466,10 @@ lines and range areas retain their existing curve options.
 ### Chart compositions
 
 The repository's `apps/examples/cartesian-cases.json` contains 33 complete specs;
-run `node apps/examples/cartesian.mjs` after building to render each one.
+run `node apps/examples/cartesian.mjs` after building to render each one. Its
+`apps/examples/time-cases.json` holds 12 more, rendered by `node apps/examples/time.mjs`: a time axis,
+range bars, a Gantt chart, an x-range chart, an annotation chart, a cycle plot, a Marey chart, log and
+square-root axes, and serpentine, spiral and curve timelines.
 
 | Chart | Preparation and composition |
 |---|---|
@@ -399,6 +482,10 @@ run `node apps/examples/cartesian.mjs` after building to render each one.
 | Centred Likert | Centre the neutral interval on zero; place negative responses to its left and positive responses to its right, using overlaid interval series |
 | Strip/barcode | Scatter points on a constant y, with circle or tick symbols |
 | Index/change line | For a chosen nonzero base `b`, plot `100 * value / b` for an index, or `value - b` for absolute change; retain null gaps |
+| Range bar | An `interval` series on a time value axis, one `[from, to]` per category |
+| Annotation chart | An `xyLine` on a time `x` axis, with `line` annotations at the events and `label` annotations for their notes |
+| Cycle plot | A linear `x` axis with `ticks` labelled by month at 0 to 11; each month's values over the years as one `xyLine` run around its tick, `null` between months, and each month's mean as a short dashed run |
+| Marey chart | A time `x` axis and a linear `y` axis with `ticks` at each station's distance, labelled by its name; one `xyLine` per train through its times at the stations |
 | Function plot | Sample the function into numeric `[x,y]` data outside the spec and draw an `xyLine` |
 
 Apply the same category order to every composed series. Horizontal interval

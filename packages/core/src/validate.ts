@@ -1,4 +1,5 @@
 import { MAX_COORDINATE } from './engine/core.js';
+import { MAX_ANGLE } from './trig.js';
 import { show } from './show.js';
 import { FILL_STYLES, type Shape, type ShapeKind, type SketchOptions } from './types.js';
 
@@ -8,11 +9,10 @@ const MAX_DASHES = 16;
 // The shortest dash pattern, dash and gap lengths added up.
 const MIN_DASH_PATTERN = 1;
 const MAX_ROUGHNESS = 10;
-// Degrees. The engine's own trigonometry reduces arguments only up to about 1.6e6 radians.
-const MAX_ANGLE = 1e6;
 
-// Both must be finite and within ±MAX_COORDINATE; a size must also not be negative.
-type FieldRule = 'number' | 'size';
+// A number or a size must be finite and within ±MAX_COORDINATE, and a size not negative; an angle, in
+// radians, must be finite and within ±MAX_ANGLE.
+type FieldRule = 'number' | 'size' | 'angle';
 
 // Every numeric field each kind requires. `satisfies` makes a new kind fail to compile until its
 // fields are listed here.
@@ -21,7 +21,7 @@ const SHAPE_FIELDS = {
   rectangle: { x: 'number', y: 'number', width: 'size', height: 'size' },
   ellipse: { cx: 'number', cy: 'number', width: 'size', height: 'size' },
   circle: { cx: 'number', cy: 'number', diameter: 'size' },
-  arc: { cx: 'number', cy: 'number', width: 'size', height: 'size', start: 'number', stop: 'number' },
+  arc: { cx: 'number', cy: 'number', width: 'size', height: 'size', start: 'angle', stop: 'angle' },
   polygon: {},
   linearPath: {},
   curve: {},
@@ -87,10 +87,11 @@ const OPTION_RULES: Record<keyof SketchOptions, OptionRule> = {
   fillStyle: {
     ok: (value) => (FILL_STYLES as readonly unknown[]).includes(value),
     expected: 'a fill style',
-    message: (value) => `Unknown fill style: ${typeof value === 'string' ? value : show(value)}`,
+    message: (value) => `Unknown fill style: ${show(value)}`,
   },
   fillWeight: FINITE,
-  hachureAngle: { ok: (value) => isWithin(value, MAX_ANGLE), expected: `a finite number within ±${MAX_ANGLE}` },
+  // In degrees, any number of turns: the engine takes it within one (engine.ts).
+  hachureAngle: FINITE,
   hachureGap: FINITE,
   dashOffset: FINITE,
   dashGap: FINITE,
@@ -129,12 +130,12 @@ function assertShape(shape: Shape): void {
   // The shape comes from callers' data, so its type is a claim until checked here.
   const raw = shape as unknown as Record<string, unknown>;
   if (typeof raw.kind !== 'string' || !Object.hasOwn(SHAPE_FIELDS, raw.kind)) {
-    throw new Error(`Unknown shape kind: ${typeof raw.kind === 'string' ? raw.kind : show(raw.kind)}`);
+    throw new Error(`Unknown shape kind: ${show(raw.kind)}`);
   }
   const fields: Record<string, FieldRule> = SHAPE_FIELDS[shape.kind];
   for (const [field, rule] of Object.entries(fields)) {
     const value = raw[field];
-    assertNumber(`${shape.kind}.${field}`, value);
+    assertNumber(`${shape.kind}.${field}`, value, rule === 'angle' ? MAX_ANGLE : MAX_COORDINATE);
     if (rule === 'size' && value < 0) {
       throw new Error(`Invalid shape: ${shape.kind}.${field} must not be negative, got ${show(value)}`);
     }
@@ -142,7 +143,7 @@ function assertShape(shape: Shape): void {
   switch (shape.kind) {
     case 'arc':
       if (!(shape.stop > shape.start)) {
-        throw new Error(`Invalid shape: arc.stop must be greater than arc.start, got start ${shape.start}, stop ${shape.stop}`);
+        throw new Error(`Invalid shape: arc.stop must be greater than arc.start, got start ${show(shape.start)}, stop ${show(shape.stop)}`);
       }
       if (shape.closed !== undefined && typeof shape.closed !== 'boolean') {
         throw new Error(`Invalid shape: arc.closed must be a boolean, got ${show(shape.closed)}`);
@@ -179,7 +180,7 @@ function assertPoints(kind: keyof typeof MIN_POINTS, points: unknown): void {
 
 function assertOption(key: string, value: unknown): void {
   if (!Object.hasOwn(OPTION_RULES, key)) {
-    throw new Error(`Unknown option: ${key}`);
+    throw new Error(`Unknown option: ${show(key)}`);
   }
   const rule = OPTION_RULES[key as keyof SketchOptions];
   if (!rule.ok(value)) {
@@ -187,8 +188,8 @@ function assertOption(key: string, value: unknown): void {
   }
 }
 
-function assertNumber(name: string, value: unknown): asserts value is number {
-  if (!isWithin(value, MAX_COORDINATE)) {
-    throw new Error(`Invalid shape: ${name} must be a finite number within ±${MAX_COORDINATE}, got ${show(value)}`);
+function assertNumber(name: string, value: unknown, bound = MAX_COORDINATE): asserts value is number {
+  if (!isWithin(value, bound)) {
+    throw new Error(`Invalid shape: ${name} must be a finite number within ±${bound}, got ${show(value)}`);
   }
 }

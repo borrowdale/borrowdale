@@ -1,9 +1,9 @@
 // Ported from points-on-curve 0.2.0 (src/index.ts, src/curve-to-bezier.ts).
 // MIT License, Copyright (c) 2020 Preet Shihn. See THIRD_PARTY_NOTICES.md.
 
-import { charge } from './budget.js';
+import { charge } from '../budget.js';
 import type { Point } from './core.js';
-import { square } from './math.js';
+import { square } from '../trig.js';
 
 function distance(p1: Point, p2: Point): number {
   return Math.sqrt(distanceSq(p1, p2));

@@ -5,7 +5,7 @@ import { cos, sin } from '@borrowdale/core/math';
 import type { TextAnchor, TextBaseline } from '@borrowdale/text';
 import type { CheckedAxis } from './check-axis.js';
 import type { Drawing, Extent } from './drawing.js';
-import { assertRoom, BAND_PADDING, GAP, TICK, type Rect } from './frame.js';
+import { aChart, assertRoom, BAND_PADDING, GAP, TICK, type Rect } from './frame.js';
 import { GRID, GRID_WIDTH, INK } from './palette.js';
 import { fail } from './read.js';
 import { bandScale, type BandScale, type PlacedScale, type Scale } from './scale.js';
@@ -211,29 +211,37 @@ export function drawGrid(
 export function drawGuide(
   drawing: Drawing,
   plot: Rect,
+  rect: Rect,
   guide: Guide,
   scale: PlacedScale | undefined,
   bands: BandScale | undefined,
   line: number,
 ): void {
-  const { side, key, axis, labels, reach, room } = guide;
+  const { side, key, axis, labels, halves, reach, room } = guide;
   if (axis.hidden) {
     return;
   }
   const rules = SIDES[side];
   const ink = { stroke: INK, strokeWidth: 1 };
-  const every = (spacing: number): number => labelEvery(room, spacing);
   const label = (at: number) => ({ ...rules.label(plot, at), ...guide.style });
   drawing.push(drawing.outline(lineShape(rules.edge(plot)), ink, ['axis', key]));
   if (axis.type === 'linear') {
-    // Ticks are evenly spaced, and a lone tick has nothing to overlap.
-    const [first, second] = scale!.ticks;
-    const nth = every(second === undefined ? Infinity : Math.abs(scale!.at(second) - scale!.at(first!)));
+    const shown = new Set(scale!.labelled(room, scale!.at));
+    // A flat label below the plot is centred on its tick, and has twice the way to the nearer side
+    // of the chart: the room past the ends holds the end labels, but a label labelled alone, or one
+    // wider than the chart, can need more, and is cut short. Beside the plot every label has room.
+    const fitted = (i: number, at: number): string => {
+      const way = Math.min(at - rect.left, rect.right - at);
+      if (side !== 'bottom' || axis.labelAngle !== 0 || halves[i]! <= way + LABEL_ROUNDING) {
+        return labels[i]!;
+      }
+      return drawing.fit(labels[i]!, 2 * way, axis.ticks === undefined ? axis.path : `${axis.path}.ticks[${i}]`);
+    };
     scale!.ticks.forEach((tick, i) => {
       const at = scale!.at(tick);
       drawing.push(drawing.outline(lineShape(rules.tick(plot, at)), ink, ['tick', key, tick]));
-      if (i % nth === 0) {
-        drawing.push(drawing.text(labels[i]!, label(at)));
+      if (shown.has(i)) {
+        drawing.push(drawing.text(fitted(i, at), label(at)));
       }
     });
   } else {
@@ -282,7 +290,7 @@ export function fitBandEnds(plot: Rect, guide: Guide, rect: Rect, chart: { width
     }
     fitted = { ...fitted, [start]: fitted[start] + Math.max(0, before), [end]: fitted[end] - Math.max(0, after) };
   }
-  return fail('', `a ${chart.width} × ${chart.height} chart leaves no room for the end labels of ${axis.path}`);
+  return fail('', `${aChart(chart.width, chart.height)} leaves no room for the end labels of ${axis.path}`);
 }
 
 /**

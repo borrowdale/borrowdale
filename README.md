@@ -5,7 +5,7 @@ Hand-drawn charts, components, text and backgrounds for the web.
 Named after Borrowdale in the English Lake District, where the graphite that started the pencil
 industry was found.
 
-> **Status:** early development. Packages are not yet published.
+> **Status:** early development. The first release, 0.1.0, is in preparation and not yet on npm.
 
 ## Packages
 
@@ -14,24 +14,33 @@ industry was found.
 | [`@borrowdale/core`](packages/core) | Deterministic hand-drawn shapes for SVG and canvas. Framework-agnostic, SSR-safe |
 | [`@borrowdale/fills`](packages/fills) | Hand-drawn pattern fills and backgrounds |
 | [`@borrowdale/text`](packages/text) | Hand-written text for SVG and canvas, measured with no DOM |
-| [`@borrowdale/charts`](packages/charts) | Hand-drawn charts: bar, line, area, range area, scatter, bubble, pie, donut, nested rings, radar, rose, radial bar, polar line, area and scatter, and gauges |
+| [`@borrowdale/charts`](packages/charts) | Hand-drawn charts: bar, line, area, range area, interval, x-range and Gantt, scatter, bubble, pie, donut, nested rings, radar, rose, radial bar, polar line, area and scatter, gauges and timelines, on linear, time, log and square-root axes |
 
 Planned: `@borrowdale/svg`, `@borrowdale/react`, `@borrowdale/elements`.
 
+The four packages share one version and are released together. Used in Node.js, they need version
+22 or later.
+
 ## Documentation
 
-Start with the [shared documentation](apps/site/content/README.md), [contributing guide](CONTRIBUTING.md), [changelog](CHANGELOG.md), or [license and credits](apps/site/content/license.md). The website renders these same public Markdown sources.
+Start with the [shared documentation](apps/site/content/README.md), the
+[contributing guide](CONTRIBUTING.md), the [changelog](CHANGELOG.md), or
+[license and credits](apps/site/content/license.md). The website renders these same Markdown
+sources.
 
 ## Development
 
-The [product website](apps/site/README.md) includes the interactive collection and three open-data dashboards. Run `npm run site` after installing dependencies; the unpublished packages resolve directly from the workspace.
+The [website](apps/site/README.md) includes the interactive collection and three open-data
+dashboards. Run `npm run site` after installing dependencies; the packages resolve directly from the
+workspace.
 
-Node.js 24 is required for development, builds and tests. Use `nvm use` with the included `.nvmrc`,
-or select Node 24 through your version manager, before installing dependencies.
+Development uses Node.js 24 (see `.nvmrc`); the packages are built and tested on Node.js 22, 24 and
+26. Use `nvm use` with the included `.nvmrc`, or select Node 24 or later through your version manager,
+before installing dependencies.
 
 ```sh
 npm ci
-npx playwright-core install chromium-headless-shell   # once: the parity tests render in Chromium
+npx playwright-core install chromium firefox webkit   # once: the parity tests render in all three
 npm run build
 npm test
 npm run typecheck
@@ -43,10 +52,16 @@ npm run fonts     # regenerate the bundled font modules from the font files
 ```
 
 `npm test` includes parity tests that draw every `@borrowdale/core`, `@borrowdale/text` and
-`@borrowdale/charts` golden in headless Chromium and require the output to match Node's byte for
-byte. For text they also require the width Chromium draws to match the measured width. They fail,
-rather than skip, when Chromium is not installed. Node and Chromium both run V8, so this does not
-exercise another JavaScript engine.
+`@borrowdale/charts` golden in headless Chromium, Firefox and WebKit and require the output to match
+Node's byte for byte, so each golden is checked in V8, SpiderMonkey and JavaScriptCore. For text
+they also require the width each browser draws to match the measured width. They fail, rather than
+skip, when a browser is not installed.
+
+## Contributing
+
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the workspace, conventions and pull requests, and the
+[code of conduct](CODE_OF_CONDUCT.md). Report security problems privately, as
+[`SECURITY.md`](SECURITY.md) describes.
 
 ## License
 

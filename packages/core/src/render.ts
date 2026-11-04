@@ -1,4 +1,4 @@
-import type { Sketch } from './types.js';
+import type { Sketch, SketchPath } from './types.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -30,17 +30,20 @@ export function svgElement(tag: string, attributes: SvgAttributes, children?: st
 /** Renders a sketch as `<path>` markup. Needs no DOM, so it works for SSR. */
 export function toSvgPaths(sketch: Sketch): string {
   return sketch.paths
-    .map((path) =>
-      svgElement('path', {
-        d: path.d,
-        stroke: path.stroke,
-        'stroke-width': path.strokeWidth,
-        ...(path.strokeLineDash ? { 'stroke-dasharray': path.strokeLineDash.join(' ') } : {}),
-        fill: path.fill,
-        ...(path.fillRule ? { 'fill-rule': path.fillRule } : {}),
-      }),
-    )
+    .map((path) => svgElement('path', pathAttributes(path)))
     .join('');
+}
+
+// One mapping from a sketch path to its SVG attributes, in output order, for both renderers.
+function pathAttributes(path: SketchPath): SvgAttributes {
+  return {
+    d: path.d,
+    stroke: path.stroke,
+    'stroke-width': path.strokeWidth,
+    ...(path.strokeLineDash ? { 'stroke-dasharray': path.strokeLineDash.join(' ') } : {}),
+    fill: path.fill,
+    ...(path.fillRule ? { 'fill-rule': path.fillRule } : {}),
+  };
 }
 
 export function toSvgDocument({ width, height, defs = [], body }: SvgDocumentOptions): string {
@@ -57,15 +60,8 @@ export function appendSketch(parent: Element, sketch: Sketch): SVGPathElement[] 
   const document = parent.ownerDocument;
   return sketch.paths.map((path) => {
     const element = document.createElementNS(SVG_NS, 'path');
-    element.setAttribute('d', path.d);
-    element.setAttribute('stroke', path.stroke);
-    element.setAttribute('stroke-width', String(path.strokeWidth));
-    if (path.strokeLineDash) {
-      element.setAttribute('stroke-dasharray', path.strokeLineDash.join(' '));
-    }
-    element.setAttribute('fill', path.fill);
-    if (path.fillRule) {
-      element.setAttribute('fill-rule', path.fillRule);
+    for (const [name, value] of Object.entries(pathAttributes(path))) {
+      element.setAttribute(name, String(value));
     }
     parent.appendChild(element);
     return element;

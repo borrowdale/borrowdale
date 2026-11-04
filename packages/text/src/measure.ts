@@ -24,6 +24,11 @@ const CLUSTER = /[^\p{M}\u200D][\p{M}\u200D]*|[\p{M}\u200D]+/gu;
 const ATTACHED = String.raw`\p{M}\p{Emoji_Modifier}\u{E0020}-\u{E007F}`;
 const BASE = String.raw`\p{Regional_Indicator}{2}|[^${ATTACHED}\u200D]`;
 const CUT_UNIT = new RegExp(String.raw`(?:${BASE})(?:[${ATTACHED}]|\u200D(?:${BASE})?)*|[${ATTACHED}\u200D]+`, 'gu');
+
+/** The units of `text`, in order, that it is cut between and drawn one at a time by. */
+export function unitsOf(text: string): string[] {
+  return text.match(CUT_UNIT) ?? [];
+}
 const ELLIPSIS = '…';
 
 // How far left of `x` the text starts, as a share of its width.
@@ -39,7 +44,8 @@ const BASELINE_SHIFT: Record<TextBaseline, (ascent: number, descent: number) => 
 
 /**
  * Measures text from the font's own advance widths, with no DOM. Kerning and ligatures are not
- * applied, and the renderers switch them off, so the drawn text is exactly this wide.
+ * applied: the SVG and DOM renderers switch them off, and the canvas renderer fills one unit at a
+ * time, so none can form, and the drawn text is this wide.
  */
 export function measureText(text: string, options?: MeasureOptions): TextExtent {
   return rounded(extent(checkMeasure(text, options)));
@@ -58,7 +64,7 @@ export function fitText(text: string, maxWidth: number, options?: MeasureOptions
   }
   const { font } = checked;
   const ellipsis = advanceOf(font, 0x2026) === undefined && advanceOf(font, 0x2e) !== undefined ? '...' : ELLIPSIS;
-  const units = checked.text.match(CUT_UNIT) ?? [];
+  const units = unitsOf(checked.text);
   // The text cut after its first `count` units, without the spaces before the cut.
   const cut = (count: number): string => `${units.slice(0, count).join('').trimEnd()}${ellipsis}`;
   if (widthOf(cut(0)) > checked.maxWidth) {
@@ -77,7 +83,7 @@ export function fitText(text: string, maxWidth: number, options?: MeasureOptions
   return cut(low);
 }
 
-/** Measures text and places it, so the renderers only draw and never measure. */
+/** Measures text and places it, so the SVG and DOM renderers only draw; the canvas one measures each unit it fills. */
 export function layoutText(text: string, options: LayoutOptions): TextLayout {
   const checked = checkLayout(text, options);
   const { x, y, rotate } = checked;

@@ -1,13 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { InvalidChartError, layoutChart, toSvgChart, type ChartSpec } from '@borrowdale/charts';
+import { laying } from './support/layout.js';
 
 const bands = { x: { type: 'band', categories: ['a', 'b'] }, y: { type: 'linear' } };
 const longKey = 'k'.repeat(101);
-const longFillStyle = 'a'.repeat(300);
 const manyBars = Array.from({ length: 28 }, (_, i) => ({ type: 'bar', name: `s${i}`, data: [1, 2] }));
 const oneTooMany = [...manyBars, { type: 'bar', name: 's28', data: [1, 2] }];
 const ownColour = [...manyBars, { type: 'bar', name: 'own', color: '#000', data: [1, 2] }];
 const bars = { width: 400, height: 300, axes: bands, series: [{ type: 'bar', name: 'A', data: [1, 2] }] };
+// Core's message for a dash of one string, up to the string: 116 characters.
+const DASH_MESSAGE = 'Invalid style: strokeLineDash must be an array of 1 to 16 lengths from 0 to 1000000, adding up to at least 1, got ["';
+const dashOf = (entry: string) => ({ ...bars, style: { strokeLineDash: [entry] } });
 const xy = { x: { type: 'linear' }, y: { type: 'linear' } };
 const pie = { width: 300, height: 200, series: [{ type: 'pie', name: 'P', data: [{ name: 'a', value: 1 }] }] };
 const spokes = { angle: { type: 'band', categories: ['a', 'b', 'c'] } };
@@ -30,8 +33,6 @@ function shiftingStroke(): object {
     },
   };
 }
-// Core's message for its style, "Unknown fill style: " and the style, is exactly 200 characters.
-const fillStyleOf200 = { ...bars, style: { fillStyle: 'a'.repeat(180) } };
 // A series made in code, whose name comes only from its prototype.
 const inheritedName = { ...bars, series: [Object.assign(Object.create({ name: 'A' }), { type: 'bar', data: [1, 2] })] };
 // JSON.parse makes "__proto__" an own key, where an object literal would set the prototype.
@@ -59,7 +60,7 @@ describe('chart validation', () => {
     ['a missing width', { ...bars, width: undefined }, 'Invalid chart: width is missing'],
     ['a width of 0', { ...bars, width: 0 }, 'Invalid chart: width must be a number from 1 to 10000, got 0'],
     ['a width given as a string', { ...bars, width: '400' }, 'Invalid chart: width must be a number from 1 to 10000, got "400"'],
-    ['a width given as an array', { ...bars, width: [400] }, 'Invalid chart: width must be a number from 1 to 10000, got an array of 1'],
+    ['a width given as an array', { ...bars, width: [400] }, 'Invalid chart: width must be a number from 1 to 10000, got [400]'],
     ['a width whose toString is not a function', JSON.parse('{"width":{"toString":1},"height":300,"series":[]}'), 'Invalid chart: width must be a number from 1 to 10000, got an object'],
     ['a title longer than 1000 characters', { ...bars, title: 'a'.repeat(1001) }, 'Invalid chart: title must be a string of at most 1000 characters, got a string of 1001 characters'],
     ['a NaN height', { ...bars, height: Number.NaN }, 'Invalid chart: height must be a number from 1 to 10000, got NaN'],
@@ -75,7 +76,7 @@ describe('chart validation', () => {
     ['a style with a seed', { ...bars, style: { seed: 3 } }, 'Invalid chart: style.seed is not allowed: each mark gets its own seed from the chart seed'],
     ['no series', { ...bars, series: [] }, 'Invalid chart: series must have 1 to 100 entries, got 0'],
     ['series that are not an array', { ...bars, series: {} }, 'Invalid chart: series must be an array, got an object'],
-    ['an unknown series type', { ...bars, series: [{ type: 'pyramid', name: 'A', data: [] }] }, 'Invalid chart: series[0].type must be a series type (bar, line, area, rangeArea, interval, xyLine, xyArea, scatter, bubble, pie, radar, rose, radialBar, polarLine, polarArea, polarScatter, gauge), got "pyramid"'],
+    ['an unknown series type', { ...bars, series: [{ type: 'pyramid', name: 'A', data: [] }] }, 'Invalid chart: series[0].type must be a series type (bar, line, area, rangeArea, interval, xRange, xyLine, xyArea, scatter, bubble, timeline, pie, radar, rose, radialBar, polarLine, polarArea, polarScatter, gauge), got "pyramid"'],
     ['an unknown series key', { ...bars, series: [{ type: 'bar', name: 'A', data: [1, 2], colour: 'red' }] }, 'Invalid chart: series[0] has an unknown key, "colour"'],
     ['a key of another series type', { ...bars, series: [{ type: 'bar', name: 'A', data: [1, 2], curve: 'step' }] }, 'Invalid chart: series[0] has an unknown key, "curve"'],
     ['a missing name', { ...bars, series: [{ type: 'bar', data: [1, 2] }] }, 'Invalid chart: series[0].name is missing'],
@@ -86,17 +87,18 @@ describe('chart validation', () => {
     ['data one value short', { ...bars, series: [{ type: 'bar', name: 'A', data: [1] }] }, 'Invalid chart: series[0].data has 1 values, but axes.x.categories has 2'],
     ['too many data points in all', { ...bars, axes: xy, series: [{ type: 'scatter', name: 'A', data: Array(60000).fill([1, 1]) }, { type: 'scatter', name: 'B', data: Array(60000).fill([1, 1]) }] }, 'Invalid chart: series hold at least 120000 data points in all, more than 100000'],
     ['an unknown curve', { ...bars, series: [{ type: 'line', name: 'A', data: [1, 2], curve: 'spline' }] }, 'Invalid chart: series[0].curve must be one of linear, monotone, step, step-before, step-after, got "spline"'],
-    ['a dash core rejects', { ...bars, series: [{ type: 'line', name: 'A', data: [1, 2], dash: [0] }] }, 'Invalid chart: series[0].dash is not valid: Invalid style: strokeLineDash must be an array of 1 to 16 lengths from 0 to 1000000, adding up to at least 1, got 0'],
-    ['a series style core rejects', { ...bars, series: [{ type: 'bar', name: 'A', data: [1, 2], style: { fillStyle: 'crayon' } }] }, 'Invalid chart: series[0].style is not valid: Unknown fill style: crayon'],
+    ['a dash core rejects', { ...bars, series: [{ type: 'line', name: 'A', data: [1, 2], dash: [0] }] }, 'Invalid chart: series[0].dash is not valid: Invalid style: strokeLineDash must be an array of 1 to 16 lengths from 0 to 1000000, adding up to at least 1, got [0]'],
+    ['a series style core rejects', { ...bars, series: [{ type: 'bar', name: 'A', data: [1, 2], style: { fillStyle: 'crayon' } }] }, 'Invalid chart: series[0].style is not valid: Unknown fill style: "crayon"'],
     ['an unknown value axis', { ...bars, series: [{ type: 'bar', name: 'A', data: [1, 2], axis: 'y3' }] }, 'Invalid chart: series[0].axis must be one of y, y2, got "y3"'],
     ['y2 that the chart lacks', { ...bars, series: [{ type: 'bar', name: 'A', data: [1, 2], axis: 'y2' }] }, 'Invalid chart: series[0].axis is y2, but the chart has no axes.y2'],
     ['a negative value in a stacked area', { ...bars, series: [{ type: 'area', name: 'A', stack: 's', data: [1, -2] }] }, 'Invalid chart: series[0].data[1] is negative, -2, which a stacked area cannot show'],
     ['a range whose high is below its low', { ...bars, series: [{ type: 'rangeArea', name: 'A', data: [[1, 2], [3, 1]] }] }, 'Invalid chart: series[0].data[1] has its high value below its low value, [3, 1]'],
     ['a range that is not a pair', { ...bars, series: [{ type: 'rangeArea', name: 'A', data: [[1, 2], 3] }] }, 'Invalid chart: series[0].data[1] must be a [low, high] array, got 3'],
-    ['a scatter point that is not a pair', { ...bars, axes: xy, series: [{ type: 'scatter', name: 'A', data: [[1, 2, 3]] }] }, 'Invalid chart: series[0].data[0] must be a [x, y] array, got an array of 3'],
+    ['a scatter point that is not a pair', { ...bars, axes: xy, series: [{ type: 'scatter', name: 'A', data: [[1, 2, 3]] }] }, 'Invalid chart: series[0].data[0] must be a [x, y] array, got [1, 2, 3]'],
     ['a negative bubble size', { ...bars, axes: xy, series: [{ type: 'bubble', name: 'A', data: [[1, 2, -3]] }] }, 'Invalid chart: series[0].data[0] has a negative size, -3'],
-    ['two band axes', { ...bars, axes: { x: bands.x, y: { type: 'band', categories: ['c'] } } }, 'Invalid chart: axes has two band axes; one of x and y must be linear'],
-    ['an unknown axis type', { ...bars, axes: { x: bands.x, y: { type: 'log' } } }, 'Invalid chart: axes.y.type must be "band" or "linear", got "log"'],
+    ['two band axes', { ...bars, axes: { x: bands.x, y: { type: 'band', categories: ['c'] } } }, 'Invalid chart: axes has two band axes; one of x and y must be continuous: linear, time, log or sqrt'],
+    ['an unknown axis type', { ...bars, axes: { x: bands.x, y: { type: 'pow' } } }, 'Invalid chart: axes.y.type must be "band", "linear", "time", "log" or "sqrt", got "pow"'],
+    ['a log axis on a polar chart', { ...radar, axes: { ...spokes, radius: { type: 'log' } } }, 'Invalid chart: axes.radius.type must be "band" or "linear", got "log"'],
     ['a missing y axis', { ...bars, axes: { x: bands.x } }, 'Invalid chart: axes.y is missing'],
     ['a repeated category', { ...bars, axes: { x: { type: 'band', categories: ['a', 'a'] }, y: bands.y } }, 'Invalid chart: axes.x.categories[1] repeats "a"'],
     ['no categories', { ...bars, axes: { x: { type: 'band', categories: [] }, y: bands.y } }, 'Invalid chart: axes.x.categories must have 1 to 1000 entries, got 0'],
@@ -109,8 +111,10 @@ describe('chart validation', () => {
     ['y2 on a horizontal chart', { ...bars, axes: { x: { type: 'linear' }, y: { type: 'band', categories: ['a', 'b'] }, y2: { type: 'linear' } } }, 'Invalid chart: axes.y2 needs x to be the band axis'],
     ['a percent axis with no band axis', { ...bars, axes: { x: { type: 'linear' }, y: { type: 'linear', percent: true } }, series: [{ type: 'scatter', name: 'A', data: [[1, 2]] }] }, 'Invalid chart: axes.y.percent needs a band axis: only stacking series (bar, area) use it'],
     ['a line on a percent axis', { ...bars, axes: { x: bands.x, y: { type: 'linear', percent: true } }, series: [{ type: 'line', name: 'A', data: [1, 2] }] }, 'Invalid chart: series[0] is a line series on axes.y, a percent axis, which only stacking series (bar, area) can use'],
-    ['a scatter series on a band axis', { ...bars, series: [{ type: 'scatter', name: 'A', data: [[1, 2]] }] }, 'Invalid chart: series[0] is a scatter series, which needs both axes linear'],
+    ['a scatter series on a band axis', { ...bars, series: [{ type: 'scatter', name: 'A', data: [[1, 2]] }] }, 'Invalid chart: series[0] is a scatter series, which needs both axes continuous: linear, time, log or sqrt'],
     ['a bar series with two linear axes', { ...bars, axes: xy }, 'Invalid chart: series[0] is a bar series, which needs one band axis'],
+    ['an interval series with two linear axes', { ...bars, axes: xy, series: [{ type: 'interval', name: 'I', data: [[1, 2]] }] }, 'Invalid chart: series[0] is an interval series, which needs one band axis'],
+    ['an xyLine series on a band axis', { ...bars, series: [{ type: 'xyLine', name: 'L', data: [[1, 2]] }] }, 'Invalid chart: series[0] is an xyLine series, which needs both axes continuous: linear, time, log or sqrt'],
     ['a pie series with axes', { ...pie, axes: bands }, 'Invalid chart: axes must be left out: a pie chart has no axes'],
     ['a bar series with no axes', { ...bars, axes: undefined }, 'Invalid chart: axes is missing'],
     ['a radar series with x and y axes', { ...radar, axes: bands }, 'Invalid chart: axes has an unknown key, "x"'],
@@ -144,10 +148,10 @@ describe('chart validation', () => {
     ['an own "__proto__" key, as JSON.parse makes it', protoKey, 'Invalid chart: series[0] has an unknown key, "__proto__"'],
     ['a name the series only inherits', inheritedName, 'Invalid chart: series[0].name is missing'],
     ['an unknown key longer than 100 characters', { ...bars, [longKey]: 1 }, 'Invalid chart: unknown key a string of 101 characters'],
-    ['a style key with a line break', { ...bars, style: { 'a\nb': 1 } }, 'Invalid chart: style is not valid: Unknown option: a\\u000ab'],
-    ['a style value core repeats at length', { ...bars, style: { fillStyle: longFillStyle } }, `Invalid chart: style is not valid: Unknown fill style: ${'a'.repeat(180)}…`],
+    ['a style key with a line break', { ...bars, style: { 'a\nb': 1 } }, 'Invalid chart: style is not valid: Unknown option: "a\\nb"'],
+    ['a style value core repeats at length', dashOf('a'.repeat(100)), `Invalid chart: style is not valid: ${DASH_MESSAGE}${'a'.repeat(84)}…`],
     ['a paint reference as a colour', { ...bars, series: [{ type: 'bar', name: 'A', color: 'url(#x)', data: [1, 2] }] }, 'Invalid chart: series[0].color must be a colour (a hex code, a name, rgb() or hsl()), got "url(#x)"'],
-    ['a style value cut inside a surrogate pair', { ...bars, style: { fillStyle: `${'a'.repeat(179)}\u{1F600}${'a'.repeat(50)}` } }, `Invalid chart: style is not valid: Unknown fill style: ${'a'.repeat(179)}…`],
+    ['a style value cut inside a surrogate pair', dashOf(`${'a'.repeat(83)}\u{1F600}${'a'.repeat(10)}`), `Invalid chart: style is not valid: ${DASH_MESSAGE}${'a'.repeat(83)}…`],
     ['a paint reference as a slice colour', { ...pie, series: [{ type: 'pie', name: 'P', data: [{ name: 'a', value: 1, color: 'url(#x)' }] }] }, 'Invalid chart: series[0].data[0].color must be a colour (a hex code, a name, rgb() or hsl()), got "url(#x)"'],
     ['a paint reference as a series style stroke', { ...bars, series: [{ type: 'bar', name: 'A', style: { stroke: 'url(#x)' }, data: [1, 2] }] }, 'Invalid chart: series[0].style.stroke must be a colour (a hex code, a name, rgb() or hsl()), got "url(#x)"'],
     ['a paint reference as a style fill', { ...bars, style: { fill: 'url(https://example.com/p.svg#x)' } }, 'Invalid chart: style.fill must be a colour (a hex code, a name, rgb() or hsl()), got "url(https://example.com/p.svg#x)"'],
@@ -157,11 +161,11 @@ describe('chart validation', () => {
     ['1001 slices', oneSliceTooMany, 'Invalid chart: series[0].data must have 1 to 1000 entries, got 1001'],
     ['100,001 data points in all', onePointTooMany, 'Invalid chart: series hold at least 100001 data points in all, more than 100000'],
     ['a stacked area value just below 0', { ...bars, series: [{ type: 'area', name: 'A', stack: 's', data: [1, -0.5] }] }, 'Invalid chart: series[0].data[1] is negative, -0.5, which a stacked area cannot show'],
-    ['the series type "constructor"', { ...bars, series: [{ type: 'constructor', name: 'A', data: [1, 2] }] }, 'Invalid chart: series[0].type must be a series type (bar, line, area, rangeArea, interval, xyLine, xyArea, scatter, bubble, pie, radar, rose, radialBar, polarLine, polarArea, polarScatter, gauge), got "constructor"'],
-    ['the series type "toString"', { ...bars, series: [{ type: 'toString', name: 'A', data: [1, 2] }] }, 'Invalid chart: series[0].type must be a series type (bar, line, area, rangeArea, interval, xyLine, xyArea, scatter, bubble, pie, radar, rose, radialBar, polarLine, polarArea, polarScatter, gauge), got "toString"'],
-    ['a series given as an array', { ...bars, series: [[1, 2]] }, 'Invalid chart: series[0] must be an object, got an array of 2'],
-    ['a style given as an array', { ...bars, style: [] }, 'Invalid chart: style must be an object, got an array of 0'],
-    ['axes given as an array', { ...bars, axes: [] }, 'Invalid chart: axes must be an object, got an array of 0'],
+    ['the series type "constructor"', { ...bars, series: [{ type: 'constructor', name: 'A', data: [1, 2] }] }, 'Invalid chart: series[0].type must be a series type (bar, line, area, rangeArea, interval, xRange, xyLine, xyArea, scatter, bubble, timeline, pie, radar, rose, radialBar, polarLine, polarArea, polarScatter, gauge), got "constructor"'],
+    ['the series type "toString"', { ...bars, series: [{ type: 'toString', name: 'A', data: [1, 2] }] }, 'Invalid chart: series[0].type must be a series type (bar, line, area, rangeArea, interval, xRange, xyLine, xyArea, scatter, bubble, timeline, pie, radar, rose, radialBar, polarLine, polarArea, polarScatter, gauge), got "toString"'],
+    ['a series given as an array', { ...bars, series: [[1, 2]] }, 'Invalid chart: series[0] must be an object, got [1, 2]'],
+    ['a style given as an array', { ...bars, style: [] }, 'Invalid chart: style must be an object, got []'],
+    ['axes given as an array', { ...bars, axes: [] }, 'Invalid chart: axes must be an object, got []'],
     ['a rejected string of exactly 100 characters, which is repeated', { ...bars, legend: 'l'.repeat(100) }, `Invalid chart: legend must be one of top, bottom, right, none, got "${'l'.repeat(100)}"`],
     ['a rejected string of 101 characters, which is described', { ...bars, legend: 'l'.repeat(101) }, 'Invalid chart: legend must be one of top, bottom, right, none, got a string of 101 characters'],
     ['an unknown key with a line separator', { ...bars, 'a\u2028b': 1 }, 'Invalid chart: unknown key "a\\u2028b"'],
@@ -199,7 +203,7 @@ describe('chart validation', () => {
     ['a range radar with a negative low', { ...radar, series: [{ type: 'radar', name: 'R', data: [[-1, 2], [0, 3], [1, 4]] }] }, 'Invalid chart: series[0].data[0] has a negative low value, -1'],
     ['a range radar with its high below its low', { ...radar, series: [{ type: 'radar', name: 'R', data: [[3, 2], [0, 3], [1, 4]] }] }, 'Invalid chart: series[0].data[0] has its high value below its low value, [3, 2]'],
     ['a radar on a linear angle axis', { ...radar, axes: { angle: { type: 'linear' } } }, 'Invalid chart: series[0] is a radar series, which needs a band angle axis, but axes.angle is linear'],
-    ['a band y2', { ...bars, axes: { ...bands, y2: { type: 'band' } } }, 'Invalid chart: axes.y2.type must be "linear", got "band"'],
+    ['a band y2', { ...bars, axes: { ...bands, y2: { type: 'band' } } }, 'Invalid chart: axes.y2.type must be "linear", "log" or "sqrt", got "band"'],
     ['a radar on a band radius', { ...radar, axes: { ...spokes, radius: { type: 'band', categories: ['x'] } } }, 'Invalid chart: series[0] is a radar series, which needs a linear radius axis, but axes.radius is band'],
     ['a rose with a negative value', { ...rose, series: [{ type: 'rose', name: 'R', data: [1, -1, 2] }] }, 'Invalid chart: series[0].data[1] is negative, -1, which a rose series cannot show'],
     ['a stacked polar area with a negative value', { ...rose, axes: { ...spokes, radius: { type: 'linear', min: -5 } }, series: [{ type: 'polarArea', name: 'A', stack: 's', data: [1, -1, 2] }] }, 'Invalid chart: series[0].data[1] is negative, -1, which a stacked polarArea series cannot show'],
@@ -207,6 +211,8 @@ describe('chart validation', () => {
     ['a polar point below a radius that starts at 0', { ...radialBars, axes: { angle: { type: 'linear' }, radius: { type: 'linear' } }, series: [{ type: 'polarScatter', name: 'S', data: [[10, -3], [20, 5]] }] }, 'Invalid chart: series[0].data[0][1] is negative, -3, but axes.radius starts at 0 unless its min is set'],
     ['a curve on a polar line', { ...rose, series: [{ type: 'polarLine', name: 'L', curve: 'monotone', data: [1, 2, 3] }] }, 'Invalid chart: series[0] has an unknown key, "curve"'],
     ['a second value axis on a rose', { ...rose, series: [{ type: 'rose', name: 'R', axis: 'y2', data: [1, 2, 3] }] }, 'Invalid chart: series[0] has an unknown key, "axis"'],
+    ['a time on a polar point', { ...radialBars, axes: { angle: { type: 'linear' }, radius: { type: 'linear' } }, series: [{ type: 'polarScatter', name: 'S', data: [['2026-01-01', 1]] }] }, 'Invalid chart: series[0].data[0][0] must be a number from -1e15 to 1e15, got "2026-01-01"'],
+    ['a polar radius written as text', { ...radialBars, axes: { angle: { type: 'linear' }, radius: { type: 'linear' } }, series: [{ type: 'polarScatter', name: 'S', data: [[10, '-3']] }] }, 'Invalid chart: series[0].data[0][1] must be a number from -1e15 to 1e15, got "-3"'],
     ['a polar scatter on a band angle axis', { ...rose, series: [{ type: 'polarScatter', name: 'S', data: [[1, 2]] }] }, 'Invalid chart: series[0] is a polarScatter series, which needs a linear angle axis, but axes.angle is band'],
     ['a radial bar with values for the wrong number of rings', { ...radialBars, series: [{ type: 'radialBar', name: 'B', data: [1] }] }, 'Invalid chart: series[0].data has 1 values, but axes.radius.categories has 2'],
     ['a rose beside a bar series', { ...rose, series: [rose.series[0], { type: 'bar', name: 'B', data: [1, 2, 3] }] }, 'Invalid chart: series[1] is a bar series, which cannot share a chart with series[0], a rose series'],
@@ -215,7 +221,7 @@ describe('chart validation', () => {
     ['a hole of the whole radius', { ...rose, axes: { ...spokes, radius: { type: 'linear', innerRadius: 1 } } }, 'Invalid chart: axes.radius.innerRadius must be a number from 0 to 0.95, got 1'],
     ['an angle axis that ends where it starts', { ...rose, axes: { angle: { ...spokes.angle, startAngle: 90, endAngle: 90 } } }, 'Invalid chart: axes.angle.endAngle must be greater than startAngle (90) and at most 360 past it, got 90'],
     ['an angle axis of more than a turn', { ...rose, axes: { angle: { ...spokes.angle, startAngle: 0, endAngle: 361 } } }, 'Invalid chart: axes.angle.endAngle must be greater than startAngle (0) and at most 360 past it, got 361'],
-    ['a dash pattern shorter than one unit', { ...bars, series: [{ type: 'line', name: 'A', dash: [0.005, 0], data: [1, 2] }] }, 'Invalid chart: series[0].dash is not valid: Invalid style: strokeLineDash must be an array of 1 to 16 lengths from 0 to 1000000, adding up to at least 1, got 0.005,0'],
+    ['a dash pattern shorter than one unit', { ...bars, series: [{ type: 'line', name: 'A', dash: [0.005, 0], data: [1, 2] }] }, 'Invalid chart: series[0].dash is not valid: Invalid style: strokeLineDash must be an array of 1 to 16 lengths from 0 to 1000000, adding up to at least 1, got [0.005, 0]'],
     ['a stroke width past 100', { ...bars, style: { strokeWidth: 1e300 } }, 'Invalid chart: style.strokeWidth must be a number from 0 to 100, got 1e+300'],
     ['a fill weight past 100', { ...bars, series: [{ type: 'bar', name: 'A', style: { fillWeight: 101 }, data: [1, 2] }] }, 'Invalid chart: series[0].style.fillWeight must be a number from 0 to 100, got 101'],
     ['an unknown key with separators, marks and embeddings', { ...bars, 'a\u2029\u200f\u061c\u202a\u202b\u202c\u202db': 1 }, 'Invalid chart: unknown key "a\\u2029\\u200f\\u061c\\u202a\\u202b\\u202c\\u202db"'],
@@ -223,8 +229,11 @@ describe('chart validation', () => {
     ['a no-break space in rgb()', { ...bars, series: [{ type: 'bar', name: 'A', color: 'rgb(1,\u00a02,3)', data: [1, 2] }] }, 'Invalid chart: series[0].color must be a colour (a hex code, a name, rgb() or hsl()), got "rgb(1,\u00a02,3)"'],
     ['more series than the palette has pairs', { ...bars, series: oneTooMany }, 'Invalid chart: series[28] needs a color: the 28 colour and hatching pairs of the palette are used up'],
     ['a plot with no room left', { ...bars, width: 20, height: 20 }, 'Invalid chart: a 20 × 20 chart leaves no room for the plot after its title, legend and labels'],
+    ['a plot with no room left on a chart read from eleven', { ...bars, width: 11, height: 20 }, 'Invalid chart: an 11 × 20 chart leaves no room for the plot after its title, legend and labels'],
+    ['a plot with no room left on a chart read from eighteen', { ...bars, width: 18, height: 20 }, 'Invalid chart: an 18 × 20 chart leaves no room for the plot after its title, legend and labels'],
+    ['a plot with no room left on a chart read from one hundred and eighteen', { ...bars, width: 118, height: 20 }, 'Invalid chart: a 118 × 20 chart leaves no room for the plot after its title, legend and labels'],
   ])('rejects %s', (_case, spec, message) => {
-    expect(() => layoutChart(spec as ChartSpec)).toThrow(message);
+    expect(laying(spec)).toThrow(message);
   });
 
   it.each<[string, unknown]>([
@@ -264,8 +273,10 @@ describe('chart validation', () => {
   });
 
   it('repeats a message from core of exactly 200 characters in full', () => {
-    expect(() => layoutChart(fillStyleOf200 as ChartSpec)).toThrow(
-      new InvalidChartError('style', `is not valid: Unknown fill style: ${'a'.repeat(180)}`),
+    // The message up to the string, a string of 82 characters, and the quote and bracket that close
+    // it make 200.
+    expect(laying(dashOf('a'.repeat(82)))).toThrow(
+      new InvalidChartError('style', `is not valid: ${DASH_MESSAGE}${'a'.repeat(82)}"]`),
     );
   });
 

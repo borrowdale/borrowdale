@@ -1,14 +1,14 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { layoutChart, toSvgChart, type ChartSpec } from '@borrowdale/charts';
 import cases from '../../../apps/examples/cartesian-cases.json' with { type: 'json' };
-import { evaluateInChromium } from '../../core/test/support/chromium.js';
+import { evaluateIn } from '../../core/test/support/browsers.js';
 import { bandScale } from '../src/scale.js';
 import { shapesOf } from './support/layout.js';
 
 const examples = cases as unknown as { name: string; spec: ChartSpec }[];
 let browser: Record<string, string>;
 beforeAll(async () => {
-  browser = await evaluateInChromium(new URL('../src/index.ts', import.meta.url), 'charts', '', (entries) => {
+  browser = await evaluateIn('chromium', new URL('../src/index.ts', import.meta.url), 'charts', '', (entries) => {
     const api = (globalThis as unknown as { charts: { layoutChart: typeof layoutChart; toSvgChart: typeof toSvgChart } }).charts;
     return Object.fromEntries(entries.map(({ name, spec }) => [name, api.toSvgChart(api.layoutChart(spec), { idPrefix: name })]));
   }, examples);

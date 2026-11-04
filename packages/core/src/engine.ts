@@ -1,6 +1,6 @@
 // The boundary to the stroke engine (./engine/, which began as a TypeScript port of rough.js 4.6.6).
 // Replacing the engine means replacing this file and that directory.
-import { Budget, drawWithin, MAX_OPERATIONS } from './engine/budget.js';
+import { Budget, drawWithin, MAX_OPERATIONS } from './budget.js';
 import { DEFAULT_OPTIONS, fillWeight, type OpSet, type ResolvedOptions } from './engine/core.js';
 import { opsToPath, shapeSets } from './engine/generator.js';
 import type { Shape, ShapeKind, SketchPath } from './types.js';
@@ -20,7 +20,15 @@ export function drawShape(
   budget: Budget = new Budget(MAX_OPERATIONS),
 ): SketchPath[] {
   const o: ResolvedOptions = { ...DEFAULT_OPTIONS, ...options };
+  o.hachureAngle = withinTurn(o.hachureAngle);
   return drawWithin(budget, () => shapeSets(shape, o).map((set) => toSketchPath(set, o, shape.kind, strokeLineDash)));
+}
+
+// An angle in degrees taken within one turn. The remainder of two doubles is exact, so a large angle
+// draws as its remainder does, its radians stay far inside the trigonometry's range, and the 90° a
+// cross-hatch adds to it is never lost to rounding. -0, the remainder of -360, draws as 0 does.
+function withinTurn(degrees: number): number {
+  return degrees % 360;
 }
 
 function toSketchPath(

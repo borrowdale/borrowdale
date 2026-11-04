@@ -3,7 +3,9 @@
 Hand-drawn SVG pattern fills for backgrounds and shapes. Every tile stroke is sketched, so patterns
 match the rest of a Borrowdale drawing.
 
-> **Unpublished:** use the [local workspace setup](https://github.com/borrowdale/borrowdale/blob/main/apps/site/content/getting-started.md). Package installation instructions will be added when releases are available.
+```sh
+npm install @borrowdale/fills
+```
 
 ```js
 import { svgElement, toSvgDocument } from '@borrowdale/core';
