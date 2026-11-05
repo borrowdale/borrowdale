@@ -26,7 +26,7 @@ and `npm run typecheck` cover the website too. To work on it, run `npm run site`
 | Path | What it holds |
 |---|---|
 | `packages/core`, `packages/fills`, `packages/text`, `packages/charts` | The published packages: `src/`, `test/`, and a `README.md` that is the package's reference |
-| `packages/*/test/golden/` | The golden corpora: `corpus.json` lists the inputs, `goldens.json` the expected output |
+| `packages/*/test/golden/` | The golden corpora: `corpus.json` lists the inputs, `goldens.json` the expected output. Charts also read `apps/examples/statistical-cases.json` |
 | `apps/examples` | Runnable examples that load the built packages |
 | `apps/site` | The website: the guides in `content/`, and pages built from the package READMEs and the golden corpora |
 | `scripts/` | Recording the goldens and generating the bundled font modules |
@@ -84,7 +84,7 @@ been measured rather than what is expected.
 ### Keep the website in step
 
 The website renders the package READMEs and the guides in `apps/site/content/` directly, and builds
-its playground from the golden corpora in `packages/*/test/golden/`. Adding, renaming or removing a
+its playground from the golden corpora in `packages/*/test/golden/` and the statistical and financial cases in `apps/examples/statistical-cases.json`. Adding, renaming or removing a
 golden case therefore also changes a public page and its URL. Keep the examples runnable, and use
 public data whose source is stated.
 

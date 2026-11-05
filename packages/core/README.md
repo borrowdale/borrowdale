@@ -132,7 +132,7 @@ Only pass markup you built yourself, never text from users.
 
 ## Portable maths
 
-`@borrowdale/core/math` exports the engine's own `sin` and `cos`, and a natural logarithm `log`, for
+`@borrowdale/core/math` exports the engine's own `sin` and `cos`, and the natural logarithm `log` and exponential `exp`, for
 numbers that must be the same in every JavaScript engine (for example points on a circle placed next
 to a drawing, or positions on a logarithmic scale):
 
@@ -145,7 +145,8 @@ const along = (log(value) - log(low)) / (log(high) - log(low));
 
 They give the same result in every JavaScript engine. That result can differ from `Math.sin`,
 `Math.cos` and `Math.log` in the last bit; `log` is within one unit in the last place of the true
-value. `sin` and `cos` accept a finite number of radians within ±1,000,000, exported as `MAX_ANGLE`;
+value. `exp` accepts finite arguments from −709 to 709 (the exported `MAX_EXPONENT`).
+`sin` and `cos` accept a finite number of radians within ±1,000,000, exported as `MAX_ANGLE`;
 not far past that range the result would be wrong without any sign of it. `log` accepts a finite
 number above 0. Each throws a `RangeError` for anything else.
 
@@ -185,7 +186,7 @@ projects need `"dom"` in `compilerOptions.lib`, even when they only render on th
 ## License
 
 MIT. The stroke engine is ported from MIT-licensed code by Preet Shihn; its trigonometry uses
-constants from fdlibm, and its logarithm is a port of fdlibm's; see
+constants from fdlibm, and its logarithm and exponential are ports of fdlibm routines; see
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 ### Validation without drawing

@@ -1,3 +1,4 @@
+import statisticalCases from '../../examples/statistical-cases.json';
 import { presentationExamples, type ChartExample } from './chart-examples';
 import coreCases from '../../../packages/core/test/golden/corpus.json';
 import chartCases from '../../../packages/charts/test/golden/corpus.json';
@@ -30,11 +31,11 @@ const shapes: Example[] = coreCases.map((e) => ({
   tag: e.shape.kind,
   render: () => shapeSvg(e.shape as Shape, e.options as SketchOptions, 300, 180, true),
 }));
-export const chartExamples = [...chartCases, ...presentationExamples] as ChartExample[];
+export const chartExamples = [...chartCases, ...presentationExamples, ...statisticalCases] as ChartExample[];
 const charts: Example[] = chartExamples.map((e) => ({
   name: e.name,
   category: 'charts',
-  tag: [...new Set(e.spec.series.map((s) => s.type))].join(' + '),
+  tag: [...new Set(e.spec.series.map((s) => 'display' in s && ['market','distribution','relationship'].includes(s.type) ? s.display : s.type))].join(' + '),
   families: [...new Set(e.spec.series.map((s) => s.type))],
   render: (renderer) => chart(e.spec, renderer, e.images),
 }));
@@ -144,7 +145,7 @@ export function gallery() {
     (x) =>
       x.category === state.category &&
       (state.tag === 'all' || (x.families ?? [x.tag]).includes(state.tag)) &&
-      `${x.name} ${x.tag}`.toLowerCase().includes(state.search.toLowerCase()),
+      `${x.name} ${x.tag} ${x.families?.join(' ') ?? ''}`.toLowerCase().includes(state.search.toLowerCase()),
   );
   const pages = Math.max(1, Math.ceil(filtered.length / 12));
   state.page = Math.min(state.page, pages - 1);

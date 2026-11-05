@@ -120,7 +120,9 @@ function legendEntries(chart: CheckedChart): LegendEntry[] {
   return paints(series).map((paint, i) => {
     const entry = series[i]!;
     const dash = 'dash' in entry ? entry.dash : undefined;
-    const symbol = 'symbol' in entry && entry.symbol !== 'circle' ? entry.symbol : undefined;
+    const symbol = 'marks' in entry && entry.marks.every(mark => mark.kind === 'dot')
+      ? entry.marks[0]?.symbol ?? 'circle'
+      : 'symbol' in entry && entry.symbol !== 'circle' ? entry.symbol : undefined;
     return { name: entry.name, path: `${entry.path}.name`, paint, line: lines[i]!, dash, style: entry.style, symbol };
   });
 }

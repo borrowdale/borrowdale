@@ -43,6 +43,7 @@ cannot share a chart:
 |---|---|
 | `bar`, `line`, `area`, `rangeArea`, `interval`, `xRange`, in any mix | `x` and `y`, one of them `band` |
 | `scatter`, `bubble`, `xyLine`, `xyArea`, in any mix (also with `histogram` on two linear axes) | `x` and `y`, both continuous: `linear`, `time`, `log` or `sqrt` |
+| `distribution`, `relationship`, `market` (also with continuous Cartesian series) | two `linear` axes |
 | `radar`, `rose`, `polarLine`, `polarArea`, in any mix | `angle` (`band`), and optionally `radius` (`linear`) |
 | `radialBar` | `angle` (`linear`) and `radius` (`band`) |
 | `polarScatter` | `angle` and `radius`, both `linear` |
@@ -124,6 +125,72 @@ Use `frequency: 'relative'` to divide each count by the series' sample count, or
 `cumulative: true` to sum through each successive bin. Together they show the fraction of
 samples accumulated through each bin. Empty input gives zero in every bin. Series with the same
 `stack` name stack in declaration order and must share edges, frequency and cumulative settings.
+
+## Statistical and financial charts
+
+Use two linear axes and a named series with a `type`, a `display` and 1 to 1,000 observations.
+The axes, annotations, legend, SVG, DOM and canvas renderers work as for other Cartesian series.
+For example, this plot shows quartiles, whiskers and all six observations.
+
+```js
+const spec = {
+  width: 480, height: 300,
+  axes: { x: { type: 'linear', ticks: [{ value: 0, label: 'East' }] },
+          y: { type: 'linear', title: 'Minutes' } },
+  series: [{ type: 'distribution', display: 'box', name: 'East',
+             data: [12, 14, 15, 16, 19, 29], points: true }]
+};
+```
+
+### Distribution of a numeric sample
+
+| `display` | Input and interpretation |
+|---|---|
+| `ecdf`, `normalQQ` | Exact empirical steps at distinct observations, or sorted observations against the standard normal quantiles at their mid-ranks. |
+| `box` | Linearly interpolated quartiles and median. Tukey whiskers reach the outermost samples within 1.5 IQR of the box. Use `whiskers: 'minmax'` for the full range, or `points: true` to show every sample. |
+| `violin`, `raincloud` | Gaussian kernel density envelope. A raincloud adds a narrow box and jittered samples. A violin accepts `points` and `polar`. In a polar violin, `position` is the angle in radians and the sample range maps to radius. |
+| `density`, `ridge`, `normal` | Gaussian KDE, a ridge normalised to unit peak at its group position, or a normal curve fitted with the sample mean and sample standard deviation. KDE accepts a positive `bandwidth`. Density series with a shared `stack` name accumulate in order. |
+| `swarm` | Places observation markers side by side where they would overlap. `sizes` gives one diameter per observation in drawing units. Use `mirrored: false` for a one-sided swarm. |
+| `dotPlot`, `isotype` | Stack dots or symbols by value. Each group starts at the smallest remaining observation and spans `binWidth` (default 1). An isotype accepts a marker `symbol`, defaulting to a star. |
+| `stemLeaf` | Nonnegative integer samples. Each row gives the tens stem and ordered units digits, up to 450 leaves per stem. |
+
+Use a different numeric `position` for each grouped box, violin, raincloud, ridge or swarm.
+Label the positions with explicit ticks. Use `horizontal: true` on boxes, violins, rainclouds,
+swarms and dot plots to exchange the axes. KDE samples 65 points, spanning three bandwidths
+past each end. Its default bandwidth is 1.06 times the sample standard deviation times
+the sample count to the power −0.2. A constant sample uses the larger of one unit or
+one percent of its absolute value. A fitted normal needs positive sample variance.
+
+### Relationships between observations
+
+A `relationship` series takes numeric pairs.
+
+| `display` | Input and interpretation |
+|---|---|
+| `histogram2d`, `hexbin` | Count observations in rectangles or flat-top hexagons. Darker cells hold more observations. A series colour sets their outline. `binWidth` and `binHeight` specify rectangle dimensions or hexagon radii before axial projection. |
+| `stanford` | Nonnegative position error and protection level. Counts colour the cells. The diagonal and the required positive `alertLimit` delimit integrity regions. |
+| `regression` | Select `method` from `linear`, `polynomial` (degree 1–5), `exponential`, `logarithmic` and `loess` (span 0.05–1). Exponential fits regress log response and logarithmic fits regress on log input. LOESS uses local linear fits with tricube weights. Add a scatter series to show the observations. |
+| `qq` | Sort both columns independently and pair their ranks to compare two equal-sized samples. |
+| `forest` | Each pair is an ordered confidence interval. Supply one point estimate per interval in `estimates`, and label row indices with y-axis ticks. |
+
+### Prices and indicators
+
+A `market` series uses zero-based session indices on x, except for Renko bricks and point-and-figure columns. Candlestick, OHLC, HLC and Heikin-Ashi
+take ordered `[open, high, low, close]` bars. Indicators and price-box charts can also read
+closing prices directly.
+
+| `display` | Calculation and options |
+|---|---|
+| `candlestick`, `heikinAshi`, `ohlc`, `hlc` | Candle bodies span open to close and wicks reach high and low. OHLC uses side ticks and HLC omits the opening tick. Heikin-Ashi derives each open from the previous transformed bar. `hollow: true` outlines rising candles. Optional `volume` draws bars below the prices in proportion to peak volume, and `flags` labels sessions by `index` and `label`. |
+| `renko`, `pointFigure` | Close-based price boxes start at the first close. Supply positive `boxSize`. Renko reverses after two boxes. Point-and-figure starts a new column after `reversal` boxes (default 3). Up to 4,000 boxes per series. |
+| `sma`, `ema`, `bollinger` | Use a trailing `period` (default 20). EMA starts at the first full-window mean. Bollinger bands show two population standard deviations around the rolling mean. |
+| `macd`, `rsi` | MACD uses 12- and 26-session EMAs with a 9-session signal and difference histogram. Wilder RSI uses `period` changes (default 14) and reports 50 for an entirely flat window. |
+| `control` | An individuals control chart shows measurements, their mean and limits at three times the mean moving range divided by 1.128 above and below the mean. |
+
+Generated price boxes, stacked density vertices and financial overlays count toward the chart-wide point budget. Bin widths and box sizes must produce distinct coordinates at the input magnitude.
+
+Indicators need enough observations for their first complete window. The earliest visible
+x position is the corresponding input session.
 
 ## Axes
 
@@ -384,8 +451,7 @@ connects points in their given order, including descending x and loops, and need
 axes: `linear`, `time`, `log` or `sqrt`.
 `symbol` adds markers, and `dash` controls the line. A lone point remains visible.
 `xyArea` takes `[x, low, high]` intervals; x increases strictly within each run.
-Use it for supplied confidence bands, with an `xyLine` for the estimate. Statistical
-fitting and function evaluation stay with the caller; specs contain data only.
+Use it for supplied confidence bands, with an `xyLine` for the estimate. Use a `relationship` series with `display: 'regression'` to fit a trend from observations.
 
 ### Symbols and labels
 

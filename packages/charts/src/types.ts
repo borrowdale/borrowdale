@@ -291,7 +291,7 @@ export type MarkerSymbol = (typeof MARKER_SYMBOLS)[number];
 /** A geometric symbol or the name of a trusted image supplied to the renderer. */
 export type Marker = MarkerSymbol | { image: string };
 
-interface SeriesBase {
+export interface SeriesBase {
   /**
    * Unique in the chart, at most 100 characters. Names the series in the legend and in tooltips.
    */
@@ -644,6 +644,9 @@ export interface GaugeSeries extends SeriesBase {
 
 export type Series =
   | BarSeries
+  | import('./statistics/types.js').DistributionSeries
+  | import('./statistics/types.js').RelationshipSeries
+  | import('./statistics/types.js').MarketSeries
   | HistogramSeries
   | LineSeries
   | AreaSeries

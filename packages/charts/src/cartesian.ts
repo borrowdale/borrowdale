@@ -1,3 +1,5 @@
+import { fail } from './read.js';
+import { swarmOffset, type Circle } from './statistics/swarm.js';
 import { drawXYLine, drawXYArea } from './cartesian-paths.js';
 import { barShape } from './bar-shape.js';
 import { annotationValues, drawAnnotations } from './annotations.js';
@@ -52,6 +54,13 @@ interface Mark<S extends CartesianSeries> {
 
 const none = (): number => 0;
 
+type ComputedSeries = Extract<CartesianSeries, { marks: unknown }>;
+const computed: Mark<ComputedSeries> = {
+  zero: false, slot: false, legend: 'box',
+  reach: (_size, entry) => entry.marks.reduce((max, mark) => Math.max(max, (mark.size ?? 0) / 2), 0),
+  draw: drawComputed,
+};
+
 const MARKS: { [K in MarkType]: Mark<Extract<CartesianSeries, { type: K }>> } = {
   bar: { zero: true, slot: true, legend: 'box', reach: none, draw: drawBars },
   line: { zero: false, slot: false, legend: 'line', reach: (_size, entry) => entry.symbol ? POINT_SIZE / 2 : 0, draw: drawLine },
@@ -59,6 +68,7 @@ const MARKS: { [K in MarkType]: Mark<Extract<CartesianSeries, { type: K }>> } = 
   rangeArea: { zero: false, slot: false, legend: 'box', reach: none, draw: drawArea },
   interval: { zero: false, slot: true, legend: 'box', reach: () => POINT_SIZE / 2, draw: drawIntervals },
   xRange: { zero: false, slot: true, legend: 'box', reach: () => MILESTONE / 2, draw: drawXRange },
+  distribution: computed, relationship: computed, market: computed,
   histogram: { zero: true, slot: false, legend: 'box', reach: none, draw: drawHistogram },
   xyLine: {
     zero: false, slot: false, legend: 'line',
@@ -86,6 +96,7 @@ function markOf<S extends CartesianSeries>(entry: S): Mark<S> {
 
 /** How the legend shows a series of a cartesian chart. */
 export function legendOf(entry: CartesianSeries): 'line' | 'box' {
+  if ('marks' in entry && entry.marks.every(mark => mark.kind === 'line')) return 'line';
   return MARKS[entry.type].legend;
 }
 
@@ -428,6 +439,12 @@ function extent(
     high = Math.max(high, value);
   };
   for (const entry of series) {
+    if ('marks' in entry) {
+      if (key !== 'y2') {
+        for (const mark of entry.marks) for (const pair of mark.points) take(pair[key === 'x' ? 0 : 1]);
+      }
+      continue;
+    }
     if (entry.type === 'histogram') {
       if (key === 'x') {
         take(entry.edges[0]!);
@@ -489,6 +506,42 @@ function largestBubble(series: readonly CartesianSeries[]): number {
     }
   }
   return largest;
+}
+
+function drawComputed(
+  { drawing, frame, x }: MarkContext, { entry, scale }: Placed<ComputedSeries>, paint: Paint,
+): void {
+  const circles: Circle[] = [];
+  entry.marks.forEach((mark, i) => {
+    const points: Point[] = mark.points.map(([u,v]) => [x!.at(u), scale.at(v)]);
+    let first = points[0]!;
+    if (entry.type === 'distribution' && entry.swarm) {
+      const along = entry.swarm.horizontal ? 1 : 0;
+      const value = first[1-along]!;
+      const origin = first[along];
+      const radius = (mark.size ?? POINT_SIZE)/2;
+      const min = (along ? frame.plot.top : frame.plot.left) - origin + radius;
+      const max = (along ? frame.plot.bottom : frame.plot.right) - origin - radius;
+      const offset = swarmOffset(value, radius, circles, entry.swarm.mirrored, min, max, mark.symbol === 'circle');
+      if (offset === undefined) fail(entry.path,'needs more room for its swarm markers');
+      circles.push({value,radius,offset});
+      first = along ? [value,origin+offset] : [origin+offset,value];
+    }
+    const key = [entry.name, mark.kind, i];
+    const color = entry.color ?? mark.color ?? mark.fillColor ?? paint.color;
+    const stroke = { stroke: color, strokeWidth: LINE_WIDTH };
+    let node: ChartNode;
+    if (mark.kind === 'text') node = drawing.label(mark.label, first[0], first[1], frame.plot, entry.path);
+    else if (mark.kind === 'dot' || points.length === 1) {
+      node = markerNode(drawing, mark.symbol ?? 'circle', first, mark.size ?? POINT_SIZE, solid(color), key, entry.style);
+    } else if (mark.kind === 'line' || mark.hollow) {
+      node = drawing.outline({ kind: 'linearPath', points: mark.hollow ? [...points, first] : points }, stroke, key, entry.style);
+    } else {
+      const fill = mark.fillColor ? { ...solid(mark.fillColor), stroke: color } : mark.color ? solid(color) : hatched(paint);
+      node = drawing.shape({ kind: 'polygon', points }, fill, key, entry.style);
+    }
+    drawing.mark(`${entry.name}, ${mark.label}`, [node]);
+  });
 }
 
 function drawHistogram(

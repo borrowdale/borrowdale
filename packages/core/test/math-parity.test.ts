@@ -7,7 +7,7 @@ import { ENGINES, evaluateIn } from './support/browsers.js';
 // leaned on anything the engines round differently, would differ somewhere.
 
 type PortableMath = typeof math;
-type Results = { log: number[]; sin: number[]; cos: number[] };
+type Results = { exp: number[]; log: number[]; sin: number[]; cos: number[] };
 
 // From a fixed sequence: for log, 500 positive numbers spread across the whole range of doubles, 500
 // from 0.5 to 1.5, where its branches near 1 are, and two within 2^-30 of 1; for sin and cos, 500
@@ -15,10 +15,12 @@ type Results = { log: number[]; sin: number[]; cos: number[] };
 const fractions = Array.from({ length: 500 }, (_, i) => ((i * 7919) % 500) / 500 + 0.0005);
 const ARGUMENTS = {
   log: [...fractions.map((f, i) => f * 2 ** ((i * 4) % 2046 - 1022)), ...fractions.map((f) => 0.5 + f), 1 + 2 ** -30, 1 - 2 ** -30],
+  exp: fractions.map(f => (f-0.5)*2*math.MAX_EXPONENT),
   trig: fractions.map((f, i) => (f - 0.5) * 2 * (i % 2 === 0 ? 10 : math.MAX_ANGLE)),
 };
 
-const compute = ({ log, sin, cos }: Pick<PortableMath, 'log' | 'sin' | 'cos'>, args: typeof ARGUMENTS): Results => ({
+const compute = ({ log, exp, sin, cos }: Pick<PortableMath, 'log' | 'exp' | 'sin' | 'cos'>, args: typeof ARGUMENTS): Results => ({
+  exp: args.exp.map(exp),
   log: args.log.map(log),
   sin: args.trig.map(sin),
   cos: args.trig.map(cos),
@@ -27,7 +29,7 @@ const compute = ({ log, sin, cos }: Pick<PortableMath, 'log' | 'sin' | 'cos'>, a
 const expected = compute(math, ARGUMENTS);
 
 describe.each(ENGINES)('%s math parity', (engine) => {
-  let computed: Results = { log: [], sin: [], cos: [] };
+  let computed: Results = { log: [], exp: [], sin: [], cos: [] };
 
   beforeAll(async () => {
     computed = await evaluateIn(
@@ -36,14 +38,14 @@ describe.each(ENGINES)('%s math parity', (engine) => {
       'borrowdaleMath',
       '',
       (args: typeof ARGUMENTS) => {
-        const { log, sin, cos } = (globalThis as unknown as { borrowdaleMath: PortableMath }).borrowdaleMath;
-        return { log: args.log.map(log), sin: args.trig.map(sin), cos: args.trig.map(cos) };
+        const { log, exp, sin, cos } = (globalThis as unknown as { borrowdaleMath: PortableMath }).borrowdaleMath;
+        return { exp: args.exp.map(exp), log: args.log.map(log), sin: args.trig.map(sin), cos: args.trig.map(cos) };
       },
       ARGUMENTS,
     );
   }, 120_000);
 
-  it.each(['log', 'sin', 'cos'] as const)(`computes %s at every argument as Node does in ${engine}`, (name) => {
+  it.each(['log', 'exp', 'sin', 'cos'] as const)(`computes %s at every argument as Node does in ${engine}`, (name) => {
     expect(computed[name]).toEqual(expected[name]);
   });
 });

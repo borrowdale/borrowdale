@@ -14,11 +14,11 @@
 // only when it is recorded, so the script runs in a checkout that lacks the others.
 import { readFileSync, writeFileSync } from 'node:fs';
 
-const record = (dir, render) => {
+const record = (dir, render, additional = []) => {
   const corpus = JSON.parse(readFileSync(new URL(`${dir}/corpus.json`, import.meta.url), 'utf8'));
-  const goldens = Object.fromEntries(corpus.map((entry) => [entry.name, render(entry)]));
+  const goldens = Object.fromEntries([...corpus, ...additional].map((entry) => [entry.name, render(entry)]));
   writeFileSync(new URL(`${dir}/goldens.json`, import.meta.url), `${JSON.stringify(goldens, null, 1)}\n`);
-  console.log(`${dir}: ${corpus.length} goldens`);
+  console.log(`${dir}: ${corpus.length + additional.length} goldens`);
 };
 
 const recorders = {
@@ -39,10 +39,11 @@ const recorders = {
   },
   async charts() {
     const { layoutChart, toSvgChart } = await import('@borrowdale/charts');
+    const { default: examples } = await import('../apps/examples/statistical-cases.json', { with: { type: 'json' } });
     record('../packages/charts/test/golden', ({ spec }) => {
       const layout = layoutChart(spec);
       return { svg: toSvgChart(layout), missing: layout.missing };
-    });
+    }, examples);
   },
 };
 

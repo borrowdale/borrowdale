@@ -1,3 +1,7 @@
+import { stackDensities } from './statistics/density-stack.js';
+import { readDistribution } from './statistics/distribution.js';
+import { readRelationship } from './statistics/relationship.js';
+import { readMarket } from './statistics/market.js';
 import { checkAnnotations, type CheckedAnnotation } from './annotations.js';
 import { sketch, assertDrawable, type Seed, type SketchStyle } from '@borrowdale/core';
 import { excalifont, type Font } from '@borrowdale/text';
@@ -23,6 +27,7 @@ import {
   type CheckedSweep,
 } from './check-axis.js';
 import {
+  SERIES_FIELDS,
   boolean,
   coordinate,
   coordinates,
@@ -189,6 +194,9 @@ const SERIES_RULES = {
       overlay: r.optional('overlay', boolean) ?? false,
     }),
   },
+  distribution: { system: 'cartesian', band: false, keys: ['data'], displayOptions: true, read: readDistribution },
+  relationship: { system: 'cartesian', band: false, keys: ['data'], displayOptions: true, read: readRelationship },
+  market: { system: 'cartesian', band: false, keys: ['data'], displayOptions: true, read: readMarket },
   histogram: {
     system: 'cartesian',
     band: false,
@@ -347,6 +355,7 @@ const SERIES_RULES = {
     system: System;
     band: boolean;
     polar?: PolarNeeds;
+    displayOptions?: boolean;
     keys: readonly string[];
     read: (r: Fields, path: string, reserve: ReservePoints) => object;
   }
@@ -488,7 +497,7 @@ export function checkChart(spec: ChartSpec, font: Font = excalifont): CheckedCha
   if (system !== 'cartesian' && r.has('annotations')) fail('annotations', 'needs a Cartesian chart');
   switch (system) {
     case 'cartesian':
-      return checkCartesianChart(r, base, seriesOf(series, 'cartesian'));
+      return checkCartesianChart(r, base, seriesOf(series, 'cartesian'), reserve);
     case 'polar':
       return checkPolarChart(r, base, seriesOf(series, 'polar'));
     case 'pie':
@@ -555,7 +564,7 @@ function checkSeries(path: string, raw: unknown, index: number, reserve: Reserve
   const r = fields(path, raw);
   const type = r.required('type', checkSeriesType);
   const rule = SERIES_RULES[type];
-  r.allow(['type', 'name', 'color', 'style', ...rule.keys]);
+  if (!('displayOptions' in rule)) r.allow([...SERIES_FIELDS, ...rule.keys]);
   const base: CheckedSeriesBase = {
     dataLabels: r.optional('dataLabels', boolean) ?? false,
     index,
@@ -596,6 +605,7 @@ function checkCartesianChart(
   r: Fields,
   base: CheckedChartBase,
   series: SeriesOf<'cartesian'>[],
+  reserve: ReservePoints,
 ): CheckedCartesianChart {
   const axes = r.required('axes', fields);
   axes.allow(['x', 'y', 'y2']);
@@ -646,6 +656,7 @@ function checkCartesianChart(
     }
   }
   resolveValues(series, roles);
+  stackDensities(series.filter(entry => entry.type === 'distribution'), reserve);
   return { ...base, system: 'cartesian', x, y, y2, band, series, annotations: checkAnnotations(r, { x, y, y2 }, color) };
 }
 
@@ -658,11 +669,11 @@ function checkCartesianChart(
 function resolveValues(series: readonly SeriesOf<'cartesian'>[], roles: AxisRoles): void {
   const histograms = new Map<string, Extract<SeriesOf<'cartesian'>, { type: 'histogram' }>>();
   for (const entry of series) {
-    if (entry.type === 'histogram') {
+    if ('marks' in entry || entry.type === 'histogram') {
       if (roles.band || roles.x.kind !== 'linear' || roles.y.kind !== 'linear') {
         fail(entry.path, 'needs linear x and y axes');
       }
-      if (entry.stack !== undefined) {
+      if (entry.type === 'histogram' && entry.stack !== undefined) {
         const first = histograms.get(entry.stack);
         if (!first) histograms.set(entry.stack, entry);
         else if (entry.relative !== first.relative || entry.cumulative !== first.cumulative ||

@@ -19,7 +19,7 @@ industry was found.
 | [`@borrowdale/core`](packages/core) | Deterministic hand-drawn shapes for SVG and canvas. Framework-agnostic, SSR-safe |
 | [`@borrowdale/fills`](packages/fills) | Hand-drawn pattern fills and backgrounds |
 | [`@borrowdale/text`](packages/text) | Hand-written text for SVG and canvas, measured with no DOM |
-| [`@borrowdale/charts`](packages/charts) | Hand-drawn charts: bar, line, area, range area, interval, x-range and Gantt, scatter, bubble, pie, donut, nested rings, radar, rose, radial bar, polar line, area and scatter, gauges and timelines, on linear, time, log and square-root axes |
+| [`@borrowdale/charts`](packages/charts) | Hand-drawn charts: bar, line, area, range area, interval, x-range and Gantt, scatter, bubble, pie, donut, nested rings, radar, rose, radial bar, polar line, area and scatter, gauges, timelines, statistical and financial charts, on linear, time, log and square-root axes |
 
 Planned: `@borrowdale/svg`, `@borrowdale/react`, `@borrowdale/elements`.
 

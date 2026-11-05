@@ -234,3 +234,5 @@ export function unique(names: readonly string[], pathOf: (index: number) => stri
     seen.add(name);
   });
 }
+
+export const SERIES_FIELDS = ['type', 'name', 'color', 'style'] as const;
