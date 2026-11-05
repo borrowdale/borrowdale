@@ -297,3 +297,22 @@ it('preserves the local linear fit for very small predictor units', () => {
   expect(fit[0]!.points[0]![1]).toBeCloseTo(0,10);
   expect(fit[0]!.points.at(-1)![1]).toBeCloseTo(3,10);
 });
+
+it('preserves each close in a one-session EMA and each movement in RSI', () => {
+  const prices = [1e12, 0.00001, 0.00002];
+  const indicator = { type: 'market', name: 'P', period: 1 } as const;
+  const ema = marks({ ...indicator, display: 'ema', data: prices });
+  expect(ema[0]!.points.map((point) => point[1])).toEqual(prices);
+  for (const [period, data] of [[1, [-1e12, 0, 0.00001]], [2, [0, Number.MIN_VALUE, 2 * Number.MIN_VALUE]]] as const) {
+    const rsi = marks({ ...indicator, display: 'rsi', period, data });
+    expect(rsi[0]!.points.every((point) => point[1] === 100)).toBe(true);
+  }
+});
+
+it('accepts tight ordinate limits for unevenly spaced and decimal straight-line observations', () => {
+  for (const data of [[[0, -5], [3, 10], [5, 20]], [[0, 10], [1, 5.05], [2, 0.1]], [[0, 0.1], [1, 0.3], [2, 0.5]]] as const) {
+    const ys = data.map((point) => point[1]);
+    const chart = spec({ type: 'relationship', display: 'regression', name: 'Trend', data });
+    expect(() => layoutChart({ ...chart, axes: { x: { type: 'linear' }, y: { type: 'linear', min: Math.min(...ys), max: Math.max(...ys) } } })).not.toThrow();
+  }
+});

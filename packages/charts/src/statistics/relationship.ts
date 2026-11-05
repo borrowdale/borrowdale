@@ -108,11 +108,19 @@ export function readRelationship(r: Fields, path: string, reserve: (n: number) =
       method === 'loess' && data.length > 2
         ? (x: number) => loess(transformed, x, Math.max(3, Math.ceil(data.length * span)))
         : polynomial(transformed, method === 'polynomial' ? degree : 1, path);
+    const ys = data.map((point) => point[1]);
+    const minY = Math.min(...ys), maxY = Math.max(...ys);
+    const fitTolerance = 4 * Number.EPSILON * (maxY - minY);
     marks.push(
       line(
         method,
         grid(low, high).map((x) => {
           const y = origin + fit(method === 'logarithmic' ? log(x) : x);
+          if (method === 'linear' || (method === 'polynomial' && degree === 1)) {
+            // A fitted endpoint can exceed the observed extent by a few rounding units.
+            if (y < minY && minY - y <= fitTolerance) return [x, minY];
+            if (y > maxY && y - maxY <= fitTolerance) return [x, maxY];
+          }
           return [x, method === 'exponential' ? exp(y) : y];
         }),
       ),

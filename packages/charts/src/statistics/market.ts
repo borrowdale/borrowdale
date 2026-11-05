@@ -5,6 +5,7 @@ import { CANDLE_DISPLAYS, readDisplay, MARKET_DISPLAYS } from './types.js';
 
 function ema(prices: readonly number[], period: number, offset = 0): XY[] {
   if (prices.length < period) return [];
+  if (period === 1) return prices.map((price, index) => [offset + index, price]);
   let value = average(prices.slice(0, period));
   const result: XY[] = [[offset + period - 1, value]];
   for (let i = period; i < prices.length; i++) {
@@ -18,10 +19,15 @@ function relativeStrength(prices: number[], period: number): XY[] {
     loss = 0;
   const result: XY[] = [];
   for (let i = 1; i < prices.length; i++) {
-    const delta = prices[i]! - prices[i - 1]!;
+    // RSI is a ratio. Exact binary scaling keeps even the smallest price changes
+    // representable through the initial division; input prices are bounded by 1e15.
+    const delta = (prices[i]! - prices[i - 1]!) * (2 ** 512);
     const up = Math.max(0, delta),
       down = Math.max(0, -delta);
-    if (i <= period) {
+    if (period === 1) {
+      gain = up;
+      loss = down;
+    } else if (i <= period) {
       gain += up / period;
       loss += down / period;
     } else {
