@@ -14,15 +14,13 @@ function polynomial(data: XY[], degree: number, path: string): (x: number) => nu
   const scale = (x: number) => ((x - low) / (high - low)) * 2 - 1;
   if (degree === 1) {
     const scaled = xs.map(scale);
-    const centre = average(scaled), mean = average(data.map(point => point[1]));
-    let covariance = 0, variance = 0;
-    for (let i = 0; i < scaled.length; i++) {
-      const offset = scaled[i]! - centre;
-      covariance += offset * (data[i]![1]-mean);
-      variance += offset * offset;
-    }
+    const centre = average(scaled);
+    const mean = average(data.map((point) => point[1]));
+    const offsets = scaled.map((value) => value - centre);
+    const covariance = average(offsets.map((offset, i) => offset * (data[i]![1] - mean)));
+    const variance = average(offsets.map((offset) => offset * offset));
     const slope = covariance / variance;
-    return x => mean + (scale(x)-centre)*slope;
+    return (x) => mean + (scale(x) - centre) * slope;
   }
   const columns: number[][] = [];
   const triangular: number[][] = [];

@@ -86,7 +86,8 @@ been measured rather than what is expected.
 The website renders the package READMEs and the guides in `apps/site/content/` directly, and builds
 its playground from the golden corpora in `packages/*/test/golden/` and the statistical and financial cases in `apps/examples/statistical-cases.json`. Adding, renaming or removing a
 golden case therefore also changes a public page and its URL. Keep the examples runnable, and use
-public data whose source is stated.
+public data whose source is stated. The statistical and financial gallery cases use synthetic observations
+and prices created for the examples.
 
 ### Add a changeset for anything a package user can notice
 

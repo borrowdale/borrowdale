@@ -34,7 +34,7 @@ function relativeStrength(prices: number[], period: number): XY[] {
       gain += (up - gain) / period;
       loss += (down - loss) / period;
     }
-    if (i >= period) result.push([i, gain + loss ? (100 * gain) / (gain + loss) : 50]);
+    if (i >= period) result.push([i, gain + loss ? 100 * (gain / (gain + loss)) : 50]);
   }
   return result;
 }

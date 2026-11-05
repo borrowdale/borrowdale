@@ -316,3 +316,24 @@ it('accepts tight ordinate limits for unevenly spaced and decimal straight-line 
     expect(() => layoutChart({ ...chart, axes: { x: { type: 'linear' }, y: { type: 'linear', min: Math.min(...ys), max: Math.max(...ys) } } })).not.toThrow();
   }
 });
+
+it('fits a rising RSI within its conventional upper limit', () => {
+  const chart = spec({ type: 'market', display: 'rsi', name: 'P', period: 1, data: [0, 55 / 17] });
+  expect(() => layoutChart({
+    ...chart,
+    axes: { x: { type: 'linear' }, y: { type: 'linear', min: 0, max: 100 } },
+  })).not.toThrow();
+});
+
+it('keeps dense and repeated straight-line observations within their fitted extent', () => {
+  const diagonal = Array.from({ length: 1000 }, (_, i): [number, number] => [i, i]);
+  const repeated: [number, number][] = [[0, 3], ...Array.from({ length: 99 }, (): [number, number] => [1, -4])];
+  for (const data of [diagonal, repeated]) {
+    const ys = data.map((point) => point[1]);
+    const chart = spec({ type: 'relationship', display: 'regression', name: 'Trend', data });
+    expect(() => layoutChart({
+      ...chart,
+      axes: { x: { type: 'linear' }, y: { type: 'linear', min: Math.min(...ys), max: Math.max(...ys) } },
+    })).not.toThrow();
+  }
+});
