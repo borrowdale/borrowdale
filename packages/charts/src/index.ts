@@ -13,6 +13,7 @@ export type {
   AxisTick,
   BandAxis,
   BarSeries,
+  HistogramSeries,
   BubbleSeries,
   CartesianAxes,
   ChartLayout,

@@ -315,6 +315,21 @@ interface ValueSeries extends SeriesBase {
   axis?: 'y' | 'y2' | undefined;
 }
 
+/** Counts numeric samples in adjacent intervals on linear x and y axes. */
+export interface HistogramSeries extends SeriesBase {
+  type: 'histogram';
+  /** Stack series with matching edges and frequency options under the same name. */
+  stack?: string | undefined;
+  /** Strictly increasing bin edges, including both outer limits. */
+  edges: readonly number[];
+  /** Every sample must fall within the outer edges. An interior edge starts a bin. */
+  data: readonly number[];
+  /** Relative frequency divides by this series' sample count. */
+  frequency?: 'count' | 'relative' | undefined;
+  /** Accumulate the frequencies through each successive bin. */
+  cumulative?: boolean | undefined;
+}
+
 export interface BarSeries extends ValueSeries {
   type: 'bar';
   /** Show fitted values at marks. Labels can overlap in dense charts. */
@@ -629,6 +644,7 @@ export interface GaugeSeries extends SeriesBase {
 
 export type Series =
   | BarSeries
+  | HistogramSeries
   | LineSeries
   | AreaSeries
   | RangeAreaSeries

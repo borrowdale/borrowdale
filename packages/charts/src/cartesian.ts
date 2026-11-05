@@ -59,6 +59,7 @@ const MARKS: { [K in MarkType]: Mark<Extract<CartesianSeries, { type: K }>> } = 
   rangeArea: { zero: false, slot: false, legend: 'box', reach: none, draw: drawArea },
   interval: { zero: false, slot: true, legend: 'box', reach: () => POINT_SIZE / 2, draw: drawIntervals },
   xRange: { zero: false, slot: true, legend: 'box', reach: () => MILESTONE / 2, draw: drawXRange },
+  histogram: { zero: true, slot: false, legend: 'box', reach: none, draw: drawHistogram },
   xyLine: {
     zero: false, slot: false, legend: 'line',
     reach: (_size, entry, style) => Math.max(POINT_SIZE,
@@ -427,6 +428,16 @@ function extent(
     high = Math.max(high, value);
   };
   for (const entry of series) {
+    if (entry.type === 'histogram') {
+      if (key === 'x') {
+        take(entry.edges[0]!);
+        take(entry.edges.at(-1)!);
+      } else if (key === 'y') {
+        take(0);
+        for (const span of spans.get(entry)!) take(span![1]);
+      }
+      continue;
+    }
     if (entry.type === 'xRange') {
       for (const item of valueAxisOf(entry) === key ? entry.data : []) {
         take(item.from);
@@ -478,6 +489,26 @@ function largestBubble(series: readonly CartesianSeries[]): number {
     }
   }
   return largest;
+}
+
+function drawHistogram(
+  { drawing, frame, x }: MarkContext,
+  { entry, scale, axis, spans }: Placed<Extract<CartesianSeries, { type: 'histogram' }>>,
+  paint: Paint,
+): void {
+  entry.data.forEach((height, i) => {
+    const left = entry.edges[i]!;
+    const right = entry.edges[i + 1]!;
+    const start = x!.at(left);
+    const label = `${entry.name}, [${left}, ${right}${i === entry.data.length - 1 ? ']' : ')'}: ${formatAxisValue(height, axis)}`;
+    const nodes: ChartNode[] = [];
+    if (height > 0) {
+      const [from, to] = spans[i]!;
+      const box = frame.box(start, x!.at(right) - start, scale.at(from), scale.at(to));
+      nodes.push(drawing.shape(box, hatched(paint), [entry.name, 'histogram', left, right], entry.style));
+    }
+    drawing.mark(label, nodes);
+  });
 }
 
 function drawIntervals(

@@ -189,6 +189,38 @@ const SERIES_RULES = {
       overlay: r.optional('overlay', boolean) ?? false,
     }),
   },
+  histogram: {
+    system: 'cartesian',
+    band: false,
+    keys: ['stack', 'edges', 'data', 'frequency', 'cumulative'],
+    read: (r: Fields, path: string, reserve: ReservePoints) => {
+      const edges = r.required('edges', list(2, MAX_CATEGORIES + 1, number(-MAX_VALUE, MAX_VALUE)));
+      for (let i = 1; i < edges.length; i++) {
+        if (edges[i]! <= edges[i - 1]!) fail(`${path}.edges[${i}]`, 'must exceed the preceding edge');
+      }
+      const counts = new Array<number>(edges.length - 1).fill(0);
+      const samples = r.required('data', list(0, MAX_POINTS, number(edges[0]!, edges.at(-1)!), reserve));
+      for (const sample of samples) {
+        // Find the last bin starting at or before the sample. The final edge belongs to the last bin.
+        let lo = 0;
+        let hi = counts.length;
+        while (lo + 1 < hi) {
+          const mid = Math.floor((lo + hi) / 2);
+          if (sample < edges[mid]!) hi = mid;
+          else lo = mid;
+        }
+        counts[lo] = counts[lo]! + 1;
+      }
+      const relative = r.optional('frequency', oneOf(['count', 'relative'] as const)) === 'relative';
+      const cumulative = r.optional('cumulative', boolean) ?? false;
+      let total = 0;
+      const heights = counts.map(count => {
+        total += count;
+        return (cumulative ? total : count) / (relative && samples.length ? samples.length : 1);
+      });
+      return { edges, data: heights, stack: readStack(r), relative, cumulative };
+    },
+  },
   xyLine: {
     system: 'cartesian', band: false,
     keys: ['dataLabels', 'data', 'symbol', 'dash', 'segments', 'widths', 'gradient'],
@@ -329,7 +361,7 @@ export function isStacking<S extends CheckedSeries>(entry: S): entry is Extract<
 
 // The types whose series stack, which are the ones a percent axis can show.
 const STACKING = (Object.keys(SERIES_RULES) as SeriesType[])
-  .filter((type) => SERIES_RULES[type].system === 'cartesian' && SERIES_RULES[type].keys.some((key) => key === 'stack'))
+  .filter((type) => SERIES_RULES[type].system === 'cartesian' && SERIES_RULES[type].band && SERIES_RULES[type].keys.some((key) => key === 'stack'))
   .join(', ');
 
 /** The fields every series has, checked. */
@@ -624,8 +656,21 @@ function checkCartesianChart(
  * lists validation copied.
  */
 function resolveValues(series: readonly SeriesOf<'cartesian'>[], roles: AxisRoles): void {
+  const histograms = new Map<string, Extract<SeriesOf<'cartesian'>, { type: 'histogram' }>>();
   for (const entry of series) {
-    if (entry.type === 'xRange' && roles.band) {
+    if (entry.type === 'histogram') {
+      if (roles.band || roles.x.kind !== 'linear' || roles.y.kind !== 'linear') {
+        fail(entry.path, 'needs linear x and y axes');
+      }
+      if (entry.stack !== undefined) {
+        const first = histograms.get(entry.stack);
+        if (!first) histograms.set(entry.stack, entry);
+        else if (entry.relative !== first.relative || entry.cumulative !== first.cumulative ||
+          entry.edges.length !== first.edges.length || entry.edges.some((edge, i) => edge !== first.edges[i])) {
+          fail(entry.path, `must match the edges, frequency and cumulative options of ${first.path} in its stack`);
+        }
+      }
+    } else if (entry.type === 'xRange' && roles.band) {
       resolveXRange(entry, readerOn(roles.value), roles.band);
     } else if (entry.type !== 'xRange' && !('axis' in entry) && !roles.band) {
       // Both axes are continuous: each coordinate is read by the axis it is on.

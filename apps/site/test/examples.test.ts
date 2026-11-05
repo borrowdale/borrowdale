@@ -110,6 +110,7 @@ describe('gallery coverage and actual rendering', () => {
         'bar',
         'bubble',
         'gauge',
+        'histogram',
         'line',
         'interval',
         'xyLine',

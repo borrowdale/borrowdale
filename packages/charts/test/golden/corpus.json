@@ -7003,5 +7003,63 @@
     }
    ]
   }
+ },
+ {
+  "name": "histogram-stacked",
+  "spec": {
+   "width": 420,
+   "height": 240,
+   "title": "Trip duration",
+   "axes": {
+    "x": {
+     "type": "linear",
+     "title": "Minutes"
+    },
+    "y": {
+     "type": "linear",
+     "title": "Trips"
+    }
+   },
+   "series": [
+    {
+     "type": "histogram",
+     "name": "Morning",
+     "stack": "trips",
+     "edges": [
+      0,
+      10,
+      20,
+      30
+     ],
+     "data": [
+      5,
+      7,
+      10,
+      12,
+      18,
+      27
+     ]
+    },
+    {
+     "type": "histogram",
+     "name": "Evening",
+     "stack": "trips",
+     "edges": [
+      0,
+      10,
+      20,
+      30
+     ],
+     "data": [
+      10,
+      13,
+      17,
+      21,
+      25,
+      30
+     ]
+    }
+   ]
+  }
  }
 ]

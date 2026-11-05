@@ -42,7 +42,7 @@ cannot share a chart:
 | Series types | Axes |
 |---|---|
 | `bar`, `line`, `area`, `rangeArea`, `interval`, `xRange`, in any mix | `x` and `y`, one of them `band` |
-| `scatter`, `bubble`, `xyLine`, `xyArea`, in any mix | `x` and `y`, both continuous: `linear`, `time`, `log` or `sqrt` |
+| `scatter`, `bubble`, `xyLine`, `xyArea`, in any mix (also with `histogram` on two linear axes) | `x` and `y`, both continuous: `linear`, `time`, `log` or `sqrt` |
 | `radar`, `rose`, `polarLine`, `polarArea`, in any mix | `angle` (`band`), and optionally `radius` (`linear`) |
 | `radialBar` | `angle` (`linear`) and `radius` (`band`) |
 | `polarScatter` | `angle` and `radius`, both `linear` |
@@ -52,6 +52,7 @@ cannot share a chart:
 
 | `type` | `data` | Options |
 |---|---|---|
+| `histogram` | numeric samples | `edges`, `frequency`, `cumulative`, `stack`. See Histograms below. |
 | `bar` | a value or `null` per category | `stack`: bars with the same stack name stack (positive values up, negative down); others stand side by side. `axis: 'y2'` |
 | `line` | a value or `null` (a gap) per category | `curve`, `dash` (dash and gap lengths, for the line and its legend swatch: `style.strokeLineDash` for short), `axis: 'y2'` |
 | `area` | a value or `null` per category | `stack`, `curve`, `axis: 'y2'`. Stacked values must not be negative. Areas of one stack share a `curve` |
@@ -106,6 +107,23 @@ below and above it, so the layers still meet exactly; a layer can show a corner 
 
 With `y` as the band axis, bars and lines run horizontally. A sparkline is a small chart with
 `hidden: true` on both axes.
+
+## Histograms
+
+On linear x and y axes, supply raw samples and 2 to 1,001 strictly increasing bin edges.
+
+```js
+{ type: 'histogram', name: 'Trip duration', edges: [0, 10, 20, 30], data: [5, 7, 10, 12, 18, 30] }
+```
+
+This gives three adjacent bars with heights 2, 3 and 1. Each bin includes its left edge, and
+the final bin also includes its right edge. Samples outside the edges raise an error. The x axis
+shows each bin at its numeric width. Heights show counts by default, even for unequal widths.
+
+Use `frequency: 'relative'` to divide each count by the series' sample count, or
+`cumulative: true` to sum through each successive bin. Together they show the fraction of
+samples accumulated through each bin. Empty input gives zero in every bin. Series with the same
+`stack` name stack in declaration order and must share edges, frequency and cumulative settings.
 
 ## Axes
 
