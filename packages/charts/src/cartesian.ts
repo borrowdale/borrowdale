@@ -18,7 +18,7 @@ import { areaPath, linePath, straightPoints } from './curves.js';
 import type { Drawing, SeedKey } from './drawing.js';
 import { assertRoom, BAND_PADDING, type Rect } from './frame.js';
 import { loneDot, piecesOf, POINT_SIZE, runsOf, solid } from './marks.js';
-import { hatched, LINE_WIDTH, type Paint } from './palette.js';
+import { hatched, LINE_WIDTH, roleFill, roleStroke, type Paint } from './palette.js';
 import { stackGroup, stackSpans, type Span } from './stack.js';
 import { bandScale, emptyExtent, formatAxisValue, formatShare, formatValue, place, scaleOf, type BandScale, type PlacedScale } from './scale.js';
 import { markerNode } from './symbols.js';
@@ -528,17 +528,15 @@ function drawComputed(
       first = along ? [value,origin+offset] : [origin+offset,value];
     }
     const key = [entry.name, mark.kind, i];
-    const color = entry.color ?? mark.color ?? mark.fillColor ?? paint.color;
-    const stroke = { stroke: color, strokeWidth: LINE_WIDTH };
     let node: ChartNode;
     if (mark.kind === 'text') node = drawing.label(mark.label, first[0], first[1], frame.plot, entry.path);
     else if (mark.kind === 'dot' || points.length === 1) {
-      node = markerNode(drawing, mark.symbol ?? 'circle', first, mark.size ?? POINT_SIZE, solid(color), key, entry.style);
+      node = markerNode(drawing, mark.symbol ?? 'circle', first, mark.size ?? POINT_SIZE, solid(paint.color), key, entry.style);
     } else if (mark.kind === 'line' || mark.hollow) {
-      node = drawing.outline({ kind: 'linearPath', points: mark.hollow ? [...points, first] : points }, stroke, key, entry.style);
+      const outline = { kind: 'linearPath' as const, points: mark.hollow ? [...points, first] : points };
+      node = drawing.outline(outline, roleStroke(mark.role, paint), key, entry.style);
     } else {
-      const fill = mark.fillColor ? { ...solid(mark.fillColor), stroke: color } : mark.color ? solid(color) : hatched(paint);
-      node = drawing.shape({ kind: 'polygon', points }, fill, key, entry.style);
+      node = drawing.shape({ kind: 'polygon', points }, roleFill(mark.role, paint, mark.weight), key, entry.style);
     }
     drawing.mark(`${entry.name}, ${mark.label}`, [node]);
   });

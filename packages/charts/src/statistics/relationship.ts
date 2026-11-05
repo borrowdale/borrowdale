@@ -2,7 +2,7 @@ import { binGrid } from './bin-grid.js';
 import { log } from '@borrowdale/core/math';
 import { fail, integer, list, MAX_VALUE, number, oneOf, tuple, type Fields } from '../read.js';
 import { average, checkGeometry, dot, exp, grid, line, rect, type Glyph, type XY } from './geometry.js';
-import { readDisplay, RELATIONSHIPS } from './types.js';
+import { readDisplay, RELATIONSHIPS, REGRESSION_METHODS, unhandled, type RegressionMethod } from './types.js';
 
 // Fit in centred, scaled coordinates by orthogonalising the Vandermonde columns.
 function polynomial(data: XY[], degree: number, path: string): (x: number) => number {
@@ -79,152 +79,207 @@ function loess(data: readonly (readonly [number, number])[], x: number, count: n
   const det = w * xx - dx * dx;
   return det > 1e-14 * w * xx ? (xx * y - dx * xy) / det : y / w;
 }
+// How each method shapes the observations for a polynomial or local fit.
+function methodShape(method: RegressionMethod, degree: number): { logX: boolean; logY: boolean; degree: number | 'loess' } {
+  switch (method) {
+    case 'linear':
+      return { logX: false, logY: false, degree: 1 };
+    case 'polynomial':
+      return { logX: false, logY: false, degree };
+    case 'exponential':
+      return { logX: false, logY: true, degree: 1 };
+    case 'logarithmic':
+      return { logX: true, logY: false, degree: 1 };
+    case 'loess':
+      return { logX: false, logY: false, degree: 'loess' };
+    default:
+      return unhandled(method);
+  }
+}
+// The largest power of two at or below a positive value: dividing by it is exact.
+function binaryScale(value: number): number {
+  let scale = 1;
+  while (scale > value) scale /= 2;
+  while (scale * 2 <= value) scale *= 2;
+  return scale;
+}
+function regression(r: Fields, path: string, data: readonly (readonly [number, number])[]): Glyph {
+  const method = r.optional('method', oneOf(REGRESSION_METHODS)) ?? 'linear';
+  if (method !== 'loess' && r.has('span')) fail(`${path}.span`, 'needs the loess method');
+  if (method !== 'polynomial' && r.has('degree')) fail(`${path}.degree`, 'needs the polynomial method');
+  const shape = methodShape(method, r.optional('degree', integer(1, 5)) ?? 2);
+  const span = r.optional('span', number(0.05, 1)) ?? 0.5;
+  const transformed: XY[] = data.map(([x, y], i) => {
+    if ((shape.logX && x <= 0) || (shape.logY && y <= 0))
+      fail(`${path}.data[${i}]`, 'needs a positive value for the logarithm');
+    return [shape.logX ? log(x) : x, shape.logY ? log(y) : y];
+  });
+  // Fit offsets from the first response, divided by a power of two near their spread, so responses
+  // at any magnitude, subnormal ones included, keep their precision through the fit.
+  const responses = transformed.map((point) => point[1]);
+  const origin = responses[0]!;
+  const minT = Math.min(...responses),
+    maxT = Math.max(...responses);
+  const spread = Math.max(maxT - origin, origin - minT);
+  const scale = spread ? binaryScale(spread) : 1;
+  for (const point of transformed) point[1] = (point[1] - origin) / scale;
+  const xs = data.map((p) => p[0]);
+  const low = Math.min(...xs),
+    high = Math.max(...xs);
+  if (low === high) fail(path, 'needs distinct x values');
+  const fit =
+    shape.degree === 'loess'
+      ? data.length > 2
+        ? (x: number) => loess(transformed, x, Math.max(3, Math.ceil(data.length * span)))
+        : polynomial(transformed, 1, path)
+      : polynomial(transformed, shape.degree, path);
+  const ys = data.map((point) => point[1]);
+  const minY = Math.min(...ys),
+    maxY = Math.max(...ys);
+  // A fit that reaches the observed extent can pass it by a few rounding units, in the fitted
+  // response and, for exponential fits, in the exponential. It is kept at the extent. A larger
+  // overshoot belongs to the fit and is drawn as calculated.
+  const tolerance =
+    4 * Number.EPSILON * (maxT - minT + Math.max(Math.abs(minT), Math.abs(maxT))) + (shape.logY ? 4 * Number.EPSILON : 0);
+  return line(
+    method,
+    grid(low, high).map((x) => {
+      const t = origin + fit(shape.logX ? log(x) : x) * scale;
+      const y = shape.logY ? exp(t) : t;
+      if (y > maxY && t <= maxT + tolerance) return [x, maxY];
+      if (y < minY && t >= minT - tolerance) return [x, minY];
+      return [x, y];
+    }),
+  );
+}
+function bins(
+  r: Fields,
+  path: string,
+  display: 'histogram2d' | 'hexbin' | 'stanford',
+  data: readonly (readonly [number, number])[],
+): Glyph[] {
+  const marks: Glyph[] = [];
+  const width = r.optional('binWidth', number(Number.MIN_VALUE, MAX_VALUE)) ?? 1;
+  const height = r.optional('binHeight', number(Number.MIN_VALUE, MAX_VALUE)) ?? width;
+  const columns = binGrid(0, width),
+    rows = binGrid(0, height);
+  const cells = new Map<string, { x: number; y: number; count: number }>();
+  for (const [x, y] of data) {
+    let col: number, row: number;
+    if (display === 'hexbin') {
+      // Flat-top axial coordinates, rounded in three cube axes.
+      const q = (2 * x) / (3 * width),
+        s = y / (Math.sqrt(3) * height) - q / 2,
+        t = -q - s;
+      col = Math.round(q);
+      row = Math.round(s);
+      const third = Math.round(t);
+      if (Math.abs(col - q) > Math.abs(row - s) && Math.abs(col - q) > Math.abs(third - t)) col = -row - third;
+      else if (Math.abs(row - s) > Math.abs(third - t)) row = -col - third;
+    } else {
+      col = columns.index(x, 'floor');
+      row = rows.index(y, 'floor');
+    }
+    if (
+      !Number.isSafeInteger(col) ||
+      !Number.isSafeInteger(row) ||
+      !Number.isSafeInteger(col + 1) ||
+      !Number.isSafeInteger(row + 1)
+    )
+      fail(path, 'needs bin dimensions resolvable at the data coordinates');
+    const key = `${col},${row}`;
+    const cell = cells.get(key) ?? { x: col, y: row, count: 0 };
+    cell.count++;
+    cells.set(key, cell);
+  }
+  const peak = Math.max(...Array.from(cells.values(), (c) => c.count));
+  for (const { x, y, count } of cells.values()) {
+    let cell: Glyph;
+    if (display === 'hexbin') {
+      const cx = 1.5 * width * x,
+        cy = Math.sqrt(3) * height * (y + x / 2),
+        half = (Math.sqrt(3) * height) / 2;
+      if (cx - width / 2 === cx + width / 2 || cy - half === cy + half)
+        fail(path, 'needs distinct hexagon vertices at the data coordinates');
+      cell = {
+        kind: 'polygon',
+        label: String(count),
+        points: [
+          [cx + width, cy],
+          [cx + width / 2, cy + half],
+          [cx - width / 2, cy + half],
+          [cx - width, cy],
+          [cx - width / 2, cy - half],
+          [cx + width / 2, cy - half],
+        ],
+      };
+    } else {
+      const left = columns.edge(x),
+        right = columns.edge(x + 1),
+        bottom = rows.edge(y),
+        top = rows.edge(y + 1);
+      if (left === right || bottom === top) fail(path, 'needs distinct bin edges at the data coordinates');
+      cell = rect(String(count), left, bottom, right, top);
+    }
+    marks.push({ ...cell, role: 'count', weight: count / peak });
+  }
+  if (display === 'stanford') {
+    if (data.some(([x, y]) => x < 0 || y < 0)) fail(path, 'needs nonnegative errors and protection levels');
+    const limit = r.required('alertLimit', number(Number.MIN_VALUE, MAX_VALUE));
+    const max = Math.max(limit, ...data.flat());
+    marks.push(
+      line('Error equals protection level', [
+        [0, 0],
+        [max, max],
+      ]),
+      line('Alert limit', [
+        [0, limit],
+        [max, limit],
+      ]),
+      line('Error at alert limit', [
+        [limit, 0],
+        [limit, max],
+      ]),
+    );
+  }
+  return marks;
+}
 export function readRelationship(r: Fields, path: string, reserve: (n: number) => void) {
   const display = readDisplay(r, RELATIONSHIPS);
   const data = r.required('data', list(1, 1000, tuple(['x', 'y']), reserve));
   const marks: Glyph[] = [];
-  if (display === 'regression') {
-    const method =
-      r.optional('method', oneOf(['linear', 'polynomial', 'exponential', 'logarithmic', 'loess'] as const)) ??
-      'linear';
-    if (method !== 'loess' && r.has('span')) fail(`${path}.span`, 'needs the loess method');
-    if (method !== 'polynomial' && r.has('degree')) fail(`${path}.degree`, 'needs the polynomial method');
-    const degree = r.optional('degree', integer(1, 5)) ?? 2;
-    const span = r.optional('span', number(0.05, 1)) ?? 0.5;
-    const transformed: XY[] = data.map(([x, y], i) => {
-      if ((method === 'logarithmic' && x <= 0) || (method === 'exponential' && y <= 0))
-        fail(`${path}.data[${i}]`, 'needs a positive value for the logarithm');
-      return [method === 'logarithmic' ? log(x) : x, method === 'exponential' ? log(y) : y];
-    });
-    const origin = transformed[0]![1];
-    for (const point of transformed) point[1] -= origin;
-    const xs = data.map((p) => p[0]);
-    const low = Math.min(...xs),
-      high = Math.max(...xs);
-    if (low === high) fail(path, 'needs distinct x values');
-    const fit =
-      method === 'loess' && data.length > 2
-        ? (x: number) => loess(transformed, x, Math.max(3, Math.ceil(data.length * span)))
-        : polynomial(transformed, method === 'polynomial' ? degree : 1, path);
-    const ys = data.map((point) => point[1]);
-    const minY = Math.min(...ys), maxY = Math.max(...ys);
-    const fitTolerance = 4 * Number.EPSILON * (maxY - minY);
-    marks.push(
-      line(
-        method,
-        grid(low, high).map((x) => {
-          const y = origin + fit(method === 'logarithmic' ? log(x) : x);
-          if (method === 'linear' || (method === 'polynomial' && degree === 1)) {
-            // A fitted endpoint can exceed the observed extent by a few rounding units.
-            if (y < minY && minY - y <= fitTolerance) return [x, minY];
-            if (y > maxY && y - maxY <= fitTolerance) return [x, maxY];
-          }
-          return [x, method === 'exponential' ? exp(y) : y];
-        }),
-      ),
-    );
-  } else if (display === 'qq') {
-    const x = data.map((p) => p[0]).sort((a, b) => a - b);
-    const y = data.map((p) => p[1]).sort((a, b) => a - b);
-    x.forEach((v, i) => marks.push(dot(`Quantile ${(i + 0.5) / x.length}`, v, y[i]!)));
-  } else if (display === 'forest') {
-    const estimates = r.required('estimates', list(data.length, data.length, number(-MAX_VALUE, MAX_VALUE)));
-    data.forEach(([lo, hi], i) => {
-      if (lo > hi || estimates[i]! < lo || estimates[i]! > hi)
-        fail(`${path}.data[${i}]`, 'needs an ordered interval containing its estimate');
-      marks.push(
-        line(`Interval ${lo} to ${hi}`, [
-          [lo, i],
-          [hi, i],
-        ]),
-        dot(String(estimates[i]), estimates[i]!, i),
-      );
-    });
-  } else {
-    const width = r.optional('binWidth', number(Number.MIN_VALUE, MAX_VALUE)) ?? 1;
-    const height = r.optional('binHeight', number(Number.MIN_VALUE, MAX_VALUE)) ?? width;
-    const columns = binGrid(0, width),
-      rows = binGrid(0, height);
-    const cells = new Map<string, { x: number; y: number; count: number }>();
-    for (const [x, y] of data) {
-      let col: number, row: number;
-      if (display === 'hexbin') {
-        // Flat-top axial coordinates, rounded in three cube axes.
-        const q = (2 * x) / (3 * width),
-          s = y / (Math.sqrt(3) * height) - q / 2,
-          t = -q - s;
-        col = Math.round(q);
-        row = Math.round(s);
-        const third = Math.round(t);
-        if (Math.abs(col - q) > Math.abs(row - s) && Math.abs(col - q) > Math.abs(third - t)) col = -row - third;
-        else if (Math.abs(row - s) > Math.abs(third - t)) row = -col - third;
-      } else {
-        col = columns.index(x, 'floor');
-        row = rows.index(y, 'floor');
-      }
-      if (
-        !Number.isSafeInteger(col) ||
-        !Number.isSafeInteger(row) ||
-        !Number.isSafeInteger(col + 1) ||
-        !Number.isSafeInteger(row + 1)
-      )
-        fail(path, 'needs bin dimensions resolvable at the data coordinates');
-      const key = `${col},${row}`;
-      const cell = cells.get(key) ?? { x: col, y: row, count: 0 };
-      cell.count++;
-      cells.set(key, cell);
+  switch (display) {
+    case 'regression':
+      marks.push(regression(r, path, data));
+      break;
+    case 'qq': {
+      const x = data.map((p) => p[0]).sort((a, b) => a - b);
+      const y = data.map((p) => p[1]).sort((a, b) => a - b);
+      x.forEach((v, i) => marks.push(dot(`Quantile ${(i + 0.5) / x.length}`, v, y[i]!)));
+      break;
     }
-    const peak = Math.max(...Array.from(cells.values(), (c) => c.count));
-    for (const { x, y, count } of cells.values()) {
-      let cell: Glyph;
-      if (display === 'hexbin') {
-        const cx = 1.5 * width * x,
-          cy = Math.sqrt(3) * height * (y + x / 2),
-          half = (Math.sqrt(3) * height) / 2;
-        if (cx - width / 2 === cx + width / 2 || cy - half === cy + half)
-          fail(path, 'needs distinct hexagon vertices at the data coordinates');
-        cell = {
-          kind: 'polygon',
-          label: String(count),
-          points: [
-            [cx + width, cy],
-            [cx + width / 2, cy + half],
-            [cx - width / 2, cy + half],
-            [cx - width, cy],
-            [cx - width / 2, cy - half],
-            [cx + width / 2, cy - half],
-          ],
-        };
-      } else {
-        const left = columns.edge(x),
-          right = columns.edge(x + 1),
-          bottom = rows.edge(y),
-          top = rows.edge(y + 1);
-        if (left === right || bottom === top) fail(path, 'needs distinct bin edges at the data coordinates');
-        cell = rect(String(count), left, bottom, right, top);
-      }
-      cell.fillColor = `rgb(${Math.round(225 - (190 * count) / peak)},${Math.round(236 - (133 * count) / peak)},${Math.round(245 - (96 * count) / peak)})`;
-      marks.push(cell);
+    case 'forest': {
+      const estimates = r.required('estimates', list(data.length, data.length, number(-MAX_VALUE, MAX_VALUE)));
+      data.forEach(([lo, hi], i) => {
+        if (lo > hi || estimates[i]! < lo || estimates[i]! > hi)
+          fail(`${path}.data[${i}]`, 'needs an ordered interval containing its estimate');
+        marks.push(
+          line(`Interval ${lo} to ${hi}`, [
+            [lo, i],
+            [hi, i],
+          ]),
+          dot(String(estimates[i]), estimates[i]!, i),
+        );
+      });
+      break;
     }
-    if (display === 'stanford') {
-      if (data.some(([x, y]) => x < 0 || y < 0)) fail(path, 'needs nonnegative errors and protection levels');
-      const limit = r.required('alertLimit', number(Number.MIN_VALUE, MAX_VALUE));
-      const max = Math.max(limit, ...data.flat());
-      marks.push(
-        line('Error equals protection level', [
-          [0, 0],
-          [max, max],
-        ]),
-        line('Alert limit', [
-          [0, limit],
-          [max, limit],
-        ]),
-        line('Error at alert limit', [
-          [limit, 0],
-          [limit, max],
-        ]),
-      );
-    }
+    case 'histogram2d':
+    case 'hexbin':
+    case 'stanford':
+      marks.push(...bins(r, path, display, data));
+      break;
+    default:
+      unhandled(display);
   }
   return checkGeometry(path, marks);
 }

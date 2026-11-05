@@ -1,5 +1,6 @@
 import { exp as portableExp, MAX_EXPONENT } from '@borrowdale/core/math';
 import type { MarkerSymbol } from '../types.js';
+import type { Role } from '../palette.js';
 import { fail, MAX_VALUE } from '../read.js';
 
 export type XY = [number, number];
@@ -7,14 +8,16 @@ export type Glyph = {
   kind: 'line' | 'polygon' | 'dot' | 'text';
   points: XY[];
   label: string;
-  color?: string;
-  fillColor?: string;
+  /** How the mark is painted from its series' paint. */
+  role?: Role;
+  /** A count cell's share of the largest count, 0 to 1. */
+  weight?: number;
   size?: number;
   symbol?: MarkerSymbol;
   hollow?: boolean;
 };
-export function line(label: string, points: XY[], color?: string): Glyph {
-  return { kind: 'line', label, points, ...(color && { color }) };
+export function line(label: string, points: XY[], role?: Role): Glyph {
+  return { kind: 'line', label, points, ...(role && { role }) };
 }
 export function rect(label: string, x1: number, y1: number, x2: number, y2: number): Glyph {
   return {

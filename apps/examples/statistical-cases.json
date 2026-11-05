@@ -1897,11 +1897,11 @@
   }
  },
  {
-  "name": "candlestick-volume",
+  "name": "candlestick",
   "spec": {
    "width": 580,
    "height": 320,
-   "title": "Session prices and volume",
+   "title": "Session prices",
    "axes": {
     "x": {
      "type": "linear",
@@ -1990,20 +1990,6 @@
        50,
        55
       ]
-     ],
-     "volume": [
-      20,
-      35,
-      15,
-      50,
-      30,
-      45,
-      65,
-      45,
-      33,
-      51,
-      40,
-      52
      ],
      "flags": [
       {
@@ -2016,11 +2002,11 @@
   }
  },
  {
-  "name": "hollow-candlestick",
+  "name": "filled-candlestick",
   "spec": {
    "width": 580,
    "height": 320,
-   "title": "Hollow candlesticks",
+   "title": "Filled candlesticks",
    "axes": {
     "x": {
      "type": "linear",
@@ -2110,7 +2096,7 @@
        55
       ]
      ],
-     "hollow": true
+     "hollow": false
     }
    ]
   }

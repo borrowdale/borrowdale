@@ -2,7 +2,7 @@ import { binGrid } from './bin-grid.js';
 import { cos, log, sin, MAX_ANGLE } from '@borrowdale/core/math';
 import { boolean, fail, list, MAX_VALUE, number, oneOf, text, type Fields } from '../read.js';
 import { MARKER_SYMBOLS } from '../types.js';
-import { readDisplay, DISTRIBUTIONS } from './types.js';
+import { readDisplay, DISTRIBUTIONS, unhandled } from './types.js';
 import {
   average,
   checkGeometry,
@@ -36,6 +36,39 @@ function normalQuantile(p: number): number {
   }
   return ((p < 0.5 ? -1 : 1) * (low + high)) / 2;
 }
+/** The most points a kernel density curve is drawn with. */
+const MAX_DENSITY_POINTS = 2000;
+// KDE points: 65 across the samples and three bandwidths past each end, refined to at most a
+// quarter bandwidth apart within three bandwidths of every sample. A sample's peak then lies at
+// most an eighth of a bandwidth from a drawn point, so no isolated peak is drawn more than 1% low.
+function densityGrid(path: string, sorted: readonly number[], h: number, given: boolean): number[] {
+  const lo = sorted[0]!,
+    hi = sorted.at(-1)!;
+  const values = grid(lo - 3 * h, hi + 3 * h);
+  const step = h / 4;
+  if ((hi + 3 * h - (lo - 3 * h)) / (values.length - 1) <= step) return values;
+  const runs: [number, number][] = [];
+  for (const sample of sorted) {
+    const last = runs.at(-1);
+    if (last && sample - 3 * h <= last[1]) last[1] = sample + 3 * h;
+    else runs.push([sample - 3 * h, sample + 3 * h]);
+  }
+  const counts = runs.map(([from, to]) => Math.ceil((to - from) / step) + 1);
+  const total = counts.reduce((sum, count) => sum + count, values.length);
+  if (total > MAX_DENSITY_POINTS) {
+    const problem = `its density needs ${total} points, more than ${MAX_DENSITY_POINTS}`;
+    if (given) fail(`${path}.bandwidth`, `is ${h}, too narrow for the sample range: ${problem}`);
+    fail(path, `needs a bandwidth: the default ${h} is too narrow for the sample range, and ${problem}`);
+  }
+  const points = [...values];
+  runs.forEach(([from, to], i) => {
+    const run = grid(from, to, counts[i]);
+    if (run.some((x, j) => j > 0 && x <= run[j - 1]!)) fail(path, 'needs a bandwidth resolvable at the sample coordinates');
+    points.push(...run);
+  });
+  points.sort((a, b) => a - b);
+  return points.filter((x, i) => i === 0 || x !== points[i - 1]);
+}
 export function readDistribution(r: Fields, path: string, reserve: (count: number) => void) {
   const display = readDisplay(r, DISTRIBUTIONS);
   const data = r.required('data', list(1, 1000, number(-MAX_VALUE, MAX_VALUE), reserve));
@@ -57,18 +90,7 @@ export function readDistribution(r: Fields, path: string, reserve: (count: numbe
   const width = r.optional('binWidth', number(Number.MIN_VALUE, MAX_VALUE)) ?? 1;
   const marks: Glyph[] = [];
   const jitter = (i: number) => (((i * 0.6180339887498949) % 1) - 0.5) * 0.55;
-  if (display === 'ecdf') {
-    const steps: XY[] = [[lo, 0]];
-    for (let i = 0; i < sorted.length; ) {
-      const value = sorted[i]!;
-      steps.push([value, i / sorted.length]);
-      while (sorted[i] === value) i++;
-      steps.push([value, i / sorted.length]);
-    }
-    marks.push(line('Empirical cumulative frequency', steps));
-  } else if (display === 'normalQQ') {
-    sorted.forEach((v, i) => marks.push(dot(String(v), normalQuantile((i + 0.5) / sorted.length), v)));
-  } else if (display === 'box' || display === 'raincloud') {
+  const box = () => {
     const q1 = quantile(sorted, 0.25),
       q3 = quantile(sorted, 0.75),
       median = quantile(sorted, 0.5);
@@ -102,18 +124,17 @@ export function readDistribution(r: Fields, path: string, reserve: (count: numbe
         );
       }
     });
-  }
-  if (['density', 'normal', 'violin', 'raincloud', 'ridge'].includes(display)) {
+  };
+  const kde = () => {
     const sd = data.length > 1 ? deviation(data, true) : 0;
     if (display === 'normal' && !sd) fail(path, 'needs sample variance above zero to fit a normal curve');
     const h = bandwidth ?? (sd ? 1.06 * sd * exp(-0.2 * log(data.length)) : Math.max(1, Math.abs(lo) * 0.01));
     const mean = average(data);
-    const values = grid(
-      display === 'normal' ? mean - 3 * sd : lo - 3 * h,
-      display === 'normal' ? mean + 3 * sd : hi + 3 * h,
-    );
+    const values =
+      display === 'normal' ? grid(mean - 3 * sd, mean + 3 * sd) : densityGrid(path, sorted, h, bandwidth !== undefined);
     if (values.some((x, i) => i > 0 && x <= values[i - 1]!))
       fail(path, 'needs a bandwidth resolvable at the sample coordinates');
+    reserve(values.length);
     const kernel = (z: number) => exp((-z * z) / 2) / Math.sqrt(2 * Math.PI);
     const density = values.map((v) =>
       display === 'normal'
@@ -151,43 +172,78 @@ export function readDistribution(r: Fields, path: string, reserve: (count: numbe
           });
       }
     }
-  }
-  if (display === 'swarm') {
-    for (const { value, index } of order) {
-      marks.push({ ...dot(String(value), at, value, sizes?.[index] ?? 7), symbol: symbol ?? 'circle' });
-    }
-  }
-  if (display === 'dotPlot' || display === 'isotype') {
-    let anchor = sorted[0]!,
-      group = binGrid(anchor, width),
-      rank = 0;
-    for (const value of sorted) {
-      if (group.index(value, 'floor') >= 1) {
-        anchor = value;
-        group = binGrid(anchor, width);
-        rank = 0;
+  };
+  switch (display) {
+    case 'ecdf': {
+      const steps: XY[] = [[lo, 0]];
+      for (let i = 0; i < sorted.length; ) {
+        const value = sorted[i]!;
+        steps.push([value, i / sorted.length]);
+        while (sorted[i] === value) i++;
+        steps.push([value, i / sorted.length]);
       }
-      if (!(group.edge(1) > anchor)) fail(path, 'needs a bin width resolvable at the sample coordinates');
-      const offset = mirrored ? Math.ceil(rank / 2) * (rank % 2 ? 1 : -1) : rank;
-      marks.push({
-        ...dot(String(value), at + offset, anchor, 7),
-        symbol: symbol ?? (display === 'isotype' ? 'star' : 'circle'),
-      });
-      rank++;
+      marks.push(line('Empirical cumulative frequency', steps));
+      break;
     }
-  }
-  if (display === 'stemLeaf') {
-    const stems = new Map<number, number[]>();
-    for (const v of sorted) {
-      if (!Number.isInteger(v) || v < 0) fail(path, 'stem-and-leaf values must be nonnegative integers');
-      const stem = Math.floor(v / 10);
-      if (!stems.has(stem)) stems.set(stem, []);
-      stems.get(stem)!.push(v % 10);
+    case 'normalQQ':
+      sorted.forEach((v, i) => marks.push(dot(String(v), normalQuantile((i + 0.5) / sorted.length), v)));
+      break;
+    case 'box':
+      box();
+      break;
+    case 'raincloud':
+      box();
+      kde();
+      break;
+    case 'density':
+    case 'normal':
+    case 'violin':
+    case 'ridge':
+      kde();
+      break;
+    case 'swarm': {
+      for (const { value, index } of order) {
+        marks.push({ ...dot(String(value), at, value, sizes?.[index] ?? 7), symbol: symbol ?? 'circle' });
+      }
+      break;
     }
-    for (const [stem, leaves] of stems) {
-      if (leaves.length > 450) fail(path, 'has more than 450 leaves on one stem');
-      marks.push({ kind: 'text', label: `${stem} | ${leaves.join(' ')}`, points: [[0, -marks.length]] });
+    case 'dotPlot':
+    case 'isotype': {
+      let anchor = sorted[0]!,
+        group = binGrid(anchor, width),
+        rank = 0;
+      for (const value of sorted) {
+        if (group.index(value, 'floor') >= 1) {
+          anchor = value;
+          group = binGrid(anchor, width);
+          rank = 0;
+        }
+        if (!(group.edge(1) > anchor)) fail(path, 'needs a bin width resolvable at the sample coordinates');
+        const offset = mirrored ? Math.ceil(rank / 2) * (rank % 2 ? 1 : -1) : rank;
+        marks.push({
+          ...dot(String(value), at + offset, anchor, 7),
+          symbol: symbol ?? (display === 'isotype' ? 'star' : 'circle'),
+        });
+        rank++;
+      }
+      break;
     }
+    case 'stemLeaf': {
+      const stems = new Map<number, number[]>();
+      for (const v of sorted) {
+        if (!Number.isInteger(v) || v < 0) fail(path, 'stem-and-leaf values must be nonnegative integers');
+        const stem = Math.floor(v / 10);
+        if (!stems.has(stem)) stems.set(stem, []);
+        stems.get(stem)!.push(v % 10);
+      }
+      for (const [stem, leaves] of stems) {
+        if (leaves.length > 450) fail(path, 'has more than 450 leaves on one stem');
+        marks.push({ kind: 'text', label: `${stem} | ${leaves.join(' ')}`, points: [[0, -marks.length]] });
+      }
+      break;
+    }
+    default:
+      unhandled(display);
   }
   if (horizontal) for (const mark of marks) mark.points = mark.points.map(([x, y]) => [y, x]);
   return {

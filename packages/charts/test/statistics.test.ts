@@ -280,12 +280,13 @@ it('retains small observations in a moving average with cancelling large values'
   const data = [1e15,-1e15,...Array<number>(998).fill(1)];
   expect(marks({type:'market',display:'sma',name:'M',data,period:1000})[0]!.points[0]![1]).toBe(.998);
 });
-it('retains count shading when a series supplies its outline colour', () => {
-  const chart=spec({type:'relationship',display:'histogram2d',name:'D',color:'#dd5500',data:[[0,0],[0,0],[1,0]]});
-  const svg=toSvgChart(layoutChart(chart));
-  expect(svg).toContain('fill="rgb(35,103,149)"');
-  expect(svg).toContain('fill="rgb(130,170,197)"');
-  expect(svg).toContain('stroke="#dd5500"');
+it('hatches cells with more observations more densely, in the series colour', () => {
+  const series: Series = { type: 'relationship', display: 'histogram2d', name: 'D', color: '#dd5500', data: [[0, 0], [0, 0], [1, 0]] };
+  expect(marks(series)).toMatchObject([
+    { label: '2', role: 'count', weight: 1 },
+    { label: '1', role: 'count', weight: 0.5 },
+  ]);
+  expect(colours(toSvgChart(layoutChart(spec(series))))).toEqual(['#c8c8c8', '#dd5500']);
 });
 it('fits a straight line inside its exact fixed ordinate limits', () => {
   const chart = spec({type:'relationship',display:'regression',name:'L',data:[[0,0],[1,9],[2,18]]});
@@ -336,4 +337,118 @@ it('keeps dense and repeated straight-line observations within their fitted exte
       axes: { x: { type: 'linear' }, y: { type: 'linear', min: Math.min(...ys), max: Math.max(...ys) } },
     })).not.toThrow();
   }
+});
+
+// Five sessions: rising, falling, rising, falling, rising.
+const BARS: [number, number, number, number][] = [
+  [100, 104, 99, 103],
+  [103, 105, 100, 101],
+  [101, 108, 101, 107],
+  [107, 109, 104, 105],
+  [105, 110, 104, 109],
+];
+// 100 samples one unit apart.
+const SPREAD = Array.from({ length: 100 }, (_, i) => i);
+// Enough closes for MACD's 26-session average and 9-session signal.
+const CLOSES = Array.from({ length: 40 }, (_, i) => 100 + (i % 7));
+
+function colours(svg: string): string[] {
+  return [...new Set(svg.match(/#[0-9a-f]{6}/gi) ?? [])].sort();
+}
+function bodies(glyphs: ReturnType<typeof marks>): [string | undefined, boolean | undefined][] {
+  return glyphs.filter((glyph) => glyph.kind === 'polygon').map((glyph) => [glyph.role, glyph.hollow]);
+}
+function highest(glyphs: ReturnType<typeof marks>): number {
+  return Math.max(...glyphs[0]!.points.map((point) => point[1]));
+}
+function outcome(chart: ChartSpec): string {
+  try {
+    layoutChart(chart);
+    return 'drawn';
+  } catch (error) {
+    return (error as Error).message;
+  }
+}
+
+it('outlines rising candles and fills falling ones by default, whatever the series colour', () => {
+  expect(bodies(marks({ type: 'market', display: 'candlestick', name: 'P', color: '#0072b2', data: BARS }))).toEqual([
+    ['rise', true],
+    ['fall', false],
+    ['rise', true],
+    ['fall', false],
+    ['rise', true],
+  ]);
+});
+
+it('hatches rising candles and fills falling ones when candles are not hollow', () => {
+  expect(bodies(marks({ type: 'market', display: 'candlestick', name: 'P', data: BARS, hollow: false }))).toEqual([
+    ['rise', false],
+    ['fall', false],
+    ['rise', false],
+    ['fall', false],
+    ['rise', false],
+  ]);
+});
+
+it('draws candles in their palette colour, with no colours of their own', () => {
+  const svg = toSvgChart(layoutChart(spec({ type: 'market', display: 'candlestick', name: 'P', data: BARS })));
+  expect(colours(svg)).toEqual(['#c8c8c8', '#e69f00']);
+});
+
+it('rejects volume, which needs an axis of its own', () => {
+  const series = { type: 'market', display: 'candlestick', name: 'P', data: BARS, volume: [1, 2, 3, 4, 5] } as unknown as Series;
+  expect(outcome(spec(series))).toBe('Invalid chart: series[0] has an unknown key, "volume"');
+});
+
+it('dashes the MACD signal line in the series colour', () => {
+  expect(marks({ type: 'market', display: 'macd', name: 'M', data: CLOSES }).at(-1)).toMatchObject({ label: 'Signal', role: 'secondary' });
+});
+
+it('draws control limits and the centre line as reference lines', () => {
+  expect(marks({ type: 'market', display: 'control', name: 'C', data: [3, 5, 4, 6] })).toMatchObject([
+    { label: 'Lower limit', role: 'reference' },
+    { label: 'Centre', role: 'reference' },
+    { label: 'Upper limit', role: 'reference' },
+    { label: 'Observations' },
+  ]);
+});
+
+it('draws a narrow density peak within one percent of its height', () => {
+  // A single sample at bandwidth 0.01 peaks at 1 / (0.01 √(2π)) / 2 samples = 19.9471.
+  const curve = marks({ type: 'distribution', display: 'density', name: 'D', data: [0, 100], bandwidth: 0.01 });
+  expect(highest(curve)).toBeGreaterThan(19.75);
+  expect(highest(curve)).toBeLessThanOrEqual(19.9472);
+});
+
+it('names a bandwidth too narrow to draw within the point limit', () => {
+  const chart = spec({ type: 'distribution', display: 'density', name: 'D', data: SPREAD, bandwidth: 0.001 });
+  expect(outcome(chart)).toMatch(
+    /^Invalid chart: series\[0\]\.bandwidth is 0\.001, too narrow for the sample range: its density needs \d+ points, more than 2000$/,
+  );
+});
+
+it('keeps the 65-point curve when the bandwidth is wide enough for it', () => {
+  expect(marks({ type: 'distribution', display: 'density', name: 'D', data: [12, 14, 15, 16, 19, 29] })[0]!.points).toHaveLength(65);
+});
+
+it.each([
+  { name: 'exponential', fit: { method: 'exponential' }, data: [[0, 1], [1, 10]], min: 1, max: 10 },
+  { name: 'logarithmic', fit: { method: 'logarithmic' }, data: [[1, 2.5], [2, 0.9]], min: 0.9, max: 2.5 },
+  { name: 'quadratic', fit: { method: 'polynomial', degree: 2 }, data: [[0.1, 0.3], [0.2, 3], [0.30000000000000004, 10]], min: 0.3, max: 10 },
+  { name: 'cubic', fit: { method: 'polynomial', degree: 3 }, data: [[1, 0.1], [2, 5], [3, 9], [4, 123.456]], min: 0.1, max: 123.456 },
+  { name: 'LOESS', fit: { method: 'loess', span: 1 }, data: [[1, 0.7], [2, 7], [3, 0.2]], min: 0.2, max: 7 },
+])('keeps the $name fit that reaches the observed extent within axis limits there', ({ fit, data, min, max }) => {
+  const chart = spec({ type: 'relationship', display: 'regression', name: 'F', data, ...fit } as unknown as Series);
+  expect(outcome({ ...chart, axes: { x: { type: 'linear' }, y: { type: 'linear', min, max } } })).toBe('drawn');
+});
+
+it('draws a polynomial that genuinely passes the observed extent as calculated', () => {
+  // The parabola through (0, 0), (1, 1) and (3, 0) peaks at 1.125.
+  const fit = marks({ type: 'relationship', display: 'regression', method: 'polynomial', name: 'P', data: [[0, 0], [1, 1], [3, 0]] });
+  expect(highest(fit)).toBeGreaterThan(1.12);
+});
+
+it('keeps a subnormal response at the end of a straight-line fit', () => {
+  const fit = marks({ type: 'relationship', display: 'regression', name: 'L', data: [[0, 0], [1, Number.MIN_VALUE]] });
+  expect(fit[0]!.points.at(-1)).toEqual([1, Number.MIN_VALUE]);
 });

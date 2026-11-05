@@ -22,6 +22,11 @@ export function readDisplay<const T extends Record<string, readonly string[]>>(
   return display;
 }
 
+/** Every display and method is handled: a key added to a table without its branch fails to compile. */
+export function unhandled(value: never): never {
+  throw new Error(`Unhandled statistical option ${String(value)}`);
+}
+
 export const DISTRIBUTIONS = {
   ecdf: [],
   box: ['position', 'horizontal', 'whiskers', 'points'],
@@ -47,10 +52,10 @@ export const RELATIONSHIPS = {
 } as const;
 
 export const MARKET_DISPLAYS = {
-  candlestick: ['hollow', 'volume', 'flags'],
-  ohlc: ['volume', 'flags'],
-  hlc: ['volume', 'flags'],
-  heikinAshi: ['hollow', 'volume', 'flags'],
+  candlestick: ['hollow', 'flags'],
+  ohlc: ['flags'],
+  hlc: ['flags'],
+  heikinAshi: ['hollow', 'flags'],
   renko: ['boxSize'],
   pointFigure: ['boxSize', 'reversal'],
   sma: ['period'],
@@ -78,8 +83,10 @@ export type DistributionSeries = SeriesBase & { type: 'distribution'; data: read
     typeof DISTRIBUTIONS,
     DistributionOptions
   >;
+export const REGRESSION_METHODS = ['linear', 'polynomial', 'exponential', 'logarithmic', 'loess'] as const;
+export type RegressionMethod = (typeof REGRESSION_METHODS)[number];
 type Regression =
-  | { method?: 'linear' | 'logarithmic' | 'exponential' }
+  | { method?: Exclude<RegressionMethod, 'polynomial' | 'loess'> }
   | { method: 'polynomial'; degree?: number }
   | { method: 'loess'; span?: number };
 export type RelationshipSeries = SeriesBase & {
@@ -94,13 +101,13 @@ export type RelationshipSeries = SeriesBase & {
   );
 type PriceBar = readonly [open: number, high: number, low: number, close: number];
 export const CANDLE_DISPLAYS = ['candlestick', 'heikinAshi', 'ohlc', 'hlc'] as const;
-type Candle = (typeof CANDLE_DISPLAYS)[number];
+export type Candle = (typeof CANDLE_DISPLAYS)[number];
 interface MarketOptions {
   period?: number;
   boxSize: number;
   reversal?: number;
+  /** Outline rising candles; falling candles are filled. Defaults to true. */
   hollow?: boolean;
-  volume?: readonly number[];
   flags?: readonly { index: number; label: string }[];
 }
 export type MarketSeries = SeriesBase & { type: 'market' } & (
