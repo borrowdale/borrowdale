@@ -156,8 +156,10 @@ const spec = {
 
 Use a different numeric `position` for each grouped box, violin, raincloud, ridge or swarm.
 Label the positions with explicit ticks. Use `horizontal: true` on boxes, violins, rainclouds,
-swarms and dot plots to exchange the axes. KDE samples 65 points, spanning three bandwidths
-past each end. Its default bandwidth is 1.06 times the sample standard deviation times
+swarms and dot plots to exchange the axes. KDE draws 65 points across the samples and three
+bandwidths past each end. A narrow bandwidth adds points at most a quarter bandwidth apart near
+every sample, so no peak is missed. A curve needs at most 2,000 points: a bandwidth too
+narrow for that is an error. Its default bandwidth is 1.06 times the sample standard deviation times
 the sample count to the power −0.2. A constant sample uses the larger of one unit or
 one percent of its absolute value. A fitted normal needs positive sample variance.
 
@@ -167,9 +169,9 @@ A `relationship` series takes numeric pairs.
 
 | `display` | Input and interpretation |
 |---|---|
-| `histogram2d`, `hexbin` | Count observations in rectangles or flat-top hexagons. Darker cells hold more observations. A series colour sets their outline. `binWidth` and `binHeight` specify rectangle dimensions or hexagon radii before axial projection. |
-| `stanford` | Nonnegative position error and protection level. Counts colour the cells. The diagonal and the required positive `alertLimit` delimit integrity regions. |
-| `regression` | Select `method` from `linear`, `polynomial` (degree 1–5), `exponential`, `logarithmic` and `loess` (span 0.05–1). Exponential fits regress log response and logarithmic fits regress on log input. LOESS uses local linear fits with tricube weights. Add a scatter series to show the observations. |
+| `histogram2d`, `hexbin` | Count observations in rectangles or flat-top hexagons. Cells with more observations have denser hachure, in the series colour. `binWidth` and `binHeight` specify rectangle dimensions or hexagon radii before axial projection. |
+| `stanford` | Nonnegative position error and protection level. Cells are hatched by count, as for `histogram2d`. The diagonal and the required positive `alertLimit` delimit integrity regions. |
+| `regression` | Select `method` from `linear`, `polynomial` (degree 1–5), `exponential`, `logarithmic` and `loess` (span 0.05–1). Exponential fits regress log response and logarithmic fits regress on log input. LOESS uses local linear fits with tricube weights. A curve that reaches the highest or lowest observation stays within it, so axis limits at the data extent hold. Add a scatter series to show the observations. |
 | `qq` | Sort both columns independently and pair their ranks to compare two equal-sized samples. |
 | `forest` | Each pair is an ordered confidence interval. Supply one point estimate per interval in `estimates`, and label row indices with y-axis ticks. |
 
@@ -181,13 +183,13 @@ closing prices directly.
 
 | `display` | Calculation and options |
 |---|---|
-| `candlestick`, `heikinAshi`, `ohlc`, `hlc` | Candle bodies span open to close and wicks reach high and low. OHLC uses side ticks and HLC omits the opening tick. Heikin-Ashi derives each open from the previous transformed bar. `hollow: true` outlines rising candles. Optional `volume` draws bars below the prices in proportion to peak volume, and `flags` labels sessions by `index` and `label`. |
+| `candlestick`, `heikinAshi`, `ohlc`, `hlc` | Candle bodies span open to close and wicks reach high and low. OHLC uses side ticks and HLC omits the opening tick. Heikin-Ashi derives each open from the previous transformed bar. Bars and candles take the series colour: rising candles are outlined and falling candles filled, or with `hollow: false` rising candles are hatched. `flags` labels sessions by `index` and `label`. |
 | `renko`, `pointFigure` | Close-based price boxes start at the first close. Supply positive `boxSize`. Renko reverses after two boxes. Point-and-figure starts a new column after `reversal` boxes (default 3). Up to 4,000 boxes per series. |
 | `sma`, `ema`, `bollinger` | Use a trailing `period` (default 20). EMA starts at the first full-window mean. Bollinger bands show two population standard deviations around the rolling mean. |
-| `macd`, `rsi` | MACD uses 12- and 26-session EMAs with a 9-session signal and difference histogram. Wilder RSI uses `period` changes (default 14) and reports 50 for an entirely flat window. |
-| `control` | An individuals control chart shows measurements, their mean and limits at three times the mean moving range divided by 1.128 above and below the mean. |
+| `macd`, `rsi` | MACD uses 12- and 26-session EMAs with a dashed 9-session signal line and difference histogram. Wilder RSI uses `period` changes (default 14) and reports 50 for an entirely flat window. |
+| `control` | An individuals control chart shows measurements, with their mean and limits as dashed lines in the axis colour. The limits lie three times the mean moving range divided by 1.128 above and below the mean. |
 
-Generated price boxes, stacked density vertices and financial overlays count toward the chart-wide point budget. Bin widths and box sizes must produce distinct coordinates at the input magnitude.
+Generated price boxes, density curves, stacked density vertices and financial overlays count toward the chart-wide point budget. Bin widths and box sizes must produce distinct coordinates at the input magnitude.
 
 Indicators need enough observations for their first complete window. The earliest visible
 x position is the corresponding input session.
