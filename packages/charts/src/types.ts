@@ -39,17 +39,15 @@ export interface ChartSpec {
  * A place on an axis: a number on a continuous axis, an ISO 8601 time or milliseconds on a time axis,
  * or a category name on a band axis.
  */
-export type ChartCoordinate = number | string;
-/** A value on a continuous axis: a number, or on a time axis an ISO 8601 string or milliseconds. */
 export type ChartValue = number | string;
-export type ChartPosition = readonly [x: ChartCoordinate, y: ChartCoordinate];
+export type ChartPosition = readonly [x: ChartValue, y: ChartValue];
 interface AnnotationStyle {
   color?: string | undefined;
   layer?: 'back' | 'front' | undefined;
 }
 export type Annotation = AnnotationStyle & (
-  | { type: 'line'; axis: 'x' | 'y' | 'y2'; value: ChartCoordinate; label?: string | undefined }
-  | { type: 'band'; axis: 'x' | 'y' | 'y2'; from: ChartCoordinate; to: ChartCoordinate }
+  | { type: 'line'; axis: 'x' | 'y' | 'y2'; value: ChartValue; label?: string | undefined }
+  | { type: 'band'; axis: 'x' | 'y' | 'y2'; from: ChartValue; to: ChartValue }
   | { type: 'region'; from: ChartPosition; to: ChartPosition; axis?: 'y' | 'y2' | undefined }
   | { type: 'arrow'; from: ChartPosition; to: ChartPosition; axis?: 'y' | 'y2' | undefined }
   | { type: 'label'; at: ChartPosition; text: string; axis?: 'y' | 'y2' | undefined }
@@ -283,13 +281,13 @@ export const CURVES = ['linear', 'monotone', 'step', 'step-before', 'step-after'
  */
 export type Curve = (typeof CURVES)[number];
 
-export const MARKER_SYMBOLS = ['circle', 'square', 'diamond', 'triangle', 'cross', 'star', 'wye', 'tick'] as const;
+export const SYMBOL_NAMES = ['circle', 'square', 'diamond', 'triangle', 'cross', 'star', 'wye', 'tick'] as const;
 
 /** A point's shape, fitted inside its diameter. */
-export type MarkerSymbol = (typeof MARKER_SYMBOLS)[number];
+export type SymbolName = (typeof SYMBOL_NAMES)[number];
 
 /** A geometric symbol or the name of a trusted image supplied to the renderer. */
-export type Marker = MarkerSymbol | { image: string };
+export type Marker = SymbolName | { image: string };
 
 interface SeriesBase {
   /**
@@ -365,7 +363,7 @@ export interface IntervalSeries extends ValueSeries {
   dataLabels?: boolean | undefined;
   /** Endpoints retain their order, including descending intervals; null omits the mark. */
   data: readonly (readonly [from: ChartValue, to: ChartValue] | null)[];
-  display?: 'bar' | 'line' | 'error' | 'points' | undefined;
+  display?: 'bar' | 'line' | 'error' | 'point' | undefined;
   shape?: 'rectangle' | 'rounded' | 'pyramid' | undefined;
   /** Fraction of the category slot, from 0.05 to 1. Defaults to 0.8. */
   slotWidth?: number | undefined;
@@ -624,7 +622,7 @@ export interface GaugeSeries extends SeriesBase {
   /** A needle from the centre, or a bar along the dial from its start. Defaults to `needle`. */
   display?: 'needle' | 'bar' | undefined;
   /** A needle's length, as a share of the radius: from 0.1 to 1. Defaults to 0.8. */
-  length?: number | undefined;
+  needleLength?: number | undefined;
 }
 
 export type Series =

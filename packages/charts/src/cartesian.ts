@@ -183,7 +183,7 @@ export function layoutCartesian(drawing: Drawing, chart: CheckedCartesianChart, 
   const bands = band && bandScale(band.categories.length, across, BAND_PADDING, band.weights);
   const frame = makeFrame(plot, horizontal, bands);
 
-  const annotationAt = (key: AxisKey, value: import('./types.js').ChartCoordinate): number => {
+  const annotationAt = (key: AxisKey, value: import('./types.js').ChartValue): number => {
     if (typeof value === 'number') return scales[key]!.at(value);
     const index = band!.categories.indexOf(value);
     return bands!.start(index) + bands!.width(index) / 2;
@@ -494,7 +494,7 @@ function drawIntervals(
     const nodes: ChartNode[] = [];
     if (entry.display === 'bar') {
       if (from !== to) nodes.push(drawing.shape(barShape(entry.shape, center - width / 2, width, from, to, frame.point, frame.box), hatched(paint), key, entry.style));
-    } else if (entry.display !== 'points') {
+    } else if (entry.display !== 'point') {
       nodes.push(drawing.outline(frame.line([[center, from], [center, to]], 'linear'), outline, key, entry.style));
       if (entry.display === 'error') {
         for (const [end, value] of [from, to].entries()) {
@@ -504,8 +504,8 @@ function drawIntervals(
       }
     }
     const endpoints = [
-      { symbol: entry.fromSymbol ?? (entry.display === 'points' ? 'circle' : undefined), value: from },
-      { symbol: entry.toSymbol ?? (entry.display === 'points' ? 'circle' : undefined), value: to },
+      { symbol: entry.fromSymbol ?? (entry.display === 'point' ? 'circle' : undefined), value: from },
+      { symbol: entry.toSymbol ?? (entry.display === 'point' ? 'circle' : undefined), value: to },
     ] as const;
     endpoints.forEach(({ symbol, value }, end) => {
       if (symbol) nodes.push(markerNode(drawing, symbol, frame.point([center, value]), POINT_SIZE,

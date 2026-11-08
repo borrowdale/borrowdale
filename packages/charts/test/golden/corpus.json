@@ -2874,13 +2874,13 @@
      "type": "gauge",
      "name": "Hour",
      "value": 10.2,
-     "length": 0.5
+     "needleLength": 0.5
     },
     {
      "type": "gauge",
      "name": "Minute",
      "value": 2,
-     "length": 0.85
+     "needleLength": 0.85
     }
    ]
   }
@@ -5680,13 +5680,13 @@
      "type": "gauge",
      "name": "Hour",
      "value": 10.2,
-     "length": 0.5
+     "needleLength": 0.5
     },
     {
      "type": "gauge",
      "name": "Minute",
      "value": 2,
-     "length": 0.85
+     "needleLength": 0.85
     }
    ]
   }

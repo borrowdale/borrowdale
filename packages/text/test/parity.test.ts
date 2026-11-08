@@ -4,7 +4,7 @@ import {
   fontFaceCss,
   layoutText,
   toSvgText,
-  type LayoutOptions,
+  type LayoutTextOptions,
   type TextLayout,
   type TextStyle,
 } from '@borrowdale/text';
@@ -26,7 +26,7 @@ import goldens from './golden/goldens.json' with { type: 'json' };
 // attributes. Each group of checks opens its own pages, so a page that fails to load fails only the
 // checks of its group.
 
-type Case = { name: string; text: string; options: LayoutOptions; style?: TextStyle };
+type Case = { name: string; text: string; options: LayoutTextOptions; style?: TextStyle };
 type Golden = TextLayout & { svg: string };
 type Drawn = { golden: Golden; svgWidth: number; domWidth: number; canvasWidth: number; shapedWidth: number };
 type Embedded = { faces: number; width: number };

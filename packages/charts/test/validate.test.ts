@@ -188,7 +188,7 @@ describe('chart validation', () => {
     ['gauge bands that overlap', { ...gauge, axes: { angle: { type: 'linear', bands: [{ from: 0, to: 50, color: '#000' }, { from: 40, to: 60, color: '#fff' }] } } }, 'Invalid chart: axes.angle.bands[1].from is 40, before the end of axes.angle.bands[0] (50)'],
     ['a gauge band with a paint reference', { ...gauge, axes: { angle: { type: 'linear', bands: [{ from: 0, to: 50, color: 'url(#x)' }] } } }, 'Invalid chart: axes.angle.bands[0].color must be a colour (a hex code, a name, rgb() or hsl()), got "url(#x)"'],
     ['a gauge display that does not exist', { ...gauge, series: [{ type: 'gauge', name: 'G', value: 1, display: 'dial' }] }, 'Invalid chart: series[0].display must be one of needle, bar, got "dial"'],
-    ['a needle longer than the radius', { ...gauge, series: [{ type: 'gauge', name: 'G', value: 1, length: 1.5 }] }, 'Invalid chart: series[0].length must be a number from 0.1 to 1, got 1.5'],
+    ['a needle longer than the radius', { ...gauge, series: [{ type: 'gauge', name: 'G', value: 1, needleLength: 1.5 }] }, 'Invalid chart: series[0].needleLength must be a number from 0.1 to 1, got 1.5'],
     ['a gauge with gridlines', { ...gauge, axes: { angle: { type: 'linear', grid: true } } }, 'Invalid chart: axes.angle has an unknown key, "grid"'],
     ['a gauge beside a rose', { ...gauge, series: [...gauge.series, { type: 'rose', name: 'R', data: [1] }] }, 'Invalid chart: series[1] is a rose series, which cannot share a chart with series[0], a gauge series'],
     ['labels rotated beyond upright', { ...bars, axes: { ...bands, x: { ...bands.x, labelAngle: 91 } } }, 'Invalid chart: axes.x.labelAngle must be a number from -90 to 90, got 91'],

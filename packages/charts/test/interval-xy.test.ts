@@ -50,12 +50,12 @@ describe('interval and numeric path geometry', () => {
     expect(layout.labels).toEqual(['$2.00 kg']);
     if (orientation !== 'numeric') expect(titles(layout)).toEqual(['F, A: $1.00 kg to $2.00 kg']);
   });
-  it.each(['bar', 'line', 'error', 'points'] as const)('draws %s intervals in both orientations', (display) => {
+  it.each(['bar', 'line', 'error', 'point'] as const)('draws %s intervals in both orientations', (display) => {
     for (const horizontal of [false, true]) {
       const entry: IntervalSeries = { type: 'interval', name: 'I', data: [[-5, 3], [8, -2], null], display };
       const layout = layoutChart({ ...intervals, axes: horizontal ? { x: linear, y: band } : intervals.axes, series: [entry] });
       expect(titles(layout)).toEqual(['I, a: -5 to 3', 'I, b: 8 to -2']);
-      expect(shapesOf(layout, 'I, b: 8 to -2')).toHaveLength(display === 'error' ? 3 : display === 'points' ? 2 : 1);
+      expect(shapesOf(layout, 'I, b: 8 to -2')).toHaveLength(display === 'error' ? 3 : display === 'point' ? 2 : 1);
       expect(pointsOutside(layout)).toBe(0);
     }
   });

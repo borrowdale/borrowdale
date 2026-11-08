@@ -44,7 +44,7 @@ import {
   type Check,
   type Fields,
 } from './read.js';
-import { CURVES, LEGEND_POSITIONS, MARKER_SYMBOLS, type ChartSpec, type Marker, type LegendPosition, type SeriesType } from './types.js';
+import { CURVES, LEGEND_POSITIONS, SYMBOL_NAMES, type ChartSpec, type Marker, type LegendPosition, type SeriesType } from './types.js';
 
 // Bounds on what a chart may ask for. The drawing work of everything within them is bounded again
 // by one Budget for the whole chart (see drawing.ts).
@@ -93,7 +93,7 @@ const readAxis = (r: Fields) => r.optional('axis', valueAxis) ?? 'y';
 const readStack = (r: Fields) => r.optional('stack', text());
 const readCurve = (r: Fields) => r.optional('curve', curve) ?? 'linear';
 const checkMarker: Check<Marker> = (path, value) => {
-  if (typeof value === 'string') return oneOf(MARKER_SYMBOLS)(path, value);
+  if (typeof value === 'string') return oneOf(SYMBOL_NAMES)(path, value);
   const r = fields(path, value);
   r.allow(['image']);
   return { image: r.required('image', text(MAX_NAME)) };
@@ -167,7 +167,7 @@ const SERIES_RULES = {
     read: (r: Fields, _path: string, reserve: ReservePoints) => ({
       shape: r.optional('shape', oneOf(['rectangle', 'rounded', 'pyramid'] as const)) ?? 'rectangle', axis: readAxis(r),
       data: r.required('data', list(0, MAX_POINTS, nullable(coordinates(['from', 'to'])), reserve)),
-      display: r.optional('display', oneOf(['bar', 'line', 'error', 'points'] as const)) ?? 'bar',
+      display: r.optional('display', oneOf(['bar', 'line', 'error', 'point'] as const)) ?? 'bar',
       width: r.optional('slotWidth', number(0.05, 1)) ?? 0.8,
       overlay: r.optional('overlay', boolean) ?? false,
       fromSymbol: r.optional('fromSymbol', checkMarker),
@@ -298,11 +298,11 @@ const SERIES_RULES = {
   gauge: {
     system: 'gauge',
     band: false,
-    keys: ['value', 'display', 'length'],
+    keys: ['value', 'display', 'needleLength'],
     read: (r: Fields) => ({
       value: r.required('value', anyValue),
       display: r.optional('display', oneOf(['needle', 'bar'] as const)) ?? 'needle',
-      length: r.optional('length', number(MIN_NEEDLE, 1)) ?? DEFAULT_NEEDLE,
+      needleLength: r.optional('needleLength', number(MIN_NEEDLE, 1)) ?? DEFAULT_NEEDLE,
     }),
   },
 } as const satisfies Record<

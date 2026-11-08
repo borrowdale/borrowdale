@@ -6,8 +6,8 @@ import {
   type Font,
   type FontFile,
   type FontFiles,
-  type LayoutOptions,
-  type MeasureOptions,
+  type LayoutTextOptions,
+  type MeasureTextOptions,
   type TextAnchor,
   type TextBaseline,
   type TextStyle,
@@ -21,8 +21,8 @@ const MAX_ROTATE = 360;
 const DEFAULT_FONT_SIZE = 16;
 
 // The complete lists of accepted options: anything else is a typo.
-const MEASURE_KEYS: Record<keyof MeasureOptions, true> = { fontSize: true, font: true };
-const LAYOUT_KEYS: Record<keyof LayoutOptions, true> = {
+const MEASURE_KEYS: Record<keyof MeasureTextOptions, true> = { fontSize: true, font: true };
+const LAYOUT_KEYS: Record<keyof LayoutTextOptions, true> = {
   ...MEASURE_KEYS,
   x: true,
   y: true,
@@ -82,7 +82,7 @@ export interface CheckedLayout extends CheckedMeasure {
   rotate: number;
 }
 
-export function checkMeasure(text: unknown, options: MeasureOptions = {}): CheckedMeasure {
+export function checkMeasure(text: unknown, options: MeasureTextOptions = {}): CheckedMeasure {
   return measureInput(text, ownOptions(options, MEASURE_KEYS));
 }
 
@@ -90,12 +90,12 @@ export function checkMeasure(text: unknown, options: MeasureOptions = {}): Check
 export function checkFit(
   text: unknown,
   maxWidth: unknown,
-  options: MeasureOptions = {},
+  options: MeasureTextOptions = {},
 ): CheckedMeasure & { maxWidth: number } {
   return { ...checkMeasure(text, options), maxWidth: checkNumber('maxWidth', maxWidth, 0, 2 * MAX_COORDINATE) };
 }
 
-export function checkLayout(text: unknown, given: LayoutOptions): CheckedLayout {
+export function checkLayout(text: unknown, given: LayoutTextOptions): CheckedLayout {
   const options = ownOptions(given, LAYOUT_KEYS);
   const { anchor = 'start', baseline = 'alphabetic', rotate = 0 } = options;
   if (!ANCHORS.includes(anchor)) {
@@ -226,7 +226,7 @@ function checkLength(text: string): void {
   }
 }
 
-function measureInput(text: unknown, options: MeasureOptions): CheckedMeasure {
+function measureInput(text: unknown, options: MeasureTextOptions): CheckedMeasure {
   const { fontSize = DEFAULT_FONT_SIZE, font = excalifont } = options;
   if (typeof fontSize !== 'number' || !(fontSize > 0 && fontSize <= MAX_FONT_SIZE)) {
     throw new Error(`fontSize must be a number greater than 0 and at most ${MAX_FONT_SIZE}, got ${show(fontSize)}`);

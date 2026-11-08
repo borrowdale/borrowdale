@@ -70,7 +70,7 @@ cannot share a chart:
 | `polarLine` | a value or `null` (a gap) per category of the angle axis | `dash`. Values below 0 need the radius axis' `min` |
 | `polarArea` | a value or `null` per category of the angle axis | `stack`. Stacked values must not be negative |
 | `polarScatter` | `[angle, radius]` points | |
-| `gauge` | `value`, a number on the dial | `display`: `needle` (default) or `bar`; `length`: a needle's length as a share of the radius, 0.1 to 1 (default 0.8) |
+| `gauge` | `value`, a number on the dial | `display`: `needle` (default) or `bar`; `needleLength`: a needle's length as a share of the radius, 0.1 to 1 (default 0.8) |
 | `timeline` | `{ from, to?, label? }` moments and periods | `dataLabels`; see [timelines](#timelines) |
 
 A slice's `offset` (0 to 0.5 of the radius) pulls it out from the centre. Give every slice of a pie
@@ -363,7 +363,7 @@ Hachure fills are what costs most: about 7 KB of SVG for a 40 × 300 bar, agains
 
 `interval` draws one `[from, to]` pair per category. Endpoints may descend; `null`
 omits a category. It uses the same `axis` and horizontal/vertical orientation as a
-bar. Its `display` is `bar` (default), `line`, `error` (stem and caps), or `points`.
+bar. Its `display` is `bar` (default), `line`, `error` (stem and caps), or `point`.
 `fromSymbol` and `toSymbol` add endpoint markers. `slotWidth` is a fraction of its slot,
 0.05 to 1 (default 0.8). `overlay: true` puts it at the category centre instead of
 reserving a grouped slot. Intervals do not stack automatically: supply their actual

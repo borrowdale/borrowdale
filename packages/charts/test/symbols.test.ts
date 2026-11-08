@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import '../../core/test/support/forbid-unportable-calls.js';
-import { layoutChart, toSvgChart, type ChartSpec, type MarkerSymbol } from '@borrowdale/charts';
+import { layoutChart, toSvgChart, type ChartSpec, type SymbolName } from '@borrowdale/charts';
 import { symbolShape } from '../src/symbols.js';
 import { pointsOutside, shapesOf } from './support/layout.js';
 import examples from '../../../apps/examples/cartesian-cases.json' with { type: 'json' };
 
-const symbols: MarkerSymbol[] = ['circle', 'square', 'diamond', 'triangle', 'cross', 'star', 'wye', 'tick'];
+const symbols: SymbolName[] = ['circle', 'square', 'diamond', 'triangle', 'cross', 'star', 'wye', 'tick'];
 const spec: ChartSpec = {
   width: 300, height: 200, legend: 'none', style: { roughness: 0 },
   axes: { x: { type: 'linear', min: 0, max: 1 }, y: { type: 'linear', min: 0, max: 1 } },

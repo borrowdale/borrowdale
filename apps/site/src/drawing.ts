@@ -1,7 +1,7 @@
 import { sketch, toSvgSketch, type Shape, type SketchOptions } from '@borrowdale/core';
 import { layoutChart, toSvgChart, drawChart, type ChartSpec, type ChartImage } from '@borrowdale/charts';
 import { pattern, type PatternOptions } from '@borrowdale/fills';
-import { layoutText, textBounds, toSvgText, type LayoutOptions } from '@borrowdale/text';
+import { layoutText, textBounds, toSvgText, type LayoutTextOptions } from '@borrowdale/text';
 
 export const colors = ['#de9b24', '#397e92', '#3b7662', '#bd6556', '#7b79a3', '#8c8a50'];
 export const escape = (value: unknown) =>
@@ -37,7 +37,7 @@ export function scribble(width = 260, height = 64, fill = '#f0c557') {
     ),
   );
 }
-export function textSvg(text: string, options: LayoutOptions) {
+export function textSvg(text: string, options: LayoutTextOptions) {
   const layout = layoutText(text, options),
     box = textBounds(layout);
   return {

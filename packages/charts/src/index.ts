@@ -3,7 +3,6 @@ export { InvalidChartError } from './read.js';
 export { appendChart, drawChart, toSvgChart, type SvgChartOptions } from './render.js';
 export type {
   Annotation,
-  ChartCoordinate,
   ChartValue,
   ChartPosition,
   AngleBandAxis,
@@ -28,7 +27,6 @@ export type {
   LogAxis,
   LineSeries,
   LinearGradient,
-  MarkerSymbol,
   Marker,
   NumberFormat,
   PieSeries,
@@ -53,6 +51,7 @@ export type {
   Series,
   SeriesType,
   Sweep,
+  SymbolName,
   TimeAxis,
   TimelineAxes,
   TimelineAxis,

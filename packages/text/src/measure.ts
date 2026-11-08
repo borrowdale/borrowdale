@@ -1,5 +1,5 @@
 import { cos, sin } from '@borrowdale/core/math';
-import type { Box, LayoutOptions, MeasureOptions, TextAnchor, TextBaseline, TextExtent, TextLayout } from './types.js';
+import type { Box, LayoutTextOptions, MeasureTextOptions, TextAnchor, TextBaseline, TextExtent, TextLayout } from './types.js';
 import {
   advanceOf,
   checkFit,
@@ -47,7 +47,7 @@ const BASELINE_SHIFT: Record<TextBaseline, (ascent: number, descent: number) => 
  * applied: the SVG and DOM renderers switch them off, and the canvas renderer fills one unit at a
  * time, so none can form, and the drawn text is this wide.
  */
-export function measureText(text: string, options?: MeasureOptions): TextExtent {
+export function measureText(text: string, options?: MeasureTextOptions): TextExtent {
   return rounded(extent(checkMeasure(text, options)));
 }
 
@@ -56,7 +56,7 @@ export function measureText(text: string, options?: MeasureOptions): TextExtent 
  * ellipsis at its end ("…", or "..." in a font without it). Cut between whole characters as they
  * are drawn, never inside one. Undefined when not even the ellipsis fits.
  */
-export function fitText(text: string, maxWidth: number, options?: MeasureOptions): string | undefined {
+export function fitText(text: string, maxWidth: number, options?: MeasureTextOptions): string | undefined {
   const checked = checkFit(text, maxWidth, options);
   const widthOf = (candidate: string): number => round(extent({ ...checked, text: candidate }).width);
   if (widthOf(checked.text) <= checked.maxWidth) {
@@ -84,7 +84,7 @@ export function fitText(text: string, maxWidth: number, options?: MeasureOptions
 }
 
 /** Measures text and places it, so the SVG and DOM renderers only draw; the canvas one measures each unit it fills. */
-export function layoutText(text: string, options: LayoutOptions): TextLayout {
+export function layoutText(text: string, options: LayoutTextOptions): TextLayout {
   const checked = checkLayout(text, options);
   const { x, y, rotate } = checked;
   const measured = extent(checked);

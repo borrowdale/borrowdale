@@ -44,14 +44,14 @@ export const TEXT_BASELINES = ['alphabetic', 'top', 'middle', 'bottom'] as const
 
 export type TextBaseline = (typeof TEXT_BASELINES)[number];
 
-export interface MeasureOptions {
+export interface MeasureTextOptions {
   /** In user units. Defaults to 16. */
   fontSize?: number | undefined;
   /** Defaults to Excalifont. */
   font?: Font | undefined;
 }
 
-export interface LayoutOptions extends MeasureOptions {
+export interface LayoutTextOptions extends MeasureTextOptions {
   x: number;
   y: number;
   /** Which part of the text sits at `x`. Defaults to `start`. */
