@@ -282,6 +282,16 @@ describe('measureText', () => {
 });
 
 describe('excalifont', () => {
+  it('is frozen through and through, so no caller can change it for the others', () => {
+    expect(Object.isFrozen(excalifont.advances)).toBe(true);
+    expect(Object.isFrozen(excalifont.files?.[0]?.ranges[0])).toBe(true);
+  });
+
+  it('has frozen files, so no caller can change them for the others', () => {
+    expect(Object.isFrozen(excalifontFiles.files[0])).toBe(true);
+    expect(Object.isFrozen(excalifontFiles.files[0]?.ranges[0])).toBe(true);
+  });
+
   it('lists the code points each of its files serves, as the files do', () => {
     expect(excalifontFiles.files).toMatchObject(excalifont.files as object);
   });

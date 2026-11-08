@@ -6,34 +6,34 @@ import type { Point } from '@borrowdale/core';
  */
 export interface Font {
   /** The CSS font family the metrics belong to. */
-  family: string;
-  unitsPerEm: number;
+  readonly family: string;
+  readonly unitsPerEm: number;
   /** Height above the baseline. */
-  ascender: number;
+  readonly ascender: number;
   /** Depth below the baseline, as a negative number. */
-  descender: number;
+  readonly descender: number;
   /** Advance width of every code point the font covers. */
-  advances: Readonly<Record<number, number>>;
+  readonly advances: Readonly<Record<number, number>>;
   /**
    * For a font split into files by Unicode range, the code points each file serves: its `FontFiles`
    * files without their bytes. A browser draws a character and the combining marks after it from
    * one file, so measuring needs to know when no one file serves them all. Leave it out for a font
    * in one file. Read only as the font's own property: a font that inherits it counts as one file.
    */
-  files?: readonly Pick<FontFile, 'ranges'>[] | undefined;
+  readonly files?: readonly Pick<FontFile, 'ranges'>[] | undefined;
 }
 
 /** A font's woff2 files, for embedding in a document or loading into a page. */
 export interface FontFiles {
-  family: string;
-  files: readonly FontFile[];
+  readonly family: string;
+  readonly files: readonly FontFile[];
 }
 
 export interface FontFile {
   /** The code points this file serves, as inclusive `[first, last]` ranges. */
-  ranges: readonly (readonly [first: number, last: number])[];
+  readonly ranges: readonly (readonly [first: number, last: number])[];
   /** The woff2 file, base64-encoded. */
-  woff2: string;
+  readonly woff2: string;
 }
 
 export const TEXT_ANCHORS = ['start', 'middle', 'end'] as const;
