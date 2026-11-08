@@ -1,12 +1,13 @@
 name: Library
 
-# Runs on each merge to main only, to keep Actions minutes down: pull requests are built and tested
-# locally before they are merged (see CONTRIBUTING.md). A merge that changes only documentation
-# starts no Library run. The website's tests read some of these files (the package READMEs,
-# CONTRIBUTING.md, CHANGELOG.md and the licence files), and the Website workflow runs them when those
-# files change. The Release workflow also runs this one, on the commit it is about to publish, and
-# publishes nothing unless every job passes.
+# Runs on every pull request and after each merge to main. A pull request runs whatever files it
+# changes, so no required check waits on a run that a path filter skipped; a merge that changes only
+# documentation starts no run. The website's tests read some
+# of these files (the package READMEs, CONTRIBUTING.md, CHANGELOG.md and the licence files), and the
+# Website workflow runs them when those files change. The Release workflow also runs this one, on
+# the commit it is about to publish, and publishes nothing unless every job passes.
 on:
+  pull_request:
   push:
     branches: [main]
     paths-ignore:
@@ -25,6 +26,11 @@ jobs:
     runs-on: ubuntu-latest
     # A whole job normally takes 2 to 3 minutes.
     timeout-minutes: 15
+    # A newer push to a pull request cancels its older run. Every other run, after a merge or started
+    # by the Release workflow, has a group of its own, so it is never cancelled or held up.
+    concurrency:
+      group: library-${{ github.event.pull_request.number || github.run_id }}-${{ matrix.node }}
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     strategy:
       # Every supported Node version reports, even when another one fails.
       fail-fast: false
