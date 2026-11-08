@@ -1,5 +1,5 @@
 import type { SketchStyle } from '@borrowdale/core';
-import { layoutCartesian, legendOf } from './cartesian.js';
+import { layoutCartesian, legendOf, legendSymbol, type LegendShape } from './cartesian.js';
 import { Drawing } from './drawing.js';
 import { GAP, PAD, type Rect } from './frame.js';
 import { hatched, LINE_WIDTH, paints, type Paint } from './palette.js';
@@ -110,20 +110,19 @@ function legendEntries(chart: CheckedChart): LegendEntry[] {
       style: slices[i]!.style,
     }));
   }
-  const lines =
+  const symbolOf = (entry: CheckedChart['series'][number]) => legendSymbol('symbol' in entry ? entry.symbol : undefined);
+  const shapes: LegendShape[] =
     chart.system === 'cartesian'
-      ? chart.series.map((entry) => legendOf(entry) === 'line')
+      ? chart.series.map(legendOf)
       : chart.system === 'polar'
-        ? chart.series.map((entry) => polarLegendOf(entry) === 'line')
-        : chart.series.map(() => false);
+        ? chart.series.map((entry) => ({ line: polarLegendOf(entry) === 'line', symbol: symbolOf(entry) }))
+        : chart.series.map((entry) => ({ line: false, symbol: symbolOf(entry) }));
   const series: readonly CheckedChart['series'][number][] = chart.series;
   return paints(series).map((paint, i) => {
     const entry = series[i]!;
     const dash = 'dash' in entry ? entry.dash : undefined;
-    const symbol = 'marks' in entry && entry.marks.every(mark => mark.kind === 'dot')
-      ? entry.marks[0]?.symbol ?? 'circle'
-      : 'symbol' in entry && entry.symbol !== 'circle' ? entry.symbol : undefined;
-    return { name: entry.name, path: `${entry.path}.name`, paint, line: lines[i]!, dash, style: entry.style, symbol };
+    const { line, symbol } = shapes[i]!;
+    return { name: entry.name, path: `${entry.path}.name`, paint, line, dash, style: entry.style, symbol };
   });
 }
 

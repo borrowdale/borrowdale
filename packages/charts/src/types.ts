@@ -1,5 +1,6 @@
 import type { Seed, Sketch, SketchStyle } from '@borrowdale/core';
 import type { Font, TextLayout } from '@borrowdale/text';
+import type { DistributionSeries, HistogramSeries, MarketSeries, RelationshipSeries } from './statistics/types.js';
 
 /**
  * A chart, as plain data that can come from JSON. Its series' type picks its coordinate system, and
@@ -313,21 +314,6 @@ interface ValueSeries extends SeriesBase {
    * axis on the right. Defaults to `y`.
    */
   axis?: 'y' | 'y2' | undefined;
-}
-
-/** Counts numeric samples in adjacent intervals on linear x and y axes. */
-export interface HistogramSeries extends SeriesBase {
-  type: 'histogram';
-  /** Stack series with matching edges and frequency options under the same name. */
-  stack?: string | undefined;
-  /** Strictly increasing bin edges, including both outer limits. */
-  edges: readonly number[];
-  /** Every sample must fall within the outer edges. An interior edge starts a bin. */
-  data: readonly number[];
-  /** Relative frequency divides by this series' sample count. */
-  frequency?: 'count' | 'relative' | undefined;
-  /** Accumulate the frequencies through each successive bin. */
-  cumulative?: boolean | undefined;
 }
 
 export interface BarSeries extends ValueSeries {
@@ -644,9 +630,9 @@ export interface GaugeSeries extends SeriesBase {
 
 export type Series =
   | BarSeries
-  | import('./statistics/types.js').DistributionSeries
-  | import('./statistics/types.js').RelationshipSeries
-  | import('./statistics/types.js').MarketSeries
+  | DistributionSeries
+  | RelationshipSeries
+  | MarketSeries
   | HistogramSeries
   | LineSeries
   | AreaSeries

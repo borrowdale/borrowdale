@@ -224,7 +224,7 @@ const charts = {
 
 const outDir = new URL('./out/', import.meta.url);
 mkdirSync(outDir, { recursive: true });
-for (const [name, spec] of [...Object.entries(charts), ...statisticalCases.map(({name,spec}) => [name,spec])]) {
+for (const [name, spec] of [...Object.entries(charts), ...statisticalCases.map(({ name, spec }) => [name, spec])]) {
   const svg = toSvgChart(layoutChart({ ...spec, seed }), { fontFiles: excalifontFiles });
   writeFileSync(new URL(`chart-${name}.svg`, outDir), svg);
   console.log(`${name} ${createHash('sha256').update(svg).digest('hex')}`);

@@ -108,12 +108,12 @@ describe('data labels and image markers', () => {
 
   it('rejects more than 10,000 data labels', () => {
     expect(layingOut(line(10_001, { dataLabels: true }))).toThrow(
-      'Drawing too complex (more than 10000 data labels and images)');
+      'Drawing too complex (more than 10000 data labels, text marks and images)');
   });
 
   it('counts image markers with data labels', () => {
     expect(layingOut(line(5_001, { dataLabels: true, symbol: { image: 'dot' } }))).toThrow(
-      'Drawing too complex (more than 10000 data labels and images)');
+      'Drawing too complex (more than 10000 data labels, text marks and images)');
   });
 });
 

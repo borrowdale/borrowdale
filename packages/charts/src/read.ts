@@ -11,6 +11,10 @@ const MAX_MESSAGE = 200;
 export const MAX_VALUE = 1e15;
 /** The most decimals a number is written with. */
 export const MAX_DECIMALS = 20;
+/** The keys every series has, whatever its type. */
+export const SERIES_FIELDS = ['type', 'name', 'color', 'style'] as const;
+/** The most data points a chart may hold in all, counting the points statistical series draw. */
+export const MAX_POINTS = 100_000;
 /** The most ticks an axis may have, whether listed in `ticks` or made by its `step`. */
 export const MAX_TICKS = 1_000;
 // The longest string read where a time may be given: "2026-11-01T09:30:15.250+01:00" is 29.
@@ -234,5 +238,3 @@ export function unique(names: readonly string[], pathOf: (index: number) => stri
     seen.add(name);
   });
 }
-
-export const SERIES_FIELDS = ['type', 'name', 'color', 'style'] as const;

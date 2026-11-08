@@ -10,8 +10,8 @@ import type { Rect } from './frame.js';
 // a work unit takes 0.4 to 2.3 µs depending on the fill, so this stays under about a second; 200
 // hachure-filled bars use about 130,000 units and 1,000 scatter points about 76,000.
 const MAX_OPERATIONS = 400_000;
-// Data labels and image markers draw no strokes, so the budget never sees them: this caps them
-// instead, at about 3 MB of SVG.
+// Data labels, statistical text marks and image markers draw no strokes, so the budget never sees
+// them: this caps them instead, at about 3 MB of SVG.
 const MAX_PLACED = 10_000;
 
 /** Distances from a point, in each direction. */
@@ -156,7 +156,7 @@ export class Drawing {
 
   #place(): void {
     if (++this.#placed > MAX_PLACED) {
-      throw new Error(`Drawing too complex (more than ${MAX_PLACED} data labels and images)`);
+      throw new Error(`Drawing too complex (more than ${MAX_PLACED} data labels, text marks and images)`);
     }
   }
 

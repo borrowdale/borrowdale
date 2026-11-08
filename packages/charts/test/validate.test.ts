@@ -114,6 +114,7 @@ describe('chart validation', () => {
     ['a scatter series on a band axis', { ...bars, series: [{ type: 'scatter', name: 'A', data: [[1, 2]] }] }, 'Invalid chart: series[0] is a scatter series, which needs both axes continuous: linear, time, log or sqrt'],
     ['a bar series with two linear axes', { ...bars, axes: xy }, 'Invalid chart: series[0] is a bar series, which needs one band axis'],
     ['an interval series with two linear axes', { ...bars, axes: xy, series: [{ type: 'interval', name: 'I', data: [[1, 2]] }] }, 'Invalid chart: series[0] is an interval series, which needs one band axis'],
+    ['a distribution series on a band axis', { ...bars, series: [{ type: 'distribution', display: 'box', name: 'D', data: [1, 2] }] }, 'Invalid chart: series[0] is a distribution series, which needs linear x and y axes'],
     ['an xyLine series on a band axis', { ...bars, series: [{ type: 'xyLine', name: 'L', data: [[1, 2]] }] }, 'Invalid chart: series[0] is an xyLine series, which needs both axes continuous: linear, time, log or sqrt'],
     ['a pie series with axes', { ...pie, axes: bands }, 'Invalid chart: axes must be left out: a pie chart has no axes'],
     ['a bar series with no axes', { ...bars, axes: undefined }, 'Invalid chart: axes is missing'],

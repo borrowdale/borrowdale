@@ -13,7 +13,6 @@ export type {
   AxisTick,
   BandAxis,
   BarSeries,
-  HistogramSeries,
   BubbleSeries,
   CartesianAxes,
   ChartLayout,
@@ -66,4 +65,4 @@ export type {
 
 export type { ChartImage, ChartRenderOptions } from './images.js';
 
-export type { DistributionSeries, MarketSeries, RelationshipSeries } from './statistics/types.js';
+export type { DistributionSeries, HistogramSeries, MarketSeries, RelationshipSeries } from './statistics/types.js';
