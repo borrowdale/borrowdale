@@ -1,0 +1,244 @@
+name: Release
+
+# Versions and publishes the packages with Changesets. While changesets are waiting on main, each merge
+# opens or updates a draft pull request that applies them: new versions, changelogs and the lockfile.
+# A maintainer marks it ready and merges it. The run for that merge tests the release commit with the
+# Library workflow, packs the packages, publishes them to npm with provenance, and tags each package
+# and creates its GitHub release. A merge with nothing to version or publish only checks that no
+# release is waiting.
+#
+# npm trusts this workflow by its file name, release.yml, and by the publish job's environment, npm.
+# Both are entered in each package's trusted publisher settings on npmjs.com, which can be replaced
+# but not edited, so renaming either one stops publishing until every package's setting is replaced.
+# No npm token is stored: the publish job signs in with a short-lived OpenID Connect token. A new
+# package must exist on npm, with the same trusted publisher setting, before the first release that
+# includes it.
+#
+# Two repository settings must be in place before this workflow runs: "Allow GitHub Actions to
+# create and approve pull requests" must be on, and the npm environment must accept deployments from
+# main only.
+on:
+  push:
+    branches: [main]
+
+permissions: {}
+
+jobs:
+  select-mode:
+    name: Select the release mode
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    outputs:
+      mode: ${{ steps.select-mode.outputs.mode }}
+      publish-plan-artifact-id: ${{ steps.select-mode.outputs.publish-plan-artifact-id }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      # The jobs in this file restore no dependency cache, so nothing saved by another run can reach
+      # the jobs that push commits or publish, and they skip install scripts, which none of them needs.
+      # The Library jobs that the test job runs keep both; they can only read the repository and pass
+      # nothing to the jobs in this file.
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - run: npm ci --ignore-scripts
+      # "version" while a changeset that names a package is waiting, "publish" when no changeset is
+      # waiting and a package version is not on npm yet, and "none" otherwise.
+      - name: Choose to version, publish or do nothing
+        id: select-mode
+        uses: changesets/action/select-mode@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
+
+  version:
+    name: Update the version pull request
+    needs: select-mode
+    if: needs.select-mode.outputs.mode == 'version' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+    # Runs update the pull request one at a time, and none is dropped while it waits. They can reach
+    # this group out of commit order, so each run first checks that its commit is still the newest on
+    # main, and only then updates the pull request: an older run never replaces a newer one's update.
+    concurrency:
+      group: release-version
+      cancel-in-progress: false
+      queue: max
+    steps:
+      - name: Check that this commit is still the newest on main
+        id: newest
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          newest=$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)
+          echo "is-newest=$([ "$newest" = "$GITHUB_SHA" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - run: npm ci --ignore-scripts
+      # The pull request is a draft, and goes back to draft each time it is updated, so it cannot be
+      # merged by accident. The commit is made through the GitHub API and signed by GitHub. A pull
+      # request opened by this workflow starts no other workflow.
+      - name: Open or update the version pull request
+        if: steps.newest.outputs.is-newest == 'true'
+        uses: changesets/action/version@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
+        with:
+          script: npm run version-packages
+          commit-message: '[repo] CHORE: version packages'
+          pr-title: '[repo] CHORE: version packages'
+          pr-draft: always
+
+  # The action publishes only when no changeset is waiting, empty ones included. If main holds a
+  # version that is not on npm while one waits, no run publishes it and the next version pull request
+  # moves past it. That happens when a release run fails and a changeset is merged after it, when the
+  # version pull request is merged behind main, or when a changeset names only private packages. This
+  # job fails the run until it is resolved, without holding up the version pull request. It also fails
+  # while an earlier release run is still publishing; run it again once that run has finished. 0.0.0
+  # is the unreleased version.
+  unpublished:
+    name: Check that no release is waiting
+    needs: select-mode
+    if: needs.select-mode.outputs.mode != 'publish'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - run: npm ci --ignore-scripts
+      - name: Fail if a version on main is not on npm
+        run: |
+          npx --no changeset publish-plan --output "$RUNNER_TEMP/publish-plan.json"
+          node --input-type=module -e '
+            import { readFileSync } from "node:fs";
+            const file = JSON.parse(readFileSync(process.argv[1], "utf8"));
+            if (file.version !== 1 || !Array.isArray(file.plan)) {
+              throw new Error(`Unrecognised publish plan format, version ${file.version}`);
+            }
+            const missing = file.plan.flat().filter((r) => r.kind === "publish" && r.version !== "0.0.0");
+            const hint = "If a release run is still publishing it, re-run this job when that run ends.";
+            for (const { name, version } of missing) {
+              console.log(`::error::${name}@${version} is not on npm while a changeset waits. ${hint}`);
+              process.exitCode = 1;
+            }' "$RUNNER_TEMP/publish-plan.json"
+
+  test:
+    name: Test the release
+    needs: select-mode
+    if: needs.select-mode.outputs.mode == 'publish'
+    permissions:
+      contents: read
+    uses: ./.github/workflows/library.yml
+
+  pack:
+    name: Check and pack the release
+    needs: [select-mode, test]
+    if: needs.select-mode.outputs.mode == 'publish'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    outputs:
+      pack-dir-artifact-id: ${{ steps.pack.outputs.pack-dir-artifact-id }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - run: npm ci --ignore-scripts
+      # npm ci accepts a lockfile that still lists the previous package versions, so nothing else
+      # notices a stale one. The version-packages script refreshes it with the lockfile script. The
+      # first check reads the committed files without npm, so it still fails if that script stops
+      # updating the versions; the second regenerates the lockfile with the same script and fails on
+      # any other difference.
+      - name: Check that the lockfile lists each workspace's version
+        run: |
+          node --input-type=module -e '
+            import { globSync, readFileSync } from "node:fs";
+            const read = (file) => JSON.parse(readFileSync(file, "utf8"));
+            const locked = read("package-lock.json").packages;
+            const manifests = read("package.json").workspaces.map((w) => `${w}/package.json`);
+            for (const manifest of globSync(manifests)) {
+              const dir = manifest.slice(0, -"/package.json".length);
+              const { version } = read(manifest);
+              const lockedVersion = dir in locked ? locked[dir].version : "no entry";
+              if (lockedVersion !== version) {
+                console.error(`${dir}: package.json has ${version}, the lockfile has ${lockedVersion}`);
+                process.exitCode = 1;
+              }
+            }'
+      - name: Check that the lockfile matches a fresh one
+        run: |
+          npm run lockfile
+          git diff --exit-code -- package-lock.json
+      - run: npm run build
+      - name: Pack the packages
+        id: pack
+        uses: changesets/action/pack@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
+        with:
+          publish-plan-artifact-id: ${{ needs.select-mode.outputs.publish-plan-artifact-id }}
+
+  publish:
+    name: Publish to npm
+    needs: pack
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: npm
+    permissions:
+      contents: write
+      id-token: write
+    # One publish runs at a time. Waiting publishes queue, in the order they reach this job, instead of
+    # replacing each other, so no release is dropped, and one that finds its versions already on npm
+    # skips them. An older release that publishes after a newer one moves the latest tag on npm back
+    # to the older version, so never re-run an older release once a newer one has shipped. The group
+    # is set for this job only, so updating the version pull request never waits behind a publish.
+    concurrency:
+      group: release-publish
+      cancel-in-progress: false
+      queue: max
+    steps:
+      # Without an artifact id, the publish step would build and publish from the package folders in
+      # this job, which can publish. Stop instead.
+      - name: Check that the pack job passed on its tarballs
+        env:
+          PACK_DIR_ARTIFACT_ID: ${{ needs.pack.outputs.pack-dir-artifact-id }}
+        run: test -n "$PACK_DIR_ARTIFACT_ID"
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      # No registry-url, so no token is configured: npm signs in through trusted publishing.
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - run: npm ci --ignore-scripts
+      # Publishes the packed tarballs, builds nothing, then tags each package and creates a GitHub
+      # release from its changelog.
+      - name: Publish, tag and create the GitHub releases
+        uses: changesets/action/publish@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
+        # Left at its default, npm adds provenance only when it can confirm that the repository and the
+        # package are public, and publishes without it otherwise. Set here, a publish without provenance
+        # fails. A package's publishConfig takes precedence over settings made in the environment, so
+        # keep provenance and registry out of it.
+        env:
+          NPM_CONFIG_PROVENANCE: 'true'
+        with:
+          pack-dir-artifact-id: ${{ needs.pack.outputs.pack-dir-artifact-id }}
