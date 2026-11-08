@@ -188,6 +188,12 @@ jobs:
         run: |
           npm run lockfile
           git diff --exit-code -- package-lock.json
+      # The @borrowdale/source export condition points the tests at the TypeScript source; installs
+      # have no use for it, so the packed manifests leave it out. Only this job's copy changes. It runs
+      # before the build: each package's prepack builds again whenever a manifest is newer than its
+      # build, and the packs run side by side.
+      - name: Leave the source condition out of the published manifests
+        run: node scripts/published-manifests.mjs
       - run: npm run build
       - name: Pack the packages
         id: pack
