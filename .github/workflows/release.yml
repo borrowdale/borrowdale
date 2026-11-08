@@ -85,8 +85,8 @@ jobs:
           package-manager-cache: false
       - run: npm ci --ignore-scripts
       # The pull request is a draft, and goes back to draft each time it is updated, so it cannot be
-      # merged by accident. The commit is made through the GitHub API and signed by GitHub. A pull
-      # request opened by this workflow starts no other workflow.
+      # merged by accident. The commit is made through the GitHub API and signed by GitHub. The
+      # pull request's own workflow runs wait until a maintainer approves them.
       - name: Open or update the version pull request
         if: steps.newest.outputs.is-newest == 'true'
         uses: changesets/action/version@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
