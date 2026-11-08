@@ -4,7 +4,8 @@ name: Library
 # locally before they are merged (see CONTRIBUTING.md). A merge that changes only documentation
 # starts no Library run. The website's tests read some of these files (the package READMEs,
 # CONTRIBUTING.md, CHANGELOG.md and the licence files), and the Website workflow runs them when those
-# files change.
+# files change. The Release workflow also runs this one, on the commit it is about to publish, and
+# publishes nothing unless every job passes.
 on:
   push:
     branches: [main]
@@ -13,6 +14,7 @@ on:
       - LICENSE
       - packages/text/OFL.txt
       - .github/ISSUE_TEMPLATE/**
+  workflow_call:
 
 permissions:
   contents: read
