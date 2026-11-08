@@ -8,7 +8,7 @@ export {
   escapeAttribute,
   svgElement,
   toSvgDocument,
-  toSvgPaths,
+  toSvgSketch,
   type SvgAttributes,
   type SvgDocumentOptions,
 } from './render.js';

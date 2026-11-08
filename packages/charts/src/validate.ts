@@ -163,12 +163,12 @@ const SERIES_RULES = {
   interval: {
     system: 'cartesian',
     band: true,
-    keys: ['shape', 'dataLabels', 'axis', 'data', 'display', 'width', 'overlay', 'fromSymbol', 'toSymbol'],
+    keys: ['shape', 'dataLabels', 'axis', 'data', 'display', 'slotWidth', 'overlay', 'fromSymbol', 'toSymbol'],
     read: (r: Fields, _path: string, reserve: ReservePoints) => ({
       shape: r.optional('shape', oneOf(['rectangle', 'rounded', 'pyramid'] as const)) ?? 'rectangle', axis: readAxis(r),
       data: r.required('data', list(0, MAX_POINTS, nullable(coordinates(['from', 'to'])), reserve)),
       display: r.optional('display', oneOf(['bar', 'line', 'error', 'points'] as const)) ?? 'bar',
-      width: r.optional('width', number(0.05, 1)) ?? 0.8,
+      width: r.optional('slotWidth', number(0.05, 1)) ?? 0.8,
       overlay: r.optional('overlay', boolean) ?? false,
       fromSymbol: r.optional('fromSymbol', checkMarker),
       toSymbol: r.optional('toSymbol', checkMarker),
@@ -177,11 +177,11 @@ const SERIES_RULES = {
   xRange: {
     system: 'cartesian',
     band: true,
-    keys: ['dataLabels', 'data', 'shape', 'width', 'overlay'],
+    keys: ['dataLabels', 'data', 'shape', 'slotWidth', 'overlay'],
     read: (r: Fields, _path: string, reserve: ReservePoints) => ({
       data: r.required('data', list(0, MAX_POINTS, checkXRangeItem, reserve)),
       shape: r.optional('shape', oneOf(['rectangle', 'rounded'] as const)) ?? 'rectangle',
-      width: r.optional('width', number(0.05, 1)) ?? 0.6,
+      width: r.optional('slotWidth', number(0.05, 1)) ?? 0.6,
       overlay: r.optional('overlay', boolean) ?? false,
     }),
   },
@@ -192,8 +192,8 @@ const SERIES_RULES = {
       const data = r.required('data', list(0, MAX_POINTS, nullable(coordinates(['x', 'y'])), reserve));
       const segments = r.optional('segments', list(Math.max(0, data.length - 1), Math.max(0, data.length - 1), nullable((p, raw) => {
         const segment = fields(p, raw);
-        segment.allow(['color', 'width', 'dash']);
-        return { color: segment.optional('color', color), width: segment.optional('width', number(0, 100)), dash: segment.optional('dash', checkDash) };
+        segment.allow(['color', 'strokeWidth', 'dash']);
+        return { color: segment.optional('color', color), width: segment.optional('strokeWidth', number(0, 100)), dash: segment.optional('dash', checkDash) };
       })));
       const widths = r.optional('widths', list(data.length, data.length, number(0, 100)));
       const gradient = r.optional('gradient', (p, raw) => {
@@ -405,7 +405,7 @@ type CheckedTimelinePath =
   | { type: 'line' }
   | { type: 'serpentine'; rows: number }
   | { type: 'spiral'; turns: number; innerRadius: number }
-  | { type: 'curve'; points: [number, number][] };
+  | { type: 'polyline'; points: [number, number][] };
 
 export interface CheckedTimelineChart extends CheckedChartBase {
   system: 'timeline';
@@ -483,10 +483,10 @@ function checkTimelineChart(r: Fields, base: CheckedChartBase, series: SeriesOf<
   for (const entry of series) {
     entry.data.forEach((event, i) => {
       const path = `${entry.path}.data[${i}]`;
-      event.at = value(`${path}.at`, event.at);
+      event.from = value(`${path}.from`, event.from);
       event.to = event.to === undefined ? undefined : value(`${path}.to`, event.to);
-      if (event.to !== undefined && !(event.to > event.at)) {
-        fail(`${path}.to`, 'must be after at; leave it out for a moment');
+      if (event.to !== undefined && !(event.to > event.from)) {
+        fail(`${path}.to`, 'must be after from; leave it out for a moment');
       }
     });
   }
@@ -495,7 +495,7 @@ function checkTimelineChart(r: Fields, base: CheckedChartBase, series: SeriesOf<
 
 const checkTrack: Check<CheckedTimelinePath> = (path, raw) => {
   const r = fields(path, raw);
-  const type = r.required('type', oneOf(['line', 'serpentine', 'spiral', 'curve'] as const));
+  const type = r.required('type', oneOf(['line', 'serpentine', 'spiral', 'polyline'] as const));
   switch (type) {
     case 'line':
       r.allow(['type']);
@@ -506,7 +506,7 @@ const checkTrack: Check<CheckedTimelinePath> = (path, raw) => {
     case 'spiral':
       r.allow(['type', 'turns', 'innerRadius']);
       return { type, turns: r.optional('turns', number(1, MAX_TURNS)) ?? 3, innerRadius: r.optional('innerRadius', number(0, 0.9)) ?? 0.2 };
-    case 'curve':
+    case 'polyline':
       r.allow(['type', 'points']);
       return { type, points: r.required('points', list(2, MAX_TRACK_POINTS, (p, point) => {
         const [x, y] = tuple(['x', 'y'])(p, point);
@@ -1025,17 +1025,17 @@ function checkRange(path: string, raw: unknown): [number, number] {
   return [low, high];
 }
 
-/** A timeline event; at and to are read once the axis is known (checkTimelineChart). */
+/** A timeline event; from and to are read once the axis is known (checkTimelineChart). */
 interface CheckedTimelineEvent {
-  at: number;
+  from: number;
   to: number | undefined;
   label: string | undefined;
 }
 
 function checkTimelineEvent(path: string, raw: unknown): CheckedTimelineEvent {
   const r = fields(path, raw);
-  r.allow(['at', 'to', 'label']);
-  return { at: r.required('at', coordinate), to: r.optional('to', coordinate), label: r.optional('label', text(MAX_NAME)) };
+  r.allow(['from', 'to', 'label']);
+  return { from: r.required('from', coordinate), to: r.optional('to', coordinate), label: r.optional('label', text(MAX_NAME)) };
 }
 
 /** An xRange item; its row is found, and from and to read, once the axes are known (resolveValues). */

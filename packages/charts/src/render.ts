@@ -1,10 +1,14 @@
 import { appendResources, resourceSvg, svgResources, type SvgResources } from './svg-resources.js';
 import { paintedSketch } from './gradients.js';
-import { appendSketch, drawSketch, escapeAttribute, svgElement, toSvgPaths } from '@borrowdale/core';
+import { appendSketch, drawSketch, escapeAttribute, svgElement, toSvgSketch } from '@borrowdale/core';
+import { ownOptions } from '@borrowdale/core/internal';
 import { appendText, drawText, fontFaceCss, toSvgText, type FontFiles } from '@borrowdale/text';
 import { imageAttributes, resolveImages, type ChartImage, type ChartRenderOptions } from './images.js';
 import { show } from './read.js';
 import type { ChartLayout, ChartNode } from './types.js';
+
+const RENDER_OPTIONS: Record<keyof ChartRenderOptions, true> = { idPrefix: true, images: true };
+const SVG_OPTIONS: Record<keyof SvgChartOptions, true> = { ...RENDER_OPTIONS, fontFiles: true };
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -19,9 +23,11 @@ export interface SvgChartOptions extends ChartRenderOptions {
 
 /** Renders a chart as a complete `<svg>` document string. Needs no DOM. */
 export function toSvgChart(layout: ChartLayout, options: SvgChartOptions = {}): string {
-  const { fontFiles } = options;
-  const images = resolveImages(layout.nodes, options);
-  const resources = svgResources(layout.nodes, images, options);
+  const checked = ownOptions(options, SVG_OPTIONS);
+  // The family is read once, and the files embedded under the family that was compared.
+  const fontFiles = checked.fontFiles && { family: checked.fontFiles.family, files: checked.fontFiles.files };
+  const images = resolveImages(layout.nodes, checked);
+  const resources = svgResources(layout.nodes, images, checked);
   if (fontFiles !== undefined && fontFiles.family !== layout.family) {
     throw new Error(`Font files are for ${show(fontFiles.family)}, but the chart was laid out in ${show(layout.family)}`);
   }
@@ -44,11 +50,11 @@ export function toSvgChart(layout: ChartLayout, options: SvgChartOptions = {}): 
 function nodeToSvg(node: ChartNode, resources: SvgResources): string {
   switch (node.kind) {
     case 'gradient':
-      return toSvgPaths(paintedSketch(node, resources.gradients.get(node)!));
+      return toSvgSketch(paintedSketch(node, resources.gradients.get(node)!));
     case 'image':
       return svgElement('use', imageAttributes(node, resources.images));
     case 'sketch':
-      return toSvgPaths(node.sketch);
+      return toSvgSketch(node.sketch);
     case 'text':
       return toSvgText(node.text, { fill: node.fill });
     case 'mark': {
@@ -65,9 +71,10 @@ function nodeToSvg(node: ChartNode, resources: SvgResources): string {
  * the page, for example through `loadFont` or `fontFaceCss`.
  */
 export function appendChart(parent: Element, layout: ChartLayout, options: ChartRenderOptions = {}): SVGSVGElement {
-  const images = resolveImages(layout.nodes, options);
+  const checked = ownOptions(options, RENDER_OPTIONS);
+  const images = resolveImages(layout.nodes, checked);
   const document = parent.ownerDocument;
-  const resources = svgResources(layout.nodes, images, options, parent);
+  const resources = svgResources(layout.nodes, images, checked, parent);
   const svg = document.createElementNS(SVG_NS, 'svg');
   svg.setAttribute('width', String(layout.width));
   svg.setAttribute('height', String(layout.height));
@@ -124,7 +131,8 @@ function titleElement(document: Document, text: string): SVGTitleElement {
  * when the font has not loaded: load it with `loadFont` first.
  */
 export function drawChart(context: CanvasRenderingContext2D, layout: ChartLayout, options: ChartRenderOptions = {}): void {
-  const images = resolveImages(layout.nodes, options, true);
+  const checked = ownOptions(options, RENDER_OPTIONS);
+  const images = resolveImages(layout.nodes, checked, true);
   drawNodes(context, layout.nodes, images);
 }
 

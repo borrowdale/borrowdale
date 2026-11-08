@@ -2,7 +2,7 @@
 // Usage: node apps/examples/text.mjs [seed]
 import { createHash } from 'node:crypto';
 import { mkdirSync, writeFileSync } from 'node:fs';
-import { sketch, svgElement, toSvgDocument, toSvgPaths } from '@borrowdale/core';
+import { sketch, svgElement, toSvgDocument, toSvgSketch } from '@borrowdale/core';
 import { fontFaceCss, layoutText, measureText, toSvgText } from '@borrowdale/text';
 import { excalifontFiles } from '@borrowdale/text/excalifont-files';
 
@@ -63,7 +63,7 @@ const svg = toSvgDocument({
   defs: [svgElement('style', {}, fontFaceCss(excalifontFiles, labels.map(({ text }) => text)))],
   body: [
     svgElement('rect', { width, height, fill: '#fdf8ef' }),
-    ...shapes.map(toSvgPaths),
+    ...shapes.map(toSvgSketch),
     ...labels.map((label) => toSvgText(label, { fill: '#2b2b2b' })),
   ],
 });

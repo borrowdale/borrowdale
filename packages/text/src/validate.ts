@@ -1,4 +1,4 @@
-import { isPaint, notXml, PAINT_RULE, show } from '@borrowdale/core/internal';
+import { isPaint, notXml, ownOptions, PAINT_RULE, show } from '@borrowdale/core/internal';
 import { excalifont } from './fonts/excalifont.js';
 import {
   TEXT_ANCHORS,
@@ -83,8 +83,7 @@ export interface CheckedLayout extends CheckedMeasure {
 }
 
 export function checkMeasure(text: unknown, options: MeasureOptions = {}): CheckedMeasure {
-  checkKeys(options, MEASURE_KEYS);
-  return measureInput(text, ownCopy(options));
+  return measureInput(text, ownOptions(options, MEASURE_KEYS));
 }
 
 /** The text and options of `fitText`, and its width: from 0 to as wide as a layout may be placed. */
@@ -97,8 +96,7 @@ export function checkFit(
 }
 
 export function checkLayout(text: unknown, given: LayoutOptions): CheckedLayout {
-  checkKeys(given, LAYOUT_KEYS);
-  const options = ownCopy(given);
+  const options = ownOptions(given, LAYOUT_KEYS);
   const { anchor = 'start', baseline = 'alphabetic', rotate = 0 } = options;
   if (!ANCHORS.includes(anchor)) {
     throw new Error(`Unknown anchor: ${show(anchor)}`);
@@ -117,8 +115,7 @@ export function checkLayout(text: unknown, given: LayoutOptions): CheckedLayout 
 }
 
 export function checkStyle(style: TextStyle = {}): { fill: string } {
-  checkKeys(style, STYLE_KEYS);
-  const { fill = '#000' } = ownCopy(style);
+  const { fill = '#000' } = ownOptions(style, STYLE_KEYS);
   // Not any CSS paint: a `url(…)` to another file or a `var(…)` would have the page fetch the file or
   // paint with its own values.
   if (!isPaint(fill)) {
@@ -301,23 +298,6 @@ function pairOf(range: unknown): unknown {
 function checkFamily(family: unknown, owner: string): void {
   if (typeof family !== 'string' || !FAMILY.test(family)) {
     throw new Error(`Invalid ${owner}: ${FAMILY_RULE}, got ${show(family)}`);
-  }
-}
-
-// Only what checkKeys saw: own properties, in an object with no prototype, so neither an inherited
-// option nor a polluted Object.prototype can supply a value.
-function ownCopy<T extends object>(options: T): T {
-  return Object.assign(Object.create(null) as T, options);
-}
-
-function checkKeys(options: unknown, keys: object): void {
-  if (typeof options !== 'object' || options === null) {
-    throw new Error(`Options must be an object, got ${show(options)}`);
-  }
-  for (const [key, value] of Object.entries(options)) {
-    if (value !== undefined && !Object.hasOwn(keys, key)) {
-      throw new Error(`Unknown option: ${show(key)}`);
-    }
   }
 }
 

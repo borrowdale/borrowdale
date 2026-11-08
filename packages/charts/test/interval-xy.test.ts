@@ -23,7 +23,7 @@ describe('interval and numeric path geometry', () => {
       axes: { x: { type: 'linear', min: 0, max: 1, hidden: true }, y: { type: 'linear', min: 0, max: 1, hidden: true } },
       series: [{ type: 'xyLine', name: 'W', data: [[0, 0], [1, 1]],
         ...(kind === 'series' ? { style: { strokeWidth: 100 } } : {}),
-        ...(kind === 'segments' ? { segments: [{ width: 100 }] } : {}),
+        ...(kind === 'segments' ? { segments: [{ strokeWidth: 100 }] } : {}),
         ...(kind === 'taper' ? { widths: [100, 100] } : {}),
       }] });
     expect(pointsOutside(layout)).toBe(0);

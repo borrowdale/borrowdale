@@ -1,5 +1,6 @@
 // Reading a chart layout back in tests: its marks, texts and the points its shapes pass through.
-import { layoutChart, toSvgChart, type ChartLayout, type ChartNode, type ChartSpec } from '@borrowdale/charts';
+import { layoutChart, toSvgChart, type ChartLayout, type ChartSpec } from '@borrowdale/charts';
+import type { ChartNode } from '../../src/types.js';
 import { textBounds } from '@borrowdale/text';
 import { PAD } from '../../src/frame.js';
 

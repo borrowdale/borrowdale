@@ -1,4 +1,4 @@
-import { sketch, toSvgPaths, type Shape, type SketchOptions } from '@borrowdale/core';
+import { sketch, toSvgSketch, type Shape, type SketchOptions } from '@borrowdale/core';
 import { layoutChart, toSvgChart, drawChart, type ChartSpec, type ChartImage } from '@borrowdale/charts';
 import { pattern, type PatternOptions } from '@borrowdale/fills';
 import { layoutText, textBounds, toSvgText, type LayoutOptions } from '@borrowdale/text';
@@ -15,12 +15,12 @@ export function reseed() {
 }
 export const exampleSeed = (original?: string | number) => original === undefined ? seed : `${seed}:${original}`;
 export function shapeSvg(shape: Shape, options: SketchOptions = {}, width = 300, height = 180, fit = false) {
-  return `<svg ${fit ? 'data-fit' : ''} viewBox="0 0 ${width} ${height}" role="img" aria-label="${escape(shape.kind)} drawing">${toSvgPaths(sketch(shape, { stroke: '#263b33', ...options, seed: exampleSeed(options.seed) }))}</svg>`;
+  return `<svg ${fit ? 'data-fit' : ''} viewBox="0 0 ${width} ${height}" role="img" aria-label="${escape(shape.kind)} drawing">${toSvgSketch(sketch(shape, { stroke: '#263b33', ...options, seed: exampleSeed(options.seed) }))}</svg>`;
 }
 // Draws with exactly the seed given, whatever the page's re-sketch seed: for a drawing that must
 // always match a file, such as the header mark and `public/favicon.svg`.
 export function fixedShapeSvg(shape: Shape, options: SketchOptions & { seed: number }, width: number, height: number) {
-  return `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${escape(shape.kind)} drawing">${toSvgPaths(sketch(shape, { stroke: '#263b33', ...options }))}</svg>`;
+  return `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${escape(shape.kind)} drawing">${toSvgSketch(sketch(shape, { stroke: '#263b33', ...options }))}</svg>`;
 }
 // Hides an ornamental drawing from assistive technology, so it adds nothing to the name of the link or
 // button around it.

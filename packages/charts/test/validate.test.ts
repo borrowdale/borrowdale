@@ -107,7 +107,7 @@ describe('chart validation', () => {
     ['data above a fixed max', { ...bars, axes: { x: bands.x, y: { type: 'linear', max: 1.5 } } }, 'Invalid chart: axes.y.max is 1.5, but the data reach 2'],
     ['data below a fixed min', { ...bars, axes: { x: bands.x, y: { type: 'linear', min: 1 } } }, 'Invalid chart: axes.y.min is 1, but the data reach 0'],
     ['fractional decimals', { ...bars, axes: { x: bands.x, y: { type: 'linear', format: { decimals: 1.5 } } } }, 'Invalid chart: axes.y.format.decimals must be an integer from 0 to 20, got 1.5'],
-    ['a long separator', { ...bars, axes: { x: bands.x, y: { type: 'linear', format: { thousands: '           ' } } } }, 'Invalid chart: axes.y.format.thousands must be a string of at most 10 characters, got "           "'],
+    ['a long separator', { ...bars, axes: { x: bands.x, y: { type: 'linear', format: { thousandsSeparator: '           ' } } } }, 'Invalid chart: axes.y.format.thousandsSeparator must be a string of at most 10 characters, got "           "'],
     ['y2 on a horizontal chart', { ...bars, axes: { x: { type: 'linear' }, y: { type: 'band', categories: ['a', 'b'] }, y2: { type: 'linear' } } }, 'Invalid chart: axes.y2 needs x to be the band axis'],
     ['a percent axis with no band axis', { ...bars, axes: { x: { type: 'linear' }, y: { type: 'linear', percent: true } }, series: [{ type: 'scatter', name: 'A', data: [[1, 2]] }] }, 'Invalid chart: axes.y.percent needs a band axis: only stacking series (bar, area) use it'],
     ['a line on a percent axis', { ...bars, axes: { x: bands.x, y: { type: 'linear', percent: true } }, series: [{ type: 'line', name: 'A', data: [1, 2] }] }, 'Invalid chart: series[0] is a line series on axes.y, a percent axis, which only stacking series (bar, area) can use'],

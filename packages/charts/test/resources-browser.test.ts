@@ -7,7 +7,7 @@ it('keeps zero-width segments invisible on Canvas as in SVG', async () => {
     const api = (globalThis as unknown as { charts: typeof Charts }).charts;
     const layout = api.layoutChart({ width: 64, height: 64, legend: 'none', style: { roughness: 0 },
       axes: { x: { type: 'linear', min: 0, max: 1, hidden: true }, y: { type: 'linear', min: 0, max: 1, hidden: true } },
-      series: [{ type: 'xyLine', name: 'zero', data: [[0, 0.5], [1, 0.5]], segments: [{ width: 0 }] }] });
+      series: [{ type: 'xyLine', name: 'zero', data: [[0, 0.5], [1, 0.5]], segments: [{ strokeWidth: 0 }] }] });
     const canvas = document.createElement('canvas'); canvas.width = 64; canvas.height = 64;
     const context = canvas.getContext('2d')!;
     context.lineWidth = 10;

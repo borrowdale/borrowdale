@@ -77,13 +77,16 @@ const PAINT: OptionRule = {
 };
 
 const FINITE: OptionRule = { ok: Number.isFinite, expected: 'a finite number' };
+// Widths, weights, gaps and lengths. Leaving one out gives its default: 1 for strokeWidth, the others
+// derived from the stroke width.
+const SIZE = range(0, MAX_COORDINATE);
 const UNIT = range(0, 1);
 const ROUGHNESS = range(0, MAX_ROUGHNESS);
 
 // The complete list of accepted options: anything else is a typo or an engine internal.
 const OPTION_RULES: Record<keyof SketchOptions, OptionRule> = {
   stroke: PAINT,
-  strokeWidth: FINITE,
+  strokeWidth: SIZE,
   strokeLineDash: {
     ok: isDashArray,
     expected:
@@ -96,13 +99,13 @@ const OPTION_RULES: Record<keyof SketchOptions, OptionRule> = {
     expected: 'a fill style',
     message: (value) => `Unknown fill style: ${show(value)}`,
   },
-  fillWeight: FINITE,
+  fillWeight: SIZE,
   // In degrees, any number of turns: the engine takes it within one (engine.ts).
   hachureAngle: FINITE,
-  hachureGap: FINITE,
-  dashOffset: FINITE,
-  dashGap: FINITE,
-  zigzagOffset: FINITE,
+  hachureGap: SIZE,
+  dashLength: SIZE,
+  dashGap: SIZE,
+  zigzagWidth: SIZE,
   // Both scale coordinates: far outside 0–1 they put Infinity into the path data.
   curveTightness: UNIT,
   curveFitting: UNIT,
@@ -112,13 +115,24 @@ const OPTION_RULES: Record<keyof SketchOptions, OptionRule> = {
   seed: { ok: (value) => typeof value === 'string' || typeof value === 'number', expected: 'a string or a number' },
 };
 
+/** Every sketch option name, for packages that take sketch options among their own. */
+export const OPTION_NAMES = Object.fromEntries(Object.keys(OPTION_RULES).map((name) => [name, true])) as Record<
+  keyof SketchOptions,
+  true
+>;
+
 export type DefinedOptions = { [K in keyof SketchOptions]?: Exclude<SketchOptions[K], undefined> };
 
+/** Throws a descriptive error if the shape or options cannot be drawn. */
+export function assertDrawable(shape: Shape, options: SketchOptions): void {
+  drawable(shape, options);
+}
+
 /**
- * Throws a descriptive error if the shape or options cannot be drawn. Returns the options without
- * the ones set to `undefined`, which count as not set.
+ * Throws as `assertDrawable` does, and returns the options as checked: without the ones set to
+ * `undefined`, which count as not set, and with the dash copied.
  */
-export function assertDrawable(shape: Shape, options: SketchOptions): DefinedOptions {
+export function drawable(shape: Shape, options: SketchOptions): DefinedOptions {
   if (typeof shape !== 'object' || shape === null) {
     throw new Error(`Invalid shape: expected an object, got ${show(shape)}`);
   }
@@ -132,7 +146,8 @@ export function assertDrawable(shape: Shape, options: SketchOptions): DefinedOpt
   for (const [key, value] of defined) {
     assertOption(key, value);
   }
-  return Object.fromEntries(defined);
+  // Without a prototype, so an inherited value cannot stand in for one that was not given.
+  return Object.assign(Object.create(null) as DefinedOptions, Object.fromEntries(defined));
 }
 
 /**

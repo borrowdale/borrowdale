@@ -1,4 +1,5 @@
 import type { SketchStyle } from '@borrowdale/core';
+import { ownOptions } from '@borrowdale/core/internal';
 import { layoutCartesian, legendOf } from './cartesian.js';
 import { Drawing } from './drawing.js';
 import { GAP, PAD, type Rect } from './frame.js';
@@ -9,7 +10,7 @@ import { layoutPolar, polarLegendOf } from './polar.js';
 import { fail } from './read.js';
 import { markerNode } from './symbols.js';
 import { layoutTimeline } from './timeline.js';
-import type { ChartLayout, ChartOptions, ChartSpec, LegendPosition, Marker } from './types.js';
+import type { ChartLayout, ChartSpec, LayoutChartOptions, LegendPosition, Marker } from './types.js';
 import { checkChart, type CheckedChart } from './validate.js';
 
 const SWATCH = 10;
@@ -30,13 +31,16 @@ interface LegendEntry {
   symbol?: Marker | undefined;
 }
 
+const LAYOUT_OPTIONS: Record<keyof LayoutChartOptions, true> = { font: true };
+
 /**
  * Validates a chart and places every part of it: measures all text, picks scales and ticks, and
  * draws every shape. The result is data for the renderers, the same in every JavaScript engine.
  * Throws an error naming the place in the spec for anything that cannot be drawn.
  */
-export function layoutChart(spec: ChartSpec, options: ChartOptions = {}): ChartLayout {
-  const chart = checkChart(spec, options.font);
+export function layoutChart(spec: ChartSpec, options: LayoutChartOptions = {}): ChartLayout {
+  const { font } = ownOptions(options, LAYOUT_OPTIONS);
+  const chart = checkChart(spec, font);
   const drawing = new Drawing(chart);
   const entries = legendEntries(chart);
 

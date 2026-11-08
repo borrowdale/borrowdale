@@ -1,5 +1,5 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { sketch, type Shape, type SketchOptions } from '@borrowdale/core';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { assertDrawable, sketch, type Shape, type SketchOptions } from '@borrowdale/core';
 
 const rectangle: Shape = { kind: 'rectangle', x: 0, y: 0, width: 40, height: 20 };
 const wave: Shape = { kind: 'curve', points: [[0, 0], [10, 10], [20, 0], [30, 10]] };
@@ -38,7 +38,27 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+// Drawn before any test changes Object.prototype.
+const unpolluted = sketch(rectangle, {});
+
+describe('with a seed on a polluted Object.prototype', () => {
+  beforeEach(() => {
+    Object.defineProperty(Object.prototype, 'seed', { value: 'polluted', configurable: true, writable: true });
+  });
+  afterEach(() => {
+    delete (Object.prototype as { seed?: unknown }).seed;
+  });
+
+  it('draws as if no seed were given, reading only the options passed', () => {
+    expect(sketch(rectangle, {})).toEqual(unpolluted);
+  });
+});
+
 describe('sketch', () => {
+  it('returns nothing from assertDrawable, which only checks', () => {
+    expect(assertDrawable(rectangle, { stroke: 'red', fill: undefined })).toBeUndefined();
+  });
+
   it('draws the dash lengths it checked, reading each once', () => {
     expect(sketch(rectangle, { strokeLineDash: changingDash(), seed: 1 }).paths[0]?.strokeLineDash).toEqual([4, 2]);
   });
@@ -164,12 +184,17 @@ describe('validation', () => {
     ['path data with a command where a number should be', { kind: 'path', d: 'M0 0 L10 Z' }, {}, 'Invalid shape: path.d: L needs a number, got "Z"'],
     ['relative path data that leaves the range', { kind: 'path', d: 'M1e6 0 l1e6 0' }, {}, 'path.d reaches, once arcs and relative coordinates are resolved, 2000000, outside ±1000000'],
     ['an inherited option name', rectangle, { constructor: 1 }, 'Unknown option: "constructor"'],
-    ['a NaN strokeWidth', rectangle, { strokeWidth: Number.NaN }, 'strokeWidth must be a finite number, got NaN'],
-    ['an infinite fillWeight', rectangle, { fill: 'red', fillWeight: Infinity }, 'fillWeight must be a finite number, got Infinity'],
-    ['a hachureGap given as a string', rectangle, { fill: 'red', hachureGap: '3' }, 'hachureGap must be a finite number, got "3"'],
-    ['an infinite dashOffset', rectangle, { fill: 'red', fillStyle: 'dashed', dashOffset: -Infinity }, 'dashOffset must be a finite number, got -Infinity'],
-    ['a NaN dashGap', rectangle, { fill: 'red', fillStyle: 'dashed', dashGap: Number.NaN }, 'dashGap must be a finite number, got NaN'],
-    ['an infinite zigzagOffset', rectangle, { fill: 'red', fillStyle: 'zigzag-line', zigzagOffset: Infinity }, 'zigzagOffset must be a finite number, got Infinity'],
+    ['a NaN strokeWidth', rectangle, { strokeWidth: Number.NaN }, 'strokeWidth must be a number from 0 to 1000000, got NaN'],
+    ['an infinite fillWeight', rectangle, { fill: 'red', fillWeight: Infinity }, 'fillWeight must be a number from 0 to 1000000, got Infinity'],
+    ['a hachureGap given as a string', rectangle, { fill: 'red', hachureGap: '3' }, 'hachureGap must be a number from 0 to 1000000, got "3"'],
+    ['an infinite dashLength', rectangle, { fill: 'red', fillStyle: 'dashed', dashLength: -Infinity }, 'dashLength must be a number from 0 to 1000000, got -Infinity'],
+    ['a NaN dashGap', rectangle, { fill: 'red', fillStyle: 'dashed', dashGap: Number.NaN }, 'dashGap must be a number from 0 to 1000000, got NaN'],
+    ['an infinite zigzagWidth', rectangle, { fill: 'red', fillStyle: 'zigzag-line', zigzagWidth: Infinity }, 'zigzagWidth must be a number from 0 to 1000000, got Infinity'],
+    ['a negative strokeWidth', rectangle, { strokeWidth: -1 }, 'strokeWidth must be a number from 0 to 1000000, got -1'],
+    ['a negative hachureGap, once the sign for its default', rectangle, { fill: 'red', hachureGap: -1 }, 'hachureGap must be a number from 0 to 1000000, got -1'],
+    ['a negative zigzagWidth', rectangle, { fill: 'red', fillStyle: 'zigzag-line', zigzagWidth: -0.5 }, 'zigzagWidth must be a number from 0 to 1000000, got -0.5'],
+    ['huge dots, past the coordinate range', smallSquare, { fill: 'red', fillStyle: 'dots', fillWeight: 1e300 }, 'fillWeight must be a number from 0 to 1000000, got 1e+300'],
+    ['a stroke width past the coordinate range', smallSquare, { strokeWidth: 1_000_001 }, 'strokeWidth must be a number from 0 to 1000000, got 1000001'],
     ['an empty arc', { kind: 'arc', cx: 5, cy: 5, width: 10, height: 10, start: 1, stop: 1, closed: true }, { fill: 'red' }, 'arc.stop must be greater than arc.start, got start 1, stop 1'],
     ['an infinite arc start', { kind: 'arc', cx: 5, cy: 5, width: 10, height: 10, start: -Infinity, stop: 1 }, {}, 'arc.start must be a finite number within ±1000000, got -Infinity'],
     ['an arc start too far from zero', { kind: 'arc', cx: 5, cy: 5, width: 10, height: 10, start: -1e17, stop: 1 }, {}, 'arc.start must be a finite number within ±1000000, got -100000000000000000'],
@@ -246,16 +271,13 @@ describe('validation', () => {
 
 describe('work budget', () => {
   it.each<[string, Shape, SketchOptions]>([
-    ['a dashed fill with no dash length', smallSquare, { fill: 'red', fillStyle: 'dashed', dashOffset: 0, dashGap: 0 }],
-    ['a zigzag-line fill with no zigzag offset', smallSquare, { fill: 'red', fillStyle: 'zigzag-line', zigzagOffset: 0 }],
+    ['a dashed fill with no dash length', smallSquare, { fill: 'red', fillStyle: 'dashed', dashLength: 0, dashGap: 0 }],
+    ['a zigzag-line fill with no zigzag width', smallSquare, { fill: 'red', fillStyle: 'zigzag-line', zigzagWidth: 0 }],
     ['a hachure fill scanning a huge height for few lines', largestSquare, { fill: 'red', hachureGap: 1e6, roughness: 0 }],
     ['a hachure fill of the largest shape', largestSquare, { fill: 'red' }],
     ['a zigzag fill of the largest shape', largestSquare, { fill: 'red', fillStyle: 'zigzag' }],
     ['a cross-hatch fill of the largest shape', largestSquare, { fill: 'red', fillStyle: 'cross-hatch' }],
     ['a dots fill of the largest shape', largestSquare, { fill: 'red', fillStyle: 'dots' }],
-    ['a dots fill with huge dots', smallSquare, { fill: 'red', fillStyle: 'dots', fillWeight: 1e300 }],
-    ['a smooth dots fill with huge dots', smallSquare, { fill: 'red', fillStyle: 'dots', fillWeight: 1e300, roughness: 0 }],
-    ['a dots fill with dots sized by a huge stroke width', smallSquare, { fill: 'red', fillStyle: 'dots', strokeWidth: 1e300, hachureGap: 2 }],
     ['a huge ellipse at the most curve steps', { kind: 'ellipse', cx: 0, cy: 0, width: 1e6, height: 1e6 }, { curveStepCount: 1000 }],
     ['an arc at the most curve steps', { kind: 'arc', cx: 0, cy: 0, width: 1e6, height: 1e6, start: 0, stop: 6, closed: true }, { fill: 'red', curveStepCount: 1000 }],
     ['a polygon of 100,000 points with a solid fill', { kind: 'polygon', points: manyPoints }, { fill: 'red', fillStyle: 'solid' }],

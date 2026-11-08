@@ -49,7 +49,7 @@ describe('playground and routing edge cases', () => {
   it('parses formatted named imports without altering comments or strings', () => {
     expect(
       executeExample(
-        "import { sketch as draw, /* style */ toSvgPaths, } from '@borrowdale/core'; render('<svg>'+toSvgPaths(draw({kind:'line',x1:0,y1:0,x2:10,y2:10},{seed:7}))+'</svg>');",
+        "import { sketch as draw, /* style */ toSvgSketch, } from '@borrowdale/core'; render('<svg>'+toSvgSketch(draw({kind:'line',x1:0,y1:0,x2:10,y2:10},{seed:7}))+'</svg>');",
       ),
     ).toContain('<path');
     const literal = "import { missing } from '@borrowdale/core';";

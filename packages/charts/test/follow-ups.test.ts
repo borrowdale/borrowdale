@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, expect, it, vi } from 'vitest';
 import * as core from '@borrowdale/core';
-import { appendChart, layoutChart, toSvgChart, type ChartSpec } from '@borrowdale/charts';
+import { appendChart, drawChart, layoutChart, toSvgChart, type ChartSpec } from '@borrowdale/charts';
 import { bandScale } from '../src/scale.js';
 import { checkChart } from '../src/validate.js';
 
@@ -111,4 +111,17 @@ it('reads the id prefix once', () => {
 
 it('draws the dash of a chart style as it was checked, reading each length once', () => {
   expect(toSvgChart(layoutChart({ ...spec, style: { roughness: 0, strokeLineDash: changingDash() } }))).toContain('stroke-dasharray="4 2"');
+});
+
+it.each<[string, () => unknown, string]>([
+  ['layoutChart', () => layoutChart(spec, { fontSize: 12 } as never), 'Unknown option: "fontSize"'],
+  ['toSvgChart', () => toSvgChart(layoutChart(spec), { prefix: 'p' } as never), 'Unknown option: "prefix"'],
+  ['appendChart', () => appendChart(document.createElement('div'), layoutChart(spec), { fontFiles: {} } as never), 'Unknown option: "fontFiles"'],
+  ['drawChart', () => drawChart({} as CanvasRenderingContext2D, layoutChart(spec), { idprefix: 'p' } as never), 'Unknown option: "idprefix"'],
+])('rejects an option %s does not take, rather than ignoring it', (_name, call, message) => {
+  expect(call).toThrow(message);
+});
+
+it('takes an option set to undefined as not set', () => {
+  expect(() => layoutChart(spec, { font: undefined, fontSize: undefined } as never)).not.toThrow();
 });

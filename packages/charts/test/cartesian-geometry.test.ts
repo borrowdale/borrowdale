@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { layoutChart, toSvgChart, type ChartLayout, type ChartNode, type ChartSpec } from '@borrowdale/charts';
+import { layoutChart, toSvgChart, type ChartLayout, type ChartSpec } from '@borrowdale/charts';
+import type { ChartNode } from '../src/types.js';
 import { gradientAttributes } from '../src/gradients.js';
 import { bandScale } from '../src/scale.js';
 import { symbolShape } from '../src/symbols.js';
@@ -38,7 +39,7 @@ const layingOut = (spec: ChartSpec) => () => layoutChart(spec);
 const longStyle = { roughness: 0, stroke: `rgb(${'1'.repeat(40)} ${'2'.repeat(40)} 3)`, strokeLineDash: Array(16).fill(0.123456789012345) };
 const styledSegments: ChartSpec = { width: 600, height: 400, legend: 'none', style: longStyle,
   axes: { x: { type: 'linear' }, y: { type: 'linear' } },
-  series: [{ type: 'xyLine', name: 'S', data: Array.from({ length: 100_000 }, (_, i) => [i, i % 7] as const), segments: Array(99_999).fill({ width: 1 }) }] } as ChartSpec;
+  series: [{ type: 'xyLine', name: 'S', data: Array.from({ length: 100_000 }, (_, i) => [i, i % 7] as const), segments: Array(99_999).fill({ strokeWidth: 1 }) }] } as ChartSpec;
 const quoted = (index: number) => `${'"'.repeat(96)}${String(index).padStart(4, '0')}`;
 const quotedIntervals: ChartSpec = { width: 600, height: 400, legend: 'none',
   axes: { x: { type: 'band', categories: Array.from({ length: 1_000 }, (_, i) => quoted(i)) },
@@ -143,7 +144,7 @@ describe('data labels and image markers', () => {
 describe('limits of the Cartesian extensions', () => {
   const band = { type: 'band', categories: ['A', 'B'] } as const;
   const interval = (width: number): ChartSpec => ({ width: 300, height: 200, axes: { x: band, y: { type: 'linear' } },
-    series: [{ type: 'interval', name: 'I', data: [[0, 1], [1, 2]], width }] });
+    series: [{ type: 'interval', name: 'I', data: [[0, 1], [1, 2]], slotWidth: width }] });
   const weighted = (weights: number[]): ChartSpec => ({ width: 300, height: 200,
     axes: { x: { ...band, weights }, y: { type: 'linear' } }, series: [{ type: 'bar', name: 'B', data: [1, 2] }] });
   const ramp = (n: number) => Array.from({ length: n }, (_, i) => ({ offset: i / (n - 1), color: '#000000' }));
@@ -162,8 +163,8 @@ describe('limits of the Cartesian extensions', () => {
     ['33 gradient stops', line(2, { gradient: { axis: 'x', stops: ramp(33) } }), 'series[0].gradient.stops'],
     ['a weight of 0', weighted([0, 1]), 'axes.x.weights[0]'],
     ['a weight above 1000000', weighted([1000001, 1]), 'axes.x.weights[0]'],
-    ['an interval width below 0.05', interval(0.049), 'series[0].width'],
-    ['an interval width above 1', interval(1.01), 'series[0].width'],
+    ['an interval width below 0.05', interval(0.049), 'series[0].slotWidth'],
+    ['an interval width above 1', interval(1.01), 'series[0].slotWidth'],
     ['segments with a gradient', line(2, { segments: [null], gradient: { axis: 'x', stops } }),
       'cannot combine segments and gradient'],
     ['segments with tapered widths', line(2, { segments: [null], widths: [1, 2] }),

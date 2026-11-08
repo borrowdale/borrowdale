@@ -1,5 +1,5 @@
 // A timeline: one time or linear axis laid along a track (a line, a serpentine, a spiral or a
-// curve), with each series' moments and periods placed along it by arc length.
+// polyline), with each series' moments and periods placed along it by arc length.
 import type { Point, Shape } from '@borrowdale/core';
 import { cos, sin } from '@borrowdale/core/math';
 import { CENTRED, type Drawing, type Extent } from './drawing.js';
@@ -40,7 +40,7 @@ export function layoutTimeline(drawing: Drawing, chart: CheckedTimelineChart, re
   let [low, high] = [Infinity, -Infinity];
   for (const entry of series) {
     for (const event of entry.data) {
-      [low, high] = [Math.min(low, event.at), Math.max(high, event.to ?? event.at)];
+      [low, high] = [Math.min(low, event.from), Math.max(high, event.to ?? event.from)];
     }
   }
   // Tick labels on the track's left and event labels on its right each take a line and a gap.
@@ -104,7 +104,7 @@ export function layoutTimeline(drawing: Drawing, chart: CheckedTimelineChart, re
       const key = [entry.name, 'event', i];
       const named = event.label === undefined ? '' : `${event.label}, `;
       const nodes: ChartNode[] = [];
-      const from = scale.fraction(event.at) * track.length;
+      const from = scale.fraction(event.from) * track.length;
       if (event.to === undefined) {
         nodes.push(markerNode(drawing, 'circle', pointAt(track, from).point, POINT_SIZE, solid(paint.color), key, entry.style));
       } else {
@@ -124,7 +124,7 @@ export function layoutTimeline(drawing: Drawing, chart: CheckedTimelineChart, re
         nodes.push(drawing.label(event.label, spot.x, spot.y, rect, path));
       }
       const when =
-        event.to === undefined ? formatAxisValue(event.at, axis) : `${formatAxisValue(event.at, axis)} to ${formatAxisValue(event.to, axis)}`;
+        event.to === undefined ? formatAxisValue(event.from, axis) : `${formatAxisValue(event.from, axis)} to ${formatAxisValue(event.to, axis)}`;
       drawing.mark(`${entry.name}: ${named}${when}`, nodes);
     });
   });
@@ -192,14 +192,14 @@ function trackOf(axis: CheckedTimelineChart['axis'], area: Rect, rowSpacing: num
       }
       return measured(points);
     }
-    case 'curve': {
+    case 'polyline': {
       // A point repeating the one before it adds no length, and no direction for a tick there.
       const distinct = track.points.filter(([x, y], i) => i === 0 || x !== track.points[i - 1]![0] || y !== track.points[i - 1]![1]);
-      const curve = measured(distinct.map(([x, y]): Point => [area.left + x * width, area.top + y * height]));
-      if (curve.length < 1) {
+      const polyline = measured(distinct.map(([x, y]): Point => [area.left + x * width, area.top + y * height]));
+      if (polyline.length < 1) {
         fail(`${axis.path}.path.points`, `must be spread out: on ${aChart(chart.width, chart.height)} they make a track shorter than 1`);
       }
-      return curve;
+      return polyline;
     }
   }
 }

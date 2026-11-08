@@ -53,8 +53,8 @@ export const TURN_ROUNDING = 1e-9;
 export interface CheckedFormat {
   /** Undefined means "from the tick step". */
   decimals: number | undefined;
-  thousands: string;
-  decimal: string;
+  thousandsSeparator: string;
+  decimalSeparator: string;
   prefix: string;
   suffix: string;
 }
@@ -250,7 +250,7 @@ export function checkLinearAxis<X extends object = object>(
     });
     const percent = r.optional('percent', boolean) ?? false;
     const format = r.optional('format', fields);
-    format?.allow(kind === 'time' ? ['months'] : ['decimals', 'thousands', 'decimal', 'prefix', 'suffix']);
+    format?.allow(kind === 'time' ? ['months'] : ['decimals', 'thousandsSeparator', 'decimalSeparator', 'prefix', 'suffix']);
     const formatText = (key: string, fallback: string): string =>
       format?.optional(key, text(MAX_FORMAT_TEXT)) ?? fallback;
     return {
@@ -269,8 +269,8 @@ export function checkLinearAxis<X extends object = object>(
       labelAngle: r.optional('labelAngle', labelAngle) ?? 0,
       format: {
         decimals: kind === 'time' ? undefined : format?.optional('decimals', integer(0, MAX_DECIMALS)),
-        thousands: kind === 'time' ? ',' : formatText('thousands', ','),
-        decimal: kind === 'time' ? '.' : formatText('decimal', '.'),
+        thousandsSeparator: kind === 'time' ? ',' : formatText('thousandsSeparator', ','),
+        decimalSeparator: kind === 'time' ? '.' : formatText('decimalSeparator', '.'),
         prefix: kind === 'time' ? '' : formatText('prefix', ''),
         suffix: kind === 'time' ? '' : formatText('suffix', percent ? '%' : ''),
       },
