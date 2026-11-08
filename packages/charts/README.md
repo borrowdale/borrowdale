@@ -341,7 +341,9 @@ characters): a chart holds at most 8,000,000 such characters, and more throws
 `Drawing too complex (more than 8000000 characters of labels and tooltips)`. The colours and dash
 lists that every drawn path repeats are counted the same way, up to 8,000,000 characters, past
 which a chart throws `Drawing too complex (more than 8000000 characters of colours and dashes)`:
-a series of many `segments`, each with a long colour and dash, reaches it. These limits bound a
+a series of many `segments`, each with a long colour and dash, reaches it. A gradient's
+`url(#…)`, written in place of a path's colour, is not counted; the stroke budget bounds those
+paths. These limits bound a
 chart's work and output; they do not make every chart small. 100 series of 1,000 interval marks,
 each with a short tooltip, already come to some 4 million characters of SVG. If you draw specs from
 people you do not trust, set your own limits as well: on the size of the spec you accept, the time

@@ -106,8 +106,9 @@ or narrower: by about 2 units across the test suite's labels, and more on longer
 
 `style` takes `fill` (default `#000`): a colour (a hex code, a name, `rgb()`, `rgba()`, `hsl()` or
 `hsla()`), or `url(#id)` for a pattern or gradient in the same SVG document. The text and every
-attribute are escaped. A name the browser does not know is ignored, so SVG text then takes its parent's fill and a
-canvas keeps the fill it had; a canvas cannot paint `url(#id)` either, and ignores it the same way.
+attribute are escaped. A name the browser does not know is ignored, so SVG text then takes its
+parent's fill and a canvas keeps the fill it had; a canvas cannot paint `url(#id)` either, and
+ignores it the same way.
 
 The font has to reach whoever views the drawing:
 

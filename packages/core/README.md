@@ -84,7 +84,7 @@ be drawn throws an error naming the field or option, and the value where one was
   file would have the page fetch it, and a `var()` would paint with a value the page sets. So are
   `inherit`, `initial`, `unset` and `revert`, which are not colours. `currentColor` is a colour: it
   paints with the `color` of the element the drawing is in. The renderers check that the paints of
-  a sketch built by hand are colours or `url(#id)` of any length, and throw
+  a sketch built by hand are colours or `url(#id)` of up to 1,000 characters, and throw
   `Invalid sketch: stroke must be …` otherwise.
 
 Valid input can still describe an enormous amount of work, such as a dashed fill with no dash
@@ -195,8 +195,8 @@ pixels already drawn remain. Caller transforms, clipping, opacity and compositin
 The optional `paint` argument to `drawSketch` supplies `stroke` and/or `fill` overrides as
 colours, `CanvasGradient` or `CanvasPattern` objects. It replaces existing paints without
 enabling a stroke or fill whose value is `none`. A canvas cannot paint `url(#id)` and ignores it,
-keeping the paint it had, so pass a `CanvasPattern` or `CanvasGradient` here for such a sketch. Canvas state is restored after each path,
-including when drawing throws.
+keeping the paint it had, so pass a `CanvasPattern` or `CanvasGradient` here for such a sketch.
+Canvas state is restored after each path, including when drawing throws.
 
 The type declarations refer to DOM types (`Element`, `CanvasRenderingContext2D`), so TypeScript
 projects need `"dom"` in `compilerOptions.lib`, even when they only render on the server.
