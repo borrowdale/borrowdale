@@ -1,6 +1,6 @@
 // Reading a chart spec that came from JSON: through own properties only, arrays by index, and every
 // problem reported as one named error that says where in the spec it is.
-import { escaped, show } from '@borrowdale/core/show';
+import { escaped, show } from '@borrowdale/core/internal';
 import { measureText } from '@borrowdale/text';
 
 // The longest text @borrowdale/text lays out.

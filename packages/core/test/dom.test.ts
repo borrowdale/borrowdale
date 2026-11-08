@@ -125,16 +125,32 @@ describe('appendSketch', () => {
     expect(svg.childElementCount).toBe(2);
   });
 
-  it('stores hostile values as attributes, not markup', () => {
+  it('stores hostile path data as an attribute, not markup', () => {
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
 
-    appendSketch(svg, { paths: [{ d: 'M0 0', stroke: '"/><script>', strokeWidth: 1, fill: 'none' }] });
+    appendSketch(svg, { paths: [{ d: 'M0 0"/><script>', stroke: '#000', strokeWidth: 1, fill: 'none' }] });
 
     expect(svg.querySelector('script')).toBeNull();
+  });
+
+  it('rejects a stroke naming another file in a sketch built by hand', () => {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+
+    expect(() => appendSketch(svg, { paths: [{ d: 'M0 0', stroke: 'url(https://example.com/a.svg#p)', strokeWidth: 1, fill: 'none' }] }))
+      .toThrow('Invalid sketch: stroke must be a colour');
   });
 });
 
 describe('drawSketch', () => {
+  it('rejects a fill that is not a colour or url(#id) before drawing anything', () => {
+    vi.stubGlobal('Path2D', RecordingPath2D);
+    const context = fakeContext();
+    expect(() => drawSketch(context as unknown as CanvasRenderingContext2D, {
+      paths: [{ d: 'M0 0 L1 1 Z', stroke: 'none', strokeWidth: 0, fill: 'var(--x)' }],
+    })).toThrow('Invalid sketch: fill must be a colour');
+    expect(context.save).not.toHaveBeenCalled();
+  });
+
   it('keeps zero-width strokes invisible without disabling the fill', () => {
     vi.stubGlobal('Path2D', RecordingPath2D);
     const context = fakeContext();

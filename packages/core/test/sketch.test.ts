@@ -8,6 +8,17 @@ const triangle: Shape = { kind: 'polygon', points: [[0, 0], [10, 0], [5, 8]] };
 const trianglePath: Shape = { kind: 'path', d: 'M0 0 L10 0 L5 8 Z' };
 const closedArc: Shape = { kind: 'arc', cx: 5, cy: 5, width: 10, height: 10, start: 0, stop: 2, closed: true };
 
+// A dash list whose first length is 4 when it is first read and a hundredth after that.
+function changingDash(): number[] {
+  let reads = 0;
+  const dash = [0, 2];
+  Object.defineProperty(dash, 0, { enumerable: true, get: () => (reads++ === 0 ? 4 : 0.01) });
+  return dash;
+}
+
+// How the errors for `stroke` and `fill` describe a valid paint.
+const PAINT_RULE = 'a colour (a hex code, a name, rgb() or hsl()) or url(#id), at most 100 characters';
+
 // Inputs whose drawing work exceeds the per-sketch budget.
 const TOO_COMPLEX = 'Drawing too complex (more than 200000 operations)';
 const manyPoints: [number, number][] = Array.from({ length: 1e5 }, (_, i) => [Math.cos(i) * 500, Math.sin(i) * 500]);
@@ -23,6 +34,10 @@ afterEach(() => {
 });
 
 describe('sketch', () => {
+  it('draws the dash lengths it checked, reading each once', () => {
+    expect(sketch(rectangle, { strokeLineDash: changingDash(), seed: 1 }).paths[0]?.strokeLineDash).toEqual([4, 2]);
+  });
+
   it('draws the same strokes for the same shape', () => {
     expect(sketch(rectangle)).toEqual(sketch(rectangle));
   });
@@ -167,7 +182,15 @@ describe('validation', () => {
     ['a huge arc radius inside path data', { kind: 'path', d: 'M0 0 A1e300 10 0 0 1 20 20' }, {}, 'path.d contains 1e+300, outside ±1000000'],
     ['an unknown option', rectangle, { roughnes: 2 }, 'Unknown option: "roughnes"'],
     ['an engine-internal option', rectangle, { maxRandomnessOffset: 1e300 }, 'Unknown option: "maxRandomnessOffset"'],
-    ['a stroke that is not a string', rectangle, { stroke: 5 }, 'stroke must be a string, got 5'],
+    ['a stroke that is not a string', rectangle, { stroke: 5 }, `stroke must be ${PAINT_RULE}, got 5`],
+    ['a stroke naming another file', rectangle, { stroke: 'url(https://example.org/p.svg#g)' }, `stroke must be ${PAINT_RULE}, got "url(https://example.org/p.svg#g)"`],
+    ['a fill reading a value of the page', rectangle, { fill: 'var(--x)' }, `fill must be ${PAINT_RULE}, got "var(--x)"`],
+    ['a fill with a fallback after its pattern', rectangle, { fill: 'url(#p) red' }, `fill must be ${PAINT_RULE}, got "url(#p) red"`],
+    ['a fill with a control character', rectangle, { fill: 'red\u0001' }, `fill must be ${PAINT_RULE}, got "red\\u0001"`],
+    ['a fill longer than 100 characters', rectangle, { fill: `#${'0'.repeat(100)}` }, `fill must be ${PAINT_RULE}, got a string of 101 characters`],
+    ['a stroke taken from the parent element', rectangle, { stroke: 'inherit' }, `stroke must be ${PAINT_RULE}, got "inherit"`],
+    ['a fill reset to its initial value', rectangle, { fill: 'INITIAL' }, `fill must be ${PAINT_RULE}, got "INITIAL"`],
+    ['an rgb() with no numbers', rectangle, { stroke: 'rgb()' }, `stroke must be ${PAINT_RULE}, got "rgb()"`],
     ['a seed that is an object', rectangle, { seed: { a: 1 } }, 'seed must be a string or a number, got an object'],
     ['an unknown fill style', rectangle, { fill: 'red', fillStyle: 'crayon' }, 'Unknown fill style: "crayon"'],
     ['an infinite roughness', rectangle, { roughness: Infinity }, 'roughness must be a number from 0 to 10, got Infinity'],

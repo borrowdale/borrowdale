@@ -35,10 +35,12 @@ export const FILL_STYLES = [
 export type FillStyle = (typeof FILL_STYLES)[number];
 
 export interface SketchStyle {
+  /** A colour (a hex code, a name, `rgb()` or `hsl()`) or `url(#id)`, at most 100 characters. */
   stroke?: string | undefined;
   strokeWidth?: number | undefined;
   /** Dash and gap lengths along the outline, as in SVG `stroke-dasharray`. Solid when omitted. */
   strokeLineDash?: readonly number[] | undefined;
+  /** A colour (a hex code, a name, `rgb()` or `hsl()`) or `url(#id)`, at most 100 characters. */
   fill?: string | undefined;
   fillStyle?: FillStyle | undefined;
   fillWeight?: number | undefined;

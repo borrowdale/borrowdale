@@ -9,11 +9,12 @@ import {
   type MeasureOptions,
   type TextStyle,
 } from '@borrowdale/text';
-import { handFiles, handFont } from './support/hand-font.js';
+import { handFiles, handFont, splitFont } from './support/hand-font.js';
 
 const placed = { x: 0, y: 0 };
 const FAMILY_RULE =
   'family must be letters, digits, spaces, hyphens and underscores, starting and ending with a letter or digit, got';
+const FILL_RULE = 'fill must be a colour (a hex code, a name, rgb() or hsl()) or url(#id), at most 100 characters';
 
 // Each returns the call, unmade, for `expect(...).toThrow`.
 function measuring(text: unknown, options?: unknown) {
@@ -24,12 +25,53 @@ function layingOut(text: unknown, options: unknown) {
   return () => layoutText(text as string, options as LayoutOptions);
 }
 
+// The split font's files behind a proxy that counts how often their length is read.
+function countedFiles(): { files: unknown; lengthReads: () => number } {
+  let reads = 0;
+  const files = new Proxy([...(splitFont.files ?? [])], {
+    get(target, key, receiver) {
+      if (key === 'length') reads += 1;
+      return Reflect.get(target, key, receiver) as unknown;
+    },
+  });
+  return { files, lengthReads: () => reads };
+}
+const counted = countedFiles();
+
 function rendering(style: unknown) {
   return () => toSvgText(layoutText('A', placed), style as TextStyle);
 }
 
 function embedding(files: unknown, labels?: unknown) {
   return () => fontFaceCss(files as FontFiles, labels as string[]);
+}
+
+// The hand font's files, but each field gives its valid value only the first time it is read and
+// markup after that: what a getter in caller code could do between a check and a later read. The
+// first range pair also yields markup when iterated rather than indexed.
+function changingFiles(): FontFiles {
+  let familyReads = 0;
+  let woff2Reads = 0;
+  const markupPair = Object.assign([0x41, 0x42], {
+    *[Symbol.iterator]() {
+      yield '0}</style><script src=//e.example/x></script>';
+      yield 0;
+    },
+  });
+  const file = {
+    ranges: [markupPair, [0x44, 0x44]],
+    get woff2() {
+      woff2Reads += 1;
+      return woff2Reads === 1 ? 'QUJD' : 'QUJD) format("woff2")}</style><script>x</script>';
+    },
+  };
+  return {
+    get family() {
+      familyReads += 1;
+      return familyReads === 1 ? 'Hand Test' : 'x"}</style><script>alert(1)</script><style>"';
+    },
+    files: [file, handFiles.files[1]],
+  } as unknown as FontFiles;
 }
 
 // A list that claims `length` entries and holds none: built at once, whatever the length.
@@ -147,6 +189,11 @@ describe('fonts', () => {
     ['a file range that runs backwards', { ...handFont, files: [{ ranges: [[0x42, 0x41]] }] }, 'Invalid font: files[0].ranges must be'],
   ])('rejects %s', (_case, font, message) => {
     expect(withFont(font)).toThrow(message);
+  });
+
+  it('reads the length of a list of files once, and checks the files it counted', () => {
+    measureText('A', { font: { ...splitFont, files: counted.files }, fontSize: 20 } as MeasureOptions);
+    expect(counted.lengthReads()).toBe(1);
   });
 
   it.each<[string, unknown, string]>([
@@ -271,18 +318,28 @@ describe('style', () => {
   });
 
   it('names a function as a function, not its source', () => {
-    expect(rendering({ fill: String })).toThrow(/^fill must be a string, got a function$/);
+    expect(rendering({ fill: String })).toThrow(
+      /^fill must be a colour \(a hex code, a name, rgb\(\) or hsl\(\)\) or url\(#id\), at most 100 characters, got a function$/,
+    );
   });
 
   it.each<[string, unknown, string]>([
     ['null', null, 'Options must be an object, got null'],
-    ['a fill that is not a string', { fill: 1 }, 'fill must be a string, got 1'],
-    ['a fill that is a function', { fill: String }, 'fill must be a string, got a function'],
-    ['a fill with a NUL', { fill: 'red\u0000' }, 'fill contains U+0000, which SVG cannot hold'],
-    ['a fill with an unpaired surrogate', { fill: '\uD800' }, 'fill contains U+D800, which SVG cannot hold'],
+    ['a fill that is not a string', { fill: 1 }, `${FILL_RULE}, got 1`],
+    ['a fill that is a function', { fill: String }, `${FILL_RULE}, got a function`],
+    ['a fill with a NUL', { fill: 'red\u0000' }, `${FILL_RULE}, got "red\\u0000"`],
+    ['a fill with an unpaired surrogate', { fill: '\uD800' }, FILL_RULE],
+    ['a fill naming another file', { fill: 'url(https://example.org/p.svg#g)' }, `${FILL_RULE}, got "url(https://example.org/p.svg#g)"`],
+    ['a fill reading a value of the page', { fill: 'var(--x)' }, `${FILL_RULE}, got "var(--x)"`],
+    ['a fill that would become markup', { fill: '"/><script>' }, FILL_RULE],
+    ['a fill longer than 100 characters', { fill: `#${'0'.repeat(100)}` }, `${FILL_RULE}, got a string of 101 characters`],
     ['an unknown key', { stroke: 'red' }, 'Unknown option: "stroke"'],
   ])('rejects %s', (_case, style, message) => {
     expect(rendering(style)).toThrow(message);
+  });
+
+  it.each(['#c0392b', 'rebeccapurple', 'rgb(230 57 70)', 'url(#borrowdale-lines-1)'])('draws with the fill %s', (fill) => {
+    expect(toSvgText(layoutText('A', placed), { fill })).toContain(`fill="${fill}"`);
   });
 });
 
@@ -322,6 +379,10 @@ describe('font files', () => {
 
   it('rejects a label that is not a string', () => {
     expect(embedding(handFiles, ['A', 42])).toThrow('Text must be a string, got 42');
+  });
+
+  it('writes only what it checked, whatever a field returns when read again', () => {
+    expect(fontFaceCss(changingFiles())).toBe(fontFaceCss(handFiles));
   });
 
   it('rejects a label of more than one line, as layoutText does', () => {

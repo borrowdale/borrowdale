@@ -198,7 +198,7 @@ describe('appendText', () => {
   it('rejects a style it cannot draw, and appends nothing', () => {
     const svg = svgRoot();
 
-    expect(appending(svg, { fill: 1 })).toThrow('fill must be a string, got 1');
+    expect(appending(svg, { fill: 1 })).toThrow('fill must be a colour (a hex code, a name, rgb() or hsl()) or url(#id), at most 100 characters, got 1');
     expect(svg.childElementCount).toBe(0);
   });
 

@@ -1,24 +1,25 @@
 import { describe, expect, it } from 'vitest';
 import {
   escapeAttribute,
+  sketch,
   svgElement,
   toSvgDocument,
   toSvgPaths,
+  type Shape,
   type Sketch,
 } from '@borrowdale/core';
+
+const square: Shape = { kind: 'rectangle', x: 0, y: 0, width: 10, height: 10 };
 
 const plain: Sketch = { paths: [{ d: 'M0 0 L1 1', stroke: '#000', strokeWidth: 1, fill: 'none' }] };
 
 const hostile: Sketch = {
-  paths: [
-    {
-      d: 'M0 0"<x>',
-      stroke: '"/><script>alert(1)</script>',
-      strokeWidth: '1"<y>' as unknown as number,
-      fill: "'&",
-    },
-  ],
+  paths: [{ d: 'M0 0"<x>&\'', stroke: '#000', strokeWidth: '1"<y>' as unknown as number, fill: 'none' }],
 };
+// What a renderer requires of the paints of a sketch: their form, at any length.
+const FORM_RULE = 'a colour (a hex code, a name, rgb() or hsl()) or url(#id)';
+// A sketch built by hand rather than by `sketch()`, with the given paints.
+const painted = (stroke: string, fill: string): Sketch => ({ paths: [{ d: 'M0 0 L1 1', stroke, strokeWidth: 1, fill }] });
 
 describe('toSvgPaths', () => {
   it('renders each path as an SVG path element', () => {
@@ -27,11 +28,26 @@ describe('toSvgPaths', () => {
     );
   });
 
-  it('escapes attribute values so caller colours cannot inject markup', () => {
+  it('escapes attribute values so path data from untyped code cannot inject markup', () => {
     expect(toSvgPaths(hostile)).toBe(
-      '<path d="M0 0&quot;&lt;x&gt;" stroke="&quot;/&gt;&lt;script&gt;alert(1)&lt;/script&gt;"' +
-        ' stroke-width="1&quot;&lt;y&gt;" fill="&#39;&amp;"/>',
+      '<path d="M0 0&quot;&lt;x&gt;&amp;&#39;" stroke="#000" stroke-width="1&quot;&lt;y&gt;" fill="none"/>',
     );
+  });
+
+  it.each<[string, Sketch, string]>([
+    ['markup as the stroke', painted('"/><script>', 'none'), `stroke must be ${FORM_RULE}, got "\\"/><script>"`],
+    ['a stroke naming another file', painted('url(https://example.com/a.svg#p)', 'none'), `stroke must be ${FORM_RULE}, got "url(https://example.com/a.svg#p)"`],
+    ['a fill reading a value of the page', painted('#000', 'var(--x)'), `fill must be ${FORM_RULE}, got "var(--x)"`],
+  ])('rejects %s in a sketch built by hand', (_case, built, message) => {
+    expect(() => toSvgPaths(built)).toThrow(`Invalid sketch: ${message}`);
+  });
+
+  it('writes a pattern in the same document as the fill of a sketch built by hand', () => {
+    expect(toSvgPaths(painted('none', 'url(#p)'))).toBe('<path d="M0 0 L1 1" stroke="none" stroke-width="1" fill="url(#p)"/>');
+  });
+
+  it('writes a paint of any length, such as a gradient named with a long id prefix', () => {
+    expect(toSvgPaths(painted('none', `url(#${'p'.repeat(120)})`))).toContain(`fill="url(#${'p'.repeat(120)})"`);
   });
 
   it('writes the fill rule when a path has one', () => {
@@ -89,5 +105,42 @@ describe('svgElement', () => {
 describe('escapeAttribute', () => {
   it('escapes ampersand first so entities are not double-escaped', () => {
     expect(escapeAttribute('&lt;')).toBe('&amp;lt;');
+  });
+
+  it.each<[string, string, string]>([
+    ['a control character', 'red\u0001', 'U+0001'],
+    ['a NUL', '\u0000', 'U+0000'],
+    ['a vertical tab', 'a\u000Bb', 'U+000B'],
+    ['U+FFFE', 'a\uFFFE', 'U+FFFE'],
+    ['an unpaired surrogate', 'a\uD800', 'U+D800'],
+  ])('rejects %s, which no escape can make fit', (_case, value, codePoint) => {
+    expect(() => escapeAttribute(value)).toThrow(`An attribute value contains ${codePoint}, which SVG cannot hold`);
+  });
+
+  it('keeps tab, line breaks and characters past U+FFFF, which XML can hold', () => {
+    expect(escapeAttribute('a\tb\nc\rd\u{1F600}')).toBe('a\tb\nc\rd\u{1F600}');
+  });
+
+  it('rejects such a character in any attribute svgElement writes', () => {
+    expect(() => svgElement('rect', { fill: 'red\u0001' })).toThrow('An attribute value contains U+0001');
+  });
+});
+
+describe('paint', () => {
+  it('draws with a pattern or gradient in the same document', () => {
+    expect(toSvgPaths(sketch(square, { fill: 'url(#borrowdale-lines-1)', fillStyle: 'solid', seed: 1 }))).toContain(
+      'fill="url(#borrowdale-lines-1)"',
+    );
+  });
+
+  it.each(['#fdf8ef', '#FFF', 'rebeccapurple', 'currentColor', 'rgb(230 57 70 / 0.5)', 'hsl(120, 50%, 50%)', 'hsl(120deg 50% 50%)', 'hsl(0.5turn 50% 50%)'])(
+    'accepts the colour %s',
+    (colour) => {
+      expect(toSvgPaths(sketch(square, { stroke: colour, seed: 1 }))).toContain(`stroke="${colour}"`);
+    },
+  );
+
+  it('accepts none, which draws no stroke', () => {
+    expect(toSvgPaths(sketch(square, { stroke: 'none', seed: 1 }))).toBe('');
   });
 });
