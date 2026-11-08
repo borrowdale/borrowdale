@@ -1,7 +1,7 @@
-// The stroke engine's own sine and cosine, and the natural logarithm and exponential, for code that must compute the
-// same numbers in every JavaScript engine: `Math.sin`, `Math.cos` and `Math.log` may differ in the
-// last bit between engines. Published as `@borrowdale/core/math` so other packages use these rather
-// than a copy.
+// The stroke engine's own sine and cosine, and the natural logarithm and exponential, for code that
+// must compute the same numbers in every JavaScript engine: `Math.sin`, `Math.cos`, `Math.log` and
+// `Math.exp` may differ in the last bit between engines. Published as `@borrowdale/core/math` so
+// other packages use these rather than a copy.
 import { exp as portableExp, log as portableLog } from './logarithm.js';
 import { show } from './show.js';
 import { cos as engineCos, MAX_ANGLE, sin as engineSin } from './trig.js';
@@ -37,7 +37,7 @@ export function log(x: number): number {
 }
 
 /**
- * e to the power `x`. Throws a `RangeError` unless `x` is a finite number within ±709. Within 1 unit
+ * e to the power `x`. Throws a `RangeError` unless `x` is a finite number within ±MAX_EXPONENT. Within 1 unit
  * in the last place of the true value, and the same in every JavaScript engine.
  */
 export function exp(x: number): number {

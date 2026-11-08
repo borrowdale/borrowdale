@@ -73,10 +73,13 @@ describe('@borrowdale/core/math', () => {
   ])('log rejects %s with a RangeError', (x, shown) => {
     expect(calling(log, x)).toThrow(new RangeError(`Invalid argument: log(x) must be a finite number above 0, got ${shown}`));
   });
+
   it('exports the bound exp checks', () => {
     expect(MAX_EXPONENT).toBe(709);
   });
 
+  // The expected values are exp's own, within one unit in the last place of the true value. They are
+  // not all Math.exp's: exp(1) is one unit above Math.E, and that is not a typo.
   it.each<[number, number]>([
     [0, 1],
     [1, 2.7182818284590455],
@@ -87,6 +90,8 @@ describe('@borrowdale/core/math', () => {
     [709, 8.218407461554972e307],
     [-709, 1.216780750623423e-308],
     [0.34, 1.404947590563594],
+    [-708.4, 2.217119081664265e-308],
+    [2 ** -29, 1.0000000018626451],
   ])('computes exp(%s)', (x, expected) => {
     expect(exp(x)).toBe(expected);
   });
@@ -98,6 +103,6 @@ describe('@borrowdale/core/math', () => {
     [Number.NaN, 'NaN'],
     [1n, '1n'],
   ])('exp rejects %s with a RangeError', (x, shown) => {
-    expect(() => exp(x as number)).toThrow(new RangeError(`Invalid argument: exp(x) must be a finite number within ±709, got ${shown}`));
+    expect(calling(exp, x)).toThrow(new RangeError(`Invalid argument: exp(x) must be a finite number within ±709, got ${shown}`));
   });
 });

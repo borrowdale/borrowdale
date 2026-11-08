@@ -110,5 +110,7 @@ export function exp(input: number): number {
   }
   const y = 1 - (lo - (x * c) / (2 - c) - hi);
   // k is added to y's exponent; below 2^-1021 in two steps, so no step leaves the normal range.
-  return k >= -1021 ? withHighWord(y, highWord(y) + (k << 20)) : withHighWord(y, highWord(y) + ((k + 1000) << 20)) * TWOM1000;
+  return k >= -1021
+    ? withHighWord(y, highWord(y) + (k << 20))
+    : withHighWord(y, highWord(y) + ((k + 1000) << 20)) * TWOM1000;
 }
