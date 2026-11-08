@@ -57,7 +57,7 @@ cannot share a chart:
 | `line` | a value or `null` (a gap) per category | `curve`, `dash` (dash and gap lengths, for the line and its legend swatch: `style.strokeLineDash` for short), `axis: 'y2'` |
 | `area` | a value or `null` per category | `stack`, `curve`, `axis: 'y2'`. Stacked values must not be negative. Areas of one stack share a `curve` |
 | `rangeArea` | a `[low, high]` pair or `null` per category, high not below low | `curve`, `axis: 'y2'` |
-| `interval` | a `[from, to]` pair or `null` per category | `display`, `width`, `overlay`, endpoint symbols, `shape`, `dataLabels`, `axis: 'y2'`; see [additional marks](#additional-cartesian-marks) |
+| `interval` | a `[from, to]` pair or `null` per category | `display`, `slotWidth`, `overlay`, endpoint symbols, `shape`, `dataLabels`, `axis: 'y2'`; see [additional marks](#additional-cartesian-marks) |
 | `xRange` | `{ row, from, to?, label?, progress? }` items, any number per category | a Gantt or x-range chart; see [time](#time-log-and-square-root-axes) |
 | `xyLine` | `[x, y]` pairs, each read by its axis (a time on a time axis), or `null` between runs | `symbol`, `dash`, `dataLabels`, `segments`, `widths`, `gradient`; see [widths and colours](#widths-crossings-and-colours) |
 | `xyArea` | `[x, low, high]` intervals or `null` between runs, x increasing within each run | `difference` permits crossing boundaries; see [widths and colours](#widths-crossings-and-colours) |
@@ -71,7 +71,7 @@ cannot share a chart:
 | `polarArea` | a value or `null` per category of the angle axis | `stack`. Stacked values must not be negative |
 | `polarScatter` | `[angle, radius]` points | |
 | `gauge` | `value`, a number on the dial | `display`: `needle` (default) or `bar`; `length`: a needle's length as a share of the radius, 0.1 to 1 (default 0.8) |
-| `timeline` | `{ at, to?, label? }` moments and periods | `dataLabels`; see [timelines](#timelines) |
+| `timeline` | `{ from, to?, label? }` moments and periods | `dataLabels`; see [timelines](#timelines) |
 
 A slice's `offset` (0 to 0.5 of the radius) pulls it out from the centre. Give every slice of a pie
 a `radius`, or none: each slice then reaches out in proportion to it, the largest to the full
@@ -121,7 +121,7 @@ With `y` as the band axis, bars and lines run horizontally. A sparkline is a sma
 | `percent` | stacks on the axis show each value as its share of the stack's total. Only bar and area series may use it, on a chart with a band axis |
 | `grid` | gridlines at the ticks; on by default, except on `y2` |
 | `title`, `hidden` | |
-| `format` | `decimals` (0 to 20; by default tick labels get the fewest that tell the ticks apart, and tooltips every decimal a value has), `thousands` (default `,`), `decimal` (default `.`), `prefix`, `suffix` (default `%` on a percent axis), each text at most 10 characters |
+| `format` | `decimals` (0 to 20; by default tick labels get the fewest that tell the ticks apart, and tooltips every decimal a value has), `thousandsSeparator` (default `,`), `decimalSeparator` (default `.`), `prefix`, `suffix` (default `%` on a percent axis), each text at most 10 characters |
 
 Where tick labels would overlap, an axis labels fewer of its ticks and keeps every tick and
 gridline. Evenly spaced ticks are labelled on multiples of a nice number of steps counted from zero,
@@ -130,8 +130,8 @@ one kept, and on an axis with an end the last tick, leaving out the labels befor
 it; where even the first would, they label whichever of the two is nearer its own end.
 
 Numbers are never formatted with the locale data of the JavaScript engine, which differs between
-engines; set `thousands` and `decimal` to write them for another language. Bars and areas always
-stand on zero; range areas, lines and points do not have to.
+engines; set `thousandsSeparator` and `decimalSeparator` to write them for another language. Bars and
+areas always stand on zero; range areas, lines and points do not have to.
 
 Points and bubbles are centred on their values, so a chart with them widens each end of `x` and `y`
 by the radius of its largest mark, keeping the same ticks, and a point at the end of the data stays
@@ -212,7 +212,7 @@ series on one, since they stand on 0.
 An `xRange` series lays items along the rows of the band axis: each `{ row, from, to, label,
 progress }`, `row` a category, `to` after `from`, `progress` 0 to 1 drawn solid along its start.
 Without `to` an item is a milestone, a diamond at `from`. `dataLabels` writes each label on its item,
-or past its end where it does not fit, where in a crowded row it can overlap the next; `width` (0.05 to 1 of the row's slot, default 0.6), `shape`
+or past its end where it does not fit, where in a crowded row it can overlap the next; `slotWidth` (0.05 to 1 of the row's slot, default 0.6), `shape`
 (`rectangle` or `rounded`) and `overlay` work as on an interval. Arrows between items are `arrow`
 annotations, such as `{ type: 'arrow', from: ['2026-02-06', 'Design'], to: ['2026-02-09', 'Build'] }`;
 they point at the middle of a row, so between the slots where several series share it.
@@ -221,7 +221,7 @@ Annotations take times on a time axis: `{ type: 'line', axis: 'x', value: '2026-
 
 ## Timelines
 
-A `timeline` series places moments, `{ at, label }`, and periods, `{ at, to, label }`, along one
+A `timeline` series places moments, `{ from, label }`, and periods, `{ from, to, label }`, along one
 axis, `axes.time`: a `time` axis by default, or `linear`, taking `min`, `max`, `step`, `ticks`,
 `hidden` and `format`. Its `path` lays the axis out as a track, earliest first:
 
@@ -230,7 +230,7 @@ axis, `axes.time`: a `time` axis by default, or `linear`, taking `min`, `max`, `
 | `{ type: 'line' }` | straight across the chart (the default) |
 | `{ type: 'serpentine', rows }` | `rows` (1 to 20, default 3) left to right and back, joined by half turns; a chart too short for them, or too narrow for their turns, is an error |
 | `{ type: 'spiral', turns, innerRadius }` | `turns` (1 to 20, default 3) out from `innerRadius` (0 to 0.9 of the radius, default 0.2), clockwise from the top |
-| `{ type: 'curve', points }` | through 2 to 100 `[x, y]` points, each 0 to 1 across and down the area inside the track's labels, joined by straight segments |
+| `{ type: 'polyline', points }` | through 2 to 100 `[x, y]` points, each 0 to 1 across and down the area inside the track's labels, joined by straight segments |
 
 Values are placed by their distance along the track, and ticks fall about every 50 units of it,
 labelled on its left where they clear the labels before them. Moments are dots and periods thick
@@ -279,10 +279,16 @@ its strokes when other data change.
 | `appendChart(parent, layout)` | appends an `<svg>` element and returns it | a DOM |
 | `drawChart(context2d, layout)` | draws into a canvas | `Path2D`, and the font loaded |
 
-A layout is plain JSON. The renderers draw it as it is and do not check it again, so draw only
-layouts that `layoutChart` returned. The type declarations refer to DOM types (`Element`,
+A layout's `width`, `height`, `title`, `family`, `labels` and `missing` are as described here; its
+`nodes`, what the renderers draw, can change in any release, so draw a layout with the same version
+of `@borrowdale/charts` that made it. The renderers draw it as it is and do not check it again, so
+draw only layouts that `layoutChart` returned. The type declarations refer to DOM types (`Element`,
 `SVGSVGElement`, `CanvasRenderingContext2D`), so TypeScript projects need `"dom"` in
 `compilerOptions.lib`, even when they only render on the server.
+
+The options of `layoutChart` and of the three renderers reject a name they do not take
+(`Unknown option: "fontfiles"`), as `@borrowdale/core` and `@borrowdale/text` do; an option set to
+`undefined` counts as not set.
 
 Labels are measured in the chart's font, so the viewer must draw them in it too. Pass `fontFiles`
 to `toSvgChart` to embed the font files the chart's labels need, load the font with `loadFont`
@@ -310,8 +316,10 @@ Unknown keys are errors too, so a misspelled option never goes unnoticed. Errors
 passed on with the same prefix.
 
 Each of these is an `InvalidChartError`, exported by the package, with the place as `path`
-(`series[2].data[5]`) and the rest of the message as `problem`. A chart too small for its parts has
-no single place in the spec, so its `path` is `''`:
+(`series[2].data[5]`) and the rest of the message as `problem`. The class and `path` are stable;
+the wording of `problem`, and of every other message, is for people and can change in any release,
+so do not match on it in code. A chart too small for its parts has no single place in the spec, so
+its `path` is `''`:
 
 ```
 Invalid chart: a 20 × 20 chart leaves no room for the plot after its title, legend and labels
@@ -356,7 +364,7 @@ Hachure fills are what costs most: about 7 KB of SVG for a 40 × 300 bar, agains
 `interval` draws one `[from, to]` pair per category. Endpoints may descend; `null`
 omits a category. It uses the same `axis` and horizontal/vertical orientation as a
 bar. Its `display` is `bar` (default), `line`, `error` (stem and caps), or `points`.
-`fromSymbol` and `toSymbol` add endpoint markers. `width` is a fraction of its slot,
+`fromSymbol` and `toSymbol` add endpoint markers. `slotWidth` is a fraction of its slot,
 0.05 to 1 (default 0.8). `overlay: true` puts it at the category centre instead of
 reserving a grouped slot. Intervals do not stack automatically: supply their actual
 endpoints when composing cumulative or overlapping marks.
@@ -449,7 +457,7 @@ use that allocation: this makes a variwide chart. Bars and bar intervals accept
 units, and pyramids taper from their first endpoint to the second.
 
 An `xyLine` can supply `segments`, one entry per adjacent pair of data slots.
-Each entry is `null` or `{ color?, width?, dash? }`; an edge touching a null point
+Each entry is `null` or `{ color?, strokeWidth?, dash? }`; an edge touching a null point
 is absent. Segment overrides take precedence over the series and chart style.
 For threshold lines, insert the exact crossing as a point, then choose the colour
 of each resulting segment. For endpoints `[x0,y0]`, `[x1,y1]`, the crossing of `t`
@@ -482,7 +490,7 @@ The repository's `apps/examples/cartesian-cases.json` contains 33 complete specs
 run `node apps/examples/cartesian.mjs` after building to render each one. Its
 `apps/examples/time-cases.json` holds 12 more, rendered by `node apps/examples/time.mjs`: a time axis,
 range bars, a Gantt chart, an x-range chart, an annotation chart, a cycle plot, a Marey chart, log and
-square-root axes, and serpentine, spiral and curve timelines.
+square-root axes, and serpentine, spiral and polyline timelines.
 
 | Chart | Preparation and composition |
 |---|---|
