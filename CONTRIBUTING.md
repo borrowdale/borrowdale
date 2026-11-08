@@ -96,6 +96,15 @@ packages share one version and are released together. While the version is 0.x, 
 is a minor release and anything else a patch. Changes to tests, CI or development tooling need no
 changeset.
 
+After each merge to `main`, the Release workflow gathers the waiting changesets into a draft pull
+request that sets the new version and writes each package's changelog. A maintainer releases by
+marking that pull request ready and merging it; the workflow then tests that commit and publishes
+the packages to npm. Merge it only after the Release run for the newest commit on `main` has updated
+it: updating its branch from `main` does not apply new changesets, and a changeset still waiting on
+the merged commit stops that release from being published. A changeset names only packages that
+are published to npm, never the website or the examples; one that does is never applied, and no
+release is published until it is deleted.
+
 ## Commits
 
 Subjects follow `[scope] TYPE: sentence`:
