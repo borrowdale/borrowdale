@@ -184,7 +184,7 @@
        "2026-08-15"
       ]
      ],
-     "width": 0.6
+     "slotWidth": 0.6
     }
    ]
   }
@@ -1073,28 +1073,28 @@
      "dataLabels": true,
      "data": [
       {
-       "at": "1969-07-20",
+       "from": "1969-07-20",
        "label": "Moon landing"
       },
       {
-       "at": "1977-09-05",
+       "from": "1977-09-05",
        "label": "Voyager 1"
       },
       {
-       "at": "1981-04-12",
+       "from": "1981-04-12",
        "to": "2011-07-21",
        "label": "Space Shuttle"
       },
       {
-       "at": "1990-04-24",
+       "from": "1990-04-24",
        "label": "Hubble"
       },
       {
-       "at": "1998-11-20",
+       "from": "1998-11-20",
        "label": "ISS"
       },
       {
-       "at": "2021-12-25",
+       "from": "2021-12-25",
        "label": "Webb"
       }
      ]
@@ -1124,28 +1124,28 @@
      "dataLabels": true,
      "data": [
       {
-       "at": "1969-07-20",
+       "from": "1969-07-20",
        "label": "Moon landing"
       },
       {
-       "at": "1977-09-05",
+       "from": "1977-09-05",
        "label": "Voyager 1"
       },
       {
-       "at": "1981-04-12",
+       "from": "1981-04-12",
        "to": "2011-07-21",
        "label": "Space Shuttle"
       },
       {
-       "at": "1990-04-24",
+       "from": "1990-04-24",
        "label": "Hubble"
       },
       {
-       "at": "1998-11-20",
+       "from": "1998-11-20",
        "label": "ISS"
       },
       {
-       "at": "2021-12-25",
+       "from": "2021-12-25",
        "label": "Webb"
       }
      ]
@@ -1154,7 +1154,7 @@
   }
  },
  {
-  "name": "timeline-curve",
+  "name": "timeline-polyline",
   "spec": {
    "width": 480,
    "height": 280,
@@ -1163,7 +1163,7 @@
     "time": {
      "type": "linear",
      "path": {
-      "type": "curve",
+      "type": "polyline",
       "points": [
        [
         0,
@@ -1192,20 +1192,20 @@
      "dataLabels": true,
      "data": [
       {
-       "at": 0,
+       "from": 0,
        "label": "Start"
       },
       {
-       "at": 3.5,
+       "from": 3.5,
        "to": 5,
        "label": "Woods"
       },
       {
-       "at": 8,
+       "from": 8,
        "label": "Bridge"
       },
       {
-       "at": 11,
+       "from": 11,
        "label": "Summit"
       }
      ]

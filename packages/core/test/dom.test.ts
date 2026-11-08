@@ -164,6 +164,13 @@ describe('drawSketch', () => {
     expect(context.fill).not.toHaveBeenCalled();
   });
 
+  it('rejects an unknown paint key rather than ignoring it', () => {
+    vi.stubGlobal('Path2D', RecordingPath2D);
+    expect(() => drawSketch(fakeContext() as unknown as CanvasRenderingContext2D, outlined, { strokeStyle: '#f00' } as never)).toThrow(
+      'Unknown option: "strokeStyle"',
+    );
+  });
+
   it('rejects a fill that is not a colour or url(#id) before drawing anything', () => {
     vi.stubGlobal('Path2D', RecordingPath2D);
     const context = fakeContext();

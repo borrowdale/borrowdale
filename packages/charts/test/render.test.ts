@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { toSvgChart, type ChartLayout } from '@borrowdale/charts';
+import type { FontFiles } from '@borrowdale/text';
 import { excalifontFiles } from '@borrowdale/text/excalifont-files';
+
+// Excalifont's files, whose family is the chart's when first read and another font's after that.
+function changingFamily(): FontFiles {
+  let reads = 0;
+  return { get family() { return reads++ === 0 ? 'Excalifont' : 'Other'; }, files: excalifontFiles.files };
+}
 
 const label = {
   text: 'Hi',
@@ -57,6 +64,10 @@ describe('toSvgChart', () => {
 
   it('embeds the font files its labels need when given them', () => {
     expect(toSvgChart(layout, { fontFiles: excalifontFiles })).toContain('<defs><style>@font-face{font-family:"Excalifont";');
+  });
+
+  it('embeds the faces under the family it compared with the layout, reading it once', () => {
+    expect(toSvgChart(layout, { fontFiles: changingFamily() })).toContain('<defs><style>@font-face{font-family:"Excalifont";');
   });
 
   it('embeds one font file for labels in one script', () => {

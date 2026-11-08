@@ -4,14 +4,14 @@ import {
   stableKey,
   svgElement,
   toSeed,
-  toSvgPaths,
+  toSvgSketch,
   type Seed,
   type Shape,
   type SketchStyle,
 } from '@borrowdale/core';
-import { COLOR_RULE, isColor, MAX_PAINT, show } from '@borrowdale/core/internal';
+import { COLOR_RULE, isColor, MAX_PAINT, OPTION_NAMES, ownOptions, show } from '@borrowdale/core/internal';
 
-export type PatternKind = 'lines' | 'crosshatch' | 'circles';
+export type PatternKind = 'lines' | 'cross-hatch' | 'circles';
 
 export interface PatternOptions extends SketchStyle {
   kind: PatternKind;
@@ -32,11 +32,14 @@ export interface Pattern {
   fill: string;
 }
 
+// The pattern's own options and every sketch option, which style the tile strokes.
+const PATTERN_OPTIONS: Record<keyof PatternOptions, true> = { ...OPTION_NAMES, kind: true, size: true, background: true, id: true, seed: true };
+
 const VALID_ID = /^[A-Za-z][\w-]*$/;
 const MAX_ID = MAX_PAINT - 'url(#)'.length;
 
 export function pattern(options: PatternOptions): Pattern {
-  const { kind, size = 10, background, id, seed, ...style } = options;
+  const { kind, size = 10, background, id, seed, ...style } = ownOptions(options, PATTERN_OPTIONS);
   // Every option is checked before it is keyed, so a misspelled or malformed one gets its own error
   // rather than whatever deriving the key from it would throw.
 
@@ -77,7 +80,7 @@ export function pattern(options: PatternOptions): Pattern {
       ? ''
       : svgElement('rect', { width: size, height: size, fill: background });
   const strokes = shapes
-    .map((shape, index) => toSvgPaths(sketch(shape, { ...style, seed: `${seedKey}:${index}` })))
+    .map((shape, index) => toSvgSketch(sketch(shape, { ...style, seed: `${seedKey}:${index}` })))
     .join('');
 
   return {
@@ -96,7 +99,7 @@ function tileShapes(kind: PatternKind, s: number): Shape[] {
   switch (kind) {
     case 'lines':
       return risingDiagonals(s);
-    case 'crosshatch':
+    case 'cross-hatch':
       return [...risingDiagonals(s), ...fallingDiagonals(s)];
     case 'circles':
       return [{ kind: 'circle', cx: s / 2, cy: s / 2, diameter: s / 2 }];

@@ -39,24 +39,22 @@ export interface ChartSpec {
  * A place on an axis: a number on a continuous axis, an ISO 8601 time or milliseconds on a time axis,
  * or a category name on a band axis.
  */
-export type ChartCoordinate = number | string;
-/** A value on a continuous axis: a number, or on a time axis an ISO 8601 string or milliseconds. */
 export type ChartValue = number | string;
-export type ChartPosition = readonly [x: ChartCoordinate, y: ChartCoordinate];
+export type ChartPosition = readonly [x: ChartValue, y: ChartValue];
 interface AnnotationStyle {
   color?: string | undefined;
   layer?: 'back' | 'front' | undefined;
 }
 export type Annotation = AnnotationStyle & (
-  | { type: 'line'; axis: 'x' | 'y' | 'y2'; value: ChartCoordinate; label?: string | undefined }
-  | { type: 'band'; axis: 'x' | 'y' | 'y2'; from: ChartCoordinate; to: ChartCoordinate }
+  | { type: 'line'; axis: 'x' | 'y' | 'y2'; value: ChartValue; label?: string | undefined }
+  | { type: 'band'; axis: 'x' | 'y' | 'y2'; from: ChartValue; to: ChartValue }
   | { type: 'region'; from: ChartPosition; to: ChartPosition; axis?: 'y' | 'y2' | undefined }
   | { type: 'arrow'; from: ChartPosition; to: ChartPosition; axis?: 'y' | 'y2' | undefined }
   | { type: 'label'; at: ChartPosition; text: string; axis?: 'y' | 'y2' | undefined }
 );
 
 /** What the caller, not the spec, decides: trusted, so never taken from chart data. */
-export interface ChartOptions {
+export interface LayoutChartOptions {
   /** The font every label is measured and drawn in. Defaults to Excalifont. */
   font?: Font | undefined;
 }
@@ -264,10 +262,10 @@ export interface NumberFormat {
    * ticks apart, and tooltips every decimal the value has.
    */
   decimals?: number | undefined;
-  /** Defaults to `,`. At most 10 characters. */
-  thousands?: string | undefined;
-  /** Defaults to `.`. At most 10 characters. */
-  decimal?: string | undefined;
+  /** Between groups of three digits. Defaults to `,`. At most 10 characters. */
+  thousandsSeparator?: string | undefined;
+  /** Before the decimals. Defaults to `.`. At most 10 characters. */
+  decimalSeparator?: string | undefined;
   /** At most 10 characters. */
   prefix?: string | undefined;
   /** Defaults to `%` on a `percent` axis. At most 10 characters. */
@@ -283,13 +281,13 @@ export const CURVES = ['linear', 'monotone', 'step', 'step-before', 'step-after'
  */
 export type Curve = (typeof CURVES)[number];
 
-export const MARKER_SYMBOLS = ['circle', 'square', 'diamond', 'triangle', 'cross', 'star', 'wye', 'tick'] as const;
+export const SYMBOL_NAMES = ['circle', 'square', 'diamond', 'triangle', 'cross', 'star', 'wye', 'tick'] as const;
 
 /** A point's shape, fitted inside its diameter. */
-export type MarkerSymbol = (typeof MARKER_SYMBOLS)[number];
+export type SymbolName = (typeof SYMBOL_NAMES)[number];
 
 /** A geometric symbol or the name of a trusted image supplied to the renderer. */
-export type Marker = MarkerSymbol | { image: string };
+export type Marker = SymbolName | { image: string };
 
 interface SeriesBase {
   /**
@@ -365,10 +363,10 @@ export interface IntervalSeries extends ValueSeries {
   dataLabels?: boolean | undefined;
   /** Endpoints retain their order, including descending intervals; null omits the mark. */
   data: readonly (readonly [from: ChartValue, to: ChartValue] | null)[];
-  display?: 'bar' | 'line' | 'error' | 'points' | undefined;
+  display?: 'bar' | 'line' | 'error' | 'point' | undefined;
   shape?: 'rectangle' | 'rounded' | 'pyramid' | undefined;
   /** Fraction of the category slot, from 0.05 to 1. Defaults to 0.8. */
-  width?: number | undefined;
+  slotWidth?: number | undefined;
   /** Overlay the category centre instead of reserving a grouped slot. Defaults to false. */
   overlay?: boolean | undefined;
   fromSymbol?: Marker | undefined;
@@ -392,25 +390,25 @@ export type TimelineAxis =
  * The track a timeline is laid along, earliest first: a straight `line` across the chart (the
  * default); a `serpentine` of `rows` (1 to 20, default 3) left to right and back, joined by half
  * turns; a `spiral` of `turns` (1 to 20, default 3) out from `innerRadius` (0 to 0.9 of the radius,
- * default 0.2), clockwise from the top; or a `curve` through 2 to 100 `points`, each `[x, y]` from
- * 0 to 1 across and down the area inside the track's labels, joined by straight segments.
+ * default 0.2), clockwise from the top; or a `polyline` through 2 to 100 `points`, each `[x, y]`
+ * from 0 to 1 across and down the area inside the track's labels, joined by straight segments.
  */
 export type TimelinePath =
   | { type: 'line' }
   | { type: 'serpentine'; rows?: number | undefined }
   | { type: 'spiral'; turns?: number | undefined; innerRadius?: number | undefined }
-  | { type: 'curve'; points: readonly (readonly [x: number, y: number])[] };
+  | { type: 'polyline'; points: readonly (readonly [x: number, y: number])[] };
 
-/** A moment of a timeline, or a period from `at` to `to`. */
+/** A moment of a timeline, or a period from `from` to `to`, as an x-range item is. */
 export interface TimelineEvent {
-  at: ChartValue;
-  /** After `at`: the event is then a period, drawn as a thick stretch of the track. */
+  from: ChartValue;
+  /** After `from`: the event is then a period, drawn as a thick stretch of the track. */
   to?: ChartValue | undefined;
   /** At most 100 characters, in the event's tooltip and, with `dataLabels`, beside it. */
   label?: string | undefined;
 }
 
-/** Events and periods along a track: a serpentine, spiral or curve timeline, or a straight one. */
+/** Events and periods along a track: a serpentine, spiral or polyline timeline, or a straight one. */
 export interface TimelineSeries extends SeriesBase {
   type: 'timeline';
   data: readonly TimelineEvent[];
@@ -443,7 +441,7 @@ export interface XRangeSeries extends SeriesBase {
   dataLabels?: boolean | undefined;
   shape?: 'rectangle' | 'rounded' | undefined;
   /** Fraction of the row's slot, from 0.05 to 1. Defaults to 0.6. */
-  width?: number | undefined;
+  slotWidth?: number | undefined;
   /** Overlay the row's centre instead of reserving a grouped slot. Defaults to false. */
   overlay?: boolean | undefined;
 }
@@ -458,7 +456,7 @@ export interface XYLineSeries extends SeriesBase {
   symbol?: Marker | undefined;
   dash?: readonly number[] | undefined;
   /** Per-edge overrides, one per pair of adjacent slots; null keeps the series style. */
-  segments?: readonly ({ color?: string | undefined; width?: number | undefined; dash?: readonly number[] | undefined } | null)[] | undefined;
+  segments?: readonly ({ color?: string | undefined; strokeWidth?: number | undefined; dash?: readonly number[] | undefined } | null)[] | undefined;
   /** Width at each point in user units, 0 to 100. Draws a tapered path with round joins/caps. */
   widths?: readonly number[] | undefined;
   /** A continuous paint across the plot, from left to right or bottom to top. */
@@ -624,7 +622,7 @@ export interface GaugeSeries extends SeriesBase {
   /** A needle from the centre, or a bar along the dial from its start. Defaults to `needle`. */
   display?: 'needle' | 'bar' | undefined;
   /** A needle's length, as a share of the radius: from 0.1 to 1. Defaults to 0.8. */
-  length?: number | undefined;
+  needleLength?: number | undefined;
 }
 
 export type Series =
@@ -661,7 +659,7 @@ export interface ChartLayout {
   title?: string;
   /** The family of the font every label was measured with. */
   family: string;
-  /** In painting order. */
+  /** What the renderers draw, in painting order. What a node holds can change in any release. */
   nodes: ChartNode[];
   /** Every label drawn, each once: pass them to `fontFaceCss` to embed only the font files needed. */
   labels: string[];

@@ -62,7 +62,7 @@ Coordinates use numbers on linear axes and category names on band axes. Numeric 
 
 - **Variwide:** add positive `weights` to the Cartesian band axis, one per category. Marks, labels and annotations use the same category allocation.
 - **Rounded and pyramid bars:** set `shape: 'rounded'` or `'pyramid'` on a bar or bar interval.
-- **Segment styles:** `xyLine.segments` has one entry per adjacent pair of data slots. Each entry can override `color`, `width` and `dash`; null data still breaks the line. A zero-width stroke is invisible in SVG and Canvas.
+- **Segment styles:** `xyLine.segments` has one entry per adjacent pair of data slots. Each entry can override `color`, `strokeWidth` and `dash`; null data still breaks the line. A zero-width stroke is invisible in SVG and Canvas.
 - **Trails and comets:** `xyLine.widths` supplies a width from 0 to 100 display units per point slot. Gaps break the trail; increasing widths makes a comet.
 - **Continuous gradients:** add `gradient: { axis: 'x', stops: [{ offset: 0, color: '#0072b2' }, { offset: 1, color: '#d55e00' }] }`. Use `axis: 'y'` for bottom-to-top colour. Stops must increase strictly from 0 to 1 and use hex colours. Gradients can colour trails; segment overrides cannot combine with gradients or tapered widths.
 

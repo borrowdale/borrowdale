@@ -1,7 +1,7 @@
 import type { Point, Shape, SketchStyle } from '@borrowdale/core';
 import { cos, sin } from '@borrowdale/core/math';
 import type { Drawing, SeedKey } from './drawing.js';
-import type { ChartNode, Marker, MarkerSymbol } from './types.js';
+import type { ChartNode, Marker, SymbolName } from './types.js';
 
 /** The image reference stays plain data; only the renderer receives trusted assets. */
 export function markerNode(
@@ -17,7 +17,7 @@ export function markerNode(
 }
 
 /** A marker inside the square centred at `center`, with side `size`. */
-export function symbolShape(symbol: MarkerSymbol, [cx, cy]: Point, size: number): Shape {
+export function symbolShape(symbol: SymbolName, [cx, cy]: Point, size: number): Shape {
   const radius = size / 2;
   const polygon = (points: readonly Point[]): Shape => ({
     kind: 'polygon',

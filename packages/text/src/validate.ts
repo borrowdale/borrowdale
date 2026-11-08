@@ -1,4 +1,4 @@
-import { isPaint, notXml, PAINT_RULE, show } from '@borrowdale/core/internal';
+import { isPaint, notXml, ownOptions, PAINT_RULE, show } from '@borrowdale/core/internal';
 import { excalifont } from './fonts/excalifont.js';
 import {
   TEXT_ANCHORS,
@@ -6,8 +6,8 @@ import {
   type Font,
   type FontFile,
   type FontFiles,
-  type LayoutOptions,
-  type MeasureOptions,
+  type LayoutTextOptions,
+  type MeasureTextOptions,
   type TextAnchor,
   type TextBaseline,
   type TextStyle,
@@ -21,8 +21,8 @@ const MAX_ROTATE = 360;
 const DEFAULT_FONT_SIZE = 16;
 
 // The complete lists of accepted options: anything else is a typo.
-const MEASURE_KEYS: Record<keyof MeasureOptions, true> = { fontSize: true, font: true };
-const LAYOUT_KEYS: Record<keyof LayoutOptions, true> = {
+const MEASURE_KEYS: Record<keyof MeasureTextOptions, true> = { fontSize: true, font: true };
+const LAYOUT_KEYS: Record<keyof LayoutTextOptions, true> = {
   ...MEASURE_KEYS,
   x: true,
   y: true,
@@ -82,23 +82,21 @@ export interface CheckedLayout extends CheckedMeasure {
   rotate: number;
 }
 
-export function checkMeasure(text: unknown, options: MeasureOptions = {}): CheckedMeasure {
-  checkKeys(options, MEASURE_KEYS);
-  return measureInput(text, ownCopy(options));
+export function checkMeasure(text: unknown, options: MeasureTextOptions = {}): CheckedMeasure {
+  return measureInput(text, ownOptions(options, MEASURE_KEYS));
 }
 
 /** The text and options of `fitText`, and its width: from 0 to as wide as a layout may be placed. */
 export function checkFit(
   text: unknown,
   maxWidth: unknown,
-  options: MeasureOptions = {},
+  options: MeasureTextOptions = {},
 ): CheckedMeasure & { maxWidth: number } {
   return { ...checkMeasure(text, options), maxWidth: checkNumber('maxWidth', maxWidth, 0, 2 * MAX_COORDINATE) };
 }
 
-export function checkLayout(text: unknown, given: LayoutOptions): CheckedLayout {
-  checkKeys(given, LAYOUT_KEYS);
-  const options = ownCopy(given);
+export function checkLayout(text: unknown, given: LayoutTextOptions): CheckedLayout {
+  const options = ownOptions(given, LAYOUT_KEYS);
   const { anchor = 'start', baseline = 'alphabetic', rotate = 0 } = options;
   if (!ANCHORS.includes(anchor)) {
     throw new Error(`Unknown anchor: ${show(anchor)}`);
@@ -117,8 +115,7 @@ export function checkLayout(text: unknown, given: LayoutOptions): CheckedLayout 
 }
 
 export function checkStyle(style: TextStyle = {}): { fill: string } {
-  checkKeys(style, STYLE_KEYS);
-  const { fill = '#000' } = ownCopy(style);
+  const { fill = '#000' } = ownOptions(style, STYLE_KEYS);
   // Not any CSS paint: a `url(…)` to another file or a `var(…)` would have the page fetch the file or
   // paint with its own values.
   if (!isPaint(fill)) {
@@ -229,7 +226,7 @@ function checkLength(text: string): void {
   }
 }
 
-function measureInput(text: unknown, options: MeasureOptions): CheckedMeasure {
+function measureInput(text: unknown, options: MeasureTextOptions): CheckedMeasure {
   const { fontSize = DEFAULT_FONT_SIZE, font = excalifont } = options;
   if (typeof fontSize !== 'number' || !(fontSize > 0 && fontSize <= MAX_FONT_SIZE)) {
     throw new Error(`fontSize must be a number greater than 0 and at most ${MAX_FONT_SIZE}, got ${show(fontSize)}`);
@@ -301,23 +298,6 @@ function pairOf(range: unknown): unknown {
 function checkFamily(family: unknown, owner: string): void {
   if (typeof family !== 'string' || !FAMILY.test(family)) {
     throw new Error(`Invalid ${owner}: ${FAMILY_RULE}, got ${show(family)}`);
-  }
-}
-
-// Only what checkKeys saw: own properties, in an object with no prototype, so neither an inherited
-// option nor a polluted Object.prototype can supply a value.
-function ownCopy<T extends object>(options: T): T {
-  return Object.assign(Object.create(null) as T, options);
-}
-
-function checkKeys(options: unknown, keys: object): void {
-  if (typeof options !== 'object' || options === null) {
-    throw new Error(`Options must be an object, got ${show(options)}`);
-  }
-  for (const [key, value] of Object.entries(options)) {
-    if (value !== undefined && !Object.hasOwn(keys, key)) {
-      throw new Error(`Unknown option: ${show(key)}`);
-    }
   }
 }
 

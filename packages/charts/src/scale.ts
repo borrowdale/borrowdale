@@ -26,8 +26,8 @@ const TICK_SPACING = 50;
 /** Numbers with no axis to take a format from: pie values, bubble sizes. */
 export const PLAIN_FORMAT: CheckedFormat = {
   decimals: undefined,
-  thousands: ',',
-  decimal: '.',
+  thousandsSeparator: ',',
+  decimalSeparator: '.',
   prefix: '',
   suffix: '',
 };
@@ -548,10 +548,10 @@ export function formatNumber(value: number, decimals: number, format: CheckedFor
   const digits = Math.abs(value).toFixed(decimals);
   const [whole = '', fraction] = digits.split('.');
   // A function, so a separator such as "$&" is not read as a replacement pattern.
-  const grouped = whole.replace(/\B(?=(\d{3})+$)/g, () => format.thousands);
+  const grouped = whole.replace(/\B(?=(\d{3})+$)/g, () => format.thousandsSeparator);
   // A value that rounds to zero is written without a sign.
   const sign = value < 0 && /[1-9]/.test(digits) ? '-' : '';
-  const fractionText = fraction === undefined ? '' : `${format.decimal}${fraction}`;
+  const fractionText = fraction === undefined ? '' : `${format.decimalSeparator}${fraction}`;
   return `${sign}${format.prefix}${grouped}${fractionText}${format.suffix}`;
 }
 

@@ -115,6 +115,14 @@ describe('pattern', () => {
     );
   });
 
+  it('names options that are not an object', () => {
+    expect(() => pattern(null as unknown as PatternOptions)).toThrow('Options must be an object, got null');
+  });
+
+  it('reads only the options passed, not inherited ones', () => {
+    expect(() => pattern(Object.create({ kind: 'lines' }) as PatternOptions)).toThrow('Unknown pattern kind: undefined');
+  });
+
   it('reads each option once, so the id comes from the options it checked and drew', () => {
     pattern(counted.options);
     expect(counted.reads()).toBe(1);
@@ -160,8 +168,8 @@ describe('pattern', () => {
     expect(pattern({ kind: 'lines', id: 'p' }).def.match(/<path /g)).toHaveLength(3);
   });
 
-  it('draws six diagonal strokes for crosshatch', () => {
-    expect(pattern({ kind: 'crosshatch', id: 'p' }).def.match(/<path /g)).toHaveLength(6);
+  it('draws six diagonal strokes for cross-hatch', () => {
+    expect(pattern({ kind: 'cross-hatch', id: 'p' }).def.match(/<path /g)).toHaveLength(6);
   });
 
   it('draws one circle for circles', () => {

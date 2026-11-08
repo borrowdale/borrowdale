@@ -46,8 +46,9 @@ returns; they never measure.
 
 The result holds the drawing position (`x`, `y` of the baseline start), the `width`, `ascent` and
 `descent`, the `box` the text takes up before rotation, `rotate`, the rotation `pivot`, and the
-`family` and `fontSize` it is drawn in. A layout is plain JSON. The renderers draw a layout as it
-is and do not check it again, so draw only layouts that `layoutText` returned.
+`family` and `fontSize` it is drawn in. Anything else a layout holds can change in any release, so
+draw a layout with the same version of `@borrowdale/text` that made it. The renderers draw a layout
+as it is and do not check it again, so draw only layouts that `layoutText` returned.
 
 Both return the text exactly as it will be drawn, which is the text that was measured:
 
@@ -169,7 +170,8 @@ use `appendText`, which sets the same properties through the CSSOM, and load the
 
 ## Validation
 
-A value that cannot be drawn throws an error naming it:
+A value that cannot be drawn throws an error naming it. The wording of these messages is for people
+and can change in any release, so do not match on it in code:
 
 - Text must be a string of at most 1,000 characters (UTF-16 code units), both as given and with
   its accents composed, on one line: line feed, carriage return, U+0085, U+2028 and U+2029 are
@@ -204,6 +206,10 @@ in the font it was measured with.
 `FontFiles` holds a font's woff2 files as base64, each with the code points it serves. Excalifont's
 are in `@borrowdale/text/excalifont-files`, a separate entry point, so code that only measures does
 not load them.
+
+`excalifont` and `excalifontFiles` are frozen, all the way down, so no code can change them for the
+rest of the page. To change one, make a copy:
+`{ ...excalifont, advances: { ...excalifont.advances, 0x41: 700 } }`.
 
 Excalifont covers printable ASCII, Cyrillic (U+0400 to U+045F) and most of Latin-1, Latin
 Extended-A and Greek. It lacks ¤ § ¬ ² ³ µ ¹, ĸ Ŋ ŋ ſ, and Δ Ω, which are measured as 1 em and

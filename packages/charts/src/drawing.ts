@@ -1,5 +1,5 @@
 import { Budget, sketch, type Shape, type SketchPath, type SketchStyle } from '@borrowdale/core';
-import { fitText, layoutText, measureText, textBounds, type LayoutOptions } from '@borrowdale/text';
+import { fitText, layoutText, measureText, textBounds, type LayoutTextOptions } from '@borrowdale/text';
 import { INK } from './palette.js';
 import { fail } from './read.js';
 import type { ChartNode } from './types.js';
@@ -30,7 +30,7 @@ export interface Extent {
   down: number;
 }
 
-type TextOptions = Omit<LayoutOptions, 'font' | 'fontSize'> & { fontSize?: number | undefined };
+type TextOptions = Omit<LayoutTextOptions, 'font' | 'fontSize'> & { fontSize?: number | undefined };
 
 // A data label is centred on the point it is drawn at.
 export const CENTRED = { anchor: 'middle', baseline: 'middle' } as const;

@@ -5,8 +5,8 @@ import {
   measureText,
   toSvgText,
   type FontFiles,
-  type LayoutOptions,
-  type MeasureOptions,
+  type LayoutTextOptions,
+  type MeasureTextOptions,
   type TextStyle,
 } from '@borrowdale/text';
 import { handFiles, handFont, splitFont } from './support/hand-font.js';
@@ -18,11 +18,11 @@ const FILL_RULE = 'fill must be a colour (a hex code, a name, rgb() or hsl()) or
 
 // Each returns the call, unmade, for `expect(...).toThrow`.
 function measuring(text: unknown, options?: unknown) {
-  return () => measureText(text as string, options as MeasureOptions);
+  return () => measureText(text as string, options as MeasureTextOptions);
 }
 
 function layingOut(text: unknown, options: unknown) {
-  return () => layoutText(text as string, options as LayoutOptions);
+  return () => layoutText(text as string, options as LayoutTextOptions);
 }
 
 // The split font's files behind a proxy that counts how often their length is read.
@@ -143,7 +143,7 @@ describe('measure options', () => {
   });
 
   it('ignores an option the options only inherit', () => {
-    expect(measureText('A', Object.create({ font: { ...handFont, unitsPerEm: 1 } }) as MeasureOptions)).toEqual(
+    expect(measureText('A', Object.create({ font: { ...handFont, unitsPerEm: 1 } }) as MeasureTextOptions)).toEqual(
       measureText('A'),
     );
   });
@@ -153,7 +153,7 @@ describe('measure options', () => {
   });
 
   it('ignores an unknown key whose value is undefined', () => {
-    expect(measureText('A', { font: handFont, extra: undefined } as MeasureOptions).width).toBe(8);
+    expect(measureText('A', { font: handFont, extra: undefined } as MeasureTextOptions).width).toBe(8);
   });
 });
 
@@ -192,7 +192,7 @@ describe('fonts', () => {
   });
 
   it('reads the length of a list of files once, and checks the files it counted', () => {
-    measureText('A', { font: { ...splitFont, files: counted.files }, fontSize: 20 } as MeasureOptions);
+    measureText('A', { font: { ...splitFont, files: counted.files }, fontSize: 20 } as MeasureTextOptions);
     expect(counted.lengthReads()).toBe(1);
   });
 
@@ -259,11 +259,11 @@ describe('layout options', () => {
   });
 
   it('ignores an inherited baseline', () => {
-    expect(layoutText('A', Object.assign(Object.create({ baseline: 'top' }), placed) as LayoutOptions).y).toBe(0);
+    expect(layoutText('A', Object.assign(Object.create({ baseline: 'top' }), placed) as LayoutTextOptions).y).toBe(0);
   });
 
   it('ignores a layout option the options only inherit', () => {
-    expect(layoutText('A', Object.assign(Object.create({ rotate: 90, anchor: 'end' }), placed) as LayoutOptions)).toMatchObject({
+    expect(layoutText('A', Object.assign(Object.create({ rotate: 90, anchor: 'end' }), placed) as LayoutTextOptions)).toMatchObject({
       x: 0,
       rotate: 0,
     });

@@ -29,7 +29,7 @@ and `npm run typecheck` cover the website too. To work on it, run `npm run site`
 | `packages/*/test/golden/` | The golden corpora: `corpus.json` lists the inputs, `goldens.json` the expected output |
 | `apps/examples` | Runnable examples that load the built packages |
 | `apps/site` | The website: the guides in `content/`, and pages built from the package READMEs and the golden corpora |
-| `scripts/` | Recording the goldens and generating the bundled font modules |
+| `scripts/` | Recording the goldens, generating the bundled font modules, and preparing the manifests the release publishes |
 | `.changeset/` | Release notes waiting for the next release |
 
 ## Report a bug
