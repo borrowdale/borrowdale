@@ -8,6 +8,11 @@ const triangle: Shape = { kind: 'polygon', points: [[0, 0], [10, 0], [5, 8]] };
 const trianglePath: Shape = { kind: 'path', d: 'M0 0 L10 0 L5 8 Z' };
 const closedArc: Shape = { kind: 'arc', cx: 5, cy: 5, width: 10, height: 10, start: 0, stop: 2, closed: true };
 
+// An empty array behind a proxy that claims the given length.
+function claimingLength(length: number): number[] {
+  return new Proxy<number[]>([], { get: (target, key) => (key === 'length' ? length : Reflect.get(target, key)) });
+}
+
 // A dash list whose first length is 4 when it is first read and a hundredth after that.
 function changingDash(): number[] {
   let reads = 0;
@@ -191,6 +196,8 @@ describe('validation', () => {
     ['a stroke taken from the parent element', rectangle, { stroke: 'inherit' }, `stroke must be ${PAINT_RULE}, got "inherit"`],
     ['a fill reset to its initial value', rectangle, { fill: 'INITIAL' }, `fill must be ${PAINT_RULE}, got "INITIAL"`],
     ['an rgb() with no numbers', rectangle, { stroke: 'rgb()' }, `stroke must be ${PAINT_RULE}, got "rgb()"`],
+    ['none in capitals, which a canvas would paint', rectangle, { fill: 'NONE' }, `fill must be ${PAINT_RULE}, got "NONE"`],
+    ['a dash list claiming a length no array has', rectangle, { strokeLineDash: claimingLength(17.5) }, 'strokeLineDash must be an array of 1 to 16 lengths from 0 to 1000000, adding up to at least 1, got an array of 17'],
     ['a seed that is an object', rectangle, { seed: { a: 1 } }, 'seed must be a string or a number, got an object'],
     ['an unknown fill style', rectangle, { fill: 'red', fillStyle: 'crayon' }, 'Unknown fill style: "crayon"'],
     ['an infinite roughness', rectangle, { roughness: Infinity }, 'roughness must be a number from 0 to 10, got Infinity'],

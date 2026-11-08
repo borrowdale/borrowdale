@@ -4,6 +4,14 @@ import { pattern, type PatternOptions } from '@borrowdale/fills';
 
 const square: Shape = { kind: 'rectangle', x: 0, y: 0, width: 10, height: 10 };
 
+// Pattern options whose stroke is a getter that counts its reads.
+function countedStroke(): { options: PatternOptions; reads: () => number } {
+  let reads = 0;
+  const options = { kind: 'lines', seed: 's', get stroke() { reads += 1; return '#333'; } } as PatternOptions;
+  return { options, reads: () => reads };
+}
+const counted = countedStroke();
+
 // An array inside an array, `depth` times: deep enough that serialising it overflows the stack.
 function deeplyNested(depth: number): unknown[] {
   let value: unknown[] = [];
@@ -105,6 +113,11 @@ describe('pattern', () => {
     expect(() => pattern({ kind: 'lines', strokeLineDash: deeplyNested(100_000) } as unknown as PatternOptions)).toThrow(
       'Invalid style: strokeLineDash',
     );
+  });
+
+  it('reads each option once, so the id comes from the options it checked and drew', () => {
+    pattern(counted.options);
+    expect(counted.reads()).toBe(1);
   });
 
   it('gives a fill that sketch accepts', () => {

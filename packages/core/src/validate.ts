@@ -7,6 +7,7 @@ import { FILL_STYLES, type Shape, type ShapeKind, type SketchOptions } from './t
 // Bounds on what callers may pass. The engine additionally bounds its total work per drawing.
 const MAX_CURVE_STEPS = 1000;
 const MAX_DASHES = 16;
+const MAX_ARRAY_LENGTH = 2 ** 32 - 1;
 // The shortest dash pattern, dash and gap lengths added up.
 const MIN_DASH_PATTERN = 1;
 const MAX_ROUGHNESS = 10;
@@ -144,7 +145,11 @@ export function ownDash(value: unknown): unknown {
     return value;
   }
   const length = value.length;
-  return length > MAX_DASHES ? new Array<unknown>(length) : Array.from({ length }, (_, i): unknown => value[i]);
+  if (length <= MAX_DASHES) {
+    return Array.from({ length }, (_, i): unknown => value[i]);
+  }
+  // Only a proxy can claim a length no array has; it fails the check as one entry too many.
+  return new Array<unknown>(Number.isSafeInteger(length) && length <= MAX_ARRAY_LENGTH ? length : MAX_DASHES + 1);
 }
 
 function assertShape(shape: Shape): void {

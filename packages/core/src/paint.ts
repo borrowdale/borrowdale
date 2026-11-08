@@ -1,6 +1,9 @@
 // The longest colour or paint accepted. Every mark writes its paints into the output, so a long one
 // would multiply the size of a drawing.
 export const MAX_PAINT = 100;
+// The longest paint a renderer writes. Far above any real one, and short enough for every pattern
+// below to test without running out of stack.
+const MAX_PAINT_FORM = 1_000;
 // What renderers read as a colour: hex codes, names, rgb() and hsl(). Anything else, like a `url(…)`
 // naming another file or a `var(…)`, would have an SVG fetch a file or paint with a value the page
 // sets. The CSS-wide keywords `inherit`, `initial`, `unset` and `revert` look like names but are
@@ -12,7 +15,7 @@ const LOCAL_PAINT = /^url\(#[A-Za-z][\w-]*\)$/;
 // Characters an XML document cannot contain, so SVG markup holding them does not parse: C0 controls
 // other than tab, line feed and carriage return, U+FFFE, U+FFFF and unpaired surrogates. With the `u`
 // flag a surrogate pair is one character, so the surrogate range matches only unpaired halves.
-const NOT_XML = /[\u0000-\u0008\u000B\u000C\u000E-\u001F￾￿\uD800-\uDFFF]/u;
+const NOT_XML = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF\uD800-\uDFFF]/u;
 
 /** How the error messages of every package describe a colour. */
 export const COLOR_RULE = 'a colour (a hex code, a name, rgb() or hsl())';
@@ -21,7 +24,13 @@ export const PAINT_RULE = `${COLOR_RULE} or url(#id), at most ${MAX_PAINT} chara
 
 /** A colour: a hex code, a name, rgb() or hsl(). */
 export function isColor(value: unknown): value is string {
-  return typeof value === 'string' && value.length <= MAX_PAINT && COLOR.test(value);
+  return typeof value === 'string' && value.length <= MAX_PAINT && isColorForm(value);
+}
+
+// `none` only in lowercase: SVG reads `NONE` as none too, but a canvas would paint it, since the
+// renderers compare a paint with `none` to skip it.
+function isColorForm(value: string): boolean {
+  return COLOR.test(value) && (value === 'none' || value.toLowerCase() !== 'none');
 }
 
 /** A colour, or a pattern or gradient in the same document, written `url(#id)`. */
@@ -30,12 +39,12 @@ export function isPaint(value: unknown): value is string {
 }
 
 /**
- * A colour or `url(#id)` of any length. What renderers check of a sketch: its paints are kept out of
- * markup and fetches either way, and a chart's gradients are named with an id prefix of up to 100
- * characters, so the length limit belongs to options rather than to drawing.
+ * A colour or `url(#id)` of up to MAX_PAINT_FORM characters. What renderers check of a sketch: a
+ * chart's gradients are named with an id prefix of up to 100 characters, so the tighter limit
+ * belongs to options rather than to drawing.
  */
 export function isPaintForm(value: unknown): value is string {
-  return typeof value === 'string' && (COLOR.test(value) || LOCAL_PAINT.test(value));
+  return typeof value === 'string' && value.length <= MAX_PAINT_FORM && (isColorForm(value) || LOCAL_PAINT.test(value));
 }
 
 /** The first character of `value` that an XML document cannot hold, written `U+0001`, if any. */

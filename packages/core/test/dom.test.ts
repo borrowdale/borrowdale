@@ -17,6 +17,14 @@ const falsyDash: Sketch = {
   paths: [{ d: 'M0 0 L1 1', stroke: '#000', strokeWidth: 1, strokeLineDash: 0 as unknown as number[], fill: 'none' }],
 };
 
+// A sketch built by hand whose second path names another file as its stroke.
+const laterBadPaint: Sketch = {
+  paths: [
+    { d: 'M0 0 L1 1', stroke: '#000', strokeWidth: 1, fill: 'red' },
+    { d: 'M2 2 L3 3', stroke: 'url(https://example.com/a.svg#p)', strokeWidth: 1, fill: 'none' },
+  ],
+};
+
 class RecordingPath2D {
   constructor(readonly d: string) {}
 }
@@ -133,6 +141,13 @@ describe('appendSketch', () => {
     expect(svg.querySelector('script')).toBeNull();
   });
 
+  it('appends nothing when a later path has a paint that is not allowed', () => {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+
+    expect(() => appendSketch(svg, laterBadPaint)).toThrow('Invalid sketch: stroke must be a colour');
+    expect(svg.childElementCount).toBe(0);
+  });
+
   it('rejects a stroke naming another file in a sketch built by hand', () => {
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
 
@@ -142,6 +157,13 @@ describe('appendSketch', () => {
 });
 
 describe('drawSketch', () => {
+  it('draws nothing when a later path has a paint that is not allowed', () => {
+    vi.stubGlobal('Path2D', RecordingPath2D);
+    const context = fakeContext();
+    expect(() => drawSketch(context as unknown as CanvasRenderingContext2D, laterBadPaint)).toThrow('Invalid sketch: stroke must be a colour');
+    expect(context.fill).not.toHaveBeenCalled();
+  });
+
   it('rejects a fill that is not a colour or url(#id) before drawing anything', () => {
     vi.stubGlobal('Path2D', RecordingPath2D);
     const context = fakeContext();

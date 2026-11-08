@@ -18,7 +18,8 @@ const MAX_PLACED = 10_000;
 // this a spec of 1.4 MB, inside every other limit, made an SVG of over 200 MB.
 const MAX_TEXT = 8_000_000;
 // The colours and dashes every path repeats, counted as written. A series of many segments, each with
-// a long colour and dash, would otherwise grow the output far past what its spec takes up.
+// a long colour and dash, would otherwise grow the output far past what its spec takes up. A gradient's
+// url(#…) replaces a path's colour only when the chart is rendered, so it is not counted here.
 const MAX_STYLE = 8_000_000;
 
 /** Distances from a point, in each direction. */

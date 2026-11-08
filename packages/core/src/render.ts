@@ -70,9 +70,10 @@ export function toSvgDocument({ width, height, defs = [], body }: SvgDocumentOpt
 /** Appends a sketch's paths to an SVG element and returns the created elements. */
 export function appendSketch(parent: Element, sketch: Sketch): SVGPathElement[] {
   const document = parent.ownerDocument;
-  return sketch.paths.map((path) => {
+  // Every path is checked before any is appended, so a bad one leaves nothing behind.
+  return sketch.paths.map(pathAttributes).map((attributes) => {
     const element = document.createElementNS(SVG_NS, 'path');
-    for (const [name, value] of Object.entries(pathAttributes(path))) {
+    for (const [name, value] of Object.entries(attributes)) {
       element.setAttribute(name, String(value));
     }
     parent.appendChild(element);
@@ -85,9 +86,10 @@ export function drawSketch(
   context: CanvasRenderingContext2D, sketch: Sketch,
   paint: { stroke?: string | CanvasGradient | CanvasPattern; fill?: string | CanvasGradient | CanvasPattern } = {},
 ): void {
-  for (const path of sketch.paths) {
-    const stroke = paintOf(path, 'stroke');
-    const fill = paintOf(path, 'fill');
+  // Every path's paints are checked before any is drawn, so a bad one leaves nothing behind.
+  const paints = sketch.paths.map((path) => ({ stroke: paintOf(path, 'stroke'), fill: paintOf(path, 'fill') }));
+  for (const [index, path] of sketch.paths.entries()) {
+    const { stroke, fill } = paints[index]!;
     const outline = new Path2D(path.d);
     context.save();
     try {

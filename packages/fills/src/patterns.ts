@@ -68,7 +68,7 @@ export function pattern(options: PatternOptions): Pattern {
   // One key for both the strokes and the id, derived from every option rather than just the seed,
   // so tiles with different options almost always get different ids. Two <pattern>s sharing an id
   // make `url(#id)` resolve to only one of them, so ids from users' options should be set explicitly.
-  const optionsKey = stableKey({ ...options, size });
+  const optionsKey = stableKey({ kind, size, background, id, seed, ...style });
   const seedKey = String(seed ?? optionsKey);
   const patternId = id ?? `borrowdale-${kind}-${toSeed(optionsKey)}`;
 

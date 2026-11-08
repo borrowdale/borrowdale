@@ -38,8 +38,13 @@ describe('toSvgPaths', () => {
     ['markup as the stroke', painted('"/><script>', 'none'), `stroke must be ${FORM_RULE}, got "\\"/><script>"`],
     ['a stroke naming another file', painted('url(https://example.com/a.svg#p)', 'none'), `stroke must be ${FORM_RULE}, got "url(https://example.com/a.svg#p)"`],
     ['a fill reading a value of the page', painted('#000', 'var(--x)'), `fill must be ${FORM_RULE}, got "var(--x)"`],
+    ['none in capitals, which a canvas would paint', painted('None', 'none'), `stroke must be ${FORM_RULE}, got "None"`],
   ])('rejects %s in a sketch built by hand', (_case, built, message) => {
     expect(() => toSvgPaths(built)).toThrow(`Invalid sketch: ${message}`);
+  });
+
+  it('rejects a paint longer than 1,000 characters in a sketch built by hand', () => {
+    expect(() => toSvgPaths(painted(`rgb(${'1'.repeat(1_000)} 2 3)`, 'none'))).toThrow('Invalid sketch: stroke must be');
   });
 
   it('writes a pattern in the same document as the fill of a sketch built by hand', () => {
