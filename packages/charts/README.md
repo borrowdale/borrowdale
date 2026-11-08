@@ -37,13 +37,13 @@ Each series has a `type`, a `name` of at most 100 characters that is unique in t
 optionally its own `color` (a hex code, a colour name, `rgb()`, `rgba()`, `hsl()` or `hsla()`) and
 `style` (any `@borrowdale/core` style option but `seed`, within the limits under Chart options).
 The series' types decide what the chart is, and which axes it takes; series of different rows
-cannot share a chart:
+cannot share a chart, except where a row says so:
 
 | Series types | Axes |
 |---|---|
 | `bar`, `line`, `area`, `rangeArea`, `interval`, `xRange`, in any mix | `x` and `y`, one of them `band` |
-| `scatter`, `bubble`, `xyLine`, `xyArea`, in any mix (also with `histogram` on two linear axes) | `x` and `y`, both continuous: `linear`, `time`, `log` or `sqrt` |
-| `distribution`, `relationship`, `market` (also with continuous Cartesian series) | two `linear` axes |
+| `scatter`, `bubble`, `xyLine`, `xyArea`, in any mix | `x` and `y`, both continuous: `linear`, `time`, `log` or `sqrt` |
+| `histogram`, `distribution`, `relationship`, `market`, in any mix, and with the series of the row above | `x` and `y`, both `linear` |
 | `radar`, `rose`, `polarLine`, `polarArea`, in any mix | `angle` (`band`), and optionally `radius` (`linear`) |
 | `radialBar` | `angle` (`linear`) and `radius` (`band`) |
 | `polarScatter` | `angle` and `radius`, both `linear` |
@@ -147,16 +147,17 @@ const spec = {
 | `display` | Input and interpretation |
 |---|---|
 | `ecdf`, `normalQQ` | Exact empirical steps at distinct observations, or sorted observations against the standard normal quantiles at their mid-ranks. |
-| `box` | Linearly interpolated quartiles and median. Tukey whiskers reach the outermost samples within 1.5 IQR of the box. Use `whiskers: 'minmax'` for the full range, or `points: true` to show every sample. |
-| `violin`, `raincloud` | Gaussian kernel density envelope. A raincloud adds a narrow box and jittered samples. A violin accepts `points` and `polar`. In a polar violin, `position` is the angle in radians and the sample range maps to radius. |
+| `box` | Linearly interpolated quartiles and median. Tukey whiskers reach the outermost samples within 1.5 IQR of the box, and never end inside it. Use `whiskers: 'minmax'` for the full range, or `points: true` to show every sample. Without `points`, samples beyond the whiskers are drawn as dots. |
+| `violin`, `raincloud` | Gaussian kernel density envelope. A raincloud adds a narrow box and jittered samples. A violin accepts `points`, and `polar` instead of `horizontal`. In a polar violin, `position` is the angle in radians and the density's range, three bandwidths past each end of the samples, maps to radius 1 to 2, with the angle clockwise from the positive y axis. A raincloud accepts `whiskers`, as a box does. |
 | `density`, `ridge`, `normal` | Gaussian KDE, a ridge normalised to unit peak at its group position, or a normal curve fitted with the sample mean and sample standard deviation. KDE accepts a positive `bandwidth`. Density series with a shared `stack` name accumulate in order. |
-| `swarm` | Places observation markers side by side where they would overlap. `sizes` gives one diameter per observation in drawing units. Use `mirrored: false` for a one-sided swarm. |
-| `dotPlot`, `isotype` | Stack dots or symbols by value. Each group starts at the smallest remaining observation and spans `binWidth` (default 1). An isotype accepts a marker `symbol`, defaulting to a star. |
-| `stemLeaf` | Nonnegative integer samples. Each row gives the tens stem and ordered units digits, up to 450 leaves per stem. |
+| `swarm` | Places observation markers side by side where they would overlap. Markers are 7 units across; `sizes` gives one diameter per observation, 1 to 40 units, and `symbol` a geometric marker. Its group axis keeps half a unit each side of the position for the markers, and a `min` or `max` fixed on that axis must leave that room in. A swarm too crowded for it spreads further, up to the edge of the plot, over any neighbour, and one that does not fit there is an error. Use `mirrored: false` for a one-sided swarm, which grows as a one-sided dot plot stacks, with the room on that side. |
+| `dotPlot`, `isotype` | Stack dots or symbols by value. Each group starts at the smallest remaining observation and spans `binWidth` (default 1). Stacks alternate about their position; `mirrored: false` stacks them to one side: rightward, or upward when horizontal. An isotype accepts a marker `symbol`, defaulting to a star. Dots in a stack sit one unit of the group axis apart, at the value that starts their group, so leave more room between positions than the widest stack. |
+| `stemLeaf` | Nonnegative integer samples. Each row gives the tens stem and ordered units digits, up to 450 leaves per stem. Every stem from the lowest to the highest has a row, empty ones included, up to 100 stems. Rows are written at x = 0, the lowest stem at y = 0 and each next stem one unit below, so the display is usually drawn with both axes hidden. |
 
-Use a different numeric `position` for each grouped box, violin, raincloud, ridge or swarm.
+Use a different numeric `position` for each grouped box, violin, raincloud, ridge, swarm, dot plot
+or isotype.
 Label the positions with explicit ticks. Use `horizontal: true` on boxes, violins, rainclouds,
-swarms and dot plots to exchange the axes. KDE draws 65 points across the samples and three
+swarms, dot plots and isotypes to exchange the axes. KDE draws 65 points across the samples and three
 bandwidths past each end. A narrow bandwidth adds points at most a quarter bandwidth apart near
 every sample, so no peak is missed. A curve needs at most 2,000 points: a bandwidth too
 narrow for that is an error. Its default bandwidth is 1.06 times the sample standard deviation times
@@ -169,11 +170,11 @@ A `relationship` series takes numeric pairs.
 
 | `display` | Input and interpretation |
 |---|---|
-| `histogram2d`, `hexbin` | Count observations in rectangles or flat-top hexagons. Cells with more observations have denser hachure, in the series colour. `binWidth` and `binHeight` specify rectangle dimensions or hexagon radii before axial projection. |
-| `stanford` | Nonnegative position error and protection level. Cells are hatched by count, as for `histogram2d`. The diagonal and the required positive `alertLimit` delimit integrity regions. |
-| `regression` | Select `method` from `linear`, `polynomial` (degree 1–5), `exponential`, `logarithmic` and `loess` (span 0.05–1). Exponential fits regress log response and logarithmic fits regress on log input. LOESS uses local linear fits with tricube weights. A curve that reaches the highest or lowest observation stays within it, so axis limits at the data extent hold. Add a scatter series to show the observations. |
+| `histogram2d`, `hexbin` | Count observations in rectangles or flat-top hexagons. Cells with more observations have denser hachure, in the series colour. `binWidth` (default 1) and `binHeight` (default `binWidth`) specify rectangle dimensions or hexagon radii before axial projection. |
+| `stanford` | Nonnegative position error and protection level. Cells are hatched by count, as for `histogram2d`. The diagonal and the required positive `alertLimit` delimit integrity regions. The boundaries are dashed reference lines in the axis colour. |
+| `regression` | Select `method` from `linear` (the default), `polynomial` (`degree` 1–5, default 2), `exponential`, `logarithmic` and `loess` (`span` 0.05–1, default 0.5). Exponential fits regress log response and logarithmic fits regress on log input, so they need positive responses and positive inputs respectively. The curve runs from the lowest to the highest observed x. LOESS uses local linear fits with tricube weights. A curve that reaches the highest or lowest observation is kept at it, so axis limits at the data extent hold; one that passes beyond the observations, as a parabola can between them, is drawn as calculated and needs the axis to leave room for it. Add a scatter series to show the observations. |
 | `qq` | Sort both columns independently and pair their ranks to compare two equal-sized samples. |
-| `forest` | Each pair is an ordered confidence interval. Supply one point estimate per interval in `estimates`, and label row indices with y-axis ticks. |
+| `forest` | Each pair is an ordered confidence interval. Supply one point estimate per interval in `estimates`, each within its interval. Row i is drawn at y = i: label the rows with y-axis ticks. |
 
 ### Prices and indicators
 
@@ -183,15 +184,21 @@ closing prices directly.
 
 | `display` | Calculation and options |
 |---|---|
-| `candlestick`, `heikinAshi`, `ohlc`, `hlc` | Candle bodies span open to close and wicks reach high and low. OHLC uses side ticks and HLC omits the opening tick. Heikin-Ashi derives each open from the previous transformed bar. Bars and candles take the series colour: rising candles are outlined and falling candles filled, or with `hollow: false` rising candles are hatched. `flags` labels sessions by `index` and `label`. |
-| `renko`, `pointFigure` | Close-based price boxes start at the first close. Supply positive `boxSize`. Renko reverses after two boxes. Point-and-figure starts a new column after `reversal` boxes (default 3). Up to 4,000 boxes per series. |
-| `sma`, `ema`, `bollinger` | Use a trailing `period` (default 20). EMA starts at the first full-window mean. Bollinger bands show two population standard deviations around the rolling mean. |
-| `macd`, `rsi` | MACD uses 12- and 26-session EMAs with a dashed 9-session signal line and difference histogram. Wilder RSI uses `period` changes (default 14) and reports 50 for an entirely flat window. |
-| `control` | An individuals control chart shows measurements, with their mean and limits as dashed lines in the axis colour. The limits lie three times the mean moving range divided by 1.128 above and below the mean. |
+| `candlestick`, `heikinAshi`, `ohlc`, `hlc` | Candle bodies span open to close and wicks reach high and low. OHLC uses side ticks and HLC omits the opening tick. Heikin-Ashi derives each open from the previous transformed bar. Bars and candles take the series colour: rising candles are outlined and falling candles filled, or with `hollow: false` rising candles are hatched. `flags`, up to 100, label sessions by `index` and a `label` of at most 100 characters. |
+| `renko`, `pointFigure` | Close-based price boxes start at the first close. Supply positive `boxSize`. Renko reverses after two boxes. Point-and-figure starts a new column after `reversal` boxes, 1 to 100 (default 3). Up to 4,000 boxes per series. |
+| `sma`, `ema`, `bollinger` | Use a trailing `period` of 1 to 1,000 sessions (default 20). EMA starts at the first full-window mean. Bollinger bands show two population standard deviations around the rolling mean. |
+| `macd`, `rsi` | MACD uses 12- and 26-session EMAs with a dashed 9-session signal line and difference histogram. Wilder RSI uses `period` changes (default 14) and reports 50 when the smoothed gain and loss are both zero. |
+| `control` | An individuals control chart shows measurements, with their mean and limits as dashed lines in the axis colour. The limits lie three times the mean moving range divided by 1.128 above and below the mean. It needs at least two measurements. |
 
-Generated price boxes, density curves, stacked density vertices and financial overlays count toward the chart-wide point budget. Bin widths and box sizes must produce distinct coordinates at the input magnitude.
+Every point a statistical series draws counts toward the chart-wide point budget, as its observations do. A kernel density's grid also counts once before its densities are computed, and so do a histogram's samples and its edges, one more than its bins. Bin widths and box sizes must produce distinct coordinates at the input magnitude. Computed geometry must stay within ±1e15, the drawable range: a series whose bins, boxes or fits would reach past it is rejected.
 
-Indicators need enough observations for their first complete window. The earliest visible
+A fixed `min` or `max` must leave room for everything a series draws, not only its observations: a
+density reaches three bandwidths past the samples, a fitted normal three standard deviations past
+the mean, a box, violin or raincloud up to half a unit either side of its position, and a ridge one
+unit above it.
+
+Indicators need enough observations for their first complete window: MACD needs 34 sessions, 26
+for its first value and 8 more for the signal line. The earliest visible
 x position is the corresponding input session.
 
 ## Axes
@@ -216,10 +223,12 @@ one kept, and on an axis with an end the last tick, leaving out the labels befor
 it; where even the first would, they label whichever of the two is nearer its own end.
 
 Numbers are never formatted with the locale data of the JavaScript engine, which differs between
-engines; set `thousands` and `decimal` to write them for another language. Bars and areas always
-stand on zero; range areas, lines and points do not have to.
+engines; set `thousands` and `decimal` to write them for another language. Bars, areas and
+histograms always stand on zero; range areas, lines, points and the other statistical series do not
+have to.
 
-Points and bubbles are centred on their values, so a chart with them widens each end of `x` and `y`
+Points, bubbles and the dots and markers of statistical series are centred on their values, so a
+chart with them widens each end of `x` and `y`
 by the radius of its largest mark, keeping the same ticks, and a point at the end of the data stays
 on the plot. An end fixed with `min` or `max` is not widened: the plot keeps that room outside it
 instead, so a mark on the fixed end may cross the axis line but stays on the chart.
@@ -377,8 +386,9 @@ be the files of the font the chart was laid out in; `toSvgChart` throws otherwis
 lists every label, for `fontFaceCss`; `layout.missing` lists any character the font does not cover.
 
 In SVG and the DOM, each mark carries a `<title>`, which browsers show as a tooltip: a bar's series,
-category and value; a point's series and values; a slice's name, value and share; and the series
-name of a line, an area or a radar. The drawing has `role="img"` and the chart title as its name. A
+category and value; a point's series and values; a slice's name, value and share; a histogram bin's
+series, edges and height; for other statistical marks, the series and what the mark shows, such as
+a quartile's value or a cell's count; and the series name of a line, an area or a radar. The drawing has `role="img"` and the chart title as its name. A
 canvas has neither.
 
 ## Errors and limits
@@ -419,9 +429,10 @@ categories. Straight and stepped lines cost the same for each point however they
 1,000 points that swing the full height at every point fit, as do 66 such `step` lines. A
 `monotone` line costs more the more it turns: some 18 such lines fit, and one that swings the full
 height fits only about 160 points.
-Data labels and image markers draw no strokes, so the budget does not count them: a chart holds at
+Data labels, image markers and the text marks of statistical charts (point-and-figure X and O,
+flags and stem-and-leaf rows) draw no strokes, so the budget does not count them: a chart holds at
 most 10,000 of them together, about 3 MB of SVG, and more throws
-`Drawing too complex (more than 10000 data labels and images)`.
+`Drawing too complex (more than 10000 data labels, text marks and images)`.
 Hachure fills are what costs most: about 7 KB of SVG for a 40 × 300 bar, against 0.6 KB with
 `style: { fillStyle: 'solid' }`.
 
@@ -457,9 +468,11 @@ Use it for supplied confidence bands, with an `xyLine` for the estimate. Use a `
 
 ### Symbols and labels
 
-`symbol` on scatter, bubble, polar scatter, line and `xyLine` supports `circle`,
-`square`, `diamond`, `triangle`, `cross`, `star`, `wye` and `tick`. Point symbols fit
-inside a six-unit square; bubble symbols keep the bubble's computed diameter.
+`symbol` on scatter, bubble, polar scatter, line and `xyLine`, and on distribution swarms and
+isotypes, supports `circle`, `square`, `diamond`, `triangle`, `cross`, `star`, `wye` and `tick`.
+Swarms and isotypes take these geometric symbols only, not images. Point symbols fit
+inside a six-unit square, and swarm and isotype markers in a seven-unit one unless `sizes` sets
+them; bubble symbols keep the bubble's computed diameter.
 The area of equally shaped bubbles remains proportional to their size value.
 A tick is a vertical stroke. New symbol choices are also shown in point legends.
 
@@ -555,7 +568,9 @@ The repository's `apps/examples/cartesian-cases.json` contains 33 complete specs
 run `node apps/examples/cartesian.mjs` after building to render each one. Its
 `apps/examples/time-cases.json` holds 12 more, rendered by `node apps/examples/time.mjs`: a time axis,
 range bars, a Gantt chart, an x-range chart, an annotation chart, a cycle plot, a Marey chart, log and
-square-root axes, and serpentine, spiral and curve timelines.
+square-root axes, and serpentine, spiral and curve timelines. `apps/examples/statistical-cases.json`
+holds 41 statistical and financial charts, rendered with the other chart kinds by
+`npm run example:charts`.
 
 | Chart | Preparation and composition |
 |---|---|
