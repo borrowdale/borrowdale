@@ -28,7 +28,7 @@ and `npm run typecheck` cover the website too. To work on it, run `npm run site`
 | `packages/core`, `packages/fills`, `packages/text`, `packages/charts` | The published packages: `src/`, `test/`, and a `README.md` that is the package's reference |
 | `packages/*/test/golden/` | The golden corpora: `corpus.json` lists the inputs, `goldens.json` the expected output. Charts also read `apps/examples/statistical-cases.json` |
 | `apps/examples` | Runnable examples that load the built packages |
-| `apps/site` | The website: the guides in `content/`, and pages built from the package READMEs and the golden corpora |
+| `apps/site` | The website: the guides in `content/`, and pages built from the package READMEs, the golden corpora and `apps/examples/statistical-cases.json` |
 | `scripts/` | Recording the goldens and generating the bundled font modules |
 | `.changeset/` | Release notes waiting for the next release |
 
@@ -53,7 +53,7 @@ Small fixes and documentation improvements can go straight to a pull request.
 The same input must give the same drawing, byte for byte, on every render, in Node and in every
 browser. Drawing code therefore never reads the clock, a random source, the locale or the time zone,
 and never calls a `Math` function whose result the engine is free to approximate. Use
-`@borrowdale/core/math` for `sin`, `cos` and `log`, and take randomness from the seed. The test
+`@borrowdale/core/math` for `sin`, `cos`, `log` and `exp`, and take randomness from the seed. The test
 guard in `packages/core/test/support/forbid-unportable-calls.ts` makes such calls throw while a
 golden is drawn.
 
@@ -94,7 +94,7 @@ and prices created for the examples.
 Run `npx changeset` for a new or changed API, a change to drawn output, a new or changed error, or a
 change to supported runtimes, and describe the change for someone reading the changelog. The four
 packages share one version and are released together. While the version is 0.x, a breaking change
-is a minor release and anything else a patch. Changes to tests, CI or development tooling need no
+or a substantial new feature is a minor release and anything else a patch. Changes to tests, CI or development tooling need no
 changeset.
 
 ## Commits
