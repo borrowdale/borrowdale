@@ -34,7 +34,8 @@ const svg = toSvgChart(chart, { fontFiles: excalifontFiles });
 ## Charts
 
 Each series has a `type`, a `name` of at most 100 characters that is unique in the chart, and
-optionally its own `color` (a hex code, a colour name, `rgb()`, `rgba()`, `hsl()` or `hsla()`) and
+optionally its own `color` (a hex code, a colour name, `rgb()`, `rgba()`, `hsl()` or `hsla()`, but
+not `inherit`, `initial`, `unset` or `revert`) and
 `style` (any `@borrowdale/core` style option but `seed`, within the limits under Chart options).
 The series' types decide what the chart is, and which axes it takes; series of different rows
 cannot share a chart:
@@ -333,8 +334,18 @@ categories. Straight and stepped lines cost the same for each point however they
 `monotone` line costs more the more it turns: some 18 such lines fit, and one that swings the full
 height fits only about 160 points.
 Data labels and image markers draw no strokes, so the budget does not count them: a chart holds at
-most 10,000 of them together, about 3 MB of SVG, and more throws
-`Drawing too complex (more than 10000 data labels and images)`.
+most 10,000 of them together, and more throws
+`Drawing too complex (more than 10000 data labels and images)`. The text of every label, title and
+tooltip is counted as it is written, escapes included (a `"` is written as `&quot;`, six
+characters): a chart holds at most 8,000,000 such characters, and more throws
+`Drawing too complex (more than 8000000 characters of labels and tooltips)`. The colours and dash
+lists that every drawn path repeats are counted the same way, up to 8,000,000 characters, past
+which a chart throws `Drawing too complex (more than 8000000 characters of colours and dashes)`:
+a series of many `segments`, each with a long colour and dash, reaches it. These limits bound a
+chart's work and output; they do not make every chart small. 100 series of 1,000 interval marks,
+each with a short tooltip, already come to some 4 million characters of SVG. If you draw specs from
+people you do not trust, set your own limits as well: on the size of the spec you accept, the time
+a drawing may take, and the size of what it returns.
 Hachure fills are what costs most: about 7 KB of SVG for a 40 × 300 bar, against 0.6 KB with
 `style: { fillStyle: 'solid' }`.
 
