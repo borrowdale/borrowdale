@@ -1,4 +1,4 @@
-import { show } from '@borrowdale/core/show';
+import { isPaint, notXml, PAINT_RULE, show } from '@borrowdale/core/internal';
 import { excalifont } from './fonts/excalifont.js';
 import {
   TEXT_ANCHORS,
@@ -60,10 +60,6 @@ export const IGNORABLE = /(?![\u180F\u3164\uFFA0\u{1BCA0}-\u{1BCA3}])\p{Default_
 // cannot follow: variation selectors 15 and 16 switch a character between text and emoji
 // presentation, and bidirectional controls reorder the text and mirror brackets.
 const PRESENTATION_CONTROLS = /[\uFE0E\uFE0F\u061C\u200E\u200F\u202A-\u202E\u2066-\u2069]/g;
-// Characters an XML document cannot contain, so SVG markup holding them does not parse: C0 controls
-// other than tab and the line breaks above, U+FFFE, U+FFFF and unpaired surrogates. With the `u`
-// flag a surrogate pair is one character, so the surrogate range matches only unpaired halves.
-const NOT_XML = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF\uD800-\uDFFF]/u;
 // A font that leaves out its files is one file, serving every code point it covers.
 const ONE_FILE: CheckedFont['files'] = [{ ranges: [[0, 0x10ffff]] }];
 
@@ -123,10 +119,11 @@ export function checkLayout(text: unknown, given: LayoutOptions): CheckedLayout 
 export function checkStyle(style: TextStyle = {}): { fill: string } {
   checkKeys(style, STYLE_KEYS);
   const { fill = '#000' } = ownCopy(style);
-  if (typeof fill !== 'string') {
-    throw new Error(`fill must be a string, got ${show(fill)}`);
+  // Not any CSS paint: a `url(…)` to another file or a `var(…)` would have the page fetch the file or
+  // paint with its own values.
+  if (!isPaint(fill)) {
+    throw new Error(`fill must be ${PAINT_RULE}, got ${show(fill)}`);
   }
-  checkXml('fill', fill);
   return { fill };
 }
 
@@ -145,20 +142,46 @@ export function advanceOf(font: Font, codePoint: number): number | undefined {
   return advance;
 }
 
-export function checkFontFiles(fontFiles: FontFiles): void {
-  if (typeof fontFiles !== 'object' || fontFiles === null || !Array.isArray(fontFiles.files)) {
+/** A checked file of a font: its bytes and its own copy of the ranges it serves. */
+export interface CheckedFontFile {
+  woff2: string;
+  ranges: readonly [first: number, last: number][];
+}
+
+/** Checked font files, each field read once, as the only copy callers then read. */
+export interface CheckedFontFiles {
+  family: string;
+  files: readonly CheckedFontFile[];
+}
+
+/**
+ * The font files, checked and copied. Each field is read once, by index rather than through an
+ * iterator, so a getter cannot pass these checks and then return another value, such as markup, to
+ * the CSS or the faces built from the copy.
+ */
+export function checkFontFiles(fontFiles: FontFiles): CheckedFontFiles {
+  const given: unknown = fontFiles;
+  const family: unknown = typeof given === 'object' && given !== null ? (given as FontFiles).family : undefined;
+  const files: unknown = typeof given === 'object' && given !== null ? (given as FontFiles).files : undefined;
+  if (!Array.isArray(files)) {
     throw new Error('Invalid font files: expected { family, files }');
   }
-  checkFamily(fontFiles.family, 'font files');
-  if (fontFiles.files.length === 0) {
+  checkFamily(family, 'font files');
+  const count = files.length;
+  if (count === 0) {
     throw new Error('Invalid font files: files must be a list of one or more files');
   }
-  for (const [index, file] of fontFiles.files.entries()) {
-    if (typeof file?.woff2 !== 'string' || !BASE64.test(file.woff2) || file.woff2.length % 4 !== 0) {
+  const checked: CheckedFontFile[] = [];
+  for (let index = 0; index < count; index += 1) {
+    const file: unknown = files[index];
+    const fields = typeof file === 'object' && file !== null ? (file as Partial<FontFile>) : {};
+    const woff2: unknown = fields.woff2;
+    if (typeof woff2 !== 'string' || !BASE64.test(woff2) || woff2.length % 4 !== 0) {
       throw new Error(`Invalid font files: files[${index}].woff2 must be base64`);
     }
-    checkRanges('font files', index, file.ranges);
+    checked.push({ woff2, ranges: checkRanges('font files', index, fields.ranges) });
   }
+  return { family: family as string, files: checked };
 }
 
 /** The text a caller asked to draw, checked, then changed into exactly what the browser draws. */
@@ -180,9 +203,9 @@ export function checkText(text: unknown): string {
 }
 
 function checkXml(name: string, value: string): void {
-  const notXml = NOT_XML.exec(value);
-  if (notXml) {
-    throw new Error(`${name} contains ${codePointName(notXml[0].charCodeAt(0))}, which SVG cannot hold`);
+  const problem = notXml(value);
+  if (problem !== undefined) {
+    throw new Error(`${name} contains ${problem}, which SVG cannot hold`);
   }
 }
 
@@ -238,18 +261,18 @@ function checkFiles(files: unknown): CheckedFont['files'] {
     return ONE_FILE;
   }
   // A font with no file would draw nothing.
-  if (!Array.isArray(files) || files.length === 0) {
+  const count = Array.isArray(files) ? files.length : 0;
+  if (count === 0) {
     throw new Error(`Invalid font: files must be a list of one or more files, got ${show(files)}`);
   }
-  // Array.from rather than map, which skips the holes of a sparse list: a hole is checked, and fails.
-  return Array.from(files, (file: { ranges?: unknown } | null | undefined, index) => ({
-    ranges: checkRanges('font', index, file?.ranges),
-  }));
+  // Each entry is read once, by index, as checkFontFiles reads them; a hole is checked, and fails.
+  const list = files as readonly ({ ranges?: unknown } | null | undefined)[];
+  return Array.from({ length: count }, (_, index) => ({ ranges: checkRanges('font', index, list[index]?.ranges) }));
 }
 
 // The same rule for a font's files and the woff2 files that hold them. Returns a copy of the
 // ranges, which is what measuring reads: the pairs a font was checked with are the pairs it is
-// measured with. Font files are trusted, and their callers read the ranges again.
+// measured with. Font files are copied the same way, and their callers read only the copy.
 // Each entry is read once, by index, and checked as it is copied, stopping at the first that is not
 // a pair: a sparse list or pair can claim billions of entries, and copying it before checking it
 // would exhaust memory. An empty list would make the face claim every code point.

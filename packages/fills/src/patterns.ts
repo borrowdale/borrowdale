@@ -1,4 +1,5 @@
 import {
+  assertDrawable,
   sketch,
   stableKey,
   svgElement,
@@ -8,7 +9,7 @@ import {
   type Shape,
   type SketchStyle,
 } from '@borrowdale/core';
-import { show } from '@borrowdale/core/show';
+import { COLOR_RULE, isColor, MAX_PAINT, show } from '@borrowdale/core/internal';
 
 export type PatternKind = 'lines' | 'crosshatch' | 'circles';
 
@@ -32,29 +33,50 @@ export interface Pattern {
 }
 
 const VALID_ID = /^[A-Za-z][\w-]*$/;
+const MAX_ID = MAX_PAINT - 'url(#)'.length;
 
 export function pattern(options: PatternOptions): Pattern {
   const { kind, size = 10, background, id, seed, ...style } = options;
-  // One key for both the strokes and the id, derived from every option rather than just the
-  // seed, so different tiles get different ids (barring a hash collision). Two <pattern>s
-  // sharing an id make `url(#id)` silently resolve to whichever comes first in the document.
-  const optionsKey = stableKey({ ...options, size });
-  const seedKey = String(seed ?? optionsKey);
-  const patternId = id ?? `borrowdale-${kind}-${toSeed(optionsKey)}`;
-  // Validated rather than escaped: the id must also be safe inside CSS url(#…).
-  if (!VALID_ID.test(patternId)) {
-    throw new Error(`Invalid pattern id: ${show(patternId)}`);
-  }
+  // Every option is checked before it is keyed, so a misspelled or malformed one gets its own error
+  // rather than whatever deriving the key from it would throw.
+
   // SVG silently skips a pattern tile of zero or negative size.
   if (!(Number.isFinite(size) && size > 0)) {
     throw new Error(`Invalid pattern size: ${show(size)}`);
   }
+  const shapes = tileShapes(kind, size);
+  // Validated rather than escaped: the id must also be safe inside CSS url(#…), and short enough
+  // that the `fill` naming it is a paint the other packages accept.
+  if (id !== undefined && (typeof id !== 'string' || id.length > MAX_ID || !VALID_ID.test(id))) {
+    throw new Error(`Invalid pattern id: ${show(id)}`);
+  }
+  // A colour, not any CSS paint: a `url(…)` to another file or a `var(…)` would have the page fetch
+  // the file or paint with its own values.
+  if (background !== undefined && !isColor(background)) {
+    throw new Error(
+      `Invalid pattern background: must be ${COLOR_RULE}, at most ${MAX_PAINT} characters, got ${show(background)}`,
+    );
+  }
+  if (seed !== undefined && typeof seed !== 'string' && !Number.isFinite(seed)) {
+    throw new Error(`Invalid pattern seed: must be a string or a finite number, got ${show(seed)}`);
+  }
+  // The style, checked as each tile's strokes are drawn with it.
+  for (const shape of shapes) {
+    assertDrawable(shape, style);
+  }
+
+  // One key for both the strokes and the id, derived from every option rather than just the seed,
+  // so tiles with different options almost always get different ids. Two <pattern>s sharing an id
+  // make `url(#id)` resolve to only one of them, so ids from users' options should be set explicitly.
+  const optionsKey = stableKey({ kind, size, background, id, seed, ...style });
+  const seedKey = String(seed ?? optionsKey);
+  const patternId = id ?? `borrowdale-${kind}-${toSeed(optionsKey)}`;
 
   const backdrop =
     background === undefined
       ? ''
       : svgElement('rect', { width: size, height: size, fill: background });
-  const strokes = tileShapes(kind, size)
+  const strokes = shapes
     .map((shape, index) => toSvgPaths(sketch(shape, { ...style, seed: `${seedKey}:${index}` })))
     .join('');
 

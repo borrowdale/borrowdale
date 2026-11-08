@@ -104,9 +104,11 @@ or narrower: by about 2 units across the test suite's labels, and more on longer
 | `appendText(parent, layout, style?)` | appends a `<text>` element to an SVG element | a DOM |
 | `drawText(context2d, layout, style?)` | draws into a canvas or an OffscreenCanvas | the font loaded |
 
-`style` takes `fill` (default `#000`). The text and every attribute are escaped. `fill` is passed
-to the browser as it is: a value that is not a colour is ignored, so SVG text then takes its
-parent's fill and a canvas keeps the fill it had.
+`style` takes `fill` (default `#000`): a colour (a hex code, a name, `rgb()`, `rgba()`, `hsl()` or
+`hsla()`), or `url(#id)` for a pattern or gradient in the same SVG document. The text and every
+attribute are escaped. A name the browser does not know is ignored, so SVG text then takes its
+parent's fill and a canvas keeps the fill it had; a canvas cannot paint `url(#id)` either, and
+ignores it the same way.
 
 The font has to reach whoever views the drawing:
 
@@ -179,7 +181,9 @@ A value that cannot be drawn throws an error naming it:
   `descender` from −32,768 to 0, and every advance from 0 to 65,535. Its `files`, when given, must
   be one or more files, each with one or more `[first, last]` ranges of code points, as `FontFiles`
   files must.
-- `fill` must be a string without characters an XML document cannot hold.
+- `fill` must be a colour (a hex code, a name, `rgb()`, `rgba()`, `hsl()` or `hsla()`) or
+  `url(#id)`, at most 100 characters. Other paints, such as a `url()` naming another file or a
+  `var()`, are rejected, and so are `inherit`, `initial`, `unset` and `revert`.
 - `fontFaceCss`'s labels must be an array, and each label must pass the checks for text above.
 - Unknown option names are rejected (`Unknown option: "fontSzie"`). An option set to `undefined`
   counts as not set. Only an options object's own properties are read: inherited values, including

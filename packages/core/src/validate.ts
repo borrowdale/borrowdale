@@ -1,11 +1,13 @@
 import { MAX_COORDINATE } from './engine/core.js';
 import { MAX_ANGLE } from './trig.js';
+import { isPaint, PAINT_RULE } from './paint.js';
 import { show } from './show.js';
 import { FILL_STYLES, type Shape, type ShapeKind, type SketchOptions } from './types.js';
 
 // Bounds on what callers may pass. The engine additionally bounds its total work per drawing.
 const MAX_CURVE_STEPS = 1000;
 const MAX_DASHES = 16;
+const MAX_ARRAY_LENGTH = 2 ** 32 - 1;
 // The shortest dash pattern, dash and gap lengths added up.
 const MIN_DASH_PATTERN = 1;
 const MAX_ROUGHNESS = 10;
@@ -67,7 +69,12 @@ function isDashArray(value: unknown): boolean {
   return total >= MIN_DASH_PATTERN;
 }
 
-const STRING: OptionRule = { ok: (value) => typeof value === 'string', expected: 'a string' };
+// A colour, or a pattern or gradient in the same document such as `pattern().fill`. Not any CSS
+// paint: a `url(…)` to another file or a `var(…)` would have an SVG fetch it or use the page's values.
+const PAINT: OptionRule = {
+  ok: isPaint,
+  expected: PAINT_RULE,
+};
 
 const FINITE: OptionRule = { ok: Number.isFinite, expected: 'a finite number' };
 const UNIT = range(0, 1);
@@ -75,7 +82,7 @@ const ROUGHNESS = range(0, MAX_ROUGHNESS);
 
 // The complete list of accepted options: anything else is a typo or an engine internal.
 const OPTION_RULES: Record<keyof SketchOptions, OptionRule> = {
-  stroke: STRING,
+  stroke: PAINT,
   strokeWidth: FINITE,
   strokeLineDash: {
     ok: isDashArray,
@@ -83,7 +90,7 @@ const OPTION_RULES: Record<keyof SketchOptions, OptionRule> = {
       `an array of 1 to ${MAX_DASHES} lengths from 0 to ${MAX_COORDINATE}, ` +
       `adding up to at least ${MIN_DASH_PATTERN}`,
   },
-  fill: STRING,
+  fill: PAINT,
   fillStyle: {
     ok: (value) => (FILL_STYLES as readonly unknown[]).includes(value),
     expected: 'a fill style',
@@ -119,11 +126,30 @@ export function assertDrawable(shape: Shape, options: SketchOptions): DefinedOpt
     throw new Error(`Invalid style: options must be an object, got ${show(options)}`);
   }
   assertShape(shape);
-  const defined = Object.entries(options).filter(([, value]) => value !== undefined);
+  const defined = Object.entries(options)
+    .filter(([, value]) => value !== undefined)
+    .map(([key, value]): [string, unknown] => [key, key === 'strokeLineDash' ? ownDash(value) : value]);
   for (const [key, value] of defined) {
     assertOption(key, value);
   }
   return Object.fromEntries(defined);
+}
+
+/**
+ * A copy of a dash list, read by index once, so the lengths that are checked are the lengths that are
+ * drawn. A list claiming more lengths than are allowed becomes an empty list of the same length, which
+ * fails the check without its entries being read.
+ */
+export function ownDash(value: unknown): unknown {
+  if (!Array.isArray(value)) {
+    return value;
+  }
+  const length = value.length;
+  if (length <= MAX_DASHES) {
+    return Array.from({ length }, (_, i): unknown => value[i]);
+  }
+  // Only a proxy can claim a length no array has; it fails the check as one entry too many.
+  return new Array<unknown>(Number.isSafeInteger(length) && length <= MAX_ARRAY_LENGTH ? length : MAX_DASHES + 1);
 }
 
 function assertShape(shape: Shape): void {

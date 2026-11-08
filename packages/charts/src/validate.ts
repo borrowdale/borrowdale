@@ -1,5 +1,6 @@
 import { checkAnnotations, type CheckedAnnotation } from './annotations.js';
 import { sketch, assertDrawable, type Seed, type SketchStyle } from '@borrowdale/core';
+import { COLOR_RULE, isColor, MAX_PAINT, ownDash } from '@borrowdale/core/internal';
 import { excalifont, type Font } from '@borrowdale/text';
 import {
   anyValue,
@@ -51,11 +52,6 @@ const MAX_SIZE = 10_000;
 const MAX_SERIES = 100;
 const MAX_POINTS = 100_000;
 const MAX_FONT_SIZE = 200;
-// Every mark writes its colours into the output: a long one would multiply the size of the drawing.
-const MAX_COLOR = 100;
-// What every renderer paints alike: hex codes, names, rgb() and hsl(). Anything else, like a
-// `url(…)`, would have an SVG fetch a file or paint with another part of the page.
-const COLOR = /^(?:#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})|[a-z]+|(?:rgba?|hsla?)\([\d .,%/+-]*\))$/i;
 // Every mark's seed starts with the chart seed, and hashing it is work the budget does not see.
 const MAX_SEED = 100;
 // A browser's work to paint a stroke grows with its width, and the budget does not see it.
@@ -74,9 +70,9 @@ const valueAxis = oneOf(['y', 'y2'] as const);
 const curve = oneOf(CURVES);
 
 const color: Check<string> = (path, value) => {
-  const given = text(MAX_COLOR)(path, value);
-  if (!COLOR.test(given)) {
-    fail(path, `must be a colour (a hex code, a name, rgb() or hsl()), got ${show(given)}`);
+  const given = text(MAX_PAINT)(path, value);
+  if (!isColor(given)) {
+    fail(path, `must be ${COLOR_RULE}, got ${show(given)}`);
   }
   return given;
 };
@@ -84,7 +80,7 @@ const color: Check<string> = (path, value) => {
 // Canvas gradients reject invalid CSS colours rather than ignoring them. A hex-only stop
 // contract can be checked without a browser and gives every renderer the same accepted paints.
 const gradientColor: Check<string> = (path, value) => {
-  const given = text(MAX_COLOR)(path, value);
+  const given = text(MAX_PAINT)(path, value);
   if (!/^#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(given)) {
     fail(path, 'must be a 3, 4, 6 or 8-digit hex colour');
   }
@@ -978,7 +974,10 @@ function checkStyle(path: string, raw: unknown): SketchStyle {
   fields(path, raw);
   // One copy, read once, is what is checked and what is drawn. An undefined entry is dropped rather
   // than copied: merged over the defaults, it would replace them.
-  const style = Object.fromEntries(Object.entries(raw as object).filter(([, entry]) => entry !== undefined));
+  // The dash is copied too, by index, as core reads it.
+  const style = Object.fromEntries(Object.entries(raw as object)
+    .filter(([, entry]) => entry !== undefined)
+    .map(([key, entry]): [string, unknown] => [key, key === 'strokeLineDash' ? ownDash(entry) : entry]));
   const r = fields(path, style);
   if (r.has('seed')) {
     fail(`${path}.seed`, 'is not allowed: each mark gets its own seed from the chart seed');
@@ -992,10 +991,10 @@ function checkStyle(path: string, raw: unknown): SketchStyle {
 }
 
 function checkDash(path: string, dash: unknown): number[] {
-  probe(path, () => assertDrawable({ kind: 'line', x1: 0, y1: 0, x2: 1, y2: 1 }, { strokeLineDash: dash as number[] }));
-  // Copied by index, as core's check read it.
-  const lengths = dash as number[];
-  return Array.from({ length: lengths.length }, (_, i) => lengths[i]!);
+  // Copied by index first, as core reads it, so the copy checked is the copy drawn.
+  const lengths = ownDash(dash) as number[];
+  probe(path, () => assertDrawable({ kind: 'line', x1: 0, y1: 0, x2: 1, y2: 1 }, { strokeLineDash: lengths }));
+  return lengths;
 }
 
 /** A radar's values: a number per spoke, or a `[low, high]` pair per spoke for a range radar. */

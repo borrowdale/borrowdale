@@ -105,6 +105,6 @@ export interface TextLayout extends TextExtent {
 }
 
 export interface TextStyle {
-  /** Defaults to `#000`. */
+  /** A colour (a hex code, a name, `rgb()` or `hsl()`) or `url(#id)`, at most 100 characters. Defaults to `#000`. */
   fill?: string | undefined;
 }

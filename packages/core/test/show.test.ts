@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { escaped, show } from '@borrowdale/core/show';
+import { escaped, show } from '@borrowdale/core/internal';
 
 // An array whose second entry throws when read, as a getter from code could.
 const throwing = Object.defineProperty([1, 2], 1, {

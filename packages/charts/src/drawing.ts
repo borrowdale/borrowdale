@@ -1,4 +1,4 @@
-import { Budget, sketch, type Shape, type SketchStyle } from '@borrowdale/core';
+import { Budget, sketch, type Shape, type SketchPath, type SketchStyle } from '@borrowdale/core';
 import { fitText, layoutText, measureText, textBounds, type LayoutOptions } from '@borrowdale/text';
 import { INK } from './palette.js';
 import { fail } from './read.js';
@@ -10,9 +10,17 @@ import type { Rect } from './frame.js';
 // a work unit takes 0.4 to 2.3 µs depending on the fill, so this stays under about a second; 200
 // hachure-filled bars use about 130,000 units and 1,000 scatter points about 76,000.
 const MAX_OPERATIONS = 400_000;
-// Data labels and image markers draw no strokes, so the budget never sees them: this caps them
-// instead, at about 3 MB of SVG.
+// Data labels and image markers draw no strokes, so the budget never sees them: this caps how many
+// there are, and MAX_TEXT caps the text of every label and tooltip.
 const MAX_PLACED = 10_000;
+// The characters of every label and tooltip together, counted as written into SVG, where `"` becomes
+// six. Neither budget above sees text, and a mark drawing nothing still carries a tooltip, so without
+// this a spec of 1.4 MB, inside every other limit, made an SVG of over 200 MB.
+const MAX_TEXT = 8_000_000;
+// The colours and dashes every path repeats, counted as written. A series of many segments, each with
+// a long colour and dash, would otherwise grow the output far past what its spec takes up. A gradient's
+// url(#…) replaces a path's colour only when the chart is rendered, so it is not counted here.
+const MAX_STYLE = 8_000_000;
 
 /** Distances from a point, in each direction. */
 export interface Extent {
@@ -36,6 +44,8 @@ export class Drawing {
   readonly #chart: CheckedChart;
   readonly #budget = new Budget(MAX_OPERATIONS);
   #placed = 0;
+  #written = 0;
+  #styled = 0;
   readonly #labels = new Set<string>();
   readonly #missing = new Set<string>();
   // Measurements by their text and options: layout measures an axis' labels more than once as it
@@ -90,7 +100,18 @@ export class Drawing {
 
   #sketch(shape: Shape, style: SketchStyle, key: SeedKey): ChartNode {
     const seed = [this.#chart.seed, ...key].map((part) => `${String(part).length}:${part}`).join('');
-    return { kind: 'sketch', sketch: sketch(shape, { ...style, seed }, this.#budget) };
+    const drawn = sketch(shape, { ...style, seed }, this.#budget);
+    for (const path of drawn.paths) {
+      this.#style(path);
+    }
+    return { kind: 'sketch', sketch: drawn };
+  }
+
+  #style(path: SketchPath): void {
+    this.#styled += escapedLength(path.stroke) + escapedLength(path.fill) + (path.strokeLineDash?.join(' ').length ?? 0);
+    if (this.#styled > MAX_STYLE) {
+      throw new Error(`Drawing too complex (more than ${MAX_STYLE} characters of colours and dashes)`);
+    }
   }
 
   /**
@@ -118,6 +139,7 @@ export class Drawing {
   text(text: string, options: TextOptions): ChartNode {
     const fontSize = options.fontSize ?? this.#chart.fontSize;
     const layout = layoutText(text, { ...options, font: this.#chart.font, fontSize });
+    this.#write(layout.text);
     this.#labels.add(layout.text);
     for (const missing of layout.missing) {
       this.#missing.add(missing);
@@ -160,14 +182,43 @@ export class Drawing {
     }
   }
 
+  #write(text: string): void {
+    this.#written += escapedLength(text);
+    if (this.#written > MAX_TEXT) {
+      throw new Error(`Drawing too complex (more than ${MAX_TEXT} characters of labels and tooltips)`);
+    }
+  }
+
   push(...nodes: ChartNode[]): void {
     this.nodes.push(...nodes);
   }
 
   /** A mark: its nodes, with `title` as its tooltip. */
   mark(title: string, nodes: ChartNode[]): void {
+    this.#write(title);
     this.nodes.push({ kind: 'mark', title, nodes });
   }
+}
+
+/** The length of `text` once escaped for SVG, as core's `escapeAttribute` writes it. */
+function escapedLength(text: string): number {
+  let length = text.length;
+  for (let at = 0; at < text.length; at += 1) {
+    switch (text.charCodeAt(at)) {
+      case 0x22: // " → &quot;
+        length += 5;
+        break;
+      case 0x26: // & → &amp;
+      case 0x27: // ' → &#39;
+        length += 4;
+        break;
+      case 0x3c: // < → &lt;
+      case 0x3e: // > → &gt;
+        length += 3;
+        break;
+    }
+  }
+  return length;
 }
 
 /** The value `known` holds for `key`, measured and kept the first time it is asked for. */

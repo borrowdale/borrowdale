@@ -16,10 +16,10 @@
       "types": "./dist/math.d.ts",
       "default": "./dist/math.js"
     },
-    "./show": {
-      "@borrowdale/source": "./src/show.ts",
-      "types": "./dist/show.d.ts",
-      "default": "./dist/show.js"
+    "./internal": {
+      "@borrowdale/source": "./src/internal.ts",
+      "types": "./dist/internal.d.ts",
+      "default": "./dist/internal.js"
     }
   },
   "files": [
