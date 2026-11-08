@@ -31,6 +31,19 @@ const line = (n: number, extra: object): ChartSpec => ({ width: 600, height: 400
   axes: { x: { type: 'linear' }, y: { type: 'linear' } },
   series: [{ type: 'xyLine', name: 'G', data: Array.from({ length: n }, (_, i) => [i, i % 7] as const), ...extra }] } as ChartSpec);
 const layingOut = (spec: ChartSpec) => () => layoutChart(spec);
+// Within every limit on the spec: 10,000 tooltips of about 250 characters, 2.5 million in all, but
+// nearly every one a quote, which escaping makes six. Its bars have no length, so they draw no strokes.
+// Within every limit on the spec: 100,000 segments, each drawn as its own path repeating the style's
+// colour of 88 characters and its 16 dash lengths, about 400 characters a path.
+const longStyle = { roughness: 0, stroke: `rgb(${'1'.repeat(40)} ${'2'.repeat(40)} 3)`, strokeLineDash: Array(16).fill(0.123456789012345) };
+const styledSegments: ChartSpec = { width: 600, height: 400, legend: 'none', style: longStyle,
+  axes: { x: { type: 'linear' }, y: { type: 'linear' } },
+  series: [{ type: 'xyLine', name: 'S', data: Array.from({ length: 100_000 }, (_, i) => [i, i % 7] as const), segments: Array(99_999).fill({ width: 1 }) }] } as ChartSpec;
+const quoted = (index: number) => `${'"'.repeat(96)}${String(index).padStart(4, '0')}`;
+const quotedIntervals: ChartSpec = { width: 600, height: 400, legend: 'none',
+  axes: { x: { type: 'band', categories: Array.from({ length: 1_000 }, (_, i) => quoted(i)) },
+    y: { type: 'linear', format: { prefix: '"'.repeat(10), suffix: '"'.repeat(10) } } },
+  series: Array.from({ length: 10 }, (_, i) => ({ type: 'interval', name: quoted(i), color: '#336699', data: Array(1_000).fill([1, 1]) })) } as ChartSpec;
 const count = (text: string, part: string): number => text.split(part).length - 1;
 
 const abc = { type: 'band', categories: ['A', 'B', 'C'] } as const;
@@ -114,6 +127,16 @@ describe('data labels and image markers', () => {
   it('counts image markers with data labels', () => {
     expect(layingOut(line(5_001, { dataLabels: true, symbol: { image: 'dot' } }))).toThrow(
       'Drawing too complex (more than 10000 data labels and images)');
+  });
+
+  it('rejects more than 8,000,000 characters of colours and dashes repeated by its paths', () => {
+    expect(layingOut(styledSegments)).toThrow(
+      'Drawing too complex (more than 8000000 characters of colours and dashes)');
+  });
+
+  it('rejects more than 8,000,000 characters of tooltips, counted as they are escaped', () => {
+    expect(layingOut(quotedIntervals)).toThrow(
+      'Drawing too complex (more than 8000000 characters of labels and tooltips)');
   });
 });
 
