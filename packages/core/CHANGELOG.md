@@ -1,0 +1,8 @@
+# @borrowdale/core
+
+## 0.1.0
+
+### Minor Changes
+
+- 31fd9ea: First public release. The four packages share one version and are released together. Used in
+  Node.js, they need version 22 or later.

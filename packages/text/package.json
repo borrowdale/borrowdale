@@ -1,6 +1,6 @@
 {
   "name": "@borrowdale/text",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Hand-written text for SVG and canvas, measured the same way in Node and the browser.",
   "license": "MIT AND OFL-1.1",
   "type": "module",
@@ -50,6 +50,6 @@
     "access": "public"
   },
   "dependencies": {
-    "@borrowdale/core": "0.0.0"
+    "@borrowdale/core": "0.1.0"
   }
 }
