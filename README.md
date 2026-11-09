@@ -7,6 +7,11 @@
 
 Hand-drawn charts, components, text and backgrounds for the web.
 
+**Website: [borrowdalejs.com](https://borrowdalejs.com/)**, with the
+[documentation](https://borrowdalejs.com/docs/), a
+[playground](https://borrowdalejs.com/playground/) where every example can be edited and run, and
+[open-data dashboards](https://borrowdalejs.com/examples/).
+
 Named after Borrowdale in the English Lake District, where the graphite that started the pencil
 industry was found.
 
@@ -28,16 +33,16 @@ The four packages share one version and are released together. Used in Node.js, 
 
 ## Documentation
 
-Start with the [shared documentation](apps/site/content/README.md), the
-[contributing guide](CONTRIBUTING.md), the [changelog](CHANGELOG.md), or
-[license and credits](apps/site/content/license.md). The website renders these same Markdown
-sources.
+Read it on the [website](https://borrowdalejs.com/docs/), which renders the Markdown sources in
+this repository: the [shared documentation](apps/site/content/README.md), the
+[contributing guide](CONTRIBUTING.md), the [changelog](CHANGELOG.md), and
+[license and credits](apps/site/content/license.md).
 
 ## Development
 
-The [website](apps/site/README.md) includes the interactive collection and three open-data
-dashboards. Run `npm run site` after installing dependencies; the packages resolve directly from the
-workspace.
+The website's source is in [`apps/site`](apps/site/README.md), with the interactive collection and
+three open-data dashboards. Run `npm run site` after installing dependencies; the packages resolve
+directly from the workspace.
 
 Development uses Node.js 24 (see `.nvmrc`); the packages are built and tested on Node.js 22, 24 and
 26. Use `nvm use` with the included `.nvmrc`, or select Node 24 or later through your version manager,
