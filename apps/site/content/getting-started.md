@@ -1,18 +1,12 @@
 # Getting started
 
-The first release, 0.1.0, is in preparation and not yet on npm, so for now BorrowdaleJS runs from its source workspace; the install commands in the package references work once it is released. Using the packages in Node.js needs version 22 or later, and developing BorrowdaleJS (building and testing the workspace) uses **Node.js 24**. Neither is a browser requirement.
-
-## Run the website locally
+Install the packages from npm. Using them in Node.js needs version 22 or later; in a browser, any bundler that reads a package's `exports` works.
 
 ```sh
-git clone https://github.com/borrowdale/borrowdale.git
-cd borrowdale
-nvm use
-npm ci
-npm run site
+npm install @borrowdale/charts @borrowdale/text
 ```
 
-Open http://127.0.0.1:5173/. The site imports the local `@borrowdale/*` packages directly. You do not need to publish or link an npm release.
+`@borrowdale/charts` brings `@borrowdale/core` and `@borrowdale/text` with it. Name `@borrowdale/text` yourself as well, because the example below imports its font files directly.
 
 ## Your first chart
 
@@ -45,6 +39,20 @@ Provide a container such as `<div id="chart"></div>` in your app. The playground
 ## Choose a package
 
 Use `@borrowdale/charts` for data visualization, `@borrowdale/core` for drawing primitives, `@borrowdale/text` for measured lettering, and `@borrowdale/fills` for repeating patterns. Read their package references for precise options and limits.
+
+## Run the website locally
+
+Developing BorrowdaleJS, or running this website and its playground from source, uses **Node.js 24**:
+
+```sh
+git clone https://github.com/borrowdale/borrowdale.git
+cd borrowdale
+nvm use
+npm ci
+npm run site
+```
+
+Open http://127.0.0.1:5173/. The site imports the `@borrowdale/*` packages from the workspace, so changes to them show at once.
 
 ## Check your changes
 
