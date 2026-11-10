@@ -276,7 +276,7 @@ function stemLeaf(path: string, sorted: readonly number[]): Glyph[] {
     const leaves = stems.get(first + row) ?? [];
     if (leaves.length > 450) fail(path, 'has more than 450 leaves on one stem');
     const label = leaves.length ? `${first + row} | ${leaves.join(' ')}` : `${first + row} |`;
-    return { kind: 'text', label, points: [[0, -row]] };
+    return { kind: 'row', label, points: [[0, -row]] };
   });
 }
 

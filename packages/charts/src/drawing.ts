@@ -24,8 +24,11 @@ export interface Extent {
 
 type TextOptions = Omit<LayoutOptions, 'font' | 'fontSize'> & { fontSize?: number | undefined };
 
-// A data label is centred on the point it is drawn at.
+// Text centred both ways on the point it is drawn at: data labels, value text and timeline labels.
 export const CENTRED = { anchor: 'middle', baseline: 'middle' } as const;
+
+// Text that starts at the point it is drawn at, centred on it vertically: stem-and-leaf rows.
+export const START = { anchor: 'start', baseline: 'middle' } as const;
 
 /** What tells one mark's strokes from another's: its series, category, part and the like. */
 export type SeedKey = readonly (string | number)[];
@@ -146,6 +149,15 @@ export class Drawing {
       y: Math.max(rect.top + extent.up, Math.min(rect.bottom - extent.down, y)),
       extent,
     };
+  }
+
+  /**
+   * Text drawn as `text` draws it, never moved or cut, and counted toward the cap on placed text as a
+   * data label is. Its caller keeps the room for it.
+   */
+  textMark(text: string, options: TextOptions): ChartNode {
+    this.#place();
+    return this.text(text, options);
   }
 
   /** A trusted image, named by `asset`, fitted inside the box. */

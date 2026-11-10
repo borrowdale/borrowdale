@@ -1,5 +1,6 @@
 import { placeSwarm } from './statistics/swarm.js';
-import { labelOf } from './statistics/geometry.js';
+import { labelOf, type Glyph } from './statistics/geometry.js';
+import { unhandled } from './statistics/types.js';
 import { drawXYLine, drawXYArea } from './cartesian-paths.js';
 import { barShape } from './bar-shape.js';
 import { annotationValues, drawAnnotations } from './annotations.js';
@@ -15,10 +16,11 @@ import {
 } from './cartesian-axes.js';
 import type { CheckedLinearAxis } from './check-axis.js';
 import { areaPath, linePath, straightPoints } from './curves.js';
-import type { Drawing, SeedKey } from './drawing.js';
+import { CENTRED, START, type Drawing, type SeedKey } from './drawing.js';
 import { assertRoom, BAND_PADDING, type Rect } from './frame.js';
 import { loneDot, piecesOf, POINT_SIZE, runsOf, solid } from './marks.js';
 import { hatched, LINE_WIDTH, roleFill, roleStroke, type Paint } from './palette.js';
+import { fail } from './read.js';
 import { stackGroup, stackSpans, type Span } from './stack.js';
 import { bandScale, emptyExtent, formatAxisValue, formatShare, formatValue, place, scaleOf, type BandScale, type PlacedScale } from './scale.js';
 import { markerNode } from './symbols.js';
@@ -51,9 +53,10 @@ interface Mark<S extends CartesianSeries> {
   points?: (entry: S) => readonly (readonly [number, number, ...number[]])[];
   /**
    * How far its marks may reach past the point of their value, on a plot whose shorter side is
-   * `plotSize` or less: the plot keeps that much room inside its edges.
+   * `plotSize` or less: the plot keeps that much room inside its edges. Text is measured with
+   * `drawing`.
    */
-  reach: (plotSize: number, entry: S, chartStyle: SketchStyle) => number;
+  reach: (plotSize: number, entry: S, chartStyle: SketchStyle, drawing: Drawing) => number;
   draw: (context: MarkContext, placed: Placed<S>, paint: Paint) => void;
 }
 
@@ -91,7 +94,7 @@ const computed: Mark<ComputedSeries> = {
     : marks.every((mark) => mark.kind === 'dot') ? { line: false, symbol: marks[0]?.symbol ?? 'circle' }
     : BOX,
   points: glyphPoints,
-  reach: (_size, entry) => entry.marks.reduce((max, mark) => Math.max(max, (mark.size ?? 0) / 2), 0),
+  reach: (_size, entry, _style, drawing) => entry.marks.reduce((max, mark) => Math.max(max, glyphReach(mark, drawing)), 0),
   draw: (context, placed, paint) => drawGlyphs(context, placed, paint, screenPoints(context, placed)),
 };
 const distribution: Mark<Extract<ComputedSeries, { type: 'distribution' }>> = {
@@ -174,12 +177,12 @@ export function layoutCartesian(drawing: Drawing, chart: CheckedCartesianChart, 
   };
 
   const line = drawing.lineHeight();
-  // Points and bubbles are centred on their values, so they reach past them: each end of x and y
-  // keeps that much room.
+  // Points, bubbles and the marks of statistical series reach past the point of their value: each end
+  // of x and y keeps that much room.
   const reach = Math.max(
     0,
     ...series.map((entry) => markOf(entry).reach(
-      Math.min(rect.right - rect.left, rect.bottom - rect.top), entry, chart.style)),
+      Math.min(rect.right - rect.left, rect.bottom - rect.top), entry, chart.style, drawing)),
   );
   const room: Record<keyof Rect, EndRoom> = {
     left: endRoom(linear.x, 'min', reach),
@@ -551,22 +554,76 @@ function screenPoints({ x }: MarkContext, { entry, scale }: Placed<ComputedSerie
   return entry.marks.map((mark) => mark.points.map(([u, v]): Point => [x!.at(u), scale.at(v)]));
 }
 
+/**
+ * How far a glyph reaches past its point: value text half its extent and a row half its height; a
+ * dot, line or polygon half its size (only dots have one). A data label is moved inside the plot
+ * instead.
+ */
+function glyphReach(mark: Glyph, drawing: Drawing): number {
+  switch (mark.kind) {
+    case 'valueText': {
+      const { left, right, up, down } = drawing.extent(mark.label, CENTRED);
+      return Math.max(left, right, up, down);
+    }
+    case 'dataLabel':
+      return 0;
+    case 'row': {
+      const { up, down } = drawing.extent(mark.label, START);
+      return Math.max(up, down);
+    }
+    case 'dot':
+    case 'line':
+    case 'polygon':
+      return (mark.size ?? 0) / 2;
+    default:
+      return unhandled(mark.kind);
+  }
+}
+
+/**
+ * A dot, or a line or polygon of one point, is drawn as a marker; a line or a hollow polygon as an
+ * outline; any other polygon filled.
+ */
+function shapeNode(
+  drawing: Drawing, mark: Glyph, points: Point[], paint: Paint, key: SeedKey, style: SketchStyle,
+): ChartNode {
+  const first = points[0]!;
+  if (mark.kind === 'dot' || points.length === 1) {
+    return markerNode(drawing, mark.symbol ?? 'circle', first, mark.size ?? POINT_SIZE, solid(paint.color), key, style);
+  }
+  if (mark.kind === 'line' || mark.hollow) {
+    const outline = { kind: 'linearPath' as const, points: mark.hollow ? [...points, first] : points };
+    return drawing.outline(outline, roleStroke(mark.role, paint), key, style);
+  }
+  return drawing.shape({ kind: 'polygon', points }, roleFill(mark.role, paint, mark.weight), key, style);
+}
+
 function drawGlyphs(
   { drawing, frame, xAxis }: MarkContext, { entry, axis }: Placed<ComputedSeries>, paint: Paint, screen: Point[][],
 ): void {
   entry.marks.forEach((mark, i) => {
     const points = screen[i]!;
     const first = points[0]!;
-    const key = [entry.name, mark.kind, i];
     let node: ChartNode;
-    if (mark.kind === 'text') node = drawing.label(mark.label, first[0], first[1], frame.plot, entry.path);
-    else if (mark.kind === 'dot' || points.length === 1) {
-      node = markerNode(drawing, mark.symbol ?? 'circle', first, mark.size ?? POINT_SIZE, solid(paint.color), key, entry.style);
-    } else if (mark.kind === 'line' || mark.hollow) {
-      const outline = { kind: 'linearPath' as const, points: mark.hollow ? [...points, first] : points };
-      node = drawing.outline(outline, roleStroke(mark.role, paint), key, entry.style);
-    } else {
-      node = drawing.shape({ kind: 'polygon', points }, roleFill(mark.role, paint, mark.weight), key, entry.style);
+    switch (mark.kind) {
+      case 'valueText':
+        node = drawing.textMark(mark.label, { ...CENTRED, x: first[0], y: first[1] });
+        break;
+      case 'dataLabel':
+        node = drawing.label(mark.label, first[0], first[1], frame.plot, entry.path);
+        break;
+      case 'row': {
+        if (drawing.width(mark.label) > frame.plot.right - frame.plot.left) fail(entry.path, 'has a row of text wider than the plot');
+        node = drawing.textMark(mark.label, { ...START, x: frame.plot.left, y: first[1] });
+        break;
+      }
+      case 'dot':
+      case 'line':
+      case 'polygon':
+        node = shapeNode(drawing, mark, points, paint, [entry.name, mark.kind, i], entry.style);
+        break;
+      default:
+        node = unhandled(mark.kind);
     }
     const valueAxis = mark.along === 'x' ? xAxis! : axis;
     drawing.mark(`${entry.name}, ${labelOf(mark, (value) => formatAxisValue(value, valueAxis))}`, [node]);

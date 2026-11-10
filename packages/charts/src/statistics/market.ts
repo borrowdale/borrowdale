@@ -137,7 +137,7 @@ function pointFigure(boxes: readonly PriceBox[]): Glyph[] {
   let column = 0;
   return boxes.map(({ to, rising, reversed }) => {
     if (reversed) column++;
-    return { kind: 'text', label: rising ? 'X' : 'O', points: [[column, to]] };
+    return { kind: 'valueText', label: rising ? 'X' : 'O', points: [[column, to]] };
   });
 }
 
@@ -296,7 +296,7 @@ export function readMarket(r: Fields, path: string, reserve: (count: number) => 
       );
       marks.push(
         ...priceBars(display, bars, hollow),
-        ...(flags ?? []).map(({ index, label }): Glyph => ({ kind: 'text', label, points: [[index, bars[index]![1]]] })),
+        ...(flags ?? []).map(({ index, label }): Glyph => ({ kind: 'dataLabel', label, points: [[index, bars[index]![1]]] })),
       );
       break;
     }

@@ -6,9 +6,18 @@ import type { MarkerSymbol } from '../types.js';
 export type XY = [number, number];
 
 export type Glyph = {
-  kind: 'line' | 'polygon' | 'dot' | 'text';
+  /**
+   * `valueText`, such as a point-and-figure X, is centred on its point and never moved: the axes keep
+   * room for half its size, as for a dot. `dataLabel` is placed as a data label is, moved inside the
+   * plot. `row` is a line of text starting at the plot's left edge, at its point's level, and must fit
+   * across the plot; its x is kept at 0 and still counts on the x axis.
+   */
+  kind: 'line' | 'polygon' | 'dot' | 'valueText' | 'dataLabel' | 'row';
   points: XY[];
-  /** The mark's tooltip. `{0}`, `{1}`… stand for `values`, written in the format of the `along` axis. */
+  /**
+   * The mark's tooltip, and for the three text kinds also the text drawn. In the tooltip only, `{0}`,
+   * `{1}`… stand for `values`, written in the format of the `along` axis.
+   */
   label: string;
   /** Axis values named in the label, so the tooltip uses the axis format. */
   values?: number[];

@@ -8,6 +8,7 @@ import { legendOf } from '../src/cartesian.js';
 import type { Rect } from '../src/frame.js';
 import type { Glyph } from '../src/statistics/geometry.js';
 import { placeSwarm, swarmOffset } from '../src/statistics/swarm.js';
+import { placedAs, placedTexts, placesOf } from './support/layout.js';
 
 function spec(...series: Series[]): ChartSpec {
   return { width: 480, height: 300, axes: { x: { type: 'linear' }, y: { type: 'linear' } }, series };
@@ -656,7 +657,8 @@ it('draws a polar violin at the last whole position inside the angle limit', () 
 it('rejects a stem with more than 450 leaves', () => {
   const series: Series = { type: 'distribution', display: 'stemLeaf', name: 'S', data: new Array<number>(451).fill(7) };
   expect(outcome(spec(series))).toBe('Invalid chart: series[0] has more than 450 leaves on one stem');
-  expect(outcome(spec({ ...series, data: new Array<number>(450).fill(7) }))).toBe('drawn');
+  // 450 are accepted; whether their row fits is a matter of the plot's width.
+  expect(marks({ ...series, data: new Array<number>(450).fill(7) })).toHaveLength(1);
 });
 
 it('rejects a polar violin whose density overflows at the sample magnitude', () => {
@@ -928,4 +930,126 @@ it('writes forest intervals and estimates in the x axis format', () => {
   const svg = toSvgChart(layoutChart({ ...chart, axes: { x: { type: 'linear', format: EUROS }, y: { type: 'linear' } } }));
   expect(svg).toContain('F, Interval €1,0 to €2,0');
   expect(svg).toContain('F, €1,5');
+});
+
+// Where a chart places a text, and its stem-and-leaf rows, laid out afresh each time. Text is placed
+// to the hundredth of a unit, so equal steps agree to within a few hundredths.
+const placedAt = (chart: ChartSpec, text: string) => placesOf(layoutChart(chart), text);
+const boxesOf = (chart: ChartSpec, text: string) => placedAs(layoutChart(chart), text).map((placed) => placed.box);
+const rowsOf = (chart: ChartSpec) => placedTexts(layoutChart(chart)).filter((placed) => placed.text.includes('|'));
+const rowStarts = (chart: ChartSpec) => rowsOf(chart).map((row) => row.box.x);
+const rowLevels = (chart: ChartSpec) => rowsOf(chart).map((row) => row.at[1]);
+const rowTexts = (chart: ChartSpec) => rowsOf(chart).map((row) => row.text);
+const flagOf = (chart: ChartSpec) => placedTexts(layoutChart(chart)).find((placed) => placed.text.startsWith('W'))!;
+
+// The series alone on hidden axes: the plot then starts 8 units in from each edge of the 480 by 300
+// chart, and a line of text is 15.12 units high.
+const onHiddenAxes = (...series: Series[]): ChartSpec => ({
+  ...spec(...series), legend: 'none', axes: { x: { type: 'linear', hidden: true }, y: { type: 'linear', hidden: true } },
+});
+
+// Closes from 0 to 40 in one-unit boxes: one rising column, an X at each level from 1 to 40.
+const RISE: Series = { type: 'market', display: 'pointFigure', name: 'P', boxSize: 1, data: [0, 40] };
+const RISE_FIXED: ChartSpec = { ...spec(RISE), axes: { x: { type: 'linear' }, y: { type: 'linear', min: 0, max: 40 } } };
+const SCATTER: Series = { type: 'scatter', name: 'S', data: [[0, 1]] };
+const RISE_AFTER_SCATTER = onHiddenAxes(SCATTER, RISE);
+const RISE_BEFORE_SCATTER = onHiddenAxes(RISE, SCATTER);
+
+// Four columns, 0 to 3: up to 5, down to 2, up to 6, down to 1. The x ticks name the first and last.
+const COLUMNS: ChartSpec = {
+  ...spec({ type: 'market', display: 'pointFigure', name: 'P', boxSize: 1, reversal: 3, data: [0, 5, 2, 6, 1] }),
+  axes: { x: { type: 'linear', ticks: [{ value: 0, label: 'first' }, { value: 3, label: 'last' }] }, y: { type: 'linear' } },
+};
+
+// Two sessions, the second flagged at its high of 14, the top tick.
+const FLAGGED: Series = {
+  type: 'market', display: 'candlestick', name: 'C', data: [[10, 12, 9, 11], [11, 14, 10, 13]], flags: [{ index: 1, label: 'Peak' }],
+};
+// One session flagged with 100 characters, wider than the plot.
+const LONG_FLAG = onHiddenAxes({
+  type: 'market', display: 'candlestick', name: 'C', data: [[10, 12, 9, 11]], flags: [{ index: 0, label: 'W'.repeat(100) }],
+});
+
+// Four stems, 1 to 4.
+const STEMS = onHiddenAxes({
+  type: 'distribution', display: 'stemLeaf', name: 'T', data: [12, 15, 21, 23, 24, 27, 28, 29, 30, 31, 33, 35, 36, 38, 41],
+});
+const STEMS_X_FIXED: ChartSpec = { ...STEMS, axes: { x: { type: 'linear', min: 5, max: 10 }, y: { type: 'linear' } } };
+
+// One stem, 1, with that many leaves of 7.
+const stemOf = (leaves: number): Series => ({ type: 'distribution', display: 'stemLeaf', name: 'T', data: new Array<number>(leaves).fill(17) });
+const ROW_TOO_WIDE = 'Invalid chart: series[0] has a row of text wider than the plot';
+
+describe('text marks of statistical series', () => {
+  it('draws the top point-and-figure box at its value, on a free and a fixed end', () => {
+    const free = placedAt(spec(RISE), 'X');
+    expect(free.at(-1)![1]).toBe(placedAt(spec(RISE), '40')[0]![1]);
+    expect(free.at(-2)![1]).toBeGreaterThan(free.at(-1)![1]);
+    expect(placedAt(RISE_FIXED, 'X').at(-1)![1]).toBe(placedAt(RISE_FIXED, '40')[0]![1]);
+  });
+
+  it('keeps room inside the plot for the top point-and-figure box, whichever series comes first', () => {
+    expect(boxesOf(onHiddenAxes(RISE), 'X').at(-1)!.y).toBeCloseTo(8, 2);
+    expect(boxesOf(RISE_AFTER_SCATTER, 'X').at(-1)!.y).toBeCloseTo(8, 2);
+    expect(boxesOf(RISE_BEFORE_SCATTER, 'X').at(-1)!.y).toBeCloseTo(8, 2);
+  });
+
+  it('centres point-and-figure boxes on their positions, across and down', () => {
+    const first = boxesOf(COLUMNS, 'X')[0]!;
+    const last = boxesOf(COLUMNS, 'O').at(-1)!;
+    const top = boxesOf(spec(RISE), 'X').at(-1)!;
+    expect(first.x + first.width / 2).toBeCloseTo(placedAt(COLUMNS, 'first')[0]![0], 1);
+    expect(last.x + last.width / 2).toBeCloseTo(placedAt(COLUMNS, 'last')[0]![0], 1);
+    expect(top.y + top.height / 2).toBeCloseTo(placedAt(spec(RISE), '40')[0]![1], 1);
+  });
+
+  it('moves a flag on the top tick down into the plot, as a data label is', () => {
+    expect(placedAt(spec(FLAGGED), 'Peak')[0]![1]).toBeGreaterThan(placedAt(spec(FLAGGED), '14')[0]![1]);
+  });
+
+  it('cuts a flag wider than the plot short, inside the plot', () => {
+    const flag = flagOf(LONG_FLAG);
+    expect(flag.text).toMatch(/^W+…$/);
+    expect(flag.box.x).toBeGreaterThanOrEqual(8);
+    expect(flag.box.x + flag.box.width).toBeLessThanOrEqual(480 - 8);
+  });
+
+  it('spaces stem rows evenly, the first and last included', () => {
+    const levels = rowLevels(STEMS);
+    expect(levels[1]! - levels[0]!).toBeCloseTo(levels[2]! - levels[1]!, 1);
+    expect(levels[3]! - levels[2]!).toBeCloseTo(levels[2]! - levels[1]!, 1);
+  });
+
+  it('starts every stem row at the left edge of the plot', () => {
+    expect(rowStarts(STEMS)).toEqual([8, 8, 8, 8]);
+  });
+
+  it('keeps half a line of room above the top stem row and below the bottom one', () => {
+    expect(rowLevels(STEMS)[0]).toBeCloseTo(8 + 7.56, 2);
+    expect(rowLevels(STEMS)[3]).toBeCloseTo(300 - 8 - 7.56, 2);
+  });
+
+  it('counts a stem-and-leaf display as x = 0 on the x axis', () => {
+    expect(outcome(STEMS_X_FIXED)).toBe('Invalid chart: axes.x.min is 5, but the data reach 0');
+  });
+
+  it('draws a stem row whole when it fits', () => {
+    expect(rowTexts(spec(stemOf(30)))).toEqual([`1 | ${'7 '.repeat(29)}7`]);
+  });
+
+  it('draws a stem row as wide as the plot allows and rejects one leaf more', () => {
+    expect(outcome(onHiddenAxes(stemOf(39)))).toBe('drawn');
+    expect(outcome(onHiddenAxes(stemOf(40)))).toBe(ROW_TOO_WIDE);
+    // Visible axes narrow the plot.
+    expect(outcome(spec(stemOf(35)))).toBe('drawn');
+    expect(outcome(spec(stemOf(36)))).toBe(ROW_TOO_WIDE);
+    // The row is measured in the chart's own font size: 30 leaves fit at 12, not at 24.
+    expect(outcome({ ...onHiddenAxes(stemOf(15)), fontSize: 24 })).toBe('drawn');
+    expect(outcome({ ...onHiddenAxes(stemOf(30)), fontSize: 24 })).toBe(ROW_TOO_WIDE);
+    // A row of ten leaves is 128.47 units wide: it fits a plot of 129 units or exactly its own width,
+    // not one of 128.
+    expect(outcome({ ...onHiddenAxes(stemOf(10)), width: 145 })).toBe('drawn');
+    expect(outcome({ ...onHiddenAxes(stemOf(10)), width: 144.47 })).toBe('drawn');
+    expect(outcome({ ...onHiddenAxes(stemOf(10)), width: 144 })).toBe(ROW_TOO_WIDE);
+  });
 });
