@@ -73,10 +73,11 @@ const hexRanges = (ranges) => `[${ranges.map(([first, last]) => `[${hex(first)},
 
 writeFileSync(
   new URL('excalifont.ts', srcDir),
-  `${header}import type { Font } from '../types.js';
+  `${header}import { frozen } from '../frozen.js';
+import type { Font } from '../types.js';
 
 /** Excalifont, the default font. Its woff2 files, for embedding or loading, are in \`@borrowdale/text/excalifont-files\`. */
-export const excalifont: Font = {
+export const excalifont: Font = frozen({
   family: '${FAMILY}',
   unitsPerEm: ${metrics.unitsPerEm},
   ascender: ${metrics.ascender},
@@ -92,18 +93,19 @@ ${files
   )
   .join('\n')}
   ],
-};
+});
 `,
 );
 
 writeFileSync(
   new URL('excalifont-files.ts', srcDir),
-  `${header}import type { FontFiles } from '../types.js';
+  `${header}import { frozen } from '../frozen.js';
+import type { FontFiles } from '../types.js';
 
 /*! Excalifont: copyright (c) 2024 by Excalidraw. Excalifont is a trademark of Excalidraw.
  * @license OFL-1.1 (SIL Open Font License 1.1, see OFL.txt in @borrowdale/text) */
 /** The Excalifont files as base64 woff2, each with the code points it serves. */
-export const excalifontFiles: FontFiles = {
+export const excalifontFiles: FontFiles = frozen({
   family: '${FAMILY}',
   files: [
 ${files
@@ -116,7 +118,7 @@ ${files
   )
   .join('\n')}
   ],
-};
+});
 `,
 );
 

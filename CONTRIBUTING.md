@@ -18,8 +18,8 @@ npm run typecheck
 ```
 
 The parity tests draw every golden in headless Chromium, Firefox and WebKit and compare the output
-with Node's byte for byte. They fail, rather than skip, when a browser is not installed. After each
-merge to `main`, continuous integration runs the same steps on Node.js 22, 24 and 26. `npm test`
+with Node's byte for byte. They fail, rather than skip, when a browser is not installed. Continuous
+integration runs the same steps on Node.js 22, 24 and 26 for every pull request. `npm test`
 and `npm run typecheck` cover the website too. To work on it, run `npm run site` to preview it and
 `npm run site:build` to build it and check the static pages.
 
@@ -29,7 +29,7 @@ and `npm run typecheck` cover the website too. To work on it, run `npm run site`
 | `packages/*/test/golden/` | The golden corpora: `corpus.json` lists the inputs, `goldens.json` the expected output. Charts also read `apps/examples/statistical-cases.json` |
 | `apps/examples` | Runnable examples that load the built packages |
 | `apps/site` | The website: the guides in `content/`, and pages built from the package READMEs, the golden corpora and `apps/examples/statistical-cases.json` |
-| `scripts/` | Recording the goldens and generating the bundled font modules |
+| `scripts/` | Recording the goldens, generating the bundled font modules, and preparing the manifests the release publishes |
 | `.changeset/` | Release notes waiting for the next release |
 
 ## Report a bug
@@ -97,6 +97,15 @@ packages share one version and are released together. While the version is 0.x, 
 or a substantial new feature is a minor release and anything else a patch. Changes to tests, CI or development tooling need no
 changeset.
 
+After each merge to `main`, the Release workflow gathers the waiting changesets into a draft pull
+request that sets the new version and writes each package's changelog. A maintainer releases by
+approving its workflow runs, marking it ready and merging it; the workflow then tests that commit
+and publishes the packages to npm. Merge it only after the Release run for the newest commit on
+`main` has updated it: updating its branch from `main` does not apply new changesets, and a
+changeset still waiting on the merged commit stops that release from being published. A changeset
+names only packages that are published to npm, never the website or the examples; one that does is
+never applied, and no release is published until it is deleted.
+
 ## Commits
 
 Subjects follow `[scope] TYPE: sentence`:
@@ -113,13 +122,14 @@ the change is needed when that is not obvious from the diff. Keep each commit to
 
 - Open pull requests against `main`, and keep each one to a single change.
 - Fill in the template: what changed and why, the risks, and how it was tested.
-- Continuous integration runs after a merge to `main`, not on pull requests, so run `npm run build`,
-  `npm run typecheck` and `npm test` yourself before asking for a merge, with the browsers
-  installed, and `npm run site:build` too when the website changes. After the merge, the Library
-  workflow runs the same on Node.js 22, 24 and 26. A merge that changes only documentation
-  (Markdown, the licence files and the issue forms) starts no Library run; the Website workflow
-  builds and tests the website when what it is built from changes, the package READMEs,
-  `CONTRIBUTING.md`, `CHANGELOG.md` and the licence files included.
+- Continuous integration runs on every pull request: the Library workflow builds, typechecks and
+  tests on Node.js 22, 24 and 26, and the Website workflow builds and tests the website. Run
+  `npm run build`, `npm run typecheck` and `npm test` yourself first, with the browsers installed,
+  and `npm run site:build` too when the website changes. Runs for a pull request from someone
+  outside the project wait until a maintainer approves them. After the merge, the Library workflow
+  runs again unless the merge changes only documentation (Markdown, the licence files and the issue
+  forms), and the Website workflow runs when what the website is built from changes, the package
+  READMEs, `CONTRIBUTING.md`, `CHANGELOG.md` and the licence files included.
 - A maintainer merges the pull request once it is approved.
 
 ## What not to commit

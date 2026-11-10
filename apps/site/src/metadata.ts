@@ -23,7 +23,7 @@ const descriptions: Record<string, string> = {
   '/docs/text/':
     'BorrowdaleJS text API: measure and lay out Excalifont lettering, identify missing glyphs, and render text in SVG or Canvas.',
   '/docs/fills/':
-    'BorrowdaleJS fill API: generate repeatable hand-drawn line, crosshatch and circle patterns for SVG backgrounds.',
+    'BorrowdaleJS fill API: generate repeatable hand-drawn line, cross-hatch and circle patterns for SVG backgrounds.',
   '/playground/': `Explore ${examples.length} editable BorrowdaleJS examples covering charts, shapes, text, patterns and native HTML component recipes.`,
   '/examples/':
     'Explore three complete BorrowdaleJS dashboards using World Bank, NASA GISS and USGS datasets. Every chart includes its code.',

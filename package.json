@@ -16,7 +16,9 @@
     "goldens": "npm run build && node scripts/record-goldens.mjs",
     "fonts": "node scripts/generate-font.mjs",
     "site": "npm run dev --workspace @borrowdale/site",
-    "site:build": "npm run build --workspace @borrowdale/site"
+    "site:build": "npm run build --workspace @borrowdale/site",
+    "lockfile": "npm install --package-lock-only --ignore-scripts",
+    "version-packages": "changeset version && npm run lockfile"
   },
   "devDependencies": {
     "@changesets/cli": "^3.0.3",

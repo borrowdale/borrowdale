@@ -2,7 +2,7 @@ import { drawShape } from './engine.js';
 import { isBudget, type Budget } from './budget.js';
 import { stableKey, toSeed } from './seed.js';
 import type { Shape, Sketch, SketchOptions } from './types.js';
-import { assertDrawable } from './validate.js';
+import { drawable } from './validate.js';
 
 /**
  * Draws a shape with hand-drawn strokes. Each call may do 200,000 units of work, unless it is given
@@ -14,6 +14,6 @@ export function sketch(shape: Shape, options: SketchOptions = {}, budget?: Budge
     throw new Error('Invalid budget: must be a Budget made with new Budget(), or nothing');
   }
   // `{ stroke: undefined }` must mean "default", not override the engine's default with undefined.
-  const { seed, ...style } = assertDrawable(shape, options);
+  const { seed, ...style } = drawable(shape, options);
   return { paths: drawShape(shape, { ...style, seed: toSeed(seed ?? stableKey(shape)) }, budget) };
 }

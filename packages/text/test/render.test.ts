@@ -48,9 +48,13 @@ describe('toSvgText', () => {
     expect(toSvgText(layoutText('A', at))).toContain(' direction="ltr" ');
   });
 
-  it('escapes the fill so it cannot become markup', () => {
-    expect(toSvgText(layoutText('A', at), { fill: '"/><script>' })).toBe(
-      `${START_TAG} fill="&quot;/&gt;&lt;script&gt;" ${LTR_UNSHAPED}>A</text>`,
+  it('rejects a fill that is not a colour rather than writing it', () => {
+    expect(() => toSvgText(layoutText('A', at), { fill: '"/><script>' })).toThrow('fill must be a colour');
+  });
+
+  it('writes a pattern in the same document as the fill', () => {
+    expect(toSvgText(layoutText('A', at), { fill: 'url(#borrowdale-lines-1)' })).toBe(
+      `${START_TAG} fill="url(#borrowdale-lines-1)" ${LTR_UNSHAPED}>A</text>`,
     );
   });
 });

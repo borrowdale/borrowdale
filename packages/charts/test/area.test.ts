@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { layoutChart, type ChartLayout, type ChartSpec, type ChartNode } from '@borrowdale/charts';
+import { layoutChart, type ChartLayout, type ChartSpec } from '@borrowdale/charts';
+import type { ChartNode } from '../src/types.js';
 import type { Point } from '@borrowdale/core';
 
 // Compare actual rendered Bézier geometry, not only vertices: the original defect had identical

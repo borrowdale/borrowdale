@@ -129,7 +129,7 @@ function zigzagFill(polygonList: Point[][], o: ResolvedOptions): OpSet {
 
 function dashedFill(polygonList: Point[][], o: ResolvedOptions): OpSet {
   const lines = polygonHachureLines(polygonList, o);
-  const offset = o.dashOffset < 0 ? defaultGap(o) : o.dashOffset;
+  const offset = o.dashLength < 0 ? defaultGap(o) : o.dashLength;
   const gap = o.dashGap < 0 ? defaultGap(o) : o.dashGap;
   const ops: Op[] = [];
   for (const line of lines) {
@@ -156,7 +156,7 @@ function dashedFill(polygonList: Point[][], o: ResolvedOptions): OpSet {
 
 function zigzagLineFill(polygonList: Point[][], o: ResolvedOptions): OpSet {
   const gap = defaultGap(o);
-  const zo = o.zigzagOffset < 0 ? gap : o.zigzagOffset;
+  const zo = o.zigzagWidth < 0 ? gap : o.zigzagWidth;
   o = Object.assign({}, o, { hachureGap: gap + zo });
   const lines = polygonHachureLines(polygonList, o);
   const ops: Op[] = [];

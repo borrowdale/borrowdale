@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, expect, it, vi } from 'vitest';
 import * as core from '@borrowdale/core';
-import { appendChart, layoutChart, type ChartSpec } from '@borrowdale/charts';
+import { appendChart, drawChart, layoutChart, toSvgChart, type ChartSpec } from '@borrowdale/charts';
 import { bandScale } from '../src/scale.js';
 import { checkChart } from '../src/validate.js';
 
@@ -10,6 +10,18 @@ const spec: ChartSpec = { width: 400, height: 300, legend: 'none',
   series: [{ type: 'xyLine', name: 'Trend', data: [[0, 0], [1, 1]],
     gradient: { axis: 'x', stops: [{ offset: 0, color: '#f00' }, { offset: 1, color: '#00f' }] } }] };
 const id = (svg: SVGSVGElement) => svg.querySelector('linearGradient')!.id;
+// Render options whose id prefix is a getter that counts its reads and gives no prefix.
+function countedPrefix() {
+  let reads = 0;
+  return { options: { get idPrefix() { reads += 1; return undefined; } }, reads: () => reads };
+}
+// A dash list whose first length is 4 when it is first read and a hundredth after that.
+function changingDash(): number[] {
+  let reads = 0;
+  const dash = [0, 2];
+  Object.defineProperty(dash, 0, { enumerable: true, get: () => (reads++ === 0 ? 4 : 0.01) });
+  return dash;
+}
 afterEach(() => { vi.restoreAllMocks(); document.body.replaceChildren(); });
 
 it('does not reuse a detached explicit resource prefix automatically', () => {
@@ -89,4 +101,27 @@ it('includes the detached root element itself in resource collision checks', () 
   const root = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   root.id = next;
   expect(id(appendChart(root, layoutChart(spec)))).not.toBe(root.id);
+});
+
+it('reads the id prefix once', () => {
+  const counted = countedPrefix();
+  appendChart(document.createElement('div'), layoutChart(spec), counted.options);
+  expect(counted.reads()).toBe(1);
+});
+
+it('draws the dash of a chart style as it was checked, reading each length once', () => {
+  expect(toSvgChart(layoutChart({ ...spec, style: { roughness: 0, strokeLineDash: changingDash() } }))).toContain('stroke-dasharray="4 2"');
+});
+
+it.each<[string, () => unknown, string]>([
+  ['layoutChart', () => layoutChart(spec, { fontSize: 12 } as never), 'Unknown option: "fontSize"'],
+  ['toSvgChart', () => toSvgChart(layoutChart(spec), { prefix: 'p' } as never), 'Unknown option: "prefix"'],
+  ['appendChart', () => appendChart(document.createElement('div'), layoutChart(spec), { fontFiles: {} } as never), 'Unknown option: "fontFiles"'],
+  ['drawChart', () => drawChart({} as CanvasRenderingContext2D, layoutChart(spec), { idprefix: 'p' } as never), 'Unknown option: "idprefix"'],
+])('rejects an option %s does not take, rather than ignoring it', (_name, call, message) => {
+  expect(call).toThrow(message);
+});
+
+it('takes an option set to undefined as not set', () => {
+  expect(() => layoutChart(spec, { font: undefined, fontSize: undefined } as never)).not.toThrow();
 });

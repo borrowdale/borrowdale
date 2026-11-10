@@ -6,7 +6,7 @@ import textCases from '../../../packages/text/test/golden/corpus.json';
 import fillCases from '../../../packages/fills/test/golden/corpus.json';
 import type { Shape, SketchOptions } from '@borrowdale/core';
 import type { ChartSpec } from '@borrowdale/charts';
-import type { LayoutOptions } from '@borrowdale/text';
+import type { LayoutTextOptions } from '@borrowdale/text';
 import type { PatternOptions } from '@borrowdale/fills';
 import { examplePath } from './routing';
 import { chart, shapeSvg, textSvg, patternSvg, scribble, escape, seed } from './drawing';
@@ -44,7 +44,7 @@ const texts: Example[] = textCases.map((e) => ({
   category: 'text',
   tag: e.name.startsWith('every-') ? 'character sets' : 'layout',
   render: () => {
-    const t = textSvg(e.text, e.options as LayoutOptions);
+    const t = textSvg(e.text, e.options as LayoutTextOptions);
     return `${t.svg}${t.missing.length ? `<span class="fallback-note">Fallback glyphs: ${escape(t.missing.join(' '))}</span>` : ''}`;
   },
 }));

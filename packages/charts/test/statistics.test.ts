@@ -526,7 +526,7 @@ it('keeps a subnormal response at the end of a straight-line fit', () => {
 });
 
 // Euro amounts with a decimal comma and one decimal.
-const EUROS = { prefix: '€', decimal: ',', decimals: 1 };
+const EUROS = { prefix: '€', decimalSeparator: ',', decimals: 1 };
 const EAST = [12, 14, 15, 16, 19, 29];
 
 it('writes statistical values in the value axis format', () => {

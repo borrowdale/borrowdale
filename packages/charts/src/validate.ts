@@ -6,6 +6,7 @@ import { readRelationship } from './statistics/relationship.js';
 import { readMarket } from './statistics/market.js';
 import { checkAnnotations, type CheckedAnnotation } from './annotations.js';
 import { sketch, assertDrawable, type Seed, type SketchStyle } from '@borrowdale/core';
+import { COLOR_RULE, isColor, MAX_PAINT, ownDash } from '@borrowdale/core/internal';
 import { excalifont, type Font } from '@borrowdale/text';
 import {
   anyValue,
@@ -51,18 +52,13 @@ import {
   type Check,
   type Fields,
 } from './read.js';
-import { CURVES, LEGEND_POSITIONS, MARKER_SYMBOLS, type ChartSpec, type Marker, type LegendPosition, type SeriesType } from './types.js';
+import { CURVES, LEGEND_POSITIONS, SYMBOL_NAMES, type ChartSpec, type Marker, type LegendPosition, type SeriesType } from './types.js';
 
 // Bounds on what a chart may ask for. The drawing work of everything within them is bounded again
 // by one Budget for the whole chart (see drawing.ts).
 const MAX_SIZE = 10_000;
 const MAX_SERIES = 100;
 const MAX_FONT_SIZE = 200;
-// Every mark writes its colours into the output: a long one would multiply the size of the drawing.
-const MAX_COLOR = 100;
-// What every renderer paints alike: hex codes, names, rgb() and hsl(). Anything else, like a
-// `url(…)`, would have an SVG fetch a file or paint with another part of the page.
-const COLOR = /^(?:#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})|[a-z]+|(?:rgba?|hsla?)\([\d .,%/+-]*\))$/i;
 // Every mark's seed starts with the chart seed, and hashing it is work the budget does not see.
 const MAX_SEED = 100;
 // A browser's work to paint a stroke grows with its width, and the budget does not see it.
@@ -81,9 +77,9 @@ const valueAxis = oneOf(['y', 'y2'] as const);
 const curve = oneOf(CURVES);
 
 const color: Check<string> = (path, value) => {
-  const given = text(MAX_COLOR)(path, value);
-  if (!COLOR.test(given)) {
-    fail(path, `must be a colour (a hex code, a name, rgb() or hsl()), got ${show(given)}`);
+  const given = text(MAX_PAINT)(path, value);
+  if (!isColor(given)) {
+    fail(path, `must be ${COLOR_RULE}, got ${show(given)}`);
   }
   return given;
 };
@@ -91,7 +87,7 @@ const color: Check<string> = (path, value) => {
 // Canvas gradients reject invalid CSS colours rather than ignoring them. A hex-only stop
 // contract can be checked without a browser and gives every renderer the same accepted paints.
 const gradientColor: Check<string> = (path, value) => {
-  const given = text(MAX_COLOR)(path, value);
+  const given = text(MAX_PAINT)(path, value);
   if (!/^#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(given)) {
     fail(path, 'must be a 3, 4, 6 or 8-digit hex colour');
   }
@@ -104,7 +100,7 @@ const readAxis = (r: Fields) => r.optional('axis', valueAxis) ?? 'y';
 const readStack = (r: Fields) => r.optional('stack', text());
 const readCurve = (r: Fields) => r.optional('curve', curve) ?? 'linear';
 const checkMarker: Check<Marker> = (path, value) => {
-  if (typeof value === 'string') return oneOf(MARKER_SYMBOLS)(path, value);
+  if (typeof value === 'string') return oneOf(SYMBOL_NAMES)(path, value);
   const r = fields(path, value);
   r.allow(['image']);
   return { image: r.required('image', text(MAX_NAME)) };
@@ -196,12 +192,12 @@ const SERIES_RULES = {
   interval: {
     system: 'cartesian',
     axes: 'band',
-    keys: ['shape', 'dataLabels', 'axis', 'data', 'display', 'width', 'overlay', 'fromSymbol', 'toSymbol'],
+    keys: ['shape', 'dataLabels', 'axis', 'data', 'display', 'slotWidth', 'overlay', 'fromSymbol', 'toSymbol'],
     read: (r: Fields, _path: string, reserve: ReservePoints) => ({
       shape: r.optional('shape', oneOf(['rectangle', 'rounded', 'pyramid'] as const)) ?? 'rectangle', axis: readAxis(r),
       data: r.required('data', list(0, MAX_POINTS, nullable(coordinates(['from', 'to'])), reserve)),
-      display: r.optional('display', oneOf(['bar', 'line', 'error', 'points'] as const)) ?? 'bar',
-      width: r.optional('width', number(0.05, 1)) ?? 0.8,
+      display: r.optional('display', oneOf(['bar', 'line', 'error', 'point'] as const)) ?? 'bar',
+      width: r.optional('slotWidth', number(0.05, 1)) ?? 0.8,
       overlay: r.optional('overlay', boolean) ?? false,
       fromSymbol: r.optional('fromSymbol', checkMarker),
       toSymbol: r.optional('toSymbol', checkMarker),
@@ -210,11 +206,11 @@ const SERIES_RULES = {
   xRange: {
     system: 'cartesian',
     axes: 'band',
-    keys: ['dataLabels', 'data', 'shape', 'width', 'overlay'],
+    keys: ['dataLabels', 'data', 'shape', 'slotWidth', 'overlay'],
     read: (r: Fields, _path: string, reserve: ReservePoints) => ({
       data: r.required('data', list(0, MAX_POINTS, checkXRangeItem, reserve)),
       shape: r.optional('shape', oneOf(['rectangle', 'rounded'] as const)) ?? 'rectangle',
-      width: r.optional('width', number(0.05, 1)) ?? 0.6,
+      width: r.optional('slotWidth', number(0.05, 1)) ?? 0.6,
       overlay: r.optional('overlay', boolean) ?? false,
     }),
   },
@@ -229,8 +225,8 @@ const SERIES_RULES = {
       const data = r.required('data', list(0, MAX_POINTS, nullable(coordinates(['x', 'y'])), reserve));
       const segments = r.optional('segments', list(Math.max(0, data.length - 1), Math.max(0, data.length - 1), nullable((p, raw) => {
         const segment = fields(p, raw);
-        segment.allow(['color', 'width', 'dash']);
-        return { color: segment.optional('color', color), width: segment.optional('width', number(0, 100)), dash: segment.optional('dash', checkDash) };
+        segment.allow(['color', 'strokeWidth', 'dash']);
+        return { color: segment.optional('color', color), width: segment.optional('strokeWidth', number(0, 100)), dash: segment.optional('dash', checkDash) };
       })));
       const widths = r.optional('widths', list(data.length, data.length, number(0, 100)));
       const gradient = r.optional('gradient', (p, raw) => {
@@ -332,11 +328,11 @@ const SERIES_RULES = {
   },
   gauge: {
     system: 'gauge',
-    keys: ['value', 'display', 'length'],
+    keys: ['value', 'display', 'needleLength'],
     read: (r: Fields) => ({
       value: r.required('value', anyValue),
       display: r.optional('display', oneOf(['needle', 'bar'] as const)) ?? 'needle',
-      length: r.optional('length', number(MIN_NEEDLE, 1)) ?? DEFAULT_NEEDLE,
+      needleLength: r.optional('needleLength', number(MIN_NEEDLE, 1)) ?? DEFAULT_NEEDLE,
     }),
   },
 } as const satisfies Record<SeriesType, Rule>;
@@ -433,7 +429,7 @@ type CheckedTimelinePath =
   | { type: 'line' }
   | { type: 'serpentine'; rows: number }
   | { type: 'spiral'; turns: number; innerRadius: number }
-  | { type: 'curve'; points: [number, number][] };
+  | { type: 'polyline'; points: [number, number][] };
 
 export interface CheckedTimelineChart extends CheckedChartBase {
   system: 'timeline';
@@ -511,10 +507,10 @@ function checkTimelineChart(r: Fields, base: CheckedChartBase, series: SeriesOf<
   for (const entry of series) {
     entry.data.forEach((event, i) => {
       const path = `${entry.path}.data[${i}]`;
-      event.at = value(`${path}.at`, event.at);
+      event.from = value(`${path}.from`, event.from);
       event.to = event.to === undefined ? undefined : value(`${path}.to`, event.to);
-      if (event.to !== undefined && !(event.to > event.at)) {
-        fail(`${path}.to`, 'must be after at; leave it out for a moment');
+      if (event.to !== undefined && !(event.to > event.from)) {
+        fail(`${path}.to`, 'must be after from; leave it out for a moment');
       }
     });
   }
@@ -523,7 +519,7 @@ function checkTimelineChart(r: Fields, base: CheckedChartBase, series: SeriesOf<
 
 const checkTrack: Check<CheckedTimelinePath> = (path, raw) => {
   const r = fields(path, raw);
-  const type = r.required('type', oneOf(['line', 'serpentine', 'spiral', 'curve'] as const));
+  const type = r.required('type', oneOf(['line', 'serpentine', 'spiral', 'polyline'] as const));
   switch (type) {
     case 'line':
       r.allow(['type']);
@@ -534,7 +530,7 @@ const checkTrack: Check<CheckedTimelinePath> = (path, raw) => {
     case 'spiral':
       r.allow(['type', 'turns', 'innerRadius']);
       return { type, turns: r.optional('turns', number(1, MAX_TURNS)) ?? 3, innerRadius: r.optional('innerRadius', number(0, 0.9)) ?? 0.2 };
-    case 'curve':
+    case 'polyline':
       r.allow(['type', 'points']);
       return { type, points: r.required('points', list(2, MAX_TRACK_POINTS, (p, point) => {
         const [x, y] = tuple(['x', 'y'])(p, point);
@@ -1015,7 +1011,10 @@ function checkStyle(path: string, raw: unknown): SketchStyle {
   fields(path, raw);
   // One copy, read once, is what is checked and what is drawn. An undefined entry is dropped rather
   // than copied: merged over the defaults, it would replace them.
-  const style = Object.fromEntries(Object.entries(raw as object).filter(([, entry]) => entry !== undefined));
+  // The dash is copied too, by index, as core reads it.
+  const style = Object.fromEntries(Object.entries(raw as object)
+    .filter(([, entry]) => entry !== undefined)
+    .map(([key, entry]): [string, unknown] => [key, key === 'strokeLineDash' ? ownDash(entry) : entry]));
   const r = fields(path, style);
   if (r.has('seed')) {
     fail(`${path}.seed`, 'is not allowed: each mark gets its own seed from the chart seed');
@@ -1029,10 +1028,10 @@ function checkStyle(path: string, raw: unknown): SketchStyle {
 }
 
 function checkDash(path: string, dash: unknown): number[] {
-  probe(path, () => assertDrawable({ kind: 'line', x1: 0, y1: 0, x2: 1, y2: 1 }, { strokeLineDash: dash as number[] }));
-  // Copied by index, as core's check read it.
-  const lengths = dash as number[];
-  return Array.from({ length: lengths.length }, (_, i) => lengths[i]!);
+  // Copied by index first, as core reads it, so the copy checked is the copy drawn.
+  const lengths = ownDash(dash) as number[];
+  probe(path, () => assertDrawable({ kind: 'line', x1: 0, y1: 0, x2: 1, y2: 1 }, { strokeLineDash: lengths }));
+  return lengths;
 }
 
 /** A radar's values: a number per spoke, or a `[low, high]` pair per spoke for a range radar. */
@@ -1063,17 +1062,17 @@ function checkRange(path: string, raw: unknown): [number, number] {
   return [low, high];
 }
 
-/** A timeline event; at and to are read once the axis is known (checkTimelineChart). */
+/** A timeline event; from and to are read once the axis is known (checkTimelineChart). */
 interface CheckedTimelineEvent {
-  at: number;
+  from: number;
   to: number | undefined;
   label: string | undefined;
 }
 
 function checkTimelineEvent(path: string, raw: unknown): CheckedTimelineEvent {
   const r = fields(path, raw);
-  r.allow(['at', 'to', 'label']);
-  return { at: r.required('at', coordinate), to: r.optional('to', coordinate), label: r.optional('label', text(MAX_NAME)) };
+  r.allow(['from', 'to', 'label']);
+  return { from: r.required('from', coordinate), to: r.optional('to', coordinate), label: r.optional('label', text(MAX_NAME)) };
 }
 
 /** An xRange item; its row is found, and from and to read, once the axes are known (resolveValues). */

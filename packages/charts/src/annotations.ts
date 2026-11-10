@@ -3,13 +3,13 @@ import { valueReader, type CheckedAxis } from './check-axis.js';
 import type { Drawing } from './drawing.js';
 import type { Rect } from './frame.js';
 import { fail, fields, list, oneOf, text, type Check, type Fields } from './read.js';
-import type { Annotation, ChartCoordinate, ChartPosition } from './types.js';
+import type { Annotation, ChartValue, ChartPosition } from './types.js';
 
 type AxisKey = 'x' | 'y' | 'y2';
 export type CheckedAnnotation = Annotation & { path: string; color: string; layer: 'back' | 'front' };
 
 export function checkAnnotations(r: Fields, axes: Record<AxisKey, CheckedAxis | undefined>, color: Check<string>): CheckedAnnotation[] {
-  const coordinate = (axis: AxisKey): Check<ChartCoordinate> => (path, raw) => {
+  const coordinate = (axis: AxisKey): Check<ChartValue> => (path, raw) => {
     const target = axes[axis];
     if (!target) return fail(path, `needs axes.${axis}`);
     if (target.type === 'linear') return valueReader(target.kind)(path, raw);
@@ -43,7 +43,7 @@ export function checkAnnotations(r: Fields, axes: Record<AxisKey, CheckedAxis | 
 }
 
 /** Coordinates in data space, before scales are fitted. */
-export function annotationValues(entry: CheckedAnnotation): { axis: AxisKey; value: ChartCoordinate }[] {
+export function annotationValues(entry: CheckedAnnotation): { axis: AxisKey; value: ChartValue }[] {
   if (entry.type === 'line') return [{ axis: entry.axis, value: entry.value }];
   if (entry.type === 'band') return [entry.from, entry.to].map((value) => ({ axis: entry.axis, value }));
   const points = entry.type === 'label' ? [entry.at] : [entry.from, entry.to];
@@ -52,7 +52,7 @@ export function annotationValues(entry: CheckedAnnotation): { axis: AxisKey; val
 
 export function drawAnnotations(
   drawing: Drawing, entries: readonly CheckedAnnotation[], layer: 'back' | 'front', rect: Rect,
-  at: (axis: AxisKey, value: ChartCoordinate) => number,
+  at: (axis: AxisKey, value: ChartValue) => number,
 ): void {
   entries.forEach((entry, i) => {
     if (entry.layer !== layer) return;

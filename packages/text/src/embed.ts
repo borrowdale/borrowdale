@@ -1,6 +1,15 @@
-import { show } from '@borrowdale/core/show';
-import type { FontFile, FontFiles } from './types.js';
-import { checkFontFiles, checkText, codePointName, codePointOf, cssFamily, IGNORABLE } from './validate.js';
+import { show } from '@borrowdale/core/internal';
+import type { FontFiles } from './types.js';
+import {
+  checkFontFiles,
+  checkText,
+  codePointName,
+  codePointOf,
+  cssFamily,
+  IGNORABLE,
+  type CheckedFontFile,
+  type CheckedFontFiles,
+} from './validate.js';
 
 // The file each face `loadFont` made came from, so a later call can tell which files a set has.
 const sources = new WeakMap<FontFace, { unicodeRange: string; woff2: string }>();
@@ -11,10 +20,13 @@ const sources = new WeakMap<FontFace, { unicodeRange: string; woff2: string }>()
  * are safe to insert as markup.
  */
 export function fontFaceCss(fontFiles: FontFiles, labels?: readonly string[]): string {
-  return filesFor(fontFiles, labels)
+  // Only the checked copy is read from here on: a getter on the caller's object could otherwise pass
+  // the checks and then return markup.
+  const checked = checkFontFiles(fontFiles);
+  return filesFor(checked, labels)
     .map(
       (file) =>
-        `@font-face{font-family:${cssFamily(fontFiles.family)};` +
+        `@font-face{font-family:${cssFamily(checked.family)};` +
         `src:url(data:font/woff2;base64,${file.woff2}) format("woff2");` +
         `unicode-range:${unicodeRange(file)}}`,
     )
@@ -35,9 +47,9 @@ export function fontFaceCss(fontFiles: FontFiles, labels?: readonly string[]): s
  * so no Content-Security-Policy blocks them. Needs `FontFace` and `atob`.
  */
 export async function loadFont(fonts: FontFaceSet, fontFiles: FontFiles): Promise<void> {
-  checkFontFiles(fontFiles);
-  const faces = facesOf(fonts, fontFiles.family);
-  for (const file of fontFiles.files) {
+  const checked = checkFontFiles(fontFiles);
+  const faces = facesOf(fonts, checked.family);
+  for (const file of checked.files) {
     const source = { unicodeRange: unicodeRange(file), woff2: file.woff2 };
     const added = faces.some((face) => {
       const made = sources.get(face);
@@ -45,7 +57,7 @@ export async function loadFont(fonts: FontFaceSet, fontFiles: FontFiles): Promis
     });
     if (!added) {
       // From the bytes just recorded, so the face is made from exactly the file it is recorded as.
-      const face = new FontFace(fontFiles.family, Uint8Array.from(atob(source.woff2), codePointOf), {
+      const face = new FontFace(checked.family, Uint8Array.from(atob(source.woff2), codePointOf), {
         unicodeRange: source.unicodeRange,
       });
       sources.set(face, source);
@@ -72,8 +84,7 @@ export function facesOf(fonts: FontFaceSet, family: string): FontFace[] {
   return faces;
 }
 
-function filesFor(fontFiles: FontFiles, labels: readonly string[] | undefined): readonly FontFile[] {
-  checkFontFiles(fontFiles);
+function filesFor(fontFiles: CheckedFontFiles, labels: readonly string[] | undefined): readonly CheckedFontFile[] {
   if (labels === undefined) {
     return fontFiles.files;
   }
@@ -97,7 +108,7 @@ function filesFor(fontFiles: FontFiles, labels: readonly string[] | undefined): 
   );
 }
 
-function unicodeRange(file: FontFile): string {
+function unicodeRange(file: CheckedFontFile): string {
   return file.ranges
     .map(([first, last]) =>
       first === last ? codePointName(first) : `${codePointName(first)}-${codePointName(last).slice(2)}`,

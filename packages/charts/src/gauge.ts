@@ -130,7 +130,7 @@ export function layoutGauge(drawing: Drawing, chart: CheckedGaugeChart, rect: Re
     }
     drawing.mark(title, [
       drawing.shape(
-        needle(point, scale.at(entry.value), entry.length * radius),
+        needle(point, scale.at(entry.value), entry.needleLength * radius),
         solid(paint.color),
         [entry.name, 'gauge'],
         entry.style,

@@ -46,8 +46,9 @@ returns; they never measure.
 
 The result holds the drawing position (`x`, `y` of the baseline start), the `width`, `ascent` and
 `descent`, the `box` the text takes up before rotation, `rotate`, the rotation `pivot`, and the
-`family` and `fontSize` it is drawn in. A layout is plain JSON. The renderers draw a layout as it
-is and do not check it again, so draw only layouts that `layoutText` returned.
+`family` and `fontSize` it is drawn in. Anything else a layout holds can change in any release, so
+draw a layout with the same version of `@borrowdale/text` that made it. The renderers draw a layout
+as it is and do not check it again, so draw only layouts that `layoutText` returned.
 
 Both return the text exactly as it will be drawn, which is the text that was measured:
 
@@ -104,9 +105,11 @@ or narrower: by about 2 units across the test suite's labels, and more on longer
 | `appendText(parent, layout, style?)` | appends a `<text>` element to an SVG element | a DOM |
 | `drawText(context2d, layout, style?)` | draws into a canvas or an OffscreenCanvas | the font loaded |
 
-`style` takes `fill` (default `#000`). The text and every attribute are escaped. `fill` is passed
-to the browser as it is: a value that is not a colour is ignored, so SVG text then takes its
-parent's fill and a canvas keeps the fill it had.
+`style` takes `fill` (default `#000`): a colour (a hex code, a name, `rgb()`, `rgba()`, `hsl()` or
+`hsla()`), or `url(#id)` for a pattern or gradient in the same SVG document. The text and every
+attribute are escaped. A name the browser does not know is ignored, so SVG text then takes its
+parent's fill and a canvas keeps the fill it had; a canvas cannot paint `url(#id)` either, and
+ignores it the same way.
 
 The font has to reach whoever views the drawing:
 
@@ -167,7 +170,8 @@ use `appendText`, which sets the same properties through the CSSOM, and load the
 
 ## Validation
 
-A value that cannot be drawn throws an error naming it:
+A value that cannot be drawn throws an error naming it. The wording of these messages is for people
+and can change in any release, so do not match on it in code:
 
 - Text must be a string of at most 1,000 characters (UTF-16 code units), both as given and with
   its accents composed, on one line: line feed, carriage return, U+0085, U+2028 and U+2029 are
@@ -179,7 +183,9 @@ A value that cannot be drawn throws an error naming it:
   `descender` from −32,768 to 0, and every advance from 0 to 65,535. Its `files`, when given, must
   be one or more files, each with one or more `[first, last]` ranges of code points, as `FontFiles`
   files must.
-- `fill` must be a string without characters an XML document cannot hold.
+- `fill` must be a colour (a hex code, a name, `rgb()`, `rgba()`, `hsl()` or `hsla()`) or
+  `url(#id)`, at most 100 characters. Other paints, such as a `url()` naming another file or a
+  `var()`, are rejected, and so are `inherit`, `initial`, `unset` and `revert`.
 - `fontFaceCss`'s labels must be an array, and each label must pass the checks for text above.
 - Unknown option names are rejected (`Unknown option: "fontSzie"`). An option set to `undefined`
   counts as not set. Only an options object's own properties are read: inherited values, including
@@ -200,6 +206,10 @@ in the font it was measured with.
 `FontFiles` holds a font's woff2 files as base64, each with the code points it serves. Excalifont's
 are in `@borrowdale/text/excalifont-files`, a separate entry point, so code that only measures does
 not load them.
+
+`excalifont` and `excalifontFiles` are frozen, all the way down, so no code can change them for the
+rest of the page. To change one, make a copy:
+`{ ...excalifont, advances: { ...excalifont.advances, 0x41: 700 } }`.
 
 Excalifont covers printable ASCII, Cyrillic (U+0400 to U+045F) and most of Latin-1, Latin
 Extended-A and Greek. It lacks ¤ § ¬ ² ³ µ ¹, ĸ Ŋ ŋ ſ, and Δ Ω, which are measured as 1 em and

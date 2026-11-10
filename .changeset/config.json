@@ -4,7 +4,7 @@
   "access": "public",
   "changelog": "@changesets/cli/changelog",
   "commit": false,
-  "fixed": [["@borrowdale/core", "@borrowdale/fills", "@borrowdale/text", "@borrowdale/charts"]],
+  "fixed": [["@borrowdale/*"]],
   "updateInternalDependencies": "patch",
   "privatePackages": { "version": false, "tag": false }
 }

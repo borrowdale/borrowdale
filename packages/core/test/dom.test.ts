@@ -17,6 +17,14 @@ const falsyDash: Sketch = {
   paths: [{ d: 'M0 0 L1 1', stroke: '#000', strokeWidth: 1, strokeLineDash: 0 as unknown as number[], fill: 'none' }],
 };
 
+// A sketch built by hand whose second path names another file as its stroke.
+const laterBadPaint: Sketch = {
+  paths: [
+    { d: 'M0 0 L1 1', stroke: '#000', strokeWidth: 1, fill: 'red' },
+    { d: 'M2 2 L3 3', stroke: 'url(https://example.com/a.svg#p)', strokeWidth: 1, fill: 'none' },
+  ],
+};
+
 class RecordingPath2D {
   constructor(readonly d: string) {}
 }
@@ -125,16 +133,53 @@ describe('appendSketch', () => {
     expect(svg.childElementCount).toBe(2);
   });
 
-  it('stores hostile values as attributes, not markup', () => {
+  it('stores hostile path data as an attribute, not markup', () => {
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
 
-    appendSketch(svg, { paths: [{ d: 'M0 0', stroke: '"/><script>', strokeWidth: 1, fill: 'none' }] });
+    appendSketch(svg, { paths: [{ d: 'M0 0"/><script>', stroke: '#000', strokeWidth: 1, fill: 'none' }] });
 
     expect(svg.querySelector('script')).toBeNull();
+  });
+
+  it('appends nothing when a later path has a paint that is not allowed', () => {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+
+    expect(() => appendSketch(svg, laterBadPaint)).toThrow('Invalid sketch: stroke must be a colour');
+    expect(svg.childElementCount).toBe(0);
+  });
+
+  it('rejects a stroke naming another file in a sketch built by hand', () => {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+
+    expect(() => appendSketch(svg, { paths: [{ d: 'M0 0', stroke: 'url(https://example.com/a.svg#p)', strokeWidth: 1, fill: 'none' }] }))
+      .toThrow('Invalid sketch: stroke must be a colour');
   });
 });
 
 describe('drawSketch', () => {
+  it('draws nothing when a later path has a paint that is not allowed', () => {
+    vi.stubGlobal('Path2D', RecordingPath2D);
+    const context = fakeContext();
+    expect(() => drawSketch(context as unknown as CanvasRenderingContext2D, laterBadPaint)).toThrow('Invalid sketch: stroke must be a colour');
+    expect(context.fill).not.toHaveBeenCalled();
+  });
+
+  it('rejects an unknown paint key rather than ignoring it', () => {
+    vi.stubGlobal('Path2D', RecordingPath2D);
+    expect(() => drawSketch(fakeContext() as unknown as CanvasRenderingContext2D, outlined, { strokeStyle: '#f00' } as never)).toThrow(
+      'Unknown option: "strokeStyle"',
+    );
+  });
+
+  it('rejects a fill that is not a colour or url(#id) before drawing anything', () => {
+    vi.stubGlobal('Path2D', RecordingPath2D);
+    const context = fakeContext();
+    expect(() => drawSketch(context as unknown as CanvasRenderingContext2D, {
+      paths: [{ d: 'M0 0 L1 1 Z', stroke: 'none', strokeWidth: 0, fill: 'var(--x)' }],
+    })).toThrow('Invalid sketch: fill must be a colour');
+    expect(context.save).not.toHaveBeenCalled();
+  });
+
   it('keeps zero-width strokes invisible without disabling the fill', () => {
     vi.stubGlobal('Path2D', RecordingPath2D);
     const context = fakeContext();

@@ -8,7 +8,11 @@
 //    commit that still depended on rough.js, never from this engine:
 //      git archive c89cb6ab | tar -x -C <empty dir>; cd <empty dir>; npm ci; npm run build
 //      copy scripts/record-goldens.mjs and the core and fills test/golden/corpus.json files into it
+//      in those copies, rename dashLength, zigzagWidth and the 'cross-hatch' pattern kind back to
+//        dashOffset, zigzagOffset and 'crosshatch': rough.js ignores names it does not know
 //      node scripts/record-goldens.mjs core fills, then copy both goldens.json files back
+//      then record fills again here (use 1): a pattern's id comes from its kind, so the cross-hatch
+//        ids change with the name, and only their strokes come from rough.js
 //    Then run the tests here: any failing case is a port bug.
 // Text and charts goldens have no rough.js origin: they only ever come from use 1. Each package is imported
 // only when it is recorded, so the script runs in a checkout that lacks the others.

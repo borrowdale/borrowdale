@@ -33,9 +33,9 @@ export interface ResolvedOptions {
   fillWeight: number;
   hachureAngle: number;
   hachureGap: number;
-  dashOffset: number;
+  dashLength: number;
   dashGap: number;
-  zigzagOffset: number;
+  zigzagWidth: number;
   seed: number;
   randomizer?: Random | undefined;
   disableMultiStroke: boolean;
@@ -57,9 +57,9 @@ export const DEFAULT_OPTIONS: ResolvedOptions = {
   fillWeight: -1,
   hachureAngle: -41,
   hachureGap: -1,
-  dashOffset: -1,
+  dashLength: -1,
   dashGap: -1,
-  zigzagOffset: -1,
+  zigzagWidth: -1,
   seed: 0,
   disableMultiStroke: false,
   disableMultiStrokeFill: false,

@@ -39,7 +39,7 @@ export function editorCode(e: Example) {
   }
   if (e.category === 'shapes') {
     const entry = coreCases.find((x) => x.name === e.name)!;
-    return `import { sketch, toSvgPaths } from '@borrowdale/core';\n\nconst shape = ${json(entry.shape)};\nconst options = ${json({ ...entry.options, seed: exampleSeed(entry.options.seed) })};\n\nconst drawing = sketch(shape, options);\nrender(\`<svg data-fit viewBox="0 0 300 240">\${toSvgPaths(drawing)}</svg>\`);\n// data-fit fits the preview to the drawn strokes.`;
+    return `import { sketch, toSvgSketch } from '@borrowdale/core';\n\nconst shape = ${json(entry.shape)};\nconst options = ${json({ ...entry.options, seed: exampleSeed(entry.options.seed) })};\n\nconst drawing = sketch(shape, options);\nrender(\`<svg data-fit viewBox="0 0 300 240">\${toSvgSketch(drawing)}</svg>\`);\n// data-fit fits the preview to the drawn strokes.`;
   }
   if (e.category === 'text') {
     const entry = textCases.find((x) => x.name === e.name)!;
@@ -53,7 +53,7 @@ export function editorCode(e: Example) {
 }
 function componentCode(e: Example) {
   const template = recipes.find((r) => r.name === e.name)!.template;
-  return `// UI recipe: native HTML + BorrowdaleJS drawing primitives.\n// Preview includes the site stylesheet and Excalifont.\nimport { sketch, toSvgPaths } from '@borrowdale/core';\n\nfunction frame(width, height, fill) {\n  const drawing = sketch(\n    { kind: 'rectangle', x: 3, y: 3, width: width-6, height: height-6 },\n    { seed: ${seed}, fill, fillStyle: 'solid', roughness: 0.8 }\n  );\n  return \`<svg viewBox="0 0 \${width} \${height}" aria-hidden="true">\${toSvgPaths(drawing)}</svg>\`;\n}\n\nrender(\`${template}\`);`;
+  return `// UI recipe: native HTML + BorrowdaleJS drawing primitives.\n// Preview includes the site stylesheet and Excalifont.\nimport { sketch, toSvgSketch } from '@borrowdale/core';\n\nfunction frame(width, height, fill) {\n  const drawing = sketch(\n    { kind: 'rectangle', x: 3, y: 3, width: width-6, height: height-6 },\n    { seed: ${seed}, fill, fillStyle: 'solid', roughness: 0.8 }\n  );\n  return \`<svg viewBox="0 0 \${width} \${height}" aria-hidden="true">\${toSvgSketch(drawing)}</svg>\`;\n}\n\nrender(\`${template}\`);`;
 }
 export function editorPage(path = location.pathname) {
   const e = findExample(path);

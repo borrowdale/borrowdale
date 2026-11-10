@@ -35,21 +35,26 @@ export const FILL_STYLES = [
 export type FillStyle = (typeof FILL_STYLES)[number];
 
 export interface SketchStyle {
+  /** A colour (a hex code, a name, `rgb()` or `hsl()`) or `url(#id)`, at most 100 characters. */
   stroke?: string | undefined;
+  /** From 0 to 1,000,000. Defaults to 1. */
   strokeWidth?: number | undefined;
   /** Dash and gap lengths along the outline, as in SVG `stroke-dasharray`. Solid when omitted. */
   strokeLineDash?: readonly number[] | undefined;
+  /** A colour (a hex code, a name, `rgb()` or `hsl()`) or `url(#id)`, at most 100 characters. */
   fill?: string | undefined;
   fillStyle?: FillStyle | undefined;
+  /** Width of fill strokes, from 0 to 1,000,000. Defaults to half the stroke width. */
   fillWeight?: number | undefined;
   hachureAngle?: number | undefined;
+  /** Distance between fill lines, from 0 to 1,000,000. Defaults to four stroke widths. */
   hachureGap?: number | undefined;
-  /** Dash length for the `dashed` fill style. */
-  dashOffset?: number | undefined;
-  /** Gap between dashes for the `dashed` fill style. */
+  /** Dash length for the `dashed` fill style, from 0 to 1,000,000. Defaults to the hachure gap. */
+  dashLength?: number | undefined;
+  /** Gap between dashes for the `dashed` fill style, from 0 to 1,000,000. Defaults to the hachure gap. */
   dashGap?: number | undefined;
-  /** Zigzag width for the `zigzag-line` fill style. */
-  zigzagOffset?: number | undefined;
+  /** Zigzag width for the `zigzag-line` fill style, from 0 to 1,000,000. Defaults to the hachure gap. */
+  zigzagWidth?: number | undefined;
   /** How tightly a `curve` follows its points, from 0 (loose) to 1 (straight segments). */
   curveTightness?: number | undefined;
   /** How closely curves, ellipses, circles and arcs follow their ideal outline, from 0 to 1. */

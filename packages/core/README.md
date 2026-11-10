@@ -10,14 +10,14 @@ npm install @borrowdale/core
 ```
 
 ```js
-import { sketch, toSvgDocument, toSvgPaths } from '@borrowdale/core';
+import { sketch, toSvgDocument, toSvgSketch } from '@borrowdale/core';
 
 const box = sketch(
   { kind: 'rectangle', x: 10, y: 10, width: 120, height: 60 },
   { fill: '#e76f51', fillStyle: 'hachure' },
 );
 
-const svg = toSvgDocument({ width: 140, height: 80, body: [toSvgPaths(box)] });
+const svg = toSvgDocument({ width: 140, height: 80, body: [toSvgSketch(box)] });
 ```
 
 ## Same input, same drawing
@@ -57,8 +57,8 @@ Use the same `@borrowdale/core` version on the server and in the browser.
 | `strokeLineDash` (dash and gap lengths, as in SVG `stroke-dasharray`) | outline; fill lines stay solid |
 | `fill`, `fillStyle` (`hachure`, `solid`, `zigzag`, `cross-hatch`, `dashed`, `zigzag-line`, `dots`) | fill |
 | `fillWeight`, `hachureAngle` (default −41°; use 41 to mirror), `hachureGap` | line-based fills; `dots` uses `fillWeight` as the dot size and `hachureGap` as the spacing, and ignores `hachureAngle` |
-| `dashOffset`, `dashGap` | `dashed` fill |
-| `zigzagOffset` | `zigzag-line` fill |
+| `dashLength`, `dashGap` | `dashed` fill |
+| `zigzagWidth` | `zigzag-line` fill |
 | `curveTightness` | `curve` shape |
 | `curveStepCount`, `curveFitting` | curves, ellipses, circles and arcs |
 | `roughness`, `bowing` | everything |
@@ -78,6 +78,17 @@ be drawn throws an error naming the field or option, and the value where one was
   1 to 1000. `hachureAngle` may be any finite number of degrees: 400 draws as 40 does.
   `strokeLineDash` must be a plain array of 1 to 16
   lengths from 0 to 1,000,000, with no holes, adding up to at least 1.
+- `strokeWidth`, `fillWeight`, `hachureGap`, `dashLength`, `dashGap` and `zigzagWidth` must be
+  numbers from 0 to 1,000,000. Left out, `strokeWidth` is 1, `fillWeight` half the stroke width,
+  `hachureGap` four stroke widths, and `dashLength`, `dashGap` and `zigzagWidth` the hachure gap.
+- `stroke` and `fill` must be a colour (a hex code, a name, `rgb()`, `rgba()`, `hsl()` or
+  `hsla()`), or `url(#id)` naming a pattern or gradient in the same document, such as
+  `pattern().fill`, at most 100 characters. Other CSS paints are rejected: a `url()` naming another
+  file would have the page fetch it, and a `var()` would paint with a value the page sets. So are
+  `inherit`, `initial`, `unset` and `revert`, which are not colours. `currentColor` is a colour: it
+  paints with the `color` of the element the drawing is in. The renderers check that the paints of
+  a sketch built by hand are colours or `url(#id)` of up to 1,000 characters, and throw
+  `Invalid sketch: stroke must be …` otherwise.
 
 Valid input can still describe an enormous amount of work, such as a dashed fill with no dash
 length or path data with a million segments. Each `sketch` call therefore stops after 200,000
@@ -118,7 +129,8 @@ Without a `seed`, the seed comes from `stableKey(shape)`: the shape serialised w
 `{ x: 0, y: 0, … }` and `{ y: 0, x: 0, … }` are therefore drawn identically.
 
 `svgElement(tag, attributes, children?)` builds an SVG element string and escapes every attribute
-value. Use it to build your own markup around Borrowdale output:
+value, throwing for a character no escape can make fit (see `escapeAttribute`), as `toSvgSketch`
+and `toSvgDocument` do. Use it to build your own markup around Borrowdale output:
 
 ```js
 svgElement('rect', { width: 300, height: 200, fill: '#fdf8ef' });
@@ -126,9 +138,14 @@ svgElement('rect', { width: 300, height: 200, fill: '#fdf8ef' });
 ```
 
 `children`, and the `defs` and `body` of `toSvgDocument`, are inserted as markup without escaping.
-Only pass markup you built yourself, never text from users.
+Only pass markup you built yourself, never text from users. The tag and attribute names are written
+as given too, so they must be your own literals: no escaping makes an attribute such as `onload`
+safe.
 
-`escapeAttribute(value)` escapes a single string for use inside a double-quoted attribute.
+`escapeAttribute(value)` escapes a single string for use inside a double-quoted attribute. It
+throws for a character an XML document cannot hold (a control character other than tab, line feed
+and carriage return, U+FFFE, U+FFFF or an unpaired surrogate), since no escape makes it fit and a
+standalone SVG holding one would not draw at all.
 
 ## Portable maths
 
@@ -152,22 +169,32 @@ number above 0. Each throws a `RangeError` for anything else.
 
 ## Values in error messages
 
-`@borrowdale/core/show` exports `show(value)`, which every `@borrowdale` package uses to write a
-rejected value into an error message: strings quoted and escaped, a short array in brackets, and
-anything that could throw or run code when converted named by its kind. It also exports
-`escaped(message)`, which writes every character of a message that could break or disguise a line of
-a log, such as a line break or a bidirectional override, as its `\u` escape.
+Every `@borrowdale` package writes a rejected value into an error message the same way: strings
+quoted and escaped, a short array in brackets, and anything that could throw or run code when
+converted named by its kind. Every character of a message that could break or disguise a line of a
+log, such as a line break or a bidirectional override, is written as its `\u` escape. Messages are
+plain text, not HTML: escape them before putting them into a page.
+
+The wording of these messages is for people and can change in any release, so do not match on it
+in code.
+
+The helpers that do this, and the colour checks every package applies, live in
+`@borrowdale/core/internal`, which the packages share. It is not public API and can change in any
+release.
 
 ## Rendering
 
 | Function | Output | Needs |
 |---|---|---|
-| `toSvgPaths(sketch)` | `<path>` markup string | nothing (SSR-safe) |
+| `toSvgSketch(sketch)` | `<path>` markup string | nothing (SSR-safe) |
 | `toSvgDocument({ width, height, defs?, body })` | complete `<svg>` string | nothing |
 | `appendSketch(parent, sketch)` | appends `<path>` elements to an SVG element | a DOM |
 | `drawSketch(context2d, sketch, paint?)` | draws into a canvas | `Path2D` |
 
-A dashed outline keeps its `strokeLineDash` in the sketch. `toSvgPaths` and `appendSketch` write
+`toSvgDocument` and the `paint` of `drawSketch` reject an option name they do not take
+(`Unknown option: "def"`); an option set to `undefined` counts as not set.
+
+A dashed outline keeps its `strokeLineDash` in the sketch. `toSvgSketch` and `appendSketch` write
 it as `stroke-dasharray`, and `drawSketch` sets it with `setLineDash`.
 `drawSketch` draws every outline with its own dash, starting at its beginning, and a solid one solid,
 whatever dash the canvas had. Outlines use butt caps, miter joins and a miter limit of 4, matching
@@ -177,18 +204,21 @@ pixels already drawn remain. Caller transforms, clipping, opacity and compositin
 
 The optional `paint` argument to `drawSketch` supplies `stroke` and/or `fill` overrides as
 colours, `CanvasGradient` or `CanvasPattern` objects. It replaces existing paints without
-enabling a stroke or fill whose value is `none`. Canvas state is restored after each path,
-including when drawing throws.
+enabling a stroke or fill whose value is `none`. A canvas cannot paint `url(#id)` and ignores it,
+keeping the paint it had, so pass a `CanvasPattern` or `CanvasGradient` here for such a sketch.
+Canvas state is restored after each path, including when drawing throws.
 
 The type declarations refer to DOM types (`Element`, `CanvasRenderingContext2D`), so TypeScript
 projects need `"dom"` in `compilerOptions.lib`, even when they only render on the server.
+
+## Validation without drawing
+
+`assertDrawable(shape, options)` checks the same shape and style rules as `sketch` without drawing
+anything. It returns nothing and throws on invalid input. It checks structure and ranges only;
+drawing still stops at its work budget.
 
 ## License
 
 MIT. The stroke engine is ported from MIT-licensed code by Preet Shihn; its trigonometry uses
 constants from fdlibm, and its logarithm and exponential are ports of fdlibm routines; see
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
-
-### Validation without drawing
-
-`assertDrawable(shape, options)` checks the same shape and style rules as `sketch`, without generating strokes. It returns a shallow options object with undefined entries removed and throws on invalid input. This checks input structure and ranges; drawing still enforces its separate work budget.

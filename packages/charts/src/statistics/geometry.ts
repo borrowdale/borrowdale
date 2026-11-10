@@ -1,7 +1,7 @@
 import { exp as portableExp, MAX_EXPONENT } from '@borrowdale/core/math';
 import type { Role } from '../palette.js';
 import { fail, MAX_VALUE } from '../read.js';
-import type { MarkerSymbol } from '../types.js';
+import type { SymbolName } from '../types.js';
 
 export type XY = [number, number];
 
@@ -28,7 +28,7 @@ export type Glyph = {
   /** A count cell's share of the largest count, 0 to 1. */
   weight?: number;
   size?: number;
-  symbol?: MarkerSymbol;
+  symbol?: SymbolName;
   hollow?: boolean;
 };
 

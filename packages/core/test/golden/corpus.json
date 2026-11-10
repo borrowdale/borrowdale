@@ -2966,7 +2966,7 @@
   }
  },
  {
-  "name": "option/dash-gap-offset",
+  "name": "option/dash-gap-length",
   "shape": {
    "kind": "rectangle",
    "x": 2,
@@ -2978,12 +2978,12 @@
    "seed": "a",
    "fill": "#c33",
    "fillStyle": "dashed",
-   "dashOffset": 6,
+   "dashLength": 6,
    "dashGap": 3
   }
  },
  {
-  "name": "option/zigzag-offset",
+  "name": "option/zigzag-width",
   "shape": {
    "kind": "rectangle",
    "x": 2,
@@ -2995,7 +2995,7 @@
    "seed": "a",
    "fill": "#c33",
    "fillStyle": "zigzag-line",
-   "zigzagOffset": 5
+   "zigzagWidth": 5
   }
  },
  {

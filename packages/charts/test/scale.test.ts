@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { bandScale, formatNumber, formatValue, keptApart, place, scaleOf, type Scale } from '../src/scale.js';
 import type { CheckedFormat, CheckedLinearAxis } from '../src/check-axis.js';
 
-const plain: CheckedFormat = { decimals: undefined, thousands: ',', decimal: '.', prefix: '', suffix: '' };
+const plain: CheckedFormat = { decimals: undefined, thousandsSeparator: ',', decimalSeparator: '.', prefix: '', suffix: '' };
 
 // A scale asks for about one tick per 50 units of axis, so a length of 250 asks for 5.
 const axis: CheckedLinearAxis = {
@@ -222,8 +222,8 @@ describe('formatNumber', () => {
   it.each<[string, number, number, CheckedFormat, string]>([
     ['groups thousands', 1234567.891, 2, plain, '1,234,567.89'],
     ['writes a value that rounds to zero without a sign', -0.001, 2, plain, '0.00'],
-    ['uses the given separators and affixes', -1234, 0, { ...plain, thousands: '.', decimal: ',', prefix: '€', suffix: ' k' }, '-€1.234 k'],
-    ['writes a separator literally, not as a replacement pattern', 1234, 0, { ...plain, thousands: '$&' }, '1$&234'],
+    ['uses the given separators and affixes', -1234, 0, { ...plain, thousandsSeparator: '.', decimalSeparator: ',', prefix: '€', suffix: ' k' }, '-€1.234 k'],
+    ['writes a separator literally, not as a replacement pattern', 1234, 0, { ...plain, thousandsSeparator: '$&' }, '1$&234'],
     ['rounds half up, as toFixed does', 0.5, 0, plain, '1'],
     ['leaves numbers under a thousand ungrouped', 999, 0, plain, '999'],
   ])('%s', (_case, value, decimals, format, expected) => {

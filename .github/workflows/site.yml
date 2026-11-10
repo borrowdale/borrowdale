@@ -1,9 +1,10 @@
 name: Website
 
-# Runs after each merge to main that changes what the site is built from, to keep Actions minutes
-# down: pull requests are built and tested locally before they are merged (see CONTRIBUTING.md). The
-# library's own changes are tested by the Library workflow, which also runs the site's tests.
+# Runs on every pull request, after each merge to main that changes what the site is built from, and
+# on demand. The library's own changes are tested by the Library workflow, which also runs the site's
+# tests.
 on:
+  pull_request:
   push:
     branches: [main]
     paths:
@@ -35,12 +36,13 @@ jobs:
     name: Validate website
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    # A run is never cancelled once it starts. While one runs, GitHub keeps only the newest waiting run
-    # in the group and cancels any older one still waiting, so pushes and manual runs have separate
-    # groups: a merge cannot replace a manual run that is waiting to publish.
+    # A newer push to a pull request cancels its older run; other runs are never cancelled once they
+    # start. While one runs, GitHub keeps only the newest waiting run in the group and cancels any
+    # older one still waiting, so pushes and manual runs have separate groups: a merge cannot replace
+    # a manual run that is waiting to publish.
     concurrency:
       group: website-validate-${{ github.event_name }}-${{ github.ref }}
-      cancel-in-progress: false
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
@@ -84,11 +86,13 @@ jobs:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           persist-credentials: false
+      # This job can deploy, so it restores no dependency cache saved by another run, and it skips
+      # install scripts, which the website build does not need.
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 24
-          cache: npm
-      - run: npm ci
+          package-manager-cache: false
+      - run: npm ci --ignore-scripts
       - name: Read Pages settings
         id: pages
         uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5

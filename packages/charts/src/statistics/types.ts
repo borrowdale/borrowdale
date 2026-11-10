@@ -1,5 +1,5 @@
 import { fail, SERIES_FIELDS, show, type Check, type Fields } from '../read.js';
-import type { MarkerSymbol, SeriesBase } from '../types.js';
+import type { SeriesBase, SymbolName } from '../types.js';
 
 /**
  * One option table drives both the public discriminated union and JSON validation: each key is a
@@ -48,7 +48,7 @@ interface DistributionOptions {
   polar?: boolean | undefined;
   mirrored?: boolean | undefined;
   sizes?: readonly number[] | undefined;
-  symbol?: MarkerSymbol | undefined;
+  symbol?: SymbolName | undefined;
   binWidth?: number | undefined;
 }
 

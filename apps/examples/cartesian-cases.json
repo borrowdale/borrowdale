@@ -541,7 +541,7 @@
             ]
           ],
           "overlay": true,
-          "width": 1,
+          "slotWidth": 1,
           "color": "#ddd",
           "style": {
             "fillStyle": "solid"
@@ -561,7 +561,7 @@
             ]
           ],
           "overlay": true,
-          "width": 1,
+          "slotWidth": 1,
           "color": "#bbb",
           "style": {
             "fillStyle": "solid"
@@ -581,7 +581,7 @@
             ]
           ],
           "overlay": true,
-          "width": 1,
+          "slotWidth": 1,
           "color": "#999",
           "style": {
             "fillStyle": "solid"
@@ -601,7 +601,7 @@
             ]
           ],
           "overlay": true,
-          "width": 0.35,
+          "slotWidth": 0.35,
           "color": "#0072b2",
           "style": {
             "fillStyle": "solid"
@@ -621,7 +621,7 @@
             ]
           ],
           "overlay": true,
-          "width": 0.7,
+          "slotWidth": 0.7,
           "display": "error",
           "color": "#000"
         }
@@ -661,7 +661,7 @@
             ]
           ],
           "overlay": true,
-          "width": 1,
+          "slotWidth": 1,
           "color": "#ddd",
           "style": {
             "fillStyle": "solid"
@@ -681,7 +681,7 @@
             ]
           ],
           "overlay": true,
-          "width": 1,
+          "slotWidth": 1,
           "color": "#bbb",
           "style": {
             "fillStyle": "solid"
@@ -701,7 +701,7 @@
             ]
           ],
           "overlay": true,
-          "width": 1,
+          "slotWidth": 1,
           "color": "#999",
           "style": {
             "fillStyle": "solid"
@@ -721,7 +721,7 @@
             ]
           ],
           "overlay": true,
-          "width": 0.35,
+          "slotWidth": 0.35,
           "color": "#0072b2",
           "style": {
             "fillStyle": "solid"
@@ -741,7 +741,7 @@
             ]
           ],
           "overlay": true,
-          "width": 0.7,
+          "slotWidth": 0.7,
           "display": "error",
           "color": "#000"
         }
@@ -781,7 +781,7 @@
             ]
           ],
           "overlay": true,
-          "width": 1,
+          "slotWidth": 1,
           "color": "#ddd",
           "style": {
             "fillStyle": "solid"
@@ -801,7 +801,7 @@
             ]
           ],
           "overlay": true,
-          "width": 1,
+          "slotWidth": 1,
           "color": "#bbb",
           "style": {
             "fillStyle": "solid"
@@ -821,7 +821,7 @@
             ]
           ],
           "overlay": true,
-          "width": 1,
+          "slotWidth": 1,
           "color": "#999",
           "style": {
             "fillStyle": "solid"
@@ -841,7 +841,7 @@
             ]
           ],
           "overlay": true,
-          "width": 0.35,
+          "slotWidth": 0.35,
           "color": "#0072b2",
           "style": {
             "fillStyle": "solid"
@@ -861,7 +861,7 @@
             ]
           ],
           "overlay": true,
-          "width": 0.7,
+          "slotWidth": 0.7,
           "display": "error",
           "color": "#000"
         }
@@ -901,7 +901,7 @@
             ]
           ],
           "overlay": true,
-          "width": 1,
+          "slotWidth": 1,
           "color": "#ddd",
           "style": {
             "fillStyle": "solid"
@@ -921,7 +921,7 @@
             ]
           ],
           "overlay": true,
-          "width": 1,
+          "slotWidth": 1,
           "color": "#bbb",
           "style": {
             "fillStyle": "solid"
@@ -941,7 +941,7 @@
             ]
           ],
           "overlay": true,
-          "width": 1,
+          "slotWidth": 1,
           "color": "#999",
           "style": {
             "fillStyle": "solid"
@@ -961,7 +961,7 @@
             ]
           ],
           "overlay": true,
-          "width": 0.35,
+          "slotWidth": 0.35,
           "color": "#0072b2",
           "style": {
             "fillStyle": "solid"
@@ -981,7 +981,7 @@
             ]
           ],
           "overlay": true,
-          "width": 0.7,
+          "slotWidth": 0.7,
           "display": "error",
           "color": "#000"
         }
@@ -1405,7 +1405,7 @@
             },
             {
               "color": "#009e73",
-              "width": 5
+              "strokeWidth": 5
             }
           ]
         }

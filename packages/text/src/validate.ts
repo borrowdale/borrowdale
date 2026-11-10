@@ -1,4 +1,4 @@
-import { show } from '@borrowdale/core/show';
+import { isPaint, notXml, ownOptions, PAINT_RULE, show } from '@borrowdale/core/internal';
 import { excalifont } from './fonts/excalifont.js';
 import {
   TEXT_ANCHORS,
@@ -6,8 +6,8 @@ import {
   type Font,
   type FontFile,
   type FontFiles,
-  type LayoutOptions,
-  type MeasureOptions,
+  type LayoutTextOptions,
+  type MeasureTextOptions,
   type TextAnchor,
   type TextBaseline,
   type TextStyle,
@@ -21,8 +21,8 @@ const MAX_ROTATE = 360;
 const DEFAULT_FONT_SIZE = 16;
 
 // The complete lists of accepted options: anything else is a typo.
-const MEASURE_KEYS: Record<keyof MeasureOptions, true> = { fontSize: true, font: true };
-const LAYOUT_KEYS: Record<keyof LayoutOptions, true> = {
+const MEASURE_KEYS: Record<keyof MeasureTextOptions, true> = { fontSize: true, font: true };
+const LAYOUT_KEYS: Record<keyof LayoutTextOptions, true> = {
   ...MEASURE_KEYS,
   x: true,
   y: true,
@@ -60,10 +60,6 @@ export const IGNORABLE = /(?![\u180F\u3164\uFFA0\u{1BCA0}-\u{1BCA3}])\p{Default_
 // cannot follow: variation selectors 15 and 16 switch a character between text and emoji
 // presentation, and bidirectional controls reorder the text and mirror brackets.
 const PRESENTATION_CONTROLS = /[\uFE0E\uFE0F\u061C\u200E\u200F\u202A-\u202E\u2066-\u2069]/g;
-// Characters an XML document cannot contain, so SVG markup holding them does not parse: C0 controls
-// other than tab and the line breaks above, U+FFFE, U+FFFF and unpaired surrogates. With the `u`
-// flag a surrogate pair is one character, so the surrogate range matches only unpaired halves.
-const NOT_XML = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF\uD800-\uDFFF]/u;
 // A font that leaves out its files is one file, serving every code point it covers.
 const ONE_FILE: CheckedFont['files'] = [{ ranges: [[0, 0x10ffff]] }];
 
@@ -86,23 +82,21 @@ export interface CheckedLayout extends CheckedMeasure {
   rotate: number;
 }
 
-export function checkMeasure(text: unknown, options: MeasureOptions = {}): CheckedMeasure {
-  checkKeys(options, MEASURE_KEYS);
-  return measureInput(text, ownCopy(options));
+export function checkMeasure(text: unknown, options: MeasureTextOptions = {}): CheckedMeasure {
+  return measureInput(text, ownOptions(options, MEASURE_KEYS));
 }
 
 /** The text and options of `fitText`, and its width: from 0 to as wide as a layout may be placed. */
 export function checkFit(
   text: unknown,
   maxWidth: unknown,
-  options: MeasureOptions = {},
+  options: MeasureTextOptions = {},
 ): CheckedMeasure & { maxWidth: number } {
   return { ...checkMeasure(text, options), maxWidth: checkNumber('maxWidth', maxWidth, 0, 2 * MAX_COORDINATE) };
 }
 
-export function checkLayout(text: unknown, given: LayoutOptions): CheckedLayout {
-  checkKeys(given, LAYOUT_KEYS);
-  const options = ownCopy(given);
+export function checkLayout(text: unknown, given: LayoutTextOptions): CheckedLayout {
+  const options = ownOptions(given, LAYOUT_KEYS);
   const { anchor = 'start', baseline = 'alphabetic', rotate = 0 } = options;
   if (!ANCHORS.includes(anchor)) {
     throw new Error(`Unknown anchor: ${show(anchor)}`);
@@ -121,12 +115,12 @@ export function checkLayout(text: unknown, given: LayoutOptions): CheckedLayout 
 }
 
 export function checkStyle(style: TextStyle = {}): { fill: string } {
-  checkKeys(style, STYLE_KEYS);
-  const { fill = '#000' } = ownCopy(style);
-  if (typeof fill !== 'string') {
-    throw new Error(`fill must be a string, got ${show(fill)}`);
+  const { fill = '#000' } = ownOptions(style, STYLE_KEYS);
+  // Not any CSS paint: a `url(…)` to another file or a `var(…)` would have the page fetch the file or
+  // paint with its own values.
+  if (!isPaint(fill)) {
+    throw new Error(`fill must be ${PAINT_RULE}, got ${show(fill)}`);
   }
-  checkXml('fill', fill);
   return { fill };
 }
 
@@ -145,20 +139,46 @@ export function advanceOf(font: Font, codePoint: number): number | undefined {
   return advance;
 }
 
-export function checkFontFiles(fontFiles: FontFiles): void {
-  if (typeof fontFiles !== 'object' || fontFiles === null || !Array.isArray(fontFiles.files)) {
+/** A checked file of a font: its bytes and its own copy of the ranges it serves. */
+export interface CheckedFontFile {
+  woff2: string;
+  ranges: readonly [first: number, last: number][];
+}
+
+/** Checked font files, each field read once, as the only copy callers then read. */
+export interface CheckedFontFiles {
+  family: string;
+  files: readonly CheckedFontFile[];
+}
+
+/**
+ * The font files, checked and copied. Each field is read once, by index rather than through an
+ * iterator, so a getter cannot pass these checks and then return another value, such as markup, to
+ * the CSS or the faces built from the copy.
+ */
+export function checkFontFiles(fontFiles: FontFiles): CheckedFontFiles {
+  const given: unknown = fontFiles;
+  const family: unknown = typeof given === 'object' && given !== null ? (given as FontFiles).family : undefined;
+  const files: unknown = typeof given === 'object' && given !== null ? (given as FontFiles).files : undefined;
+  if (!Array.isArray(files)) {
     throw new Error('Invalid font files: expected { family, files }');
   }
-  checkFamily(fontFiles.family, 'font files');
-  if (fontFiles.files.length === 0) {
+  checkFamily(family, 'font files');
+  const count = files.length;
+  if (count === 0) {
     throw new Error('Invalid font files: files must be a list of one or more files');
   }
-  for (const [index, file] of fontFiles.files.entries()) {
-    if (typeof file?.woff2 !== 'string' || !BASE64.test(file.woff2) || file.woff2.length % 4 !== 0) {
+  const checked: CheckedFontFile[] = [];
+  for (let index = 0; index < count; index += 1) {
+    const file: unknown = files[index];
+    const fields = typeof file === 'object' && file !== null ? (file as Partial<FontFile>) : {};
+    const woff2: unknown = fields.woff2;
+    if (typeof woff2 !== 'string' || !BASE64.test(woff2) || woff2.length % 4 !== 0) {
       throw new Error(`Invalid font files: files[${index}].woff2 must be base64`);
     }
-    checkRanges('font files', index, file.ranges);
+    checked.push({ woff2, ranges: checkRanges('font files', index, fields.ranges) });
   }
+  return { family: family as string, files: checked };
 }
 
 /** The text a caller asked to draw, checked, then changed into exactly what the browser draws. */
@@ -180,9 +200,9 @@ export function checkText(text: unknown): string {
 }
 
 function checkXml(name: string, value: string): void {
-  const notXml = NOT_XML.exec(value);
-  if (notXml) {
-    throw new Error(`${name} contains ${codePointName(notXml[0].charCodeAt(0))}, which SVG cannot hold`);
+  const problem = notXml(value);
+  if (problem !== undefined) {
+    throw new Error(`${name} contains ${problem}, which SVG cannot hold`);
   }
 }
 
@@ -206,7 +226,7 @@ function checkLength(text: string): void {
   }
 }
 
-function measureInput(text: unknown, options: MeasureOptions): CheckedMeasure {
+function measureInput(text: unknown, options: MeasureTextOptions): CheckedMeasure {
   const { fontSize = DEFAULT_FONT_SIZE, font = excalifont } = options;
   if (typeof fontSize !== 'number' || !(fontSize > 0 && fontSize <= MAX_FONT_SIZE)) {
     throw new Error(`fontSize must be a number greater than 0 and at most ${MAX_FONT_SIZE}, got ${show(fontSize)}`);
@@ -238,18 +258,18 @@ function checkFiles(files: unknown): CheckedFont['files'] {
     return ONE_FILE;
   }
   // A font with no file would draw nothing.
-  if (!Array.isArray(files) || files.length === 0) {
+  const count = Array.isArray(files) ? files.length : 0;
+  if (count === 0) {
     throw new Error(`Invalid font: files must be a list of one or more files, got ${show(files)}`);
   }
-  // Array.from rather than map, which skips the holes of a sparse list: a hole is checked, and fails.
-  return Array.from(files, (file: { ranges?: unknown } | null | undefined, index) => ({
-    ranges: checkRanges('font', index, file?.ranges),
-  }));
+  // Each entry is read once, by index, as checkFontFiles reads them; a hole is checked, and fails.
+  const list = files as readonly ({ ranges?: unknown } | null | undefined)[];
+  return Array.from({ length: count }, (_, index) => ({ ranges: checkRanges('font', index, list[index]?.ranges) }));
 }
 
 // The same rule for a font's files and the woff2 files that hold them. Returns a copy of the
 // ranges, which is what measuring reads: the pairs a font was checked with are the pairs it is
-// measured with. Font files are trusted, and their callers read the ranges again.
+// measured with. Font files are copied the same way, and their callers read only the copy.
 // Each entry is read once, by index, and checked as it is copied, stopping at the first that is not
 // a pair: a sparse list or pair can claim billions of entries, and copying it before checking it
 // would exhaust memory. An empty list would make the face claim every code point.
@@ -278,23 +298,6 @@ function pairOf(range: unknown): unknown {
 function checkFamily(family: unknown, owner: string): void {
   if (typeof family !== 'string' || !FAMILY.test(family)) {
     throw new Error(`Invalid ${owner}: ${FAMILY_RULE}, got ${show(family)}`);
-  }
-}
-
-// Only what checkKeys saw: own properties, in an object with no prototype, so neither an inherited
-// option nor a polluted Object.prototype can supply a value.
-function ownCopy<T extends object>(options: T): T {
-  return Object.assign(Object.create(null) as T, options);
-}
-
-function checkKeys(options: unknown, keys: object): void {
-  if (typeof options !== 'object' || options === null) {
-    throw new Error(`Options must be an object, got ${show(options)}`);
-  }
-  for (const [key, value] of Object.entries(options)) {
-    if (value !== undefined && !Object.hasOwn(keys, key)) {
-      throw new Error(`Unknown option: ${show(key)}`);
-    }
   }
 }
 

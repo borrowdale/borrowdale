@@ -19,14 +19,16 @@ export interface SvgResources {
 export function svgResources(
   nodes: readonly ChartNode[], images: ReadonlyMap<string, ChartImage>, options: ChartRenderOptions, parent?: Element,
 ): SvgResources {
-  const automatic = parent !== undefined && options.idPrefix === undefined;
+  // Read once: the loop below must not see a prefix that changes between passes.
+  const { idPrefix } = options;
+  const automatic = parent !== undefined && idPrefix === undefined;
   let index = automatic ? nextPrefix : 0n;
   const root = parent?.getRootNode();
   const occupied = (id: string) => parent?.ownerDocument.getElementById(id)
     || (root?.nodeType === 1 && (root as Element).id === id)
     || (root && 'querySelector' in root && (root as ParentNode).querySelector(`[id="${id}"]`));
   for (;;) {
-    const prefix = options.idPrefix ?? (index === 0n ? 'chart' : `chart-${index}`);
+    const prefix = idPrefix ?? (index === 0n ? 'chart' : `chart-${index}`);
     const result = { gradients: gradientIds(nodes, prefix),
       images: new Map([...images.keys()].map((name, i) => [name, `${prefix}-image-${i}`])) };
     const ids = [...result.gradients.values(), ...result.images.values()];

@@ -1,6 +1,6 @@
 import { cos, log, MAX_ANGLE, sin } from '@borrowdale/core/math';
 import { boolean, fail, list, MAX_VALUE, number, oneOf, text, type Fields } from '../read.js';
-import { MARKER_SYMBOLS, type MarkerSymbol } from '../types.js';
+import { SYMBOL_NAMES, type SymbolName } from '../types.js';
 import { binGrid } from './bin-grid.js';
 import {
   average,
@@ -224,7 +224,7 @@ function dotGroups(
   at: number,
   width: number,
   mirrored: boolean,
-  symbol: MarkerSymbol,
+  symbol: SymbolName,
 ): Glyph[] {
   const marks: Glyph[] = [];
   let group: ReturnType<typeof binGrid> | undefined;
@@ -297,7 +297,7 @@ export function readDistribution(r: Fields, path: string, reserve: (count: numbe
   const bandwidth = r.optional('bandwidth', number(Number.MIN_VALUE, MAX_VALUE));
   const mirrored = r.optional('mirrored', boolean) ?? true;
   const sizes = r.optional('sizes', list(data.length, data.length, number(1, 40)));
-  const symbol = r.optional('symbol', oneOf(MARKER_SYMBOLS));
+  const symbol = r.optional('symbol', oneOf(SYMBOL_NAMES));
   const width = r.optional('binWidth', number(Number.MIN_VALUE, MAX_VALUE)) ?? 1;
   const stack = r.optional('stack', text());
   let marks: Glyph[];

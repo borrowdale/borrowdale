@@ -137,7 +137,7 @@ describe('gallery coverage and actual rendering', () => {
     );
     expect([...new Set(examples.filter((x) => x.category === 'patterns').map((x) => x.tag))].sort()).toEqual([
       'circles',
-      'crosshatch',
+      'cross-hatch',
       'lines',
     ]);
     expect(categories.every((c) => examples.some((x) => x.category === c))).toBe(true);
