@@ -152,7 +152,7 @@ const spec = {
 | `density`, `ridge`, `normal` | Gaussian KDE, a ridge normalised to unit peak at its group position, or a normal curve fitted with the sample mean and sample standard deviation. KDE accepts a positive `bandwidth`. Density series with a shared `stack` name accumulate in order. |
 | `swarm` | Places observation markers side by side where they would overlap. Markers are 7 units across; `sizes` gives one diameter per observation, 1 to 40 units, and `symbol` a geometric marker. Its group axis keeps half a unit each side of the position for the markers, and a `min` or `max` fixed on that axis must leave that room in. A swarm too crowded for it spreads further, up to the edge of the plot, over any neighbour, and one that does not fit there is an error. Use `mirrored: false` for a one-sided swarm, which grows as a one-sided dot plot stacks, with the room on that side. |
 | `dotPlot`, `isotype` | Stack dots or symbols by value. Each group starts at the smallest remaining observation and spans `binWidth` (default 1). Stacks alternate about their position; `mirrored: false` stacks them to one side: rightward, or upward when horizontal. An isotype accepts a marker `symbol`, defaulting to a star. Dots in a stack sit one unit of the group axis apart, at the value that starts their group, so leave more room between positions than the widest stack. |
-| `stemLeaf` | Nonnegative integer samples. Each row gives the tens stem and ordered units digits, up to 450 leaves per stem. Every stem from the lowest to the highest has a row, empty ones included, up to 100 stems. Rows are written at x = 0, the lowest stem at y = 0 and each next stem one unit below, so the display is usually drawn with both axes hidden. |
+| `stemLeaf` | Nonnegative integer samples. Each row gives the tens stem and ordered units digits, up to 450 leaves per stem. Every stem from the lowest to the highest has a row, empty ones included, up to 100 stems. Each row starts at the plot's left edge, the lowest stem at y = 0 and each next stem one unit below, so the display is usually drawn with both axes hidden. A row wider than the plot is an error. The rows count as x = 0 on the x axis, so a fixed x range must include 0. |
 
 Use a different numeric `position` for each grouped box, violin, raincloud, ridge, swarm, dot plot
 or isotype.
@@ -184,7 +184,7 @@ closing prices directly.
 
 | `display` | Calculation and options |
 |---|---|
-| `candlestick`, `heikinAshi`, `ohlc`, `hlc` | Candle bodies span open to close and wicks reach high and low. OHLC uses side ticks and HLC omits the opening tick. Heikin-Ashi derives each open from the previous transformed bar. Bars and candles take the series colour: rising candles are outlined and falling candles filled, or with `hollow: false` rising candles are hatched. `flags`, up to 100, label sessions by `index` and a `label` of at most 100 characters. |
+| `candlestick`, `heikinAshi`, `ohlc`, `hlc` | Candle bodies span open to close and wicks reach high and low. OHLC uses side ticks and HLC omits the opening tick. Heikin-Ashi derives each open from the previous transformed bar. Bars and candles take the series colour: rising candles are outlined and falling candles filled, or with `hollow: false` rising candles are hatched. `flags`, up to 100, label sessions by `index` and a `label` of at most 100 characters. A flag is centred on the high of its session's bar and, like a data label, kept inside the plot, cut short if it is wider. |
 | `renko`, `pointFigure` | Close-based price boxes start at the first close. Supply positive `boxSize`. Renko reverses after two boxes. Point-and-figure starts a new column after `reversal` boxes, 1 to 100 (default 3). Up to 4,000 boxes per series. |
 | `sma`, `ema`, `bollinger` | Use a trailing `period` of 1 to 1,000 sessions (default 20). EMA starts at the first full-window mean. Bollinger bands show two population standard deviations around the rolling mean. |
 | `macd`, `rsi` | MACD uses 12- and 26-session EMAs with a dashed 9-session signal line and difference histogram. Wilder RSI uses `period` changes (default 14) and reports 50 when the smoothed gain and loss are both zero. |
@@ -227,11 +227,12 @@ engines; set `thousands` and `decimal` to write them for another language. Bars,
 histograms always stand on zero; range areas, lines, points and the other statistical series do not
 have to.
 
-Points, bubbles and the dots and markers of statistical series are centred on their values, so a
-chart with them widens each end of `x` and `y`
-by the radius of its largest mark, keeping the same ticks, and a point at the end of the data stays
-on the plot. An end fixed with `min` or `max` is not widened: the plot keeps that room outside it
-instead, so a mark on the fixed end may cross the axis line but stays on the chart.
+Points and bubbles are centred on their values, as are the dots, markers and point-and-figure X
+and O of statistical series, so a chart with them widens each end of `x` and `y` by half the size of
+its largest mark, keeping the same ticks, and a mark at the end of the data stays on the plot at its
+value. Stem-and-leaf rows widen each end by half a line. An end fixed with `min` or `max` is not
+widened: the plot keeps that room outside it instead, so a mark on the fixed end may cross the axis
+line but stays on the chart.
 
 A band axis' labels are centred on their bands. Where the first or last one shown would reach past
 the edge of the chart, the plot is narrowed until it does not; a lone label wider than the chart
