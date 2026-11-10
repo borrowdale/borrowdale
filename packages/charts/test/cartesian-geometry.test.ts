@@ -32,6 +32,18 @@ const line = (n: number, extra: object): ChartSpec => ({ width: 600, height: 400
   axes: { x: { type: 'linear' }, y: { type: 'linear' } },
   series: [{ type: 'xyLine', name: 'G', data: Array.from({ length: n }, (_, i) => [i, i % 7] as const), ...extra }] } as ChartSpec);
 const layingOut = (spec: ChartSpec) => () => layoutChart(spec);
+// Point-and-figure series of 4,000 boxes each, the most a series may have: one text mark per box.
+const pointFigures = (n: number): ChartSpec => ({ width: 600, height: 400, legend: 'none',
+  axes: { x: { type: 'linear' }, y: { type: 'linear' } },
+  series: Array.from({ length: n }, (_, i) => ({ type: 'market', display: 'pointFigure', name: `P${i}`, boxSize: 1, data: [0, 4000] })) } as ChartSpec);
+const TOO_COMPLEX = 'Drawing too complex (more than 10000 data labels, text marks and images)';
+// 8,000 X marks, then `boxes` more, then 100 stem-and-leaf rows: 10,000 placements with 1,900 boxes.
+const withRows = (boxes: number): ChartSpec => {
+  const chart = pointFigures(2);
+  return { ...chart, series: [...chart.series,
+    { type: 'market', display: 'pointFigure', name: 'P', boxSize: 1, data: [0, boxes] },
+    { type: 'distribution', display: 'stemLeaf', name: 'T', data: Array.from({ length: 100 }, (_, i) => i * 10) }] } as ChartSpec;
+};
 // Within every limit on the spec: 10,000 tooltips of about 250 characters, 2.5 million in all, but
 // nearly every one a quote, which escaping makes six. Its bars have no length, so they draw no strokes.
 // Within every limit on the spec: 100,000 segments, each drawn as its own path repeating the style's
@@ -121,13 +133,21 @@ describe('data labels and image markers', () => {
   });
 
   it('rejects more than 10,000 data labels', () => {
-    expect(layingOut(line(10_001, { dataLabels: true }))).toThrow(
-      'Drawing too complex (more than 10000 data labels and images)');
+    expect(layingOut(line(10_001, { dataLabels: true }))).toThrow(TOO_COMPLEX);
   });
 
   it('counts image markers with data labels', () => {
-    expect(layingOut(line(5_001, { dataLabels: true, symbol: { image: 'dot' } }))).toThrow(
-      'Drawing too complex (more than 10000 data labels and images)');
+    expect(layingOut(line(5_001, { dataLabels: true, symbol: { image: 'dot' } }))).toThrow(TOO_COMPLEX);
+  });
+
+  it('counts the text marks of statistical series toward the cap on data labels', () => {
+    expect(layingOut(pointFigures(2))).not.toThrow();
+    expect(layingOut(pointFigures(3))).toThrow(TOO_COMPLEX);
+  });
+
+  it('counts stem-and-leaf rows toward the cap as well', () => {
+    expect(layingOut(withRows(1_900))).not.toThrow();
+    expect(layingOut(withRows(1_901))).toThrow(TOO_COMPLEX);
   });
 
   it('rejects more than 8,000,000 characters of colours and dashes repeated by its paths', () => {

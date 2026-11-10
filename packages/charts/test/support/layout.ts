@@ -1,8 +1,14 @@
 // Reading a chart layout back in tests: its marks, texts and the points its shapes pass through.
 import { layoutChart, toSvgChart, type ChartLayout, type ChartSpec } from '@borrowdale/charts';
+import type { Point } from '@borrowdale/core';
 import type { ChartNode } from '../../src/types.js';
 import { textBounds } from '@borrowdale/text';
 import { PAD } from '../../src/frame.js';
+
+/** Every drawn node, those inside marks included, one level down. */
+function drawnNodes(layout: ChartLayout): ChartNode[] {
+  return layout.nodes.flatMap((node) => (node.kind === 'mark' ? node.nodes : [node]));
+}
 
 /** The mark whose tooltip is `title`. */
 export function mark(layout: ChartLayout, title: string): ChartNode {
@@ -24,7 +30,7 @@ export function shapesOf(layout: ChartLayout, title: string): ChartNode[] {
  * each curve, not a curve's control points, which lie off the curve.
  */
 export function pointsOnCurves(layout: ChartLayout): [number, number][] {
-  const ds = layout.nodes.flatMap((node) => (node.kind === 'mark' ? node.nodes : [node]));
+  const ds = drawnNodes(layout);
   const paths = ds.flatMap((node) => (node.kind === 'sketch' ? node.sketch.paths.map((path) => path.d) : []));
   const onCurve = /(?:[ML]|C[^,]*,[^,]*,)\s*(-?[\d.]+)[ ,](-?[\d.]+)/g;
   return paths.flatMap((d) =>
@@ -40,7 +46,7 @@ export function pointsOutside(layout: ChartLayout, margin = 0): number {
 
 /** How many labels reach outside the chart's padding. */
 export function labelsOutside(layout: ChartLayout): number {
-  const drawn = layout.nodes.flatMap((node) => (node.kind === 'mark' ? node.nodes : [node]));
+  const drawn = drawnNodes(layout);
   const labels = drawn.flatMap((node) => (node.kind === 'text' ? [textBounds(node.text)] : []));
   const [low, right, bottom] = [PAD - 0.01, layout.width - PAD + 0.01, layout.height - PAD + 0.01];
   return labels.filter((box) => box.x < low || box.y < low || box.x + box.width > right || box.y + box.height > bottom)
@@ -53,7 +59,7 @@ export function titles(layout: ChartLayout): string[] {
 
 /** Each pair of drawn texts, in marks or not, whose boxes overlap, as "first / second". */
 export function overlappingTexts(layout: ChartLayout): string[] {
-  const drawn = layout.nodes.flatMap((node) => (node.kind === 'mark' ? node.nodes : [node]));
+  const drawn = drawnNodes(layout);
   const boxes = drawn.flatMap((node) => (node.kind === 'text' ? [{ text: node.text.text, ...textBounds(node.text) }] : []));
   return boxes.flatMap((a, i) =>
     boxes.slice(i + 1).flatMap((b) =>
@@ -64,6 +70,31 @@ export function overlappingTexts(layout: ChartLayout): string[] {
 
 export function texts(layout: ChartLayout): string[] {
   return layout.nodes.flatMap((node) => (node.kind === 'text' ? [node.text.text] : []));
+}
+
+/** A drawn text: the point it was placed at, and the box it covers there. */
+export interface PlacedText {
+  text: string;
+  at: Point;
+  box: ReturnType<typeof textBounds>;
+}
+
+/** Each drawn text, in marks or not. */
+export function placedTexts(layout: ChartLayout): PlacedText[] {
+  const drawn = drawnNodes(layout);
+  return drawn.flatMap((node) =>
+    node.kind === 'text' ? [{ text: node.text.text, at: node.text.pivot, box: textBounds(node.text) }] : [],
+  );
+}
+
+/** Each drawn `text`, in drawing order. */
+export function placedAs(layout: ChartLayout, text: string): PlacedText[] {
+  return placedTexts(layout).filter((placed) => placed.text === text);
+}
+
+/** Where each drawn `text` was placed, in drawing order. */
+export function placesOf(layout: ChartLayout, text: string): Point[] {
+  return placedAs(layout, text).map((placed) => placed.at);
 }
 
 /** Laying a spec out, to be called by `toThrow`. */

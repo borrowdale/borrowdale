@@ -1,3 +1,4 @@
+import statisticalExamples from '../../../apps/examples/statistical-cases.json' with { type: 'json' };
 import { beforeAll, describe, expect, it } from 'vitest';
 import type { ChartLayout, ChartSpec } from '@borrowdale/charts';
 import corpus from './golden/corpus.json' with { type: 'json' };
@@ -12,7 +13,7 @@ type Case = { name: string; spec: ChartSpec };
 type Golden = { svg: string; missing: string[] };
 type Charts = { layoutChart: (spec: ChartSpec) => ChartLayout; toSvgChart: (layout: ChartLayout) => string };
 
-const cases = corpus as unknown as Case[];
+const cases = [...corpus, ...statisticalExamples] as unknown as Case[];
 const expected = goldens as unknown as Record<string, Golden>;
 
 describe.each(ENGINES)('%s parity', (engine) => {

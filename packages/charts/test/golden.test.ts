@@ -5,11 +5,12 @@ import { layoutChart, toSvgChart, type ChartSpec } from '@borrowdale/charts';
 import corpus from './golden/corpus.json' with { type: 'json' };
 import goldens from './golden/goldens.json' with { type: 'json' };
 import cartesianExamples from '../../../apps/examples/cartesian-cases.json' with { type: 'json' };
+import statisticalExamples from '../../../apps/examples/statistical-cases.json' with { type: 'json' };
 import timeExamples from '../../../apps/examples/time-cases.json' with { type: 'json' };
 
 // Recorded from this package with `npm run goldens charts`, and reviewed, after each deliberate
 // change to what a chart looks like.
-const cases = corpus as unknown as { name: string; spec: ChartSpec }[];
+const cases = [...corpus, ...statisticalExamples] as unknown as { name: string; spec: ChartSpec }[];
 const expected = goldens as unknown as Record<string, { svg: string; missing: string[] }>;
 const names = cases.map((entry) => entry.name);
 

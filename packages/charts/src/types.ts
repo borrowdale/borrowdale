@@ -1,5 +1,6 @@
 import type { Seed, Sketch, SketchStyle } from '@borrowdale/core';
 import type { Font, TextLayout } from '@borrowdale/text';
+import type { DistributionSeries, HistogramSeries, MarketSeries, RelationshipSeries } from './statistics/types.js';
 
 /**
  * A chart, as plain data that can come from JSON. Its series' type picks its coordinate system, and
@@ -289,7 +290,7 @@ export type SymbolName = (typeof SYMBOL_NAMES)[number];
 /** A geometric symbol or the name of a trusted image supplied to the renderer. */
 export type Marker = SymbolName | { image: string };
 
-interface SeriesBase {
+export interface SeriesBase {
   /**
    * Unique in the chart, at most 100 characters. Names the series in the legend and in tooltips.
    */
@@ -627,6 +628,10 @@ export interface GaugeSeries extends SeriesBase {
 
 export type Series =
   | BarSeries
+  | DistributionSeries
+  | RelationshipSeries
+  | MarketSeries
+  | HistogramSeries
   | LineSeries
   | AreaSeries
   | RangeAreaSeries

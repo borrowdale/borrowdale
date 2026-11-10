@@ -1,3 +1,9 @@
+import { stackStatistics } from './statistics/stacks.js';
+import { readHistogram } from './statistics/histogram.js';
+import { displayKeys, DISTRIBUTIONS, MARKET_DISPLAYS, RELATIONSHIPS } from './statistics/types.js';
+import { readDistribution } from './statistics/distribution.js';
+import { readRelationship } from './statistics/relationship.js';
+import { readMarket } from './statistics/market.js';
 import { checkAnnotations, type CheckedAnnotation } from './annotations.js';
 import { sketch, assertDrawable, type Seed, type SketchStyle } from '@borrowdale/core';
 import { COLOR_RULE, isColor, MAX_PAINT, ownDash } from '@borrowdale/core/internal';
@@ -31,11 +37,13 @@ import {
   fields,
   integer,
   list,
+  MAX_POINTS,
   MAX_VALUE,
   nullable,
   number,
   oneOf,
   probe,
+  SERIES_FIELDS,
   shortText,
   show,
   text,
@@ -50,7 +58,6 @@ import { CURVES, LEGEND_POSITIONS, SYMBOL_NAMES, type ChartSpec, type Marker, ty
 // by one Budget for the whole chart (see drawing.ts).
 const MAX_SIZE = 10_000;
 const MAX_SERIES = 100;
-const MAX_POINTS = 100_000;
 const MAX_FONT_SIZE = 200;
 // Every mark's seed starts with the chart seed, and hashing it is work the budget does not see.
 const MAX_SEED = 100;
@@ -126,33 +133,55 @@ interface PolarNeeds {
 }
 
 /**
- * What each series type needs: its coordinate system, whether it is drawn per category of a band
- * axis, whether it stacks, which polar axes it needs, its keys beyond the common ones, and how its own
- * fields are read. `satisfies` makes a new type fail to compile until it is listed, and
- * `CheckedSeries` is derived from it.
+ * The axes a Cartesian series is drawn on: one band axis, two continuous axes of any kind, or two
+ * linear axes, for the statistical series whose geometry is computed in data units.
+ */
+type CartesianAxes = 'band' | 'continuous' | 'linear';
+
+const AXES_NEEDED: Record<CartesianAxes, string> = {
+  band: 'one band axis',
+  continuous: 'both axes continuous: linear, time, log or sqrt',
+  linear: 'linear x and y axes',
+};
+
+interface RuleBase {
+  keys: readonly string[];
+  read: (r: Fields, path: string, reserve: ReservePoints) => object;
+}
+
+type Rule =
+  | (RuleBase & { system: 'cartesian'; axes: CartesianAxes })
+  | (RuleBase & { system: 'polar'; band: boolean; polar: PolarNeeds })
+  | (RuleBase & { system: Exclude<System, 'cartesian' | 'polar'> });
+
+/**
+ * What each series type needs: its coordinate system, the axes a Cartesian series is drawn on, or
+ * whether a polar series is drawn per category of a band axis and which polar axes it needs, its
+ * keys beyond the common ones, and how its own fields are read. `satisfies` makes a new type fail to
+ * compile until it is listed, and `CheckedSeries` is derived from it.
  */
 const SERIES_RULES = {
   bar: {
     system: 'cartesian',
-    band: true,
+    axes: 'band',
     keys: ['shape', 'dataLabels', 'axis', 'data', 'stack'],
     read: (r: Fields, _path: string, reserve: ReservePoints) => ({ shape: r.optional('shape', oneOf(['rectangle', 'rounded', 'pyramid'] as const)) ?? 'rectangle', axis: readAxis(r), stack: readStack(r), data: readValues(r, reserve) }),
   },
   line: {
     system: 'cartesian',
-    band: true,
+    axes: 'band',
     keys: ['symbol', 'dataLabels', 'axis', 'data', 'curve', 'dash'],
     read: (r: Fields, _path: string, reserve: ReservePoints) => ({ symbol: r.optional('symbol', checkMarker), axis: readAxis(r), curve: readCurve(r), dash: readDash(r), data: readValues(r, reserve) }),
   },
   area: {
     system: 'cartesian',
-    band: true,
+    axes: 'band',
     keys: ['axis', 'data', 'stack', 'curve'],
     read: (r: Fields, _path: string, reserve: ReservePoints) => ({ axis: readAxis(r), stack: readStack(r), curve: readCurve(r), data: readValues(r, reserve) }),
   },
   rangeArea: {
     system: 'cartesian',
-    band: true,
+    axes: 'band',
     keys: ['axis', 'data', 'curve'],
     read: (r: Fields, _path: string, reserve: ReservePoints) => ({
       axis: readAxis(r),
@@ -162,7 +191,7 @@ const SERIES_RULES = {
   },
   interval: {
     system: 'cartesian',
-    band: true,
+    axes: 'band',
     keys: ['shape', 'dataLabels', 'axis', 'data', 'display', 'slotWidth', 'overlay', 'fromSymbol', 'toSymbol'],
     read: (r: Fields, _path: string, reserve: ReservePoints) => ({
       shape: r.optional('shape', oneOf(['rectangle', 'rounded', 'pyramid'] as const)) ?? 'rectangle', axis: readAxis(r),
@@ -176,7 +205,7 @@ const SERIES_RULES = {
   },
   xRange: {
     system: 'cartesian',
-    band: true,
+    axes: 'band',
     keys: ['dataLabels', 'data', 'shape', 'slotWidth', 'overlay'],
     read: (r: Fields, _path: string, reserve: ReservePoints) => ({
       data: r.required('data', list(0, MAX_POINTS, checkXRangeItem, reserve)),
@@ -185,8 +214,12 @@ const SERIES_RULES = {
       overlay: r.optional('overlay', boolean) ?? false,
     }),
   },
+  distribution: { system: 'cartesian', axes: 'linear', keys: displayKeys(DISTRIBUTIONS), read: readDistribution },
+  relationship: { system: 'cartesian', axes: 'linear', keys: displayKeys(RELATIONSHIPS), read: readRelationship },
+  market: { system: 'cartesian', axes: 'linear', keys: displayKeys(MARKET_DISPLAYS), read: readMarket },
+  histogram: { system: 'cartesian', axes: 'linear', keys: ['stack', 'edges', 'data', 'frequency', 'cumulative'], read: readHistogram },
   xyLine: {
-    system: 'cartesian', band: false,
+    system: 'cartesian', axes: 'continuous',
     keys: ['dataLabels', 'data', 'symbol', 'dash', 'segments', 'widths', 'gradient'],
     read: (r: Fields, path: string, reserve: ReservePoints) => {
       const data = r.required('data', list(0, MAX_POINTS, nullable(coordinates(['x', 'y'])), reserve));
@@ -213,7 +246,7 @@ const SERIES_RULES = {
   },
   xyArea: {
     system: 'cartesian',
-    band: false,
+    axes: 'continuous',
     keys: ['data', 'difference'],
     read: (r: Fields, path: string, reserve: ReservePoints) => {
       const difference = r.optional('difference', (p, raw) => {
@@ -227,19 +260,18 @@ const SERIES_RULES = {
   },
   scatter: {
     system: 'cartesian',
-    band: false,
+    axes: 'continuous',
     keys: ['dataLabels', 'data', 'symbol'],
     read: (r: Fields, _path: string, reserve: ReservePoints) => ({ symbol: readSymbol(r), data: readPoints(['x', 'y'])(r, reserve) }),
   },
   bubble: {
     system: 'cartesian',
-    band: false,
+    axes: 'continuous',
     keys: ['dataLabels', 'data', 'symbol'],
     read: (r: Fields, _path: string, reserve: ReservePoints) => ({ symbol: readSymbol(r), data: r.required('data', list(0, MAX_POINTS, checkBubble, reserve)) }),
   },
   timeline: {
     system: 'timeline',
-    band: false,
     keys: ['dataLabels', 'data'],
     read: (r: Fields, _path: string, reserve: ReservePoints) => ({
       data: r.required('data', list(0, MAX_POINTS, checkTimelineEvent, reserve)),
@@ -247,7 +279,6 @@ const SERIES_RULES = {
   },
   pie: {
     system: 'pie',
-    band: false,
     keys: ['dataLabels', 'data', 'innerRadius', 'outerRadius', 'startAngle', 'endAngle', 'padAngle', 'cornerRadius'],
     read: checkPieSeries,
   },
@@ -297,7 +328,6 @@ const SERIES_RULES = {
   },
   gauge: {
     system: 'gauge',
-    band: false,
     keys: ['value', 'display', 'needleLength'],
     read: (r: Fields) => ({
       value: r.required('value', anyValue),
@@ -305,16 +335,7 @@ const SERIES_RULES = {
       needleLength: r.optional('needleLength', number(MIN_NEEDLE, 1)) ?? DEFAULT_NEEDLE,
     }),
   },
-} as const satisfies Record<
-  SeriesType,
-  {
-    system: System;
-    band: boolean;
-    polar?: PolarNeeds;
-    keys: readonly string[];
-    read: (r: Fields, path: string, reserve: ReservePoints) => object;
-  }
->;
+} as const satisfies Record<SeriesType, Rule>;
 
 type Rules = typeof SERIES_RULES;
 
@@ -325,7 +346,10 @@ export function isStacking<S extends CheckedSeries>(entry: S): entry is Extract<
 
 // The types whose series stack, which are the ones a percent axis can show.
 const STACKING = (Object.keys(SERIES_RULES) as SeriesType[])
-  .filter((type) => SERIES_RULES[type].system === 'cartesian' && SERIES_RULES[type].keys.some((key) => key === 'stack'))
+  .filter((type) => {
+    const rule: Rule = SERIES_RULES[type];
+    return rule.system === 'cartesian' && rule.axes === 'band' && rule.keys.includes('stack');
+  })
   .join(', ');
 
 /** The fields every series has, checked. */
@@ -452,7 +476,7 @@ export function checkChart(spec: ChartSpec, font: Font = excalifont): CheckedCha
   if (system !== 'cartesian' && r.has('annotations')) fail('annotations', 'needs a Cartesian chart');
   switch (system) {
     case 'cartesian':
-      return checkCartesianChart(r, base, seriesOf(series, 'cartesian'));
+      return checkCartesianChart(r, base, seriesOf(series, 'cartesian'), reserve);
     case 'polar':
       return checkPolarChart(r, base, seriesOf(series, 'polar'));
     case 'pie':
@@ -519,7 +543,7 @@ function checkSeries(path: string, raw: unknown, index: number, reserve: Reserve
   const r = fields(path, raw);
   const type = r.required('type', checkSeriesType);
   const rule = SERIES_RULES[type];
-  r.allow(['type', 'name', 'color', 'style', ...rule.keys]);
+  r.allow([...SERIES_FIELDS, ...rule.keys]);
   const base: CheckedSeriesBase = {
     dataLabels: r.optional('dataLabels', boolean) ?? false,
     index,
@@ -560,6 +584,7 @@ function checkCartesianChart(
   r: Fields,
   base: CheckedChartBase,
   series: SeriesOf<'cartesian'>[],
+  reserve: ReservePoints,
 ): CheckedCartesianChart {
   const axes = r.required('axes', fields);
   axes.allow(['x', 'y', 'y2']);
@@ -576,13 +601,8 @@ function checkCartesianChart(
   // The first area of each stack, by value axis and stack name.
   const stacked = new Map<string, Extract<SeriesOf<'cartesian'>, { type: 'area' }>>();
   for (const entry of series) {
-    const rule = SERIES_RULES[entry.type];
-    if (rule.band && !band) {
-      fail(entry.path, `is ${aSeries(entry.type)}, which needs one band axis`);
-    }
-    if (!rule.band && band) {
-      fail(entry.path, `is ${aSeries(entry.type)}, which needs both axes continuous: linear, time, log or sqrt`);
-    }
+    const { axes } = SERIES_RULES[entry.type];
+    if (!fitsAxes(axes, roles)) fail(entry.path, `is ${aSeries(entry.type)}, which needs ${AXES_NEEDED[axes]}`);
     const onAxis = roles.band && valueAxisOf(entry, roles);
     if (onAxis && onAxis.percent && !isStacking(entry)) {
       const which = `a percent axis, which only stacking series (${STACKING}) can use`;
@@ -610,6 +630,7 @@ function checkCartesianChart(
     }
   }
   resolveValues(series, roles);
+  stackStatistics(series, reserve);
   return { ...base, system: 'cartesian', x, y, y2, band, series, annotations: checkAnnotations(r, { x, y, y2 }, color) };
 }
 
@@ -621,6 +642,8 @@ function checkCartesianChart(
  */
 function resolveValues(series: readonly SeriesOf<'cartesian'>[], roles: AxisRoles): void {
   for (const entry of series) {
+    // Statistical series compute their geometry in linear data units: there is nothing to read.
+    if (inDataUnits(entry)) continue;
     if (entry.type === 'xRange' && roles.band) {
       resolveXRange(entry, readerOn(roles.value), roles.band);
     } else if (entry.type !== 'xRange' && !('axis' in entry) && !roles.band) {
@@ -663,6 +686,20 @@ function rolesOf(x: CheckedAxis, y: CheckedAxis, y2: CheckedLinearAxis | undefin
     fail('axes.y2', 'needs x to be the band axis');
   }
   return y.type === 'band' ? { band: y, value: x, y2: undefined } : { band: undefined, x, y };
+}
+
+/** The types whose geometry is computed in linear data units. */
+type DataUnitType = { [T in keyof Rules]: Rules[T] extends { axes: 'linear' } ? T : never }[keyof Rules];
+
+function inDataUnits(entry: SeriesOf<'cartesian'>): entry is Extract<SeriesOf<'cartesian'>, { type: DataUnitType }> {
+  const rule: Rule = SERIES_RULES[entry.type];
+  return rule.system === 'cartesian' && rule.axes === 'linear';
+}
+
+/** Whether a series that needs `axes` can be drawn on these. */
+function fitsAxes(axes: CartesianAxes, roles: AxisRoles): boolean {
+  if (roles.band) return axes === 'band';
+  return axes === 'continuous' || (axes === 'linear' && roles.x.kind === 'linear' && roles.y.kind === 'linear');
 }
 
 // The axis a series on a band chart is drawn against: y2 when it says so, else the value axis. A

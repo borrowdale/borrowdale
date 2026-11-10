@@ -1,6 +1,7 @@
 // Lays out one chart of each kind with no DOM, writes each as an SVG with its font embedded, and
 // prints each file's SHA-256.
 // Usage: node apps/examples/charts.mjs [seed]
+import statisticalCases from './statistical-cases.json' with { type: 'json' };
 import { createHash } from 'node:crypto';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { layoutChart, toSvgChart } from '@borrowdale/charts';
@@ -223,7 +224,7 @@ const charts = {
 
 const outDir = new URL('./out/', import.meta.url);
 mkdirSync(outDir, { recursive: true });
-for (const [name, spec] of Object.entries(charts)) {
+for (const [name, spec] of [...Object.entries(charts), ...statisticalCases.map(({ name, spec }) => [name, spec])]) {
   const svg = toSvgChart(layoutChart({ ...spec, seed }), { fontFiles: excalifontFiles });
   writeFileSync(new URL(`chart-${name}.svg`, outDir), svg);
   console.log(`${name} ${createHash('sha256').update(svg).digest('hex')}`);

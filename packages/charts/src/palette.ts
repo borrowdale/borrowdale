@@ -46,3 +46,30 @@ export function paints(entries: readonly { color: string | undefined; path: stri
 export function hatched({ color, hachureAngle }: Paint): SketchStyle {
   return { stroke: color, fill: color, fillStyle: 'hachure', hachureAngle };
 }
+
+/**
+ * What a computed statistical mark stands for. Every role is painted from its series' own paint,
+ * or the axis ink, so a role never depends on a colour of its own: rising and falling candles
+ * differ by fill, secondary and reference lines by dash, and counts by hachure density.
+ */
+export type Role = 'rise' | 'fall' | 'secondary' | 'reference' | 'count';
+
+const ROLE_DASH = [6, 4];
+// A count cell's hachure gap is DENSE_GAP over its share of the largest count, so the ink in a cell
+// grows in proportion to its count. The sparsest cells stop at SPARSE_GAP and keep a few lines.
+const DENSE_GAP = 2;
+const SPARSE_GAP = 16;
+
+/** The outline of a line or hollow shape with `role`. */
+export function roleStroke(role: Role | undefined, paint: Paint): SketchStyle {
+  if (role === 'reference') return { stroke: INK, strokeWidth: 1, strokeLineDash: ROLE_DASH };
+  if (role === 'secondary') return { stroke: paint.color, strokeWidth: LINE_WIDTH, strokeLineDash: ROLE_DASH };
+  return { stroke: paint.color, strokeWidth: LINE_WIDTH };
+}
+
+/** The fill of a shape with `role`; `weight` is a count cell's share of the largest count, 0 to 1. */
+export function roleFill(role: Role | undefined, paint: Paint, weight = 1): SketchStyle {
+  if (role === 'fall') return { stroke: paint.color, fill: paint.color, fillStyle: 'solid' };
+  if (role === 'count') return { ...hatched(paint), hachureGap: Math.min(SPARSE_GAP, DENSE_GAP / weight) };
+  return hatched(paint);
+}

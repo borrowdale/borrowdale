@@ -62,3 +62,5 @@ export type {
 } from './types.js';
 
 export type { ChartImage, ChartRenderOptions } from './images.js';
+
+export type { DistributionSeries, HistogramSeries, MarketSeries, RelationshipSeries } from './statistics/types.js';

@@ -10,8 +10,8 @@ import type { Rect } from './frame.js';
 // a work unit takes 0.4 to 2.3 µs depending on the fill, so this stays under about a second; 200
 // hachure-filled bars use about 130,000 units and 1,000 scatter points about 76,000.
 const MAX_OPERATIONS = 400_000;
-// Data labels and image markers draw no strokes, so the budget never sees them: this caps how many
-// there are, and MAX_TEXT caps the text of every label and tooltip.
+// Data labels, statistical text marks and image markers draw no strokes, so the budget never sees
+// them: this caps how many there are, and MAX_TEXT caps the text of every label and tooltip.
 const MAX_PLACED = 10_000;
 // The characters of every label and tooltip together, counted as written into SVG, where `"` becomes
 // six. Neither budget above sees text, and a mark drawing nothing still carries a tooltip, so without
@@ -32,8 +32,11 @@ export interface Extent {
 
 type TextOptions = Omit<LayoutTextOptions, 'font' | 'fontSize'> & { fontSize?: number | undefined };
 
-// A data label is centred on the point it is drawn at.
+// Text centred both ways on the point it is drawn at: data labels, value text and timeline labels.
 export const CENTRED = { anchor: 'middle', baseline: 'middle' } as const;
+
+// Text that starts at the point it is drawn at, centred on it vertically: stem-and-leaf rows.
+export const START = { anchor: 'start', baseline: 'middle' } as const;
 
 /** What tells one mark's strokes from another's: its series, category, part and the like. */
 export type SeedKey = readonly (string | number)[];
@@ -170,6 +173,15 @@ export class Drawing {
     };
   }
 
+  /**
+   * Text drawn as `text` draws it, never moved or cut, and counted toward the cap on placed text as a
+   * data label is. Its caller keeps the room for it.
+   */
+  textMark(text: string, options: TextOptions): ChartNode {
+    this.#place();
+    return this.text(text, options);
+  }
+
   /** A trusted image, named by `asset`, fitted inside the box. */
   image(asset: string, x: number, y: number, width: number, height: number): ChartNode {
     this.#place();
@@ -178,7 +190,7 @@ export class Drawing {
 
   #place(): void {
     if (++this.#placed > MAX_PLACED) {
-      throw new Error(`Drawing too complex (more than ${MAX_PLACED} data labels and images)`);
+      throw new Error(`Drawing too complex (more than ${MAX_PLACED} data labels, text marks and images)`);
     }
   }
 

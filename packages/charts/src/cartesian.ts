@@ -1,3 +1,6 @@
+import { placeSwarm } from './statistics/swarm.js';
+import { labelOf, type Glyph } from './statistics/geometry.js';
+import { unhandled } from './statistics/types.js';
 import { drawXYLine, drawXYArea } from './cartesian-paths.js';
 import { barShape } from './bar-shape.js';
 import { annotationValues, drawAnnotations } from './annotations.js';
@@ -13,14 +16,15 @@ import {
 } from './cartesian-axes.js';
 import type { CheckedLinearAxis } from './check-axis.js';
 import { areaPath, linePath, straightPoints } from './curves.js';
-import type { Drawing, SeedKey } from './drawing.js';
+import { CENTRED, START, type Drawing, type SeedKey } from './drawing.js';
 import { assertRoom, BAND_PADDING, type Rect } from './frame.js';
 import { loneDot, piecesOf, POINT_SIZE, runsOf, solid } from './marks.js';
-import { hatched, LINE_WIDTH, type Paint } from './palette.js';
+import { hatched, LINE_WIDTH, roleFill, roleStroke, type Paint } from './palette.js';
+import { fail } from './read.js';
 import { stackGroup, stackSpans, type Span } from './stack.js';
 import { bandScale, emptyExtent, formatAxisValue, formatShare, formatValue, place, scaleOf, type BandScale, type PlacedScale } from './scale.js';
 import { markerNode } from './symbols.js';
-import type { ChartNode, Curve } from './types.js';
+import type { ChartNode, Curve, Marker } from './types.js';
 import { isStacking, type CheckedCartesianChart, type SeriesOf } from './validate.js';
 
 type CartesianSeries = SeriesOf<'cartesian'>;
@@ -41,35 +45,97 @@ interface Mark<S extends CartesianSeries> {
   /** Takes a slot of its own beside other series in each band, as bars do. */
   slot: boolean;
   /** How the legend shows it. */
-  legend: 'line' | 'box';
+  legend: (entry: S) => LegendShape;
+  /**
+   * The data coordinates it spans, for series whose points sit on both continuous axes; others span
+   * their categories and value spans.
+   */
+  points?: (entry: S) => readonly (readonly [number, number, ...number[]])[];
   /**
    * How far its marks may reach past the point of their value, on a plot whose shorter side is
-   * `plotSize` or less: the plot keeps that much room inside its edges.
+   * `plotSize` or less: the plot keeps that much room inside its edges. Text is measured with
+   * `drawing`.
    */
-  reach: (plotSize: number, entry: S, chartStyle: SketchStyle) => number;
+  reach: (plotSize: number, entry: S, chartStyle: SketchStyle, drawing: Drawing) => number;
   draw: (context: MarkContext, placed: Placed<S>, paint: Paint) => void;
 }
 
 const none = (): number => 0;
 
+/** How a legend entry shows its series: a line or a hatched box, with a symbol where it has one. */
+export interface LegendShape {
+  line: boolean;
+  symbol: Marker | undefined;
+}
+
+/** The symbol a legend draws for a series' marker: none for a circle, the plain point. */
+export function legendSymbol(symbol: Marker | undefined): Marker | undefined {
+  return symbol === 'circle' ? undefined : symbol;
+}
+
+const BOX: LegendShape = { line: false, symbol: undefined };
+
+const boxed = (): LegendShape => BOX;
+
+const marked = (line: boolean) => (entry: { symbol?: Marker | undefined }): LegendShape =>
+  ({ line, symbol: legendSymbol(entry.symbol) });
+
+const present = <P>(points: readonly (P | null)[]): P[] => points.filter((point) => point !== null);
+
+type ComputedSeries = Extract<CartesianSeries, { marks: unknown }>;
+
+const glyphPoints = ({ marks }: ComputedSeries) => marks.flatMap((mark) => mark.points);
+
+const computed: Mark<ComputedSeries> = {
+  zero: false, slot: false,
+  // A series of lines shows a line, and one of dots its marker; anything else a box.
+  legend: ({ marks }) =>
+    marks.every((mark) => mark.kind === 'line') ? { line: true, symbol: undefined }
+    : marks.every((mark) => mark.kind === 'dot') ? { line: false, symbol: marks[0]?.symbol ?? 'circle' }
+    : BOX,
+  points: glyphPoints,
+  reach: (_size, entry, _style, drawing) => entry.marks.reduce((max, mark) => Math.max(max, glyphReach(mark, drawing)), 0),
+  draw: (context, placed, paint) => drawGlyphs(context, placed, paint, screenPoints(context, placed)),
+};
+const distribution: Mark<Extract<ComputedSeries, { type: 'distribution' }>> = {
+  ...computed,
+  // The axes also keep the room a swarm spreads into.
+  points: (entry) => [...glyphPoints(entry), ...(entry.swarm?.room ?? [])],
+  draw: (context, placed, paint) => {
+    const screen = screenPoints(context, placed);
+    const { entry } = placed;
+    if (entry.swarm) placeSwarm(entry.path, entry.marks, screen, context.frame.plot, entry.swarm.mirrored);
+    drawGlyphs(context, placed, paint, screen);
+  },
+};
+
 const MARKS: { [K in MarkType]: Mark<Extract<CartesianSeries, { type: K }>> } = {
-  bar: { zero: true, slot: true, legend: 'box', reach: none, draw: drawBars },
-  line: { zero: false, slot: false, legend: 'line', reach: (_size, entry) => entry.symbol ? POINT_SIZE / 2 : 0, draw: drawLine },
-  area: { zero: true, slot: false, legend: 'box', reach: none, draw: drawArea },
-  rangeArea: { zero: false, slot: false, legend: 'box', reach: none, draw: drawArea },
-  interval: { zero: false, slot: true, legend: 'box', reach: () => POINT_SIZE / 2, draw: drawIntervals },
-  xRange: { zero: false, slot: true, legend: 'box', reach: () => MILESTONE / 2, draw: drawXRange },
+  bar: { zero: true, slot: true, legend: boxed, reach: none, draw: drawBars },
+  line: { zero: false, slot: false, legend: marked(true), reach: (_size, entry) => entry.symbol ? POINT_SIZE / 2 : 0, draw: drawLine },
+  area: { zero: true, slot: false, legend: boxed, reach: none, draw: drawArea },
+  rangeArea: { zero: false, slot: false, legend: boxed, reach: none, draw: drawArea },
+  interval: { zero: false, slot: true, legend: boxed, reach: () => POINT_SIZE / 2, draw: drawIntervals },
+  xRange: { zero: false, slot: true, legend: boxed, reach: () => MILESTONE / 2, draw: drawXRange },
+  distribution, relationship: computed, market: computed,
+  histogram: { zero: true, slot: false, legend: boxed, reach: none, draw: drawHistogram },
   xyLine: {
-    zero: false, slot: false, legend: 'line',
+    zero: false, slot: false, legend: marked(true), points: ({ data }) => present(data),
     reach: (_size, entry, style) => Math.max(POINT_SIZE,
       entry.widths?.reduce((max, width) => Math.max(max, width), 0) ?? 0,
       entry.segments?.reduce((max, segment) => Math.max(max, segment?.width ?? 0), 0) ?? 0,
       entry.style.strokeWidth ?? style.strokeWidth ?? LINE_WIDTH) / 2,
     draw: drawXYLine,
   },
-  xyArea: { zero: false, slot: false, legend: 'box', reach: none, draw: drawXYArea },
-  scatter: { zero: false, slot: false, legend: 'box', reach: () => POINT_SIZE / 2, draw: drawPoints },
-  bubble: { zero: false, slot: false, legend: 'box', reach: (size) => bubbleDiameter(size) / 2, draw: drawPoints },
+  xyArea: {
+    zero: false, slot: false, legend: boxed, reach: none, draw: drawXYArea,
+    // Both edges of the area count on y.
+    points: ({ data }) => present(data).flatMap(([x, y, base]) => [[x, y], [x, base]] as const),
+  },
+  scatter: { zero: false, slot: false, legend: marked(false), points: ({ data }) => data, reach: () => POINT_SIZE / 2, draw: drawPoints },
+  bubble: {
+    zero: false, slot: false, legend: marked(false), points: ({ data }) => data,
+    reach: (size) => bubbleDiameter(size) / 2, draw: drawPoints,
+  },
 };
 
 /** The diameter of the largest bubble on a plot whose shorter side is `plotSize`. */
@@ -84,8 +150,8 @@ function markOf<S extends CartesianSeries>(entry: S): Mark<S> {
 }
 
 /** How the legend shows a series of a cartesian chart. */
-export function legendOf(entry: CartesianSeries): 'line' | 'box' {
-  return MARKS[entry.type].legend;
+export function legendOf(entry: CartesianSeries): LegendShape {
+  return markOf(entry).legend(entry);
 }
 
 /** Lays out axes, gridlines and series of a chart with x and y axes into `rect`. */
@@ -111,12 +177,12 @@ export function layoutCartesian(drawing: Drawing, chart: CheckedCartesianChart, 
   };
 
   const line = drawing.lineHeight();
-  // Points and bubbles are centred on their values, so they reach past them: each end of x and y
-  // keeps that much room.
+  // Points, bubbles and the marks of statistical series reach past the point of their value: each end
+  // of x and y keeps that much room.
   const reach = Math.max(
     0,
     ...series.map((entry) => markOf(entry).reach(
-      Math.min(rect.right - rect.left, rect.bottom - rect.top), entry, chart.style)),
+      Math.min(rect.right - rect.left, rect.bottom - rect.top), entry, chart.style, drawing)),
   );
   const room: Record<keyof Rect, EndRoom> = {
     left: endRoom(linear.x, 'min', reach),
@@ -427,18 +493,21 @@ function extent(
     high = Math.max(high, value);
   };
   for (const entry of series) {
+    const points = markOf(entry).points?.(entry);
+    if (points) {
+      for (const point of key === 'y2' ? [] : points) take(key === 'x' ? point[0] : point[1]);
+      continue;
+    }
+    // Bins span their outer edges on x; their heights stand on zero on y, as bars do.
+    if (entry.type === 'histogram' && key === 'x') {
+      take(entry.edges[0]!);
+      take(entry.edges.at(-1)!);
+      continue;
+    }
     if (entry.type === 'xRange') {
       for (const item of valueAxisOf(entry) === key ? entry.data : []) {
         take(item.from);
         take(item.to ?? item.from);
-      }
-      continue;
-    }
-    if (entry.type === 'scatter' || entry.type === 'bubble' || entry.type === 'xyLine' || entry.type === 'xyArea') {
-      for (const point of key === 'y2' ? [] : entry.data) {
-        if (point === null) continue;
-        take(key === 'x' ? point[0] : point[1]);
-        if (entry.type === 'xyArea' && key === 'y') take(point[2]!);
       }
       continue;
     }
@@ -478,6 +547,108 @@ function largestBubble(series: readonly CartesianSeries[]): number {
     }
   }
   return largest;
+}
+
+// Each glyph's points on screen, before any marker is moved aside.
+function screenPoints({ x }: MarkContext, { entry, scale }: Placed<ComputedSeries>): Point[][] {
+  return entry.marks.map((mark) => mark.points.map(([u, v]): Point => [x!.at(u), scale.at(v)]));
+}
+
+/**
+ * How far a glyph reaches past its point: value text half its extent and a row half its height; a
+ * dot, line or polygon half its size (only dots have one). A data label is moved inside the plot
+ * instead.
+ */
+function glyphReach(mark: Glyph, drawing: Drawing): number {
+  switch (mark.kind) {
+    case 'valueText': {
+      const { left, right, up, down } = drawing.extent(mark.label, CENTRED);
+      return Math.max(left, right, up, down);
+    }
+    case 'dataLabel':
+      return 0;
+    case 'row': {
+      const { up, down } = drawing.extent(mark.label, START);
+      return Math.max(up, down);
+    }
+    case 'dot':
+    case 'line':
+    case 'polygon':
+      return (mark.size ?? 0) / 2;
+    default:
+      return unhandled(mark.kind);
+  }
+}
+
+/**
+ * A dot, or a line or polygon of one point, is drawn as a marker; a line or a hollow polygon as an
+ * outline; any other polygon filled.
+ */
+function shapeNode(
+  drawing: Drawing, mark: Glyph, points: Point[], paint: Paint, key: SeedKey, style: SketchStyle,
+): ChartNode {
+  const first = points[0]!;
+  if (mark.kind === 'dot' || points.length === 1) {
+    return markerNode(drawing, mark.symbol ?? 'circle', first, mark.size ?? POINT_SIZE, solid(paint.color), key, style);
+  }
+  if (mark.kind === 'line' || mark.hollow) {
+    const outline = { kind: 'linearPath' as const, points: mark.hollow ? [...points, first] : points };
+    return drawing.outline(outline, roleStroke(mark.role, paint), key, style);
+  }
+  return drawing.shape({ kind: 'polygon', points }, roleFill(mark.role, paint, mark.weight), key, style);
+}
+
+function drawGlyphs(
+  { drawing, frame, xAxis }: MarkContext, { entry, axis }: Placed<ComputedSeries>, paint: Paint, screen: Point[][],
+): void {
+  entry.marks.forEach((mark, i) => {
+    const points = screen[i]!;
+    const first = points[0]!;
+    let node: ChartNode;
+    switch (mark.kind) {
+      case 'valueText':
+        node = drawing.textMark(mark.label, { ...CENTRED, x: first[0], y: first[1] });
+        break;
+      case 'dataLabel':
+        node = drawing.label(mark.label, first[0], first[1], frame.plot, entry.path);
+        break;
+      case 'row': {
+        if (drawing.width(mark.label) > frame.plot.right - frame.plot.left) fail(entry.path, 'has a row of text wider than the plot');
+        node = drawing.textMark(mark.label, { ...START, x: frame.plot.left, y: first[1] });
+        break;
+      }
+      case 'dot':
+      case 'line':
+      case 'polygon':
+        node = shapeNode(drawing, mark, points, paint, [entry.name, mark.kind, i], entry.style);
+        break;
+      default:
+        node = unhandled(mark.kind);
+    }
+    const valueAxis = mark.along === 'x' ? xAxis! : axis;
+    drawing.mark(`${entry.name}, ${labelOf(mark, (value) => formatAxisValue(value, valueAxis))}`, [node]);
+  });
+}
+
+function drawHistogram(
+  { drawing, frame, x, xAxis }: MarkContext,
+  { entry, scale, axis, spans }: Placed<Extract<CartesianSeries, { type: 'histogram' }>>,
+  paint: Paint,
+): void {
+  entry.data.forEach((height, i) => {
+    const left = entry.edges[i]!;
+    const right = entry.edges[i + 1]!;
+    const start = x!.at(left);
+    const edges = `${formatAxisValue(left, xAxis!)}, ${formatAxisValue(right, xAxis!)}`;
+    const label = `${entry.name}, [${edges}${i === entry.data.length - 1 ? ']' : ')'}: ${formatAxisValue(height, axis)}`;
+    const nodes: ChartNode[] = [];
+    if (height > 0) {
+      const [from, to] = spans[i]!;
+      const box = frame.box(start, x!.at(right) - start, scale.at(from), scale.at(to));
+      nodes.push(drawing.shape(box, hatched(paint), [entry.name, 'histogram', left, right], entry.style));
+    }
+    drawing.mark(label, nodes);
+  });
 }
 
 function drawIntervals(

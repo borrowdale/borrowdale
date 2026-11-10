@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 // Before the module, so a Math.sin it called or kept a reference to would throw.
 import './support/forbid-unportable-calls.js';
-import { cos, log, MAX_ANGLE, sin } from '@borrowdale/core/math';
+import { cos, exp, log, MAX_EXPONENT, MAX_ANGLE, sin } from '@borrowdale/core/math';
 
 // A Proxy that throws when anything looks at it, even a test title.
 const { proxy: revoked, revoke } = Proxy.revocable([], {});
@@ -72,5 +72,37 @@ describe('@borrowdale/core/math', () => {
     ['1', '"1"'],
   ])('log rejects %s with a RangeError', (x, shown) => {
     expect(calling(log, x)).toThrow(new RangeError(`Invalid argument: log(x) must be a finite number above 0, got ${shown}`));
+  });
+
+  it('exports the bound exp checks', () => {
+    expect(MAX_EXPONENT).toBe(709);
+  });
+
+  // The expected values are exp's own, within one unit in the last place of the true value. They are
+  // not all Math.exp's: exp(1) is one unit above Math.E, and that is not a typo.
+  it.each<[number, number]>([
+    [0, 1],
+    [1, 2.7182818284590455],
+    [-1, 0.36787944117144233],
+    [0.5, 1.6487212707001282],
+    [1e-30, 1],
+    [10, 22026.465794806718],
+    [709, 8.218407461554972e307],
+    [-709, 1.216780750623423e-308],
+    [0.34, 1.404947590563594],
+    [-708.4, 2.217119081664265e-308],
+    [2 ** -29, 1.0000000018626451],
+  ])('computes exp(%s)', (x, expected) => {
+    expect(exp(x)).toBe(expected);
+  });
+
+  it.each<[unknown, string]>([
+    [710, '710'],
+    [-710, '-710'],
+    [Number.NEGATIVE_INFINITY, '-Infinity'],
+    [Number.NaN, 'NaN'],
+    [1n, '1n'],
+  ])('exp rejects %s with a RangeError', (x, shown) => {
+    expect(calling(exp, x)).toThrow(new RangeError(`Invalid argument: exp(x) must be a finite number within ±709, got ${shown}`));
   });
 });
