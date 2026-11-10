@@ -15,7 +15,7 @@ Hand-drawn charts, components, text and backgrounds for the web.
 Named after Borrowdale in the English Lake District, where the graphite that started the pencil
 industry was found.
 
-> **Status:** early development. The first release, 0.1.0, is on npm:
+> **Status:** early development. The latest release, 0.2.0, is on npm:
 > `npm install @borrowdale/charts`. Until 1.0, a minor release can include breaking changes.
 
 ## Packages
