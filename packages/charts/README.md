@@ -38,7 +38,8 @@ optionally its own `color` (a hex code, a colour name, `rgb()`, `rgba()`, `hsl()
 not `inherit`, `initial`, `unset` or `revert`) and
 `style` (any `@borrowdale/core` style option but `seed`, within the limits under Chart options).
 The series' types decide what the chart is, and which axes it takes; series of different rows
-cannot share a chart, except where a row says so:
+cannot share a chart, except where a row says so. Minor releases add series types, `display` values
+and regression methods, so code that switches over them needs a default branch:
 
 | Series types | Axes |
 |---|---|
@@ -148,15 +149,15 @@ const spec = {
 | `display` | Input and interpretation |
 |---|---|
 | `ecdf`, `normalQQ` | Exact empirical steps at distinct observations, or sorted observations against the standard normal quantiles at their mid-ranks. |
-| `box` | Linearly interpolated quartiles and median. Tukey whiskers reach the outermost samples within 1.5 IQR of the box, and never end inside it. Use `whiskers: 'minmax'` for the full range, or `points: true` to show every sample. Without `points`, samples beyond the whiskers are drawn as dots. |
-| `violin`, `raincloud` | Gaussian kernel density envelope. A raincloud adds a narrow box and jittered samples. A violin accepts `points`, and `polar` instead of `horizontal`. In a polar violin, `position` is the angle in radians and the density's range, three bandwidths past each end of the samples, maps to radius 1 to 2, with the angle clockwise from the positive y axis. A raincloud accepts `whiskers`, as a box does. |
+| `box` | Linearly interpolated quartiles and median. Tukey whiskers reach the outermost samples within 1.5 IQR of the box, and never end inside it. Use `whiskers: 'min-max'` for the full range, or `points: true` to show every sample. Without `points`, samples beyond the whiskers are drawn as dots. |
+| `violin`, `raincloud` | Gaussian kernel density envelope. A raincloud adds a narrow box and jittered samples. A violin accepts `points`. A raincloud accepts `whiskers`, as a box does. |
 | `density`, `ridge`, `normal` | Gaussian KDE, a ridge normalised to unit peak at its group position, or a normal curve fitted with the sample mean and sample standard deviation. KDE accepts a positive `bandwidth`. Density series with a shared `stack` name accumulate in order. |
-| `swarm` | Places observation markers side by side where they would overlap. Markers are 7 units across; `sizes` gives one diameter per observation, 1 to 40 units, and `symbol` a geometric marker. Its group axis keeps half a unit each side of the position for the markers, and a `min` or `max` fixed on that axis must leave that room in. A swarm too crowded for it spreads further, up to the edge of the plot, over any neighbour, and one that does not fit there is an error. Use `mirrored: false` for a one-sided swarm, which grows as a one-sided dot plot stacks, with the room on that side. |
+| `swarm` | Places observation markers side by side where they would overlap. Markers are 7 units across; `sizes` gives one diameter per observation, 1 to 40 units, and `symbol` a geometric marker, a circle by default. Its group axis keeps half a unit each side of the position for the markers, and a `min` or `max` fixed on that axis must leave that room in. A swarm too crowded for it spreads further, up to the edge of the plot, over any neighbour, and one that does not fit there is an error. Use `mirrored: false` for a one-sided swarm, which grows as a one-sided dot plot stacks, with the room on that side. |
 | `dotPlot`, `isotype` | Stack dots or symbols by value. Each group starts at the smallest remaining observation and spans `binWidth` (default 1). Stacks alternate about their position; `mirrored: false` stacks them to one side: rightward, or upward when horizontal. An isotype accepts a marker `symbol`, defaulting to a star. Dots in a stack sit one unit of the group axis apart, at the value that starts their group, so leave more room between positions than the widest stack. |
 | `stemLeaf` | Nonnegative integer samples. Each row gives the tens stem and ordered units digits, up to 450 leaves per stem. Every stem from the lowest to the highest has a row, empty ones included, up to 100 stems. Each row starts at the plot's left edge, the lowest stem at y = 0 and each next stem one unit below, so the display is usually drawn with both axes hidden. A row wider than the plot is an error. The rows count as x = 0 on the x axis, so a fixed x range must include 0. |
 
-Use a different numeric `position` for each grouped box, violin, raincloud, ridge, swarm, dot plot
-or isotype.
+Use a different numeric `position` (default 0) for each grouped box, violin, raincloud, ridge, swarm,
+dot plot or isotype.
 Label the positions with explicit ticks. Use `horizontal: true` on boxes, violins, rainclouds,
 swarms, dot plots and isotypes to exchange the axes. KDE draws 65 points across the samples and three
 bandwidths past each end. A narrow bandwidth adds points at most a quarter bandwidth apart near
@@ -171,7 +172,7 @@ A `relationship` series takes numeric pairs.
 
 | `display` | Input and interpretation |
 |---|---|
-| `histogram2d`, `hexbin` | Count observations in rectangles or flat-top hexagons. Cells with more observations have denser hachure, in the series colour. `binWidth` (default 1) and `binHeight` (default `binWidth`) specify rectangle dimensions or hexagon radii before axial projection. |
+| `histogram2d`, `hexbin` | Count observations in rectangles or flat-top hexagons. Cells with more observations have denser hachure, in the series colour. `binWidth` (default 1) and `binHeight` (default `binWidth`) give each cell's extent in data units: a rectangle's width and height, or a hexagon's width from vertex to vertex and height from flat side to flat side. A regular hexagon is about 0.866 times as high as it is wide. |
 | `stanford` | Nonnegative position error and protection level. Cells are hatched by count, as for `histogram2d`. The diagonal and the required positive `alertLimit` delimit integrity regions. The boundaries are dashed reference lines in the axis colour. |
 | `regression` | Select `method` from `linear` (the default), `polynomial` (`degree` 1–5, default 2), `exponential`, `logarithmic` and `loess` (`span` 0.05–1, default 0.5). Exponential fits regress log response and logarithmic fits regress on log input, so they need positive responses and positive inputs respectively. The curve runs from the lowest to the highest observed x. LOESS uses local linear fits with tricube weights. A curve that reaches the highest or lowest observation is kept at it, so axis limits at the data extent hold; one that passes beyond the observations, as a parabola can between them, is drawn as calculated and needs the axis to leave room for it. Add a scatter series to show the observations. |
 | `qq` | Sort both columns independently and pair their ranks to compare two equal-sized samples. |
@@ -591,7 +592,7 @@ run `node apps/examples/cartesian.mjs` after building to render each one. Its
 `apps/examples/time-cases.json` holds 12 more, rendered by `node apps/examples/time.mjs`: a time axis,
 range bars, a Gantt chart, an x-range chart, an annotation chart, a cycle plot, a Marey chart, log and
 square-root axes, and serpentine, spiral and polyline timelines. `apps/examples/statistical-cases.json`
-holds 41 statistical and financial charts, rendered with the other chart kinds by
+holds 40 statistical and financial charts, rendered with the other chart kinds by
 `npm run example:charts`.
 
 | Chart | Preparation and composition |

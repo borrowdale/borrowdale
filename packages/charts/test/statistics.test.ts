@@ -63,13 +63,13 @@ describe('sample statistics', () => {
     expect(past.slice(5)).toMatchObject([{ points: [[0, 0.9]] }, { points: [[0, 9.1]] }]);
   });
   it('reaches both extremes with min-max whiskers, in a box and a raincloud', () => {
-    const box = marks({ type: 'distribution', display: 'box', name: 'A', whiskers: 'minmax', data: [-100, 1, 2, 3, 4] });
+    const box = marks({ type: 'distribution', display: 'box', name: 'A', whiskers: 'min-max', data: [-100, 1, 2, 3, 4] });
     expect(box[0]!.points).toEqual([
       [0, -100],
       [0, 4],
     ]);
     expect(box).toHaveLength(5);
-    const raincloud = marks({ type: 'distribution', display: 'raincloud', name: 'R', whiskers: 'minmax', data: [1, 2, 3, 4, 100] });
+    const raincloud = marks({ type: 'distribution', display: 'raincloud', name: 'R', whiskers: 'min-max', data: [1, 2, 3, 4, 100] });
     expect(raincloud[1]!.points).toEqual([
       [0, 1],
       [0, 100],
@@ -112,6 +112,37 @@ describe('sample statistics', () => {
       expect(cells.map((c) => Number(c.label)).sort()).toEqual([1, 1, 2]);
       expect(cells[0]!.points).toHaveLength(display === 'hexbin' ? 6 : 4);
     }
+  });
+  it('sizes a hexagon by its full extent, as a rectangle cell is sized by its sides', () => {
+    // binWidth runs vertex to vertex and binHeight flat side to flat side; the cell above shares the
+    // flat side at y = 1.5.
+    const [cell, above] = marks({
+      type: 'relationship',
+      display: 'hexbin',
+      name: 'H',
+      binWidth: 2,
+      binHeight: 3,
+      data: [
+        [0, 0],
+        [0, 3],
+      ],
+    });
+    expect(cell!.points).toEqual([
+      [1, 0],
+      [0.5, 1.5],
+      [-0.5, 1.5],
+      [-1, 0],
+      [-0.5, -1.5],
+      [0.5, -1.5],
+    ]);
+    expect(above!.points).toEqual([
+      [1, 3],
+      [0.5, 4.5],
+      [-0.5, 4.5],
+      [-1, 3],
+      [-0.5, 1.5],
+      [0.5, 1.5],
+    ]);
   });
   it('reproduces polynomial, exponential, logarithmic and locally linear fits', () => {
     for (const method of ['polynomial', 'logarithmic', 'exponential', 'loess'] as const) {
@@ -569,11 +600,6 @@ it('names the sample spread when a normal curve is too narrow for its magnitude'
   expect(outcome(spec(series))).toBe('Invalid chart: series[0] needs a sample spread resolvable at the sample coordinates');
 });
 
-it('rejects a violin that is both polar and horizontal', () => {
-  const series: Series = { type: 'distribution', display: 'violin', name: 'V', data: [1, 2, 3], polar: true, horizontal: true };
-  expect(outcome(spec(series))).toBe('Invalid chart: series[0] cannot combine polar and horizontal');
-});
-
 it('rejects statistical series on a log axis', () => {
   const chart = spec({ type: 'distribution', display: 'box', name: 'D', data: [1, 2] });
   expect(outcome({ ...chart, axes: { x: { type: 'linear' }, y: { type: 'log' } } })).toBe(
@@ -650,20 +676,11 @@ it('places the median of an odd sample at the zero normal quantile', () => {
   expect(marks({ type: 'distribution', display: 'normalQQ', name: 'Q', data: [1, 2, 3] })[1]!.points).toEqual([[0, 2]]);
 });
 
-it('draws a polar violin at the last whole position inside the angle limit', () => {
-  expect(outcome(spec({ type: 'distribution', display: 'violin', name: 'V', polar: true, position: 999999, data: [1, 2, 3] }))).toBe('drawn');
-});
-
 it('rejects a stem with more than 450 leaves', () => {
   const series: Series = { type: 'distribution', display: 'stemLeaf', name: 'S', data: new Array<number>(451).fill(7) };
   expect(outcome(spec(series))).toBe('Invalid chart: series[0] has more than 450 leaves on one stem');
   // 450 are accepted; whether their row fits is a matter of the plot's width.
   expect(marks({ ...series, data: new Array<number>(450).fill(7) })).toHaveLength(1);
-});
-
-it('rejects a polar violin whose density overflows at the sample magnitude', () => {
-  const series: Series = { type: 'distribution', display: 'violin', name: 'V', polar: true, data: [0, 1e-318, 2e-318] };
-  expect(outcome(spec(series))).toBe('Invalid chart: series[0] needs a bandwidth resolvable at the sample coordinates');
 });
 
 // 21 densities of 1,000 samples, each drawn with about 2,000 points: within the budget only while
@@ -900,6 +917,8 @@ it.each([
     'Invalid chart: series[0] needs distinct x values'],
   ['bins too narrow for the data', { type: 'relationship', display: 'histogram2d', name: 'S', binWidth: 1e-10, data: [[1e15, 0]] },
     'Invalid chart: series[0] needs bin dimensions resolvable at the data coordinates'],
+  ['hexagons too small to have distinct vertices', { type: 'relationship', display: 'hexbin', name: 'H', binWidth: 1e-323, data: [[0, 0]] },
+    'Invalid chart: series[0] needs distinct hexagon vertices at the data coordinates'],
   ['a dot-plot bin too narrow for the samples', { type: 'distribution', display: 'dotPlot', name: 'D', binWidth: 1e-10, data: [1e15] },
     'Invalid chart: series[0] needs a bin width resolvable at the sample coordinates'],
   ['a logarithmic fit at zero', { type: 'relationship', display: 'regression', method: 'logarithmic', name: 'R', data: [[0, 1], [1, 2]] },
@@ -910,19 +929,14 @@ it.each([
     'Invalid chart: series[0] stem-and-leaf values must be nonnegative integers'],
   ['a display named by an inherited property', { type: 'distribution', display: 'toString', name: 'D', data: [1] },
     'Invalid chart: series[0].display must be one of ecdf, box, violin, raincloud, density, ridge, normal, normalQQ, swarm, dotPlot, isotype, stemLeaf, got "toString"'],
-  ['a polar violin past the angle limit', { type: 'distribution', display: 'violin', name: 'V', polar: true, position: 999999.5, data: [1, 2, 3] },
-    'Invalid chart: series[0].position must leave the violin inside ±1000000 radians'],
+  ['a violin with the removed polar option', { type: 'distribution', display: 'violin', name: 'V', polar: true, data: [1, 2, 3] },
+    'Invalid chart: series[0] has an unknown key, "polar"'],
+  ['the whisker style spelt minmax', { type: 'distribution', display: 'box', name: 'B', whiskers: 'minmax', data: [1, 2] },
+    'Invalid chart: series[0].whiskers must be one of min-max, tukey, got "minmax"'],
   ['an option of another regression method', { type: 'relationship', display: 'regression', method: 'linear', span: 0.5, name: 'R', data: [[0, 1], [1, 2]] },
     'Invalid chart: series[0].span needs the loess method'],
 ])('rejects %s', (_case, series, message) => {
   expect(outcome(spec(series as Series))).toBe(message);
-});
-
-it('writes polar violin samples as given, since no axis measures them', () => {
-  const chart = spec({ type: 'distribution', display: 'violin', name: 'V', polar: true, points: true, data: [12, 14] });
-  const svg = toSvgChart(layoutChart({ ...chart, axes: { x: { type: 'linear' }, y: { type: 'linear', format: EUROS } } }));
-  expect(svg).toContain('V, 12<');
-  expect(svg).toContain('V, 14<');
 });
 
 it('writes forest intervals and estimates in the x axis format', () => {
