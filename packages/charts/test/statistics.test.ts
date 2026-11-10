@@ -114,9 +114,10 @@ describe('sample statistics', () => {
     }
   });
   it('sizes a hexagon by its full extent, as a rectangle cell is sized by its sides', () => {
-    // binWidth runs vertex to vertex and binHeight flat side to flat side; the cell above shares the
-    // flat side at y = 1.5.
-    const [cell, above] = marks({
+    // binWidth runs vertex to vertex and binHeight flat side to flat side. (0, 1.6) lies just above the
+    // flat side the cell at the origin shares with the one above it, and (1.2, -0.6) in the next column,
+    // whose cells stand half a height up, in the cell centred at (1.5, -1.5).
+    const [cell, above, next] = marks({
       type: 'relationship',
       display: 'hexbin',
       name: 'H',
@@ -124,7 +125,8 @@ describe('sample statistics', () => {
       binHeight: 3,
       data: [
         [0, 0],
-        [0, 3],
+        [0, 1.6],
+        [1.2, -0.6],
       ],
     });
     expect(cell!.points).toEqual([
@@ -142,6 +144,24 @@ describe('sample statistics', () => {
       [-1, 3],
       [-0.5, 1.5],
       [0.5, 1.5],
+    ]);
+    expect(next!.points).toEqual([
+      [2.5, -1.5],
+      [2, 0],
+      [1, 0],
+      [0.5, -1.5],
+      [1, -3],
+      [2, -3],
+    ]);
+  });
+  it('gives a hexagon the height of its width when binHeight is left out', () => {
+    expect(marks({ type: 'relationship', display: 'hexbin', name: 'H', binWidth: 2, data: [[0, 0]] })[0]!.points).toEqual([
+      [1, 0],
+      [0.5, 1],
+      [-0.5, 1],
+      [-1, 0],
+      [-0.5, -1],
+      [0.5, -1],
     ]);
   });
   it('reproduces polynomial, exponential, logarithmic and locally linear fits', () => {
@@ -917,7 +937,9 @@ it.each([
     'Invalid chart: series[0] needs distinct x values'],
   ['bins too narrow for the data', { type: 'relationship', display: 'histogram2d', name: 'S', binWidth: 1e-10, data: [[1e15, 0]] },
     'Invalid chart: series[0] needs bin dimensions resolvable at the data coordinates'],
-  ['hexagons too small to have distinct vertices', { type: 'relationship', display: 'hexbin', name: 'H', binWidth: 1e-323, data: [[0, 0]] },
+  ['hexagons too narrow to have distinct vertices', { type: 'relationship', display: 'hexbin', name: 'H', binWidth: 1e-323, data: [[0, 0]] },
+    'Invalid chart: series[0] needs distinct hexagon vertices at the data coordinates'],
+  ['hexagons too flat to have distinct sides', { type: 'relationship', display: 'hexbin', name: 'H', binWidth: 1, binHeight: Number.MIN_VALUE, data: [[0, 0]] },
     'Invalid chart: series[0] needs distinct hexagon vertices at the data coordinates'],
   ['a dot-plot bin too narrow for the samples', { type: 'distribution', display: 'dotPlot', name: 'D', binWidth: 1e-10, data: [1e15] },
     'Invalid chart: series[0] needs a bin width resolvable at the sample coordinates'],
