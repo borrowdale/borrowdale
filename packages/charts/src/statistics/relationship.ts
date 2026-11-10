@@ -185,11 +185,15 @@ function rectangles(path: string, [width, height]: [number, number]): CellLayout
   };
 }
 
-// Flat-top hexagons in axial coordinates, rounded in three cube axes.
+// Flat-top hexagons in axial coordinates, rounded in three cube axes. `width` is a hexagon's extent from
+// vertex to vertex and `height` from flat side to flat side, as a rectangle cell's are its sides.
+// Columns stand 1.5 radii apart and rows one height apart, each odd column half a height up. The
+// guard checks the inner vertices, the closer pair in x, and the flat sides.
 function hexagons(path: string, [width, height]: [number, number]): CellLayout {
+  const radius = width / 2, half = height / 2;
   return {
     cell: (x, y) => {
-      const q = (2 * x) / (3 * width), s = y / (Math.sqrt(3) * height) - q / 2, t = -q - s;
+      const q = (2 * x) / (3 * radius), s = y / height - q / 2, t = -q - s;
       let column = Math.round(q), row = Math.round(s);
       const third = Math.round(t);
       if (Math.abs(column - q) > Math.abs(row - s) && Math.abs(column - q) > Math.abs(third - t)) column = -row - third;
@@ -197,22 +201,21 @@ function hexagons(path: string, [width, height]: [number, number]): CellLayout {
       return [column, row];
     },
     shape: (column, row, label) => {
-      const cx = 1.5 * width * column;
-      const cy = Math.sqrt(3) * height * (row + column / 2);
-      const half = (Math.sqrt(3) * height) / 2;
-      if (cx - width / 2 === cx + width / 2 || cy - half === cy + half) {
+      const cx = 1.5 * radius * column;
+      const cy = height * (row + column / 2);
+      if (cx - radius / 2 === cx + radius / 2 || cy - half === cy + half) {
         fail(path, 'needs distinct hexagon vertices at the data coordinates');
       }
       return {
         kind: 'polygon',
         label,
         points: [
-          [cx + width, cy],
-          [cx + width / 2, cy + half],
-          [cx - width / 2, cy + half],
-          [cx - width, cy],
-          [cx - width / 2, cy - half],
-          [cx + width / 2, cy - half],
+          [cx + radius, cy],
+          [cx + radius / 2, cy + half],
+          [cx - radius / 2, cy + half],
+          [cx - radius, cy],
+          [cx - radius / 2, cy - half],
+          [cx + radius / 2, cy - half],
         ],
       };
     },

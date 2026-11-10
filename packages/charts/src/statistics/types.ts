@@ -39,23 +39,39 @@ export function unhandled(value: never): never {
 }
 
 interface DistributionOptions {
+  /** Where the group stands on the group axis, in that axis' data units. Defaults to 0. */
   position?: number | undefined;
+  /** Exchange the axes, so the group stands on y and the values run along x. */
   horizontal?: boolean | undefined;
-  whiskers?: 'tukey' | 'minmax' | undefined;
+  /**
+   * Tukey whiskers (the default) reach the outermost samples within 1.5 IQR of the box, and never end
+   * inside it; `min-max` whiskers reach the lowest and highest samples.
+   */
+  whiskers?: 'tukey' | 'min-max' | undefined;
+  /** Draw every sample as a dot. */
   points?: boolean | undefined;
+  /**
+   * The kernel density bandwidth, positive, in data units. Defaults to 1.06 times the sample standard
+   * deviation times the sample count to the power -0.2, or for a constant sample the larger of 1 and
+   * one percent of its absolute value.
+   */
   bandwidth?: number | undefined;
+  /** Stack density series with the same stack name, in order. */
   stack?: string | undefined;
-  polar?: boolean | undefined;
+  /** Stack to both sides of the position (the default), or to one side when false. */
   mirrored?: boolean | undefined;
+  /** One marker diameter per observation, 1 to 40 drawing units. Markers are 7 units by default. */
   sizes?: readonly number[] | undefined;
+  /** The marker: a circle on a swarm and a star on an isotype by default. */
   symbol?: SymbolName | undefined;
+  /** The span of values each stack groups, in data units. Defaults to 1. */
   binWidth?: number | undefined;
 }
 
 export const DISTRIBUTIONS = {
   ecdf: [],
   box: ['position', 'horizontal', 'whiskers', 'points'],
-  violin: ['position', 'horizontal', 'points', 'bandwidth', 'polar'],
+  violin: ['position', 'horizontal', 'points', 'bandwidth'],
   raincloud: ['position', 'horizontal', 'bandwidth', 'whiskers'],
   density: ['bandwidth', 'stack'],
   ridge: ['position', 'bandwidth'],
@@ -74,7 +90,9 @@ export type DistributionSeries = SeriesBase & { type: 'distribution'; data: read
   >;
 
 interface RegressionOptions {
+  /** A polynomial's degree, an integer from 1 to 5. Defaults to 2. */
   degree?: number | undefined;
+  /** The fraction of observations each LOESS fit uses, 0.05 to 1. Defaults to 0.5. */
   span?: number | undefined;
 }
 
@@ -90,10 +108,21 @@ export const REGRESSIONS = {
 export type RegressionMethod = keyof typeof REGRESSIONS;
 
 interface RelationshipOptions extends RegressionOptions {
+  /**
+   * A cell's width in x data units: a rectangle's side, or a hexagon from vertex to vertex. Defaults
+   * to 1.
+   */
   binWidth?: number | undefined;
+  /**
+   * A cell's height in y data units: a rectangle's side, or a hexagon from flat side to flat side.
+   * Defaults to `binWidth`.
+   */
   binHeight?: number | undefined;
+  /** One point estimate per interval, each within its interval. */
   estimates: readonly number[];
+  /** The positive alert limit that, with the diagonal, bounds the integrity regions. */
   alertLimit: number;
+  /** The fitted curve. Defaults to linear. */
   method?: RegressionMethod | undefined;
 }
 
@@ -117,11 +146,15 @@ export type RelationshipSeries = SeriesBase & {
 export type PriceBar = readonly [open: number, high: number, low: number, close: number];
 
 interface MarketOptions {
+  /** The trailing window, 1 to 1,000 sessions (default 20), or price changes for RSI (default 14). */
   period?: number | undefined;
+  /** The positive price step of each box. */
   boxSize: number;
+  /** The boxes a point-and-figure reversal takes, 1 to 100. Defaults to 3. */
   reversal?: number | undefined;
   /** Outline rising candles; falling candles are filled. Defaults to true. */
   hollow?: boolean | undefined;
+  /** Up to 100 labels, each on the session at `index`, of at most 100 characters. */
   flags?: readonly { index: number; label: string }[] | undefined;
 }
 

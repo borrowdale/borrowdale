@@ -1,4 +1,4 @@
-import { cos, log, MAX_ANGLE, sin } from '@borrowdale/core/math';
+import { log } from '@borrowdale/core/math';
 import { boolean, fail, list, MAX_VALUE, number, oneOf, text, type Fields } from '../read.js';
 import { SYMBOL_NAMES, type SymbolName } from '../types.js';
 import { binGrid } from './bin-grid.js';
@@ -12,7 +12,6 @@ import {
   gaussian,
   grid,
   increasing,
-  labelOf,
   line,
   quantile,
   rect,
@@ -146,20 +145,6 @@ function ridge({ values, density, peak }: Curve, at: number): Glyph {
   };
 }
 
-// A polar violin: `at` is the angle and the density's range maps to radius 1 to 2. No axis measures a
-// polar sample, so its tooltips write the value as given.
-function toPolar(marks: Glyph[], { values }: Curve): void {
-  const low = values[0]!, range = values.at(-1)! - low;
-  for (const mark of marks) {
-    mark.points = mark.points.map(([angle, v]) => {
-      const radius = 1 + (v - low) / range;
-      return [radius * sin(angle), radius * cos(angle)];
-    });
-    mark.label = labelOf(mark, String);
-    delete mark.values;
-  }
-}
-
 // A fixed sideways spread for drawn samples, the same for every engine.
 function jitter(i: number): number {
   return (((i * 0.6180339887498949) % 1) - 0.5) * 0.55;
@@ -172,7 +157,7 @@ interface BoxStyle {
   shift: number;
   /** Draw every sample, jittered; otherwise only the samples outside the whiskers. */
   every: boolean;
-  whiskers: 'minmax' | 'tukey' | undefined;
+  whiskers: 'min-max' | 'tukey' | undefined;
 }
 
 // Interpolated quartiles and median. Tukey whiskers reach the outermost samples within 1.5 IQR, and
@@ -181,8 +166,8 @@ function boxGlyphs(data: readonly number[], sorted: readonly number[], at: numbe
   const { half, shift, every, whiskers } = style;
   const q1 = quantile(sorted, 0.25), q3 = quantile(sorted, 0.75), median = quantile(sorted, 0.5);
   const iqr = q3 - q1;
-  const min = whiskers === 'minmax' ? sorted[0]! : Math.min(q1, sorted.find((v) => v >= q1 - 1.5 * iqr)!);
-  const max = whiskers === 'minmax' ? sorted.at(-1)! : Math.max(q3, [...sorted].reverse().find((v) => v <= q3 + 1.5 * iqr)!);
+  const min = whiskers === 'min-max' ? sorted[0]! : Math.min(q1, sorted.find((v) => v >= q1 - 1.5 * iqr)!);
+  const max = whiskers === 'min-max' ? sorted.at(-1)! : Math.max(q3, [...sorted].reverse().find((v) => v <= q3 + 1.5 * iqr)!);
   const marks: Glyph[] = [
     line('Whiskers', [
       [at, min],
@@ -288,12 +273,7 @@ export function readDistribution(r: Fields, path: string, reserve: (count: numbe
   const at = r.optional('position', number(-MAX_VALUE, MAX_VALUE)) ?? 0;
   const horizontal = r.optional('horizontal', boolean);
   const points = r.optional('points', boolean);
-  const polar = r.optional('polar', boolean);
-  if (polar && Math.abs(at) > MAX_ANGLE - 1) {
-    fail(`${path}.position`, `must leave the violin inside ±${MAX_ANGLE} radians`);
-  }
-  if (polar && horizontal) fail(path, 'cannot combine polar and horizontal');
-  const whiskers = r.optional('whiskers', oneOf(['minmax', 'tukey'] as const));
+  const whiskers = r.optional('whiskers', oneOf(['min-max', 'tukey'] as const));
   const bandwidth = r.optional('bandwidth', number(Number.MIN_VALUE, MAX_VALUE));
   const mirrored = r.optional('mirrored', boolean) ?? true;
   const sizes = r.optional('sizes', list(data.length, data.length, number(1, 40)));
@@ -322,7 +302,6 @@ export function readDistribution(r: Fields, path: string, reserve: (count: numbe
       const density = kernelDensity(path, data, sorted, bandwidth, reserve);
       const samples = points ? data.map((v, i) => valued(dot('{0}', at + jitter(i), v, 4), [v])) : [];
       marks = [envelope(density, at, false), ...samples];
-      if (polar) toPolar(marks, density);
       break;
     }
     case 'density': {

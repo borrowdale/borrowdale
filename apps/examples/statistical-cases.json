@@ -121,49 +121,6 @@
   }
  },
  {
-  "name": "polar-violin",
-  "spec": {
-   "width": 580,
-   "height": 320,
-   "title": "Radial violin",
-   "axes": {
-    "x": {
-     "type": "linear",
-     "title": "Projected x",
-     "hidden": true
-    },
-    "y": {
-     "type": "linear",
-     "title": "Projected y",
-     "hidden": true
-    }
-   },
-   "series": [
-    {
-     "type": "distribution",
-     "display": "violin",
-     "data": [
-      12,
-      14,
-      14,
-      15,
-      16,
-      17,
-      17,
-      17,
-      18,
-      19,
-      20,
-      24,
-      29
-     ],
-     "name": "Observations",
-     "polar": true
-    }
-   ]
-  }
- },
- {
   "name": "fitted-normal",
   "spec": {
    "width": 580,
@@ -546,7 +503,7 @@
      "name": "East",
      "position": 1,
      "horizontal": true,
-     "whiskers": "minmax"
+     "whiskers": "min-max"
     },
     {
      "type": "distribution",
@@ -567,7 +524,7 @@
      "name": "West",
      "position": 2,
      "horizontal": true,
-     "whiskers": "minmax"
+     "whiskers": "min-max"
     }
    ]
   }
@@ -986,7 +943,8 @@
       ]
      ],
      "name": "Observations",
-     "binWidth": 0.65
+     "binWidth": 1.3,
+     "binHeight": 1.1
     }
    ]
   }
