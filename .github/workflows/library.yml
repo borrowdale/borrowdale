@@ -24,8 +24,9 @@ jobs:
   test:
     name: Node ${{ matrix.node }}
     runs-on: ubuntu-latest
-    # A whole job normally takes 2 to 3 minutes.
-    timeout-minutes: 15
+    # A whole job normally takes 2 to 3 minutes. The steps that set their own limits allow 19 minutes
+    # in all, so a slow mirror or cache stops at a named step rather than at this limit.
+    timeout-minutes: 25
     # A newer push to a pull request cancels its older run. Every other run, after a merge or started
     # by the Release workflow, has a group of its own, so it is never cancelled or held up.
     concurrency:
@@ -45,27 +46,142 @@ jobs:
           node-version: ${{ matrix.node }}
           cache: npm
       - run: npm ci
+      # The browsers' system libraries, about 114 MB of packages from Ubuntu's mirror, are kept in the
+      # Actions cache between runs, so a job downloads from the mirror only what the cache lacks. The
+      # key names the runner image and the Playwright version, whose dependency list chooses the
+      # packages. A key with no entry yet falls back to the newest entry for the same operating
+      # system, and apt still installs the versions in the current index, downloading any the cache
+      # does not hold. The cache only saves time: none of its steps can fail the job. The restore and
+      # the save are separate actions, as the save waits for a successful install and only the restore
+      # reports the entry it found. This step names the cache's folder once, as the restore and the
+      # save must give the same path or every restore misses. ImageOS and ImageVersion exist only on
+      # GitHub-hosted runners; without them this step fails and the cache is skipped.
+      - name: Name the system library cache
+        id: library-cache
+        continue-on-error: true
+        run: |
+          version=$(node -p "require('./node_modules/playwright-core/package.json').version")
+          prefix="system-libraries-${ImageOS:?}-"
+          key="$prefix${ImageVersion:?}-playwright-$version"
+          {
+            echo "path=$RUNNER_TEMP/system-libraries"
+            echo "prefix=$prefix"
+            echo "key=$key"
+          } >> "$GITHUB_OUTPUT"
+      - name: Restore the system library packages
+        id: restore-library-packages
+        if: steps.library-cache.outcome == 'success'
+        continue-on-error: true
+        timeout-minutes: 2
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.library-cache.outputs.path }}
+          key: ${{ steps.library-cache.outputs.key }}
+          restore-keys: ${{ steps.library-cache.outputs.prefix }}
+      # apt uses a package already in its folder without checking its hash when the name and size match
+      # its index. So a restored file goes to apt only when its SHA-256 is in the current index, under the
+      # name apt gives that package there: name_version_architecture.deb, with the colon after a version's
+      # epoch written as %3a. Files are hashed by content and named by the index, so a file's name in the
+      # cache never decides the name it gets. This guards apt's folder only: the restore itself can write
+      # wherever the runner user can, so an entry is only as trusted as the runs that can write it, which
+      # are runs on main and, for its own entries, a pull request. The step prints how many restored
+      # packages it handed over, and runs with pipefail so that a failed index read fails the step instead
+      # of passing quietly.
+      - name: Hand the restored packages to apt
+        if: steps.restore-library-packages.outputs.cache-matched-key != ''
+        continue-on-error: true
+        timeout-minutes: 2
+        shell: bash
+        env:
+          PACKAGES: ${{ steps.library-cache.outputs.path }}
+        run: |
+          sudo timeout --kill-after=10 90 apt-get update -qq
+          apt-get indextargets --format '$(FILENAME)' 'Created-By: Packages' \
+            | xargs -r /usr/lib/apt/apt-helper cat-file \
+            | awk '
+                function emit() {
+                  if (h != "") {
+                    gsub(/:/, "%3a", v)
+                    print h, p "_" v "_" a ".deb"
+                  }
+                  p = v = a = h = ""
+                }
+                /^Package: / { if (p != "") emit(); p = $2 }
+                /^Version: / { v = $2 }
+                /^Architecture: / { a = $2 }
+                /^SHA256: / { h = $2 }
+                /^$/ { emit() }
+                END { emit() }' > "$RUNNER_TEMP/package-index"
+          files=("$PACKAGES"/*.deb)
+          for i in "${!files[@]}"; do
+            sum=$(sha256sum < "${files[$i]}")
+            echo "${sum%% *} $i"
+          done \
+            | awk 'NR == FNR { name[$1] = $2; next } $1 in name { print $2, name[$1] }' \
+                "$RUNNER_TEMP/package-index" - > "$RUNNER_TEMP/package-matches"
+          while read -r i name; do
+            sudo cp "${files[$i]}" "/var/cache/apt/archives/$name"
+          done < "$RUNNER_TEMP/package-matches"
+          handed=$(wc -l < "$RUNNER_TEMP/package-matches")
+          echo "Handed $handed of ${#files[@]} restored packages to apt."
+          if [ "$handed" -eq 0 ]; then
+            echo "::warning::None of the restored packages matched the current package index."
+          fi
       # The parity tests draw in all three engines and fail, rather than skip, without them. Their system
       # libraries come from Ubuntu's package mirror, which sometimes stops sending data or slows to a
-      # trickle. apt drops a connection that is silent for 15 seconds and retries it, and an attempt
-      # that still runs past 120 seconds (normally 30 to 70) is stopped and started once more, so a
-      # stalled mirror costs at most about 5 minutes. The timeout runs as root, as apt-get does: as the
-      # runner user it cannot stop apt-get, which would then hold the package lock and fail the retry.
+      # trickle. The runner image already makes apt drop a connection that is silent for 15 seconds,
+      # retry it once and then move to the next mirror; the step prints the settings the image sets. An
+      # attempt that still runs past 120 seconds (normally 30 to 70) is stopped and started again, up
+      # to four attempts in all. The packages an attempt has fetched stay in apt's folder, so each one
+      # picks up where the last stopped: a mirror that delivers a third of the packages per attempt
+      # finishes on the third, and one that never finishes costs about 9 minutes. The timeout runs as
+      # root, as apt-get does: as the runner user it cannot stop apt-get, which would then hold the
+      # package lock and fail the retry.
       - name: Install the browsers' system libraries
-        timeout-minutes: 5
+        timeout-minutes: 10
         run: |
-          printf '%s\n' 'Acquire::Retries "2";' 'Acquire::http::Timeout "15";' 'Acquire::https::Timeout "15";' \
-            | sudo tee /etc/apt/apt.conf.d/99-stalled-mirror > /dev/null
+          apt-config dump Acquire::Retries Acquire::http::Timeout Acquire::https::Timeout
           node_bin=$(command -v node)
-          for attempt in 1 2; do
+          for attempt in 1 2 3 4; do
             if sudo timeout --kill-after=10 120 "$node_bin" node_modules/playwright-core/cli.js \
                 install-deps chromium firefox webkit; then
               exit 0
             fi
-            echo "Attempt $attempt failed or ran past 120 seconds."
+            echo "Attempt $attempt of 4 failed or ran past 120 seconds."
             sudo dpkg --configure -a || true
           done
           exit 1
+      # After a successful install, this step drops the versions the current index no longer offers,
+      # and the next step saves the rest under this run's key. An exact hit is not saved again:
+      # packages updated since it was saved come from the mirror until the image or Playwright changes
+      # the key. If apt kept no packages, this step says so, and nothing is saved.
+      - name: Collect the system library packages
+        id: collect-library-packages
+        if: >-
+          steps.library-cache.outcome == 'success'
+          && steps.restore-library-packages.outputs.cache-hit != 'true'
+        continue-on-error: true
+        env:
+          PACKAGES: ${{ steps.library-cache.outputs.path }}
+        run: |
+          sudo apt-get autoclean
+          rm -rf "$PACKAGES"
+          mkdir -p "$PACKAGES"
+          if ! compgen -G "/var/cache/apt/archives/*.deb" > /dev/null; then
+            echo "::warning::apt kept no packages after the install, so there is nothing to cache."
+            exit 1
+          fi
+          cp /var/cache/apt/archives/*.deb "$PACKAGES/"
+      # The save reads Collect's outcome, not its conclusion: continue-on-error makes every conclusion
+      # a success.
+      - name: Save the system library packages
+        if: steps.collect-library-packages.outcome == 'success'
+        continue-on-error: true
+        timeout-minutes: 2
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.library-cache.outputs.path }}
+          key: ${{ steps.library-cache.outputs.key }}
       # Playwright drops a download that is silent for 15 seconds and moves to its next mirror.
       - name: Download the browsers
         timeout-minutes: 3
