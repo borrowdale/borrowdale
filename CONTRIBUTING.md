@@ -81,6 +81,26 @@ The package `README.md` files are the reference documentation. Change them in th
 as the behaviour they describe. Keep examples runnable, state limits as numbers, and say what has
 been measured rather than what is expected.
 
+### Name options consistently
+
+- Functions are camelCase and types and classes PascalCase, with an acronym written as a word
+  (`toSvgChart`, `fontFaceCss`, `SvgChartOptions`). Constants are upper case with underscores
+  (`MAX_ANGLE`).
+- Option keys are camelCase (`binWidth`, `fontFiles`).
+- The values of discriminants (a series' `type`, `display` and `method`, and a shape's `kind`) are
+  camelCase, with an acronym in lower case at the start and upper case inside (`qq`, `normalQQ`,
+  `xyLine`, `linearPath`).
+- Other option values name a style or a behaviour and are kebab-case (`step-before`, `min-max`, and
+  a pattern's `kind`, such as `cross-hatch`).
+- Angles in chart and text options are in degrees. Core's `arc` shape and the `sin` and `cos` of
+  `@borrowdale/core/math` take radians.
+- A size option means the same extent wherever it appears: `binWidth` is a cell's full width on
+  every display that takes it.
+
+Once a version is published, renaming or removing an exported name, an option key or an option
+value is a breaking change. Adding a series type, a `display` value or a method is not: say so
+where the set is documented, so that callers who switch over it keep a default branch.
+
 ### Keep the website in step
 
 The website renders the package READMEs and the guides in `apps/site/content/` directly, and builds
