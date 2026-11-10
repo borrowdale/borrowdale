@@ -187,6 +187,8 @@ function rectangles(path: string, [width, height]: [number, number]): CellLayout
 
 // Flat-top hexagons in axial coordinates, rounded in three cube axes. `width` is a hexagon's extent from
 // vertex to vertex and `height` from flat side to flat side, as a rectangle cell's are its sides.
+// Columns stand 1.5 radii apart and rows one height apart, each odd column half a height up. The
+// guard checks the inner vertices, the closer pair in x, and the flat sides.
 function hexagons(path: string, [width, height]: [number, number]): CellLayout {
   const radius = width / 2, half = height / 2;
   return {

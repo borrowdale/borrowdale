@@ -44,8 +44,8 @@ interface DistributionOptions {
   /** Exchange the axes, so the group stands on y and the values run along x. */
   horizontal?: boolean | undefined;
   /**
-   * Tukey whiskers (the default) reach the outermost samples within 1.5 IQR of the box; `min-max`
-   * whiskers reach the lowest and highest samples.
+   * Tukey whiskers (the default) reach the outermost samples within 1.5 IQR of the box, and never end
+   * inside it; `min-max` whiskers reach the lowest and highest samples.
    */
   whiskers?: 'tukey' | 'min-max' | undefined;
   /** Draw every sample as a dot. */

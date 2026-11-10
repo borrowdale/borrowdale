@@ -38,8 +38,8 @@ optionally its own `color` (a hex code, a colour name, `rgb()`, `rgba()`, `hsl()
 not `inherit`, `initial`, `unset` or `revert`) and
 `style` (any `@borrowdale/core` style option but `seed`, within the limits under Chart options).
 The series' types decide what the chart is, and which axes it takes; series of different rows
-cannot share a chart, except where a row says so. Minor releases add series types, `display` values
-and regression methods, so code that switches over them needs a default branch:
+cannot share a chart, except where a row says so. Releases add series types, `display` values and
+regression methods, so code that switches over them needs a default branch:
 
 | Series types | Axes |
 |---|---|
