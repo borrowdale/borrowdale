@@ -84,8 +84,9 @@ been measured rather than what is expected.
 ### Name options consistently
 
 - Functions are camelCase and types and classes PascalCase, with an acronym written as a word
-  (`toSvgChart`, `fontFaceCss`, `SvgChartOptions`). Constants are upper case with underscores
-  (`MAX_ANGLE`).
+  (`toSvgChart`, `fontFaceCss`, `SvgChartOptions`). A type named after a series type keeps that
+  type's letters (`XYLineSeries` for `xyLine`). Limits are upper case with underscores
+  (`MAX_ANGLE`); exported data, such as a font, is camelCase (`excalifont`).
 - Option keys are camelCase (`binWidth`, `fontFiles`).
 - The values of discriminants (a series' `type`, `display` and `method`, and a shape's `kind`) are
   camelCase, with an acronym in lower case at the start and upper case inside (`qq`, `normalQQ`,
