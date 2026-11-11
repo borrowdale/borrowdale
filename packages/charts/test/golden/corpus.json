@@ -7602,7 +7602,6 @@
    "series": [
     {
      "type": "heatmap",
-     "display": "correlation",
      "dataLabels": true,
      "name": "Correlation",
      "data": [
@@ -7686,7 +7685,8 @@
        "Income",
        1
       ]
-     ]
+     ],
+     "correlation": true
     }
    ]
   }
@@ -12354,7 +12354,6 @@
      "type": "horizon",
      "name": "North",
      "row": "North",
-     "bands": 3,
      "data": [
       [
        0,
@@ -12740,13 +12739,13 @@
        95,
        -0.1
       ]
-     ]
+     ],
+     "layers": 3
     },
     {
      "type": "horizon",
      "name": "South",
      "row": "South",
-     "bands": 3,
      "data": [
       [
        0,
@@ -13132,13 +13131,13 @@
        95,
        -5.92
       ]
-     ]
+     ],
+     "layers": 3
     },
     {
      "type": "horizon",
      "name": "East",
      "row": "East",
-     "bands": 3,
      "data": [
       [
        0,
@@ -13524,7 +13523,8 @@
        95,
        -8.1
       ]
-     ]
+     ],
+     "layers": 3
     }
    ]
   }
@@ -13714,7 +13714,6 @@
      "name": "Warehouse A",
      "row": "Warehouse A",
      "mode": "offset",
-     "bands": 2,
      "data": [
       [
        "2026-10-01",
@@ -13840,14 +13839,14 @@
        "2026-10-31",
        5
       ]
-     ]
+     ],
+     "layers": 2
     },
     {
      "type": "horizon",
      "name": "Warehouse B",
      "row": "Warehouse B",
      "mode": "offset",
-     "bands": 2,
      "data": [
       [
        "2026-10-01",
@@ -13973,7 +13972,8 @@
        "2026-10-31",
        -1
       ]
-     ]
+     ],
+     "layers": 2
     }
    ]
   }

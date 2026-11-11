@@ -21,7 +21,7 @@ export const SCHEMES: Record<ColorScheme, readonly string[]> = {
   'blue-red': [...RED_BLUE].reverse(),
 };
 
-/** The most classes a classed scale may have: as many as a horizon of 6 bands takes. */
+/** The most classes a classed scale may have: as many as a horizon of 6 layers takes. */
 export const MAX_CLASSES = 12;
 // How far apart, as a share of a class's width, a computed quantize boundary and a decimal may be and
 // still be taken as the same number: binary rounding, far below any difference the legend can write.

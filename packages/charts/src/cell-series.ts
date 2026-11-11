@@ -11,6 +11,7 @@ import {
   type CheckedLinearAxis,
 } from './check-axis.js';
 import {
+  boolean,
   coordinates,
   fail,
   integer,
@@ -31,8 +32,8 @@ import type { SeriesOf } from './validate.js';
 // The farthest a hex heatmap's column or row may be from 0.
 const MAX_HEX_PLACE = 100_000;
 // A horizon's layers.
-const MIN_HORIZON_BANDS = 2;
-const MAX_HORIZON_BANDS = 6;
+const MIN_HORIZON_LAYERS = 2;
+const MAX_HORIZON_LAYERS = 6;
 
 /** A cell's place on one axis as the spec gives it: a category, a number, or a `[from, to]` stretch. */
 type GivenPlace = string | number | [number, number];
@@ -82,7 +83,8 @@ const readCells = (r: Fields, reserve: (count: number) => void) => r.required('d
 
 export function readHeatmap(r: Fields, _path: string, reserve: (count: number) => void) {
   return {
-    display: r.optional('display', oneOf(['rect', 'circle', 'hex', 'correlation'] as const)) ?? 'rect',
+    display: r.optional('display', oneOf(['rect', 'circle', 'hex'] as const)) ?? 'rect',
+    correlation: r.optional('correlation', boolean) ?? false,
     data: readCells(r, reserve),
   };
 }
@@ -111,7 +113,7 @@ export function resolveCells(entry: Extract<SeriesOf<'cartesian'>, { type: 'heat
       cell.x = placeOn(axes.x, cell.given[0], `${path}[0]`);
       cell.y = placeOn(axes.y, cell.given[1], `${path}[1]`);
     }
-    if (entry.display === 'correlation' && cell.value !== null && !(cell.value >= -1 && cell.value <= 1)) {
+    if (entry.correlation && cell.value !== null && !(cell.value >= -1 && cell.value <= 1)) {
       fail(`${path}[2]`, `must be a coefficient from -1 to 1, got ${cell.value}`);
     }
   });
@@ -150,7 +152,7 @@ export function readHorizon(r: Fields, _path: string, reserve: (count: number) =
     row: r.required('row', shortText(MAX_NAME)),
     category: -1,
     data: r.required('data', list(0, MAX_POINTS, nullable(coordinates(['x', 'value'])), reserve)),
-    bands: r.optional('bands', integer(MIN_HORIZON_BANDS, MAX_HORIZON_BANDS)) ?? 3,
+    layers: r.optional('layers', integer(MIN_HORIZON_LAYERS, MAX_HORIZON_LAYERS)) ?? 3,
     mode: r.optional('mode', oneOf(['mirror', 'offset'] as const)) ?? 'mirror',
   };
 }

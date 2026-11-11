@@ -21,7 +21,7 @@ export interface ChartSpec {
   seed?: Seed | undefined;
   /** For every label, in user units, from 1 to 200. The title is 4 units larger. Defaults to 12. */
   fontSize?: number | undefined;
-  /** Defaults to `top` with two or more entries and to `none` with one. */
+  /** Defaults to `top` with two or more entries or a colour axis, and to `none` otherwise. */
   legend?: LegendPosition | undefined;
   /**
    * Applies to every shape the chart draws, axes too, under each series' own `style`. Its `stroke`,
@@ -65,22 +65,28 @@ export type ColorScheme = (typeof COLOR_SCHEMES)[number];
  * A colour axis: a linear axis of values whose colours fill cells. Its ends round out to ticks
  * unless fixed, as a linear axis' do, and a value beyond a fixed end is an error. Its legend is a ramp
  * labelled at its ends, or one swatch per class labelled at the class boundaries, and a "no value"
- * swatch when a cell has none.
+ * swatch when a cell has none. A value on a class boundary is in the class above it. Series whose
+ * values need different default scales, such as a correlation and a plain heatmap, cannot share it.
+ * Each option is for the scales it names; on another it is an error.
  */
 export interface ColorAxis extends Omit<LinearAxis, 'percent' | 'grid' | 'hidden' | 'labelAngle'> {
   /**
-   * Defaults to `sequential`, to `diverging` on a correlation heatmap, and to `quantize` on a horizon
-   * chart.
+   * Defaults to `sequential`, to `diverging` on a correlation heatmap (fixed at -1 and 1 unless `min`
+   * or `max` is set), and to `quantize` on a horizon chart.
    */
   scale?: ColorScaleKind | undefined;
   /**
-   * The colours, by name. Defaults to `red-blue` for a diverging scale and `viridis` otherwise. Not
-   * with `stops`.
+   * The colours, by name. Defaults to `red-blue` for a diverging scale and on a horizon chart, and
+   * to `viridis` otherwise. Not with `stops`.
    */
   scheme?: ColorScheme | undefined;
   /** 2 to 32 colours, from the lowest value to the highest, each a 3, 4, 6 or 8-digit hex code. */
   stops?: readonly string[] | undefined;
-  /** For `quantize` and `quantile`: 2 to 12 classes. Defaults to 5, and to twice `bands` on a horizon chart. */
+  /**
+   * For `quantize` and `quantile`: 2 to 12 classes. Defaults to 5, and to twice `layers` on a horizon
+   * chart. Quantile classes need as many distinct values, and ties that leave a class empty are an
+   * error.
+   */
   classes?: number | undefined;
   /** For `threshold`, which needs them: 1 to 11 increasing values, each starting a class. */
   breaks?: readonly number[] | undefined;
@@ -691,19 +697,36 @@ export type CellPlace = string | readonly [from: ChartValue, to: ChartValue];
  * Cells coloured by their value through the chart's colour axis: a heatmap, matrix or punch card on
  * band axes, warming stripes or a heat lane along a time axis, or a hexagon heatmap or tile map.
  * `display` picks the shape: a `rect` filling its place (the default), a `circle` whose area grows
- * with the value's size, a `hex` on two linear axes, or a `correlation` matrix, whose values are
- * coefficients from -1 to 1 on a diverging scale fixed at those ends.
+ * with the value's size, or a `hex` on two linear axes.
  */
-export interface HeatmapSeries extends SeriesBase {
+export type HeatmapSeries = HeatmapBase & (
+  | {
+      display?: 'rect' | 'circle' | undefined;
+      /**
+       * One `[x, y, value]` per cell, at most one per place; a `null` value draws the cell's outline as
+       * having no value.
+       */
+      data: readonly (readonly [x: CellPlace, y: CellPlace, value: number | null])[];
+    }
+  | {
+      display: 'hex';
+      /**
+       * One `[column, row, value]` per hexagon, whole numbers from -100,000 to 100,000: flat-topped
+       * hexagons one unit across, columns 0.75 apart, each column half a row above the one before it.
+       * They are regular where one y unit is drawn √3/2 as long as one x unit.
+       */
+      data: readonly (readonly [column: number, row: number, value: number | null])[];
+    }
+);
+
+interface HeatmapBase extends SeriesBase {
   type: 'heatmap';
   /**
-   * One `[x, y, value]` per cell, at most one per place; a `null` value draws the cell's outline as
-   * having no value. With `display: 'hex'`, x and y are a hexagon's column and row, whole numbers:
-   * flat-topped hexagons one unit across, columns 0.75 apart, each column half a row above the one
-   * before it.
+   * The values are correlation coefficients, from -1 to 1, beyond which they are an error: the colour
+   * axis is `diverging` and fixed at -1 and 1 unless set. A correlation heatmap cannot share the
+   * colour axis with one that is not. Defaults to false.
    */
-  data: readonly (readonly [x: CellPlace | number, y: CellPlace | number, value: number | null])[];
-  display?: 'rect' | 'circle' | 'hex' | 'correlation' | undefined;
+  correlation?: boolean | undefined;
   /** Writes each value on its cell. */
   dataLabels?: boolean | undefined;
 }
@@ -748,9 +771,9 @@ export interface CalendarSeries extends SeriesBase {
 
 /**
  * A horizon chart: a row of a band y axis whose values along a linear or time x axis are folded into
- * `bands` layers, each darker than the one below it, so a tall range fits a short row. Negative values
+ * layers (`layers`), each darker than the one below it, so a tall range fits a short row. Negative values
  * are mirrored up from the baseline (`mirror`, the default) or hang down from the top (`offset`), in
- * the colours below the midpoint. The colour axis is a quantize scale with twice `bands` classes,
+ * the colours below the midpoint. The colour axis is a quantize scale with twice `layers` classes,
  * symmetric about 0.
  */
 export interface HorizonSeries extends SeriesBase {
@@ -760,7 +783,7 @@ export interface HorizonSeries extends SeriesBase {
   /** Points `[x, value]`, x increasing; `null` leaves a gap. */
   data: readonly (readonly [x: ChartValue, value: number] | null)[];
   /** How many layers the values each side of 0 are folded into: 2 to 6. Defaults to 3. */
-  bands?: number | undefined;
+  layers?: number | undefined;
   /** Negative values mirrored up from the baseline, or hanging from the top. Defaults to `mirror`. */
   mode?: 'mirror' | 'offset' | undefined;
 }
