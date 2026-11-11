@@ -2,7 +2,7 @@
 
 BorrowdaleJS is a TypeScript toolkit for hand-drawn charts, shapes, text and patterns. The public name is BorrowdaleJS; package imports use the `@borrowdale` scope.
 
-The latest release, 0.2.0, is on npm. Install the packages you need, then explore the same APIs the playground and examples use.
+The latest release, 0.3.0, is on npm. Install the packages you need, then explore the same APIs the playground and examples use.
 
 ## Start here
 
