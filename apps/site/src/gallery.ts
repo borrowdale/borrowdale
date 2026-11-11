@@ -20,7 +20,7 @@ export type Example = {
 };
 const json = (x: unknown) => JSON.stringify(x, null, 2);
 export function codeBlock(code: string) {
-  return `<div class="code-block"><div class="code-bar"><span>JavaScript · workspace imports</span><button class="copy-code" type="button">Copy code</button></div><pre tabindex="0" aria-label="Code"><code>${escape(code)}</code></pre></div>`;
+  return `<div class="code-block"><div class="code-bar"><span>JavaScript</span><button class="copy-code" type="button">Copy code</button></div><pre tabindex="0" aria-label="Code"><code>${escape(code)}</code></pre></div>`;
 }
 export function chartCode(spec: ChartSpec) {
   return `import { layoutChart, toSvgChart } from '@borrowdale/charts';\nimport { excalifontFiles } from '@borrowdale/text/excalifont-files';\n\nconst spec = ${json({ ...spec, seed })};\nconst svg = toSvgChart(layoutChart(spec), { fontFiles: excalifontFiles });\ndocument.querySelector('#chart').innerHTML = svg;`;

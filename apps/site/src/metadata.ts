@@ -9,7 +9,7 @@ const descriptions: Record<string, string> = {
   '/docs/':
     'Learn BorrowdaleJS with shared guides, working code examples, and references for charts, shapes, text and repeating patterns.',
   '/docs/getting-started/':
-    'Set up BorrowdaleJS locally with Node.js 24 and create your first hand-drawn chart from a JavaScript spec.',
+    'Install BorrowdaleJS from npm and draw your first hand-drawn chart from a JavaScript spec, in Node.js 22 or later or in a browser.',
   '/docs/rendering/':
     'Render BorrowdaleJS drawings as SVG or Canvas, load Excalifont, use repeatable seeds and work with the live playground.',
   '/docs/cartesian/':
@@ -17,7 +17,7 @@ const descriptions: Record<string, string> = {
   '/docs/accessibility/':
     'Make BorrowdaleJS charts understandable with accessible descriptions, data alternatives and clear labels. Learn the current limitations.',
   '/docs/charts/':
-    'BorrowdaleJS chart API: series data, axes, legends, styling, validation, SVG and Canvas rendering for cartesian, radial and polar charts.',
+    'BorrowdaleJS chart API: series, axes, legends, styling, validation and SVG or Canvas rendering of cartesian, radial, polar, statistical and financial charts.',
   '/docs/core/':
     'BorrowdaleJS drawing API: seeded shapes, sketch styles, SVG paths, Canvas rendering and geometry primitives.',
   '/docs/text/':
@@ -28,17 +28,17 @@ const descriptions: Record<string, string> = {
   '/examples/':
     'Explore three complete BorrowdaleJS dashboards using World Bank, NASA GISS and USGS datasets. Every chart includes its code.',
   '/examples/world/':
-    'Compare income, life expectancy and population across selected countries in an interactive BorrowdaleJS dashboard using World Bank data.',
+    'Compare income, life expectancy and population across selected countries, with a fitted income and longevity curve, using World Bank data.',
   '/examples/climate/':
-    'Explore NASA GISTEMP temperature anomalies through hand-drawn annual trends, monthly ranges, polar charts and a gauge.',
+    'Explore NASA GISTEMP temperature anomalies through hand-drawn annual trends, decade box plots, a LOESS curve, monthly ranges, polar charts and a gauge.',
   '/examples/earthquakes/':
-    'Explore a saved USGS earthquake feed through event counts, magnitudes, depths, cumulative areas and radial charts.',
+    'Explore a saved USGS earthquake feed through event counts, a magnitude histogram, box plots of magnitude by depth, cumulative areas and radial charts.',
   '/about/':
     'Discover BorrowdaleJS, a TypeScript toolkit combining measured data visualization with a repeatable hand-drawn style.',
   '/contributing/':
     'Contribute to BorrowdaleJS: set up Node.js 24, run tests, report reproducible bugs, improve documentation and propose focused changes.',
   '/changelog/':
-    'Follow development of BorrowdaleJS. The packages are currently unreleased; this changelog describes the local development workspace.',
+    'Follow the development of BorrowdaleJS: what each release of the four @borrowdale packages added, changed and fixed.',
   '/license/':
     'Read the BorrowdaleJS MIT license, Excalifont SIL OFL license, incorporated-code notices and open-dataset credits.',
 };
