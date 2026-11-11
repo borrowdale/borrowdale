@@ -59,7 +59,8 @@ describe('gallery coverage and actual rendering', () => {
     }
   });
 
-  // A heatmap is tagged by the shape of its cells, so the hexagon and correlation views can be found by name.
+  // A heatmap is tagged by the shape of its cells, and as a correlation when it is one, so the hexagon and
+  // correlation views can be found by name.
   it.each([
     ['heatmap', 'heatmap'],
     ['punch-card', 'circle heatmap'],
