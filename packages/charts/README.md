@@ -38,8 +38,9 @@ optionally its own `color` (a hex code, a colour name, `rgb()`, `rgba()`, `hsl()
 not `inherit`, `initial`, `unset` or `revert`) and
 `style` (any `@borrowdale/core` style option but `seed`, within the limits under Chart options).
 The series' types decide what the chart is, and which axes it takes; series of different rows
-cannot share a chart, except where a row says so. Releases add series types, `display` values and
-regression methods, so code that switches over them needs a default branch:
+cannot share a chart, except where a row says so. Releases add series types, `display` values,
+regression methods, colour scales and colour schemes, so code that switches over them needs a
+default branch:
 
 | Series types | Axes |
 |---|---|
@@ -405,21 +406,24 @@ errors naming the cell; stretches that only overlap are drawn as given, the late
 |---|---|
 | `rect` (the default) | fills its place: a heatmap or matrix on band axes, warming stripes or a heat lane along a time axis with a single hidden category on `y`, a lasagna chart with a row per category |
 | `circle` | a circle in its place, its area growing with the value's size against the largest: a punch card |
-| `hex` | a flat-topped hexagon, on two `linear` axes, for a hexagon heatmap or tile map: x and y are its column and row, whole numbers, columns 0.75 apart and each half a row above the one before it, one unit across |
-| `correlation` | as `rect`, for coefficients from −1 to 1, an error beyond them: the colour axis is `diverging` and fixed at −1 and 1 unless set |
+| `hex` | a flat-topped hexagon, on two `linear` axes, for a hexagon heatmap or tile map: x and y are its column and row, whole numbers from −100,000 to 100,000, columns 0.75 apart and each half a row above the one before it, one unit across. The hexagons are regular where one y unit is drawn √3/2 as long as one x unit |
 
-`dataLabels` writes each value on its cell, on a `rect`, `hex` or `correlation` cell in white where the
+`correlation: true` reads the values as correlation coefficients, from −1 to 1, an error beyond them,
+with any display: the colour axis is `diverging` and fixed at −1 and 1 unless set. A correlation
+heatmap cannot share the colour axis with one that is not, since their values need different scales.
+
+`dataLabels` writes each value on its cell, on a `rect` or `hex` cell in white where the
 colour is dark. A circle may be smaller than its label, so its label stays in the usual ink, and a
 circle for a value of 0 has no area and is not drawn. Tooltips name the series, both
 places and the value: `Requests, 6am, Mon: 3`.
 
 A `horizon` series folds a row of values into layers, so a tall range fits a short row. It stands in
 the category `row` of a band `y` axis, with points `[x, value]` along a `linear` or `time` `x` axis, x
-increasing across gaps too, and `null` for a gap; a row holds one horizon. Each of its `bands` layers (2 to 6, default 3) holds the next
+increasing across gaps too, and `null` for a gap; a row holds one horizon. Each of its `layers` (2 to 6, default 3) holds the next
 stretch of values, up from the baseline and darker than the one below. Negative values fold the
 same way in the colours below 0, mirrored up from the baseline (`mode: 'mirror'`, the default) or
 hanging from the top of the row (`mode: 'offset'`). Its colour axis is a `quantize` scale with twice
-`bands` classes, 4 to 12, `red-blue` by default, symmetric about 0, so every row of a chart shares `bands`,
+`layers` classes, 4 to 12, `red-blue` by default, symmetric about 0, so every row of a chart shares `layers`,
 and a `colorAxis` that sets another scale, other classes or ends that are not opposite is an error.
 
 A `polarHeatmap` series draws a cell per `[angle, radius, value]` on band `angle` and `radius` axes:
@@ -540,7 +544,8 @@ A chart holds at most 100 series, 1,000 categories and 100,000 data points in al
 within ±10¹⁵. Validation reserves each series' point count before copying its data and stops as
 soon as the total exceeds the limit, without reading later series. A limit error reports the
 count reached so far, not a count of unread data. A pie holds at most 1,000 slices, and a chart
-at most 10 nested pies. A calendar counts one point per day of its range, reserved before any cell
+at most 10 nested pies. A hex heatmap's columns and rows are whole numbers within ±100,000. A
+calendar counts one point per day of its range, reserved before any cell
 is made, so a range of more than 100,000 days, about 273 years, is an error. A gauge's dial
 holds as many bar rings as fit outside its hub. Titles and stack names hold at most 1,000
 characters, and names, categories and colours at most 100. All of a chart's strokes share one
