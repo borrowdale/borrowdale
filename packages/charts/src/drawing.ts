@@ -38,6 +38,9 @@ export const CENTRED = { anchor: 'middle', baseline: 'middle' } as const;
 // Text that starts at the point it is drawn at, centred on it vertically: stem-and-leaf rows.
 export const START = { anchor: 'start', baseline: 'middle' } as const;
 
+/** A drawn shape: what `shape` and `outline` return. */
+export type SketchNode = Extract<ChartNode, { kind: 'sketch' }>;
+
 /** What tells one mark's strokes from another's: its series, category, part and the like. */
 export type SeedKey = readonly (string | number)[];
 
@@ -97,11 +100,11 @@ export class Drawing {
    * from the chart seed and `key`, so a mark keeps its strokes when other marks change. Each part is
    * written with its length, so a separator inside a name never makes two keys alike.
    */
-  shape(shape: Shape, defaults: SketchStyle, key: SeedKey, own: SketchStyle = {}): ChartNode {
+  shape(shape: Shape, defaults: SketchStyle, key: SeedKey, own: SketchStyle = {}): SketchNode {
     return this.#sketch(shape, { ...defaults, ...this.#chart.style, ...own }, key);
   }
 
-  #sketch(shape: Shape, style: SketchStyle, key: SeedKey): ChartNode {
+  #sketch(shape: Shape, style: SketchStyle, key: SeedKey): SketchNode {
     const seed = [this.#chart.seed, ...key].map((part) => `${String(part).length}:${part}`).join('');
     const drawn = sketch(shape, { ...style, seed }, this.#budget);
     for (const path of drawn.paths) {
@@ -121,7 +124,7 @@ export class Drawing {
    * A shape drawn as an outline only, as `shape` draws it but never filled, whatever fill the chart's
    * or the series' style gives: lines, the edges of areas, gridlines, axes, ticks and tracks.
    */
-  outline(shape: Shape, defaults: SketchStyle, key: SeedKey, own: SketchStyle = {}): ChartNode {
+  outline(shape: Shape, defaults: SketchStyle, key: SeedKey, own: SketchStyle = {}): SketchNode {
     return this.#sketch(shape, { ...defaults, ...this.#chart.style, ...own, fill: 'none' }, key);
   }
 

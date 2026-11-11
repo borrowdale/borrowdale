@@ -2,6 +2,8 @@ import { placeSwarm } from './statistics/swarm.js';
 import { labelOf, type Glyph } from './statistics/geometry.js';
 import { unhandled } from './statistics/types.js';
 import { drawXYLine, drawXYArea } from './cartesian-paths.js';
+import { drawHeatmap, drawHorizon, type PlaceName } from './cells.js';
+import type { ColorScale } from './color-scale.js';
 import { barShape } from './bar-shape.js';
 import { annotationValues, drawAnnotations } from './annotations.js';
 import type { Point, Shape, SketchStyle } from '@borrowdale/core';
@@ -14,17 +16,18 @@ import {
   type AxisKey,
   type Reserve,
 } from './cartesian-axes.js';
-import type { CheckedLinearAxis } from './check-axis.js';
+import type { CheckedAxis, CheckedLinearAxis } from './check-axis.js';
 import { areaPath, linePath, straightPoints } from './curves.js';
 import { CENTRED, START, type Drawing, type SeedKey } from './drawing.js';
 import { assertRoom, BAND_PADDING, type Rect } from './frame.js';
 import { loneDot, piecesOf, POINT_SIZE, runsOf, solid } from './marks.js';
-import { hatched, LINE_WIDTH, roleFill, roleStroke, type Paint } from './palette.js';
+import { countDensity, hatched, LINE_WIDTH, roleFill, roleStroke, type Paint } from './palette.js';
 import { fail } from './read.js';
 import { stackGroup, stackSpans, type Span } from './stack.js';
 import { bandScale, emptyExtent, formatAxisValue, formatShare, formatValue, place, scaleOf, type BandScale, type PlacedScale } from './scale.js';
 import { markerNode } from './symbols.js';
-import type { ChartNode, Curve, Marker } from './types.js';
+import type { ChartNode, ChartValue, Curve, Marker } from './types.js';
+import type { CheckedPlace } from './cell-series.js';
 import { isStacking, type CheckedCartesianChart, type SeriesOf } from './validate.js';
 
 type CartesianSeries = SeriesOf<'cartesian'>;
@@ -51,6 +54,8 @@ interface Mark<S extends CartesianSeries> {
    * their categories and value spans.
    */
   points?: (entry: S) => readonly (readonly [number, number, ...number[]])[];
+  /** The values it spans on axis `key`, for series whose cells may sit on either axis. */
+  values?: (entry: S, key: AxisKey) => readonly number[];
   /**
    * How far its marks may reach past the point of their value, on a plot whose shorter side is
    * `plotSize` or less: the plot keeps that much room inside its edges. Text is measured with
@@ -136,6 +141,18 @@ const MARKS: { [K in MarkType]: Mark<Extract<CartesianSeries, { type: K }>> } = 
     zero: false, slot: false, legend: marked(false), points: ({ data }) => data,
     reach: (size) => bubbleDiameter(size) / 2, draw: drawPoints,
   },
+  heatmap: {
+    zero: false, slot: false, legend: boxed, reach: none, draw: (context, { entry }) => drawHeatmap(context, entry),
+    // A stretch of a continuous axis; a category spans none.
+    values: ({ data }, key) => key === 'y2' ? [] : data.flatMap((cell) => {
+      const place = key === 'x' ? cell.x : cell.y;
+      return 'from' in place ? [place.from, place.to] : [];
+    }),
+  },
+  horizon: {
+    zero: false, slot: false, legend: boxed, reach: none, draw: drawHorizon,
+    values: ({ data }, key) => (key === 'x' ? present(data).map(([x]) => x) : []),
+  },
 };
 
 /** The diameter of the largest bubble on a plot whose shorter side is `plotSize`. */
@@ -156,8 +173,9 @@ export function legendOf(entry: CartesianSeries): LegendShape {
 
 /** Lays out axes, gridlines and series of a chart with x and y axes into `rect`. */
 export function layoutCartesian(drawing: Drawing, chart: CheckedCartesianChart, rect: Rect, paints: Paint[]): void {
-  const { x, y, y2, band, series } = chart;
-  const horizontal = band === y;
+  const { x, y, y2, roles, series } = chart;
+  const band = roles.kind === 'band' ? roles.band : undefined;
+  const horizontal = roles.kind === 'band' && roles.along === 'y';
   const linear: Record<AxisKey, CheckedLinearAxis | undefined> = {
     x: x.type === 'linear' ? x : undefined,
     y: y.type === 'linear' ? y : undefined,
@@ -208,7 +226,8 @@ export function layoutCartesian(drawing: Drawing, chart: CheckedCartesianChart, 
     plotLeft = Math.max(plotLeft, rect.left + below.ends.left, rect.left + room.left.outside);
     plotRight = Math.min(plotRight, rect.right - below.ends.right, rect.right - room.right.outside);
     // The band axis, if there is one, is x below the plot or y beside it.
-    const plot = fitBandEnds({ left: plotLeft, top, right: plotRight, bottom }, band === x ? below : left, rect, chart);
+    // Either axis may be a band axis, and with cells both are: each keeps its end labels on the chart.
+    const plot = fitBandEnds(fitBandEnds({ left: plotLeft, top, right: plotRight, bottom }, below, rect, chart), left, rect, chart);
     // Where the values of x and y are placed: the plot, less the room kept inside it.
     const data: Rect = {
       left: plot.left + room.left.inside,
@@ -245,14 +264,21 @@ export function layoutCartesian(drawing: Drawing, chart: CheckedCartesianChart, 
     y: yScale && place(yScale, [data.bottom, data.top]),
     y2: y2Scale && place(y2Scale, [data.bottom, data.top]),
   };
-  const across: [number, number] = horizontal ? [plot.top, plot.bottom] : [plot.left, plot.right];
-  const bands = band && bandScale(band.categories.length, across, BAND_PADDING, band.weights);
+  const bandsOn = (axis: CheckedAxis, along: [number, number]): BandScale | undefined =>
+    axis.type === 'band' ? bandScale(axis.categories.length, along, BAND_PADDING, axis.weights) : undefined;
+  const bandScales = { x: bandsOn(x, [plot.left, plot.right]), y: bandsOn(y, [plot.top, plot.bottom]) };
+  const bands = horizontal ? bandScales.y : bandScales.x;
   const frame = makeFrame(plot, horizontal, bands);
+  const categoriesOf = (key: 'x' | 'y'): readonly string[] => {
+    const axis = key === 'x' ? x : y;
+    return axis.type === 'band' ? axis.categories : [];
+  };
 
-  const annotationAt = (key: AxisKey, value: import('./types.js').ChartValue): number => {
+  const annotationAt = (key: AxisKey, value: ChartValue): number => {
     if (typeof value === 'number') return scales[key]!.at(value);
-    const index = band!.categories.indexOf(value);
-    return bands!.start(index) + bands!.width(index) / 2;
+    const onAxis = key === 'y2' ? undefined : bandScales[key];
+    const index = categoriesOf(key === 'y2' ? 'y' : key).indexOf(value);
+    return onAxis!.start(index) + onAxis!.width(index) / 2;
   };
   drawAnnotations(drawing, chart.annotations, 'back', plot, annotationAt);
   for (const entry of guides) {
@@ -267,8 +293,21 @@ export function layoutCartesian(drawing: Drawing, chart: CheckedCartesianChart, 
     x: scales.x,
     xAxis: linear.x,
     largestBubble: largestBubble(series),
+    span: (key, place) => 'band' in place
+      ? [bandScales[key]!.start(place.band), bandScales[key]!.start(place.band) + bandScales[key]!.width(place.band)]
+      : [scales[key]!.at(place.from), scales[key]!.at(place.to)],
+    placeName: (key, place) => 'band' in place
+      ? categoriesOf(key)[place.band]!
+      : `${formatAxisValue(place.from, linear[key]!)} to ${formatAxisValue(place.to, linear[key]!)}`,
+    color: chart.color,
   };
   series.forEach((entry, i) => {
+    // On two band axes there is no value axis to place a series on: only cells are drawn there.
+    if (roles.kind === 'cells') {
+      if (entry.type !== 'heatmap') throw new Error(`${entry.path} is not cells, on two band axes`);
+      drawHeatmap(context, entry);
+      return;
+    }
     const key = valueAxisOf(entry);
     const placed: Placed = {
       entry,
@@ -282,7 +321,7 @@ export function layoutCartesian(drawing: Drawing, chart: CheckedCartesianChart, 
   });
   drawAnnotations(drawing, chart.annotations, 'front', plot, annotationAt);
   for (const entry of guides) {
-    drawGuide(drawing, plot, rect, entry, scales[entry.key], bands, line);
+    drawGuide(drawing, plot, rect, entry, scales[entry.key], entry.key === 'x' ? bandScales.x : bandScales.y, line);
   }
 }
 
@@ -305,7 +344,7 @@ function endRoom(axis: CheckedLinearAxis | undefined, end: 'min' | 'max', reach:
 }
 
 /** A series with everything resolved about where it is drawn, once, before it is drawn. */
-interface Placed<S extends CartesianSeries = CartesianSeries> {
+export interface Placed<S extends CartesianSeries = CartesianSeries> {
   entry: S;
   /** The axis of its values, and its placed scale. */
   axis: CheckedLinearAxis;
@@ -319,7 +358,7 @@ interface Placed<S extends CartesianSeries = CartesianSeries> {
 }
 
 /** What every series of the chart is drawn in. */
-interface MarkContext {
+export interface MarkContext {
   drawing: Drawing;
   frame: Frame;
   categories: readonly string[];
@@ -330,10 +369,15 @@ interface MarkContext {
   xAxis: CheckedLinearAxis | undefined;
   /** The largest bubble size of the whole chart, so equal sizes draw equal in every series. */
   largestBubble: number;
+  /** Where a cell's place on axis `key` starts and ends across the plot. */
+  span: (key: 'x' | 'y', place: CheckedPlace) => [number, number];
+  placeName: PlaceName;
+  /** The colour axis, for series coloured by value. */
+  color: ColorScale | undefined;
 }
 
 /** The plot and its orientation: marks give positions as [along, value] and get [x, y] back. */
-interface Frame {
+export interface Frame {
   plot: Rect;
   /** Whether the value axis runs across, with the bands stacked down the plot. */
   horizontal: boolean;
@@ -493,6 +537,11 @@ function extent(
     high = Math.max(high, value);
   };
   for (const entry of series) {
+    const values = markOf(entry).values;
+    if (values) {
+      for (const value of values(entry, key)) take(value);
+      continue;
+    }
     const points = markOf(entry).points?.(entry);
     if (points) {
       for (const point of key === 'y2' ? [] : points) take(key === 'x' ? point[0] : point[1]);
@@ -595,7 +644,8 @@ function shapeNode(
     const outline = { kind: 'linearPath' as const, points: mark.hollow ? [...points, first] : points };
     return drawing.outline(outline, roleStroke(mark.role, paint), key, style);
   }
-  return drawing.shape({ kind: 'polygon', points }, roleFill(mark.role, paint, mark.weight), key, style);
+  const own = mark.role === 'count' ? { ...style, ...countDensity(mark.weight ?? 1) } : style;
+  return drawing.shape({ kind: 'polygon', points }, roleFill(mark.role, paint, mark.weight), key, own);
 }
 
 function drawGlyphs(

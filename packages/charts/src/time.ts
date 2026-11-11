@@ -10,7 +10,8 @@ import type { TimeUnit } from './types.js';
 const SECOND = 1000;
 const MINUTE = 60 * SECOND;
 const HOUR = 60 * MINUTE;
-const DAY = 24 * HOUR;
+/** A day in milliseconds. */
+export const DAY = 24 * HOUR;
 const WEEK = 7 * DAY;
 // 1970-01-01 was a Thursday, so weeks start 3 days before the epoch.
 const MONDAY = -3 * DAY;
@@ -21,6 +22,8 @@ export const MIN_TIME = -62_167_219_200_000;
 export const MAX_TIME = 253_402_300_799_999;
 
 export const ENGLISH_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+/** The days of the week, Monday first. */
+export const ENGLISH_WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 // A year, a year and month, a date, or a date and time with minutes, seconds and up to 3 decimals of
 // a second, ending in Z or an offset from UTC.
@@ -93,6 +96,12 @@ export function fieldsOf(at: number): TimeFields {
   rest -= minute * MINUTE;
   const second = Math.floor(rest / SECOND);
   return { year, month, day, hour, minute, second, millisecond: rest - second * SECOND };
+}
+
+/** The day of the week of a time, in UTC: 0 for Monday to 6 for Sunday. */
+export function weekdayOf(at: number): number {
+  const days = Math.floor((at - MONDAY) / DAY);
+  return ((days % 7) + 7) % 7;
 }
 
 /** The time at the start of a day, from its year, month (1 to 12) and day. */

@@ -10,12 +10,15 @@ import { dataRows } from '../src/data-table';
 import { chart, chartSpec, reseed } from '../src/drawing';
 import cartesianCases from '../../examples/cartesian-cases.json';
 import timeCases from '../../examples/time-cases.json';
+import gridCases from '../../examples/grid-cases.json';
 import type { ChartSpec } from '@borrowdale/charts';
 
 // The gallery's chart examples with a name, and the spec the gallery holds under it.
 const galleryCharts = (name: string) =>
   examples.filter((example) => example.category === 'charts' && example.name === name);
 const gallerySpec = (name: string) => chartExamples.find((example) => example.name === name)?.spec;
+// The tag the gallery gives the chart example of this name.
+const galleryTag = (name: string) => galleryCharts(name)[0]?.tag;
 
 // Tests change the shared dashboard and gallery state; each starts from the state the site loads with.
 const initialDashboard = { ...dashboardState };
@@ -56,11 +59,24 @@ describe('gallery coverage and actual rendering', () => {
     }
   });
 
+  // A heatmap is tagged by the shape of its cells, so the hexagon and correlation views can be found by name.
+  it.each([
+    ['heatmap', 'heatmap'],
+    ['punch-card', 'circle heatmap'],
+    ['hexagon-heatmap', 'hex heatmap'],
+    ['correlation-matrix', 'correlation heatmap'],
+    ['calendar-heatmap', 'calendar'],
+    ['radar-heatmap', 'polarHeatmap'],
+    ['horizon', 'horizon'],
+  ])('tags the example %s as %s', (name, tag) => {
+    expect(galleryTag(name)).toBe(tag);
+  });
+
   it('has time examples to check', () => {
     expect(timeCases.length).toBeGreaterThan(0);
   });
 
-  it.each([...timeCases, ...statisticalCases])('includes the $name composition in the editable gallery', ({ name, spec }) => {
+  it.each([...timeCases, ...statisticalCases, ...gridCases])('includes the $name composition in the editable gallery', ({ name, spec }) => {
     expect(galleryCharts(name)).toHaveLength(1);
     expect(gallerySpec(name)).toEqual(spec);
     expect(executeExample(editorCode(galleryCharts(name)[0]!))).toContain('<svg');
@@ -111,7 +127,10 @@ describe('gallery coverage and actual rendering', () => {
         'area',
         'bar',
         'bubble',
+        'calendar',
         'gauge',
+        'heatmap',
+        'horizon',
         'histogram',
         'distribution',
         'relationship',
@@ -122,6 +141,7 @@ describe('gallery coverage and actual rendering', () => {
         'xyArea',
         'pie',
         'polarArea',
+        'polarHeatmap',
         'polarLine',
         'polarScatter',
         'radar',

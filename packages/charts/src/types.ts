@@ -33,7 +33,62 @@ export interface ChartSpec {
   axes?: CartesianAxes | PolarAxes | GaugeAxes | TimelineAxes | undefined;
   /** Up to 100 Cartesian annotations. Numeric coordinates contribute to automatic domains. */
   annotations?: readonly Annotation[] | undefined;
+  /**
+   * How the values of heatmap, polar heatmap, calendar and horizon series become colours, and the
+   * legend that shows it. Only for a chart with such a series, which gets the default one without it.
+   */
+  colorAxis?: ColorAxis | undefined;
   series: readonly Series[];
+}
+
+export const COLOR_SCALE_KINDS = ['sequential', 'diverging', 'quantize', 'quantile', 'threshold'] as const;
+
+/**
+ * How a colour axis turns values into colours: `sequential` runs through its colours from the lowest
+ * value to the highest; `diverging` runs from its first colour to its middle one at `midpoint` and on
+ * to its last; `quantize` cuts the domain into `classes` equal parts; `quantile` into `classes` parts
+ * holding as many values each; `threshold` at its `breaks`. The classed kinds give each class one
+ * colour, sampled evenly from the scheme or stops.
+ */
+export type ColorScaleKind = (typeof COLOR_SCALE_KINDS)[number];
+
+export const COLOR_SCHEMES = ['viridis', 'red-blue', 'blue-red'] as const;
+
+/**
+ * Named colours for a colour axis, all readable with the common forms of colour blindness:
+ * `viridis` from dark purple to yellow, `red-blue` from dark red through white to dark blue, and
+ * `blue-red` the other way, for values where high reads as warm.
+ */
+export type ColorScheme = (typeof COLOR_SCHEMES)[number];
+
+/**
+ * A colour axis: a linear axis of values whose colours fill cells. Its ends round out to ticks
+ * unless fixed, as a linear axis' do, and a value beyond a fixed end is an error. Its legend is a ramp
+ * labelled at its ends, or one swatch per class labelled at the class boundaries, and a "no value"
+ * swatch when a cell has none.
+ */
+export interface ColorAxis extends Omit<LinearAxis, 'percent' | 'grid' | 'hidden' | 'labelAngle'> {
+  /**
+   * Defaults to `sequential`, to `diverging` on a correlation heatmap, and to `quantize` on a horizon
+   * chart.
+   */
+  scale?: ColorScaleKind | undefined;
+  /**
+   * The colours, by name. Defaults to `red-blue` for a diverging scale and `viridis` otherwise. Not
+   * with `stops`.
+   */
+  scheme?: ColorScheme | undefined;
+  /** 2 to 32 colours, from the lowest value to the highest, each a 3, 4, 6 or 8-digit hex code. */
+  stops?: readonly string[] | undefined;
+  /** For `quantize` and `quantile`: 2 to 12 classes. Defaults to 5, and to twice `bands` on a horizon chart. */
+  classes?: number | undefined;
+  /** For `threshold`, which needs them: 1 to 11 increasing values, each starting a class. */
+  breaks?: readonly number[] | undefined;
+  /**
+   * For `diverging`: the value of the middle colour, inside the domain. Defaults to 0 when the domain
+   * spans it, else the middle of the domain.
+   */
+  midpoint?: number | undefined;
 }
 
 /**
@@ -626,8 +681,96 @@ export interface GaugeSeries extends SeriesBase {
   needleLength?: number | undefined;
 }
 
+/**
+ * A place of a heatmap cell on one axis: a category on a band axis, or a `[from, to]` stretch on a
+ * linear or time axis, `to` after `from`.
+ */
+export type CellPlace = string | readonly [from: ChartValue, to: ChartValue];
+
+/**
+ * Cells coloured by their value through the chart's colour axis: a heatmap, matrix or punch card on
+ * band axes, warming stripes or a heat lane along a time axis, or a hexagon heatmap or tile map.
+ * `display` picks the shape: a `rect` filling its place (the default), a `circle` whose area grows
+ * with the value's size, a `hex` on two linear axes, or a `correlation` matrix, whose values are
+ * coefficients from -1 to 1 on a diverging scale fixed at those ends.
+ */
+export interface HeatmapSeries extends SeriesBase {
+  type: 'heatmap';
+  /**
+   * One `[x, y, value]` per cell, at most one per place; a `null` value draws the cell's outline as
+   * having no value. With `display: 'hex'`, x and y are a hexagon's column and row, whole numbers:
+   * flat-topped hexagons one unit across, columns 0.75 apart, each column half a row above the one
+   * before it.
+   */
+  data: readonly (readonly [x: CellPlace | number, y: CellPlace | number, value: number | null])[];
+  display?: 'rect' | 'circle' | 'hex' | 'correlation' | undefined;
+  /** Writes each value on its cell. */
+  dataLabels?: boolean | undefined;
+}
+
+/**
+ * Cells around a polar chart, one per angle and radius category: annular sectors, or with
+ * `display: 'polygon'` rings through the spokes, for a radar heatmap. Needs band angle and radius axes.
+ */
+export interface PolarHeatmapSeries extends SeriesBase {
+  type: 'polarHeatmap';
+  /** One `[angle, radius, value]` per cell, each a category of its axis, at most one per place. */
+  data: readonly (readonly [angle: string, radius: string, value: number | null])[];
+  /** Defaults to `sector`. A polygon needs at least 3 angle categories. */
+  display?: 'sector' | 'polygon' | undefined;
+}
+
+/**
+ * A calendar heatmap: one cell per day from `from` to `to`, in weeks, coloured by its value. Years
+ * are stacked, each with its months outlined. A chart has one calendar series, and no axes.
+ */
+export interface CalendarSeries extends SeriesBase {
+  type: 'calendar';
+  /** One `[date, value]` per day, a date without a time of day, at most one per day, inside the range. */
+  data: readonly (readonly [date: ChartValue, value: number | null])[];
+  /**
+   * The first day drawn, a date without a time of day. Defaults to the first of January of the
+   * earliest date's year. The range holds at most 100,000 days.
+   */
+  from?: ChartValue | undefined;
+  /** The last day drawn, on or after `from`. Defaults to the last of December of the latest date's year. */
+  to?: ChartValue | undefined;
+  /** The day each week starts on. Defaults to `monday`. */
+  weekStart?: 'monday' | 'sunday' | undefined;
+  /** Weeks left to right, or top to bottom. Defaults to `horizontal`. */
+  orientation?: 'horizontal' | 'vertical' | undefined;
+  /**
+   * `months`: the 12 names of the months, January first; `weekdays`: the 7 names of the days, Monday
+   * first. Each at most 20 characters. English by default.
+   */
+  format?: { months?: readonly string[] | undefined; weekdays?: readonly string[] | undefined } | undefined;
+}
+
+/**
+ * A horizon chart: a row of a band y axis whose values along a linear or time x axis are folded into
+ * `bands` layers, each darker than the one below it, so a tall range fits a short row. Negative values
+ * are mirrored up from the baseline (`mirror`, the default) or hang down from the top (`offset`), in
+ * the colours below the midpoint. The colour axis is a quantize scale with twice `bands` classes,
+ * symmetric about 0.
+ */
+export interface HorizonSeries extends SeriesBase {
+  type: 'horizon';
+  /** The category of the band y axis the row is drawn in. */
+  row: string;
+  /** Points `[x, value]`, x increasing; `null` leaves a gap. */
+  data: readonly (readonly [x: ChartValue, value: number] | null)[];
+  /** How many layers the values each side of 0 are folded into: 2 to 6. Defaults to 3. */
+  bands?: number | undefined;
+  /** Negative values mirrored up from the baseline, or hanging from the top. Defaults to `mirror`. */
+  mode?: 'mirror' | 'offset' | undefined;
+}
+
 export type Series =
   | BarSeries
+  | HeatmapSeries
+  | PolarHeatmapSeries
+  | CalendarSeries
+  | HorizonSeries
   | DistributionSeries
   | RelationshipSeries
   | MarketSeries

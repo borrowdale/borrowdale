@@ -7,6 +7,7 @@ import goldens from './golden/goldens.json' with { type: 'json' };
 import cartesianExamples from '../../../apps/examples/cartesian-cases.json' with { type: 'json' };
 import statisticalExamples from '../../../apps/examples/statistical-cases.json' with { type: 'json' };
 import timeExamples from '../../../apps/examples/time-cases.json' with { type: 'json' };
+import gridExamples from '../../../apps/examples/grid-cases.json' with { type: 'json' };
 
 // Recorded from this package with `npm run goldens charts`, and reviewed, after each deliberate
 // change to what a chart looks like.
@@ -20,7 +21,7 @@ describe('golden charts', () => {
   });
 
   // The example scripts render these, so they are recorded and reviewed here too.
-  it.each([...cartesianExamples, ...timeExamples])('holds the example $name', (example) => {
+  it.each([...cartesianExamples, ...timeExamples, ...gridExamples])('holds the example $name', (example) => {
     expect(corpus).toContainEqual(example);
   });
 

@@ -70,6 +70,14 @@ export function roleStroke(role: Role | undefined, paint: Paint): SketchStyle {
 /** The fill of a shape with `role`; `weight` is a count cell's share of the largest count, 0 to 1. */
 export function roleFill(role: Role | undefined, paint: Paint, weight = 1): SketchStyle {
   if (role === 'fall') return { stroke: paint.color, fill: paint.color, fillStyle: 'solid' };
-  if (role === 'count') return { ...hatched(paint), hachureGap: Math.min(SPARSE_GAP, DENSE_GAP / weight) };
+  if (role === 'count') return { ...hatched(paint), ...countDensity(weight) };
   return hatched(paint);
+}
+
+/**
+ * The hachure that shows a count cell's count. It says what the cell holds, so it is drawn over the
+ * chart's and the series' styles: a `fillStyle` or `hachureGap` there does not replace it.
+ */
+export function countDensity(weight: number): SketchStyle {
+  return { fillStyle: 'hachure', hachureGap: Math.min(SPARSE_GAP, DENSE_GAP / weight) };
 }

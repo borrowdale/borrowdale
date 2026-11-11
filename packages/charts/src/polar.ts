@@ -2,6 +2,8 @@ import { markerNode } from './symbols.js';
 import type { Point, Shape, SketchStyle } from '@borrowdale/core';
 import type { TextAnchor, TextBaseline } from '@borrowdale/text';
 import type { CheckedFormat, CheckedLinearAxis } from './check-axis.js';
+import { categoryIndex } from './cell-series.js';
+import { colorAxisOf, type ColorScale } from './color-scale.js';
 import { coordinate } from './curves.js';
 import type { Drawing, SeedKey } from './drawing.js';
 import { aChart, assertRoom, BAND_PADDING, GAP, type Rect } from './frame.js';
@@ -18,7 +20,7 @@ import {
   sliceShape,
   type PolarFrame,
 } from './geometry.js';
-import { loneDot, POINT_SIZE, runsOf, solid } from './marks.js';
+import { loneDot, POINT_SIZE, runsOf, solid, valueCell, valueTitle } from './marks.js';
 import { GRID, GRID_WIDTH, hatched, LINE_WIDTH, type Paint } from './palette.js';
 import { fail } from './read.js';
 import { bandScale, emptyExtent, formatValue, place, PLAIN_FORMAT, scaleOf, type PlacedScale } from './scale.js';
@@ -82,6 +84,8 @@ interface PolarContext {
   slotCount: number;
   /** Whether the angle axis goes the whole way round, so a line through every category closes. */
   whole: boolean;
+  /** The colour axis, for series coloured by value. */
+  color: ColorScale | undefined;
 }
 
 /** A series with everything resolved about where it is drawn, once, before it is drawn. */
@@ -127,6 +131,7 @@ const POLAR_MARKS: { [K in PolarType]: PolarMark<Extract<PolarSeries, { type: K 
   radialBar: { angle: spanValues, radius: none, zero: true, slot: true, legend: 'box', draw: drawWedges },
   polarLine: { angle: none, radius: plainValues, zero: false, slot: false, legend: 'line', draw: drawPolarLine },
   polarArea: { angle: none, radius: spanValues, zero: true, slot: false, legend: 'box', draw: drawPolarArea },
+  polarHeatmap: { angle: none, radius: none, zero: false, slot: false, legend: 'box', draw: drawPolarHeatmap },
   polarScatter: {
     angle: (entry) => entry.data.map(([a]) => a),
     radius: (entry) => entry.data.map(([, r]) => r),
@@ -300,6 +305,7 @@ export function layoutPolar(drawing: Drawing, chart: CheckedPolarChart, rect: Re
     },
     slotCount: slots.count,
     whole,
+    color: chart.color,
   };
   series.forEach((entry, i) => {
     const placed: PolarPlaced = { entry, spans: spans.get(entry) ?? [], slot: slots.slotOf(entry) };
@@ -603,4 +609,41 @@ function polyline(
 
 function pathThrough(points: readonly Point[]): string {
   return points.map(([px, py], i) => `${i === 0 ? 'M' : 'L'}${coordinate(px)} ${coordinate(py)}`).join(' ');
+}
+
+/**
+ * Each cell in the colour of its value, a cell with no value as an outline only: an annular sector
+ * across its angle category's share and its ring, or with `display: 'polygon'` the part of its ring
+ * of polygons around its spoke, from halfway to the spoke before to halfway to the one after.
+ */
+function drawPolarHeatmap(
+  { drawing, frame, angle, radius, whole, color, categories }: PolarContext,
+  { entry }: PolarPlaced<Extract<PolarSeries, { type: 'polarHeatmap' }>>,
+): void {
+  const [slot, ring] = [bandOf(angle), bandOf(radius)];
+  const scale = colorAxisOf(color, entry.path);
+  entry.data.forEach((cell, i) => {
+    const spoke = categoryIndex(cell.x);
+    const { middle, half } = slot(spoke);
+    const band = ring(categoryIndex(cell.y));
+    const [inner, outer] = [band.middle - band.half, band.middle + band.half];
+    let shape: Shape;
+    if (entry.display === 'polygon') {
+      // Around a whole turn the spoke before the first is the last; at the ends of part of one, the
+      // cell stops at the edge of its share. The angle axis holds the categories.
+      const count = categories.length;
+      const vertex = (k: number, distance: number): Point => frame.point(slot(k).middle, distance);
+      const side = (step: number, distance: number): Point => {
+        const k = spoke + step;
+        if (!whole && (k < 0 || k >= count)) return frame.point(middle + step * half, distance);
+        const [a, b] = [vertex(spoke, distance), vertex((k + count) % count, distance)];
+        return [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+      };
+      shape = { kind: 'polygon', points: [side(-1, outer), vertex(spoke, outer), side(1, outer), side(1, inner), vertex(spoke, inner), side(-1, inner)] };
+    } else {
+      shape = sliceShape(frame.center, outer, inner, middle - half, middle + half);
+    }
+    const node = valueCell(drawing, shape, cell.value, scale, [entry.name, 'cell', i], entry.style);
+    drawing.mark(valueTitle(entry.name, `${cell.given[0]}, ${cell.given[1]}`, cell.value, scale), [node]);
+  });
 }

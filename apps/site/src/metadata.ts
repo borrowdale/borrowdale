@@ -17,7 +17,7 @@ const descriptions: Record<string, string> = {
   '/docs/accessibility/':
     'Make BorrowdaleJS charts understandable with accessible descriptions, data alternatives and clear labels. Learn the current limitations.',
   '/docs/charts/':
-    'BorrowdaleJS chart API: series, axes, legends, styling, validation and SVG or Canvas rendering of cartesian, radial, polar, statistical and financial charts.',
+    'BorrowdaleJS chart API: series, axes, legends, styling, validation and SVG or Canvas rendering of cartesian, radial, polar, statistical and financial charts, heatmaps and calendars.',
   '/docs/core/':
     'BorrowdaleJS drawing API: seeded shapes, sketch styles, SVG paths, Canvas rendering and geometry primitives.',
   '/docs/text/':

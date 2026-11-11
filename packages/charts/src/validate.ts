@@ -7,6 +7,7 @@ import { readMarket } from './statistics/market.js';
 import { checkAnnotations, type CheckedAnnotation } from './annotations.js';
 import { sketch, assertDrawable, type Seed, type SketchStyle } from '@borrowdale/core';
 import { COLOR_RULE, isColor, MAX_PAINT, ownDash } from '@borrowdale/core/internal';
+import { aSeries, hexColor, readEach } from './read.js';
 import { excalifont, type Font } from '@borrowdale/text';
 import {
   anyValue,
@@ -16,12 +17,13 @@ import {
   checkContinuousAxis,
   checkLinearAxis,
   checkRadiusAxis,
+  categoryOf,
   checkSweep,
   checkY2Axis,
   MAX_CATEGORIES,
   MAX_HOLE,
   MAX_NAME,
-  valueReader,
+  readerOn,
   type CheckedAngleAxis,
   type CheckedAxis,
   type CheckedBandAxis,
@@ -52,7 +54,19 @@ import {
   type Check,
   type Fields,
 } from './read.js';
-import { CURVES, LEGEND_POSITIONS, SYMBOL_NAMES, type ChartSpec, type Marker, type LegendPosition, type SeriesType } from './types.js';
+import { checkCalendarChart, readCalendar } from './calendar-series.js';
+import { readHeatmap, readHorizon, readPolarHeatmap, resolveCells, resolveHorizon, resolvePolarCells } from './cell-series.js';
+import { withColorAxis } from './color-axis.js';
+import type { ColorScale } from './color-scale.js';
+import {
+  CURVES,
+  LEGEND_POSITIONS,
+  SYMBOL_NAMES,
+  type ChartSpec,
+  type Marker,
+  type LegendPosition,
+  type SeriesType,
+} from './types.js';
 
 // Bounds on what a chart may ask for. The drawing work of everything within them is bounded again
 // by one Budget for the whole chart (see drawing.ts).
@@ -68,7 +82,7 @@ const MIN_NEEDLE = 0.1;
 const DEFAULT_NEEDLE = 0.8;
 const MAX_BANDS = 100;
 
-export type System = 'cartesian' | 'polar' | 'pie' | 'gauge' | 'timeline';
+export type System = 'cartesian' | 'polar' | 'pie' | 'gauge' | 'timeline' | 'calendar';
 
 type ReservePoints = (count: number) => void;
 const categoryValues = (reserve: ReservePoints) =>
@@ -80,16 +94,6 @@ const color: Check<string> = (path, value) => {
   const given = text(MAX_PAINT)(path, value);
   if (!isColor(given)) {
     fail(path, `must be ${COLOR_RULE}, got ${show(given)}`);
-  }
-  return given;
-};
-
-// Canvas gradients reject invalid CSS colours rather than ignoring them. A hex-only stop
-// contract can be checked without a browser and gives every renderer the same accepted paints.
-const gradientColor: Check<string> = (path, value) => {
-  const given = text(MAX_PAINT)(path, value);
-  if (!/^#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(given)) {
-    fail(path, 'must be a 3, 4, 6 or 8-digit hex colour');
   }
   return given;
 };
@@ -133,15 +137,18 @@ interface PolarNeeds {
 }
 
 /**
- * The axes a Cartesian series is drawn on: one band axis, two continuous axes of any kind, or two
- * linear axes, for the statistical series whose geometry is computed in data units.
+ * The axes a Cartesian series is drawn on: one band axis, two continuous axes of any kind, two
+ * linear axes, for the statistical series whose geometry is computed in data units, a band y axis
+ * across a continuous x axis, for horizon rows, or `any` of these and two band axes, for cells.
  */
-type CartesianAxes = 'band' | 'continuous' | 'linear';
+type CartesianAxes = 'band' | 'continuous' | 'linear' | 'rows' | 'any';
 
 const AXES_NEEDED: Record<CartesianAxes, string> = {
   band: 'one band axis',
   continuous: 'both axes continuous: linear, time, log or sqrt',
   linear: 'linear x and y axes',
+  rows: 'a band y axis and a continuous x axis',
+  any: 'x and y axes',
 };
 
 interface RuleBase {
@@ -234,7 +241,7 @@ const SERIES_RULES = {
         const axis = g.required('axis', oneOf(['x', 'y'] as const));
         const stops = g.required('stops', list(2, 32, (p, raw) => {
           const stop = fields(p, raw); stop.allow(['offset', 'color']);
-          return { offset: stop.required('offset', number(0, 1)), color: stop.required('color', gradientColor) };
+          return { offset: stop.required('offset', number(0, 1)), color: stop.required('color', hexColor) };
         }));
         if (stops[0]!.offset !== 0 || stops.at(-1)!.offset !== 1 || stops.some((stop, i) => i > 0 && stop.offset <= stops[i - 1]!.offset)) fail(p, 'needs increasing stops from 0 to 1');
         return { axis, stops };
@@ -326,6 +333,20 @@ const SERIES_RULES = {
     keys: ['dataLabels', 'data', 'symbol'],
     read: (r: Fields, _path: string, reserve: ReservePoints) => ({ symbol: readSymbol(r), data: readPolarPoints(r, reserve) }),
   },
+  heatmap: { system: 'cartesian', axes: 'any', keys: ['dataLabels', 'data', 'display'], read: readHeatmap },
+  horizon: { system: 'cartesian', axes: 'rows', keys: ['row', 'data', 'bands', 'mode'], read: readHorizon },
+  polarHeatmap: {
+    system: 'polar',
+    band: false,
+    polar: { angle: 'band', radius: 'band', outward: 'never', polygon: false },
+    keys: ['data', 'display'],
+    read: readPolarHeatmap,
+  },
+  calendar: {
+    system: 'calendar',
+    keys: ['data', 'from', 'to', 'weekStart', 'orientation', 'format'],
+    read: readCalendar,
+  },
   gauge: {
     system: 'gauge',
     keys: ['value', 'display', 'needleLength'],
@@ -373,7 +394,7 @@ export type SeriesOf<S extends System> = Extract<
   { type: { [K in SeriesType]: Rules[K]['system'] extends S ? K : never }[SeriesType] }
 >;
 
-interface CheckedChartBase {
+export interface CheckedChartBase {
   width: number;
   height: number;
   title: string | undefined;
@@ -382,6 +403,8 @@ interface CheckedChartBase {
   fontSize: number;
   legend: LegendPosition | undefined;
   style: SketchStyle;
+  /** The colour axis of a chart with series coloured by value. */
+  color: ColorScale | undefined;
 }
 
 export interface CheckedCartesianChart extends CheckedChartBase {
@@ -390,8 +413,8 @@ export interface CheckedCartesianChart extends CheckedChartBase {
   x: CheckedAxis;
   y: CheckedAxis;
   y2: CheckedLinearAxis | undefined;
-  /** The axis the categories are on, if one is; with `y`, bars run horizontally. */
-  band: CheckedBandAxis | undefined;
+  /** What each axis is for: a band axis and the value axes across it, two continuous axes, or cells. */
+  roles: AxisRoles;
   series: SeriesOf<'cartesian'>[];
 }
 
@@ -437,8 +460,19 @@ export interface CheckedTimelineChart extends CheckedChartBase {
   series: SeriesOf<'timeline'>[];
 }
 
+export interface CheckedCalendarChart extends CheckedChartBase {
+  system: 'calendar';
+  series: SeriesOf<'calendar'>[];
+}
+
 /** A chart, checked: one shape per coordinate system, each with only its own axes and series. */
-export type CheckedChart = CheckedCartesianChart | CheckedPolarChart | CheckedPieChart | CheckedGaugeChart | CheckedTimelineChart;
+export type CheckedChart =
+  | CheckedCartesianChart
+  | CheckedPolarChart
+  | CheckedPieChart
+  | CheckedGaugeChart
+  | CheckedTimelineChart
+  | CheckedCalendarChart;
 
 /**
  * Throws a named error, starting "Invalid chart:" and naming the place in the spec, for anything that
@@ -448,7 +482,7 @@ export type CheckedChart = CheckedCartesianChart | CheckedPolarChart | CheckedPi
  */
 export function checkChart(spec: ChartSpec, font: Font = excalifont): CheckedChart {
   const r = fields('', spec);
-  r.allow(['width', 'height', 'title', 'seed', 'fontSize', 'legend', 'style', 'axes', 'series', 'annotations']);
+  r.allow(['width', 'height', 'title', 'seed', 'fontSize', 'legend', 'style', 'axes', 'series', 'annotations', 'colorAxis']);
   const width = r.required('width', number(1, MAX_SIZE));
   const height = r.required('height', number(1, MAX_SIZE));
   const fontSize = r.optional('fontSize', number(1, MAX_FONT_SIZE)) ?? 12;
@@ -461,6 +495,7 @@ export function checkChart(spec: ChartSpec, font: Font = excalifont): CheckedCha
     fontSize,
     legend: r.optional('legend', oneOf(LEGEND_POSITIONS)),
     style: r.optional('style', checkStyle) ?? {},
+    color: undefined,
   };
   let points = 0;
   const reserve = (count: number): void => {
@@ -474,6 +509,10 @@ export function checkChart(spec: ChartSpec, font: Font = excalifont): CheckedCha
   // The first series decides the coordinate system; every other series must draw in it.
   const system = SERIES_RULES[series[0]!.type].system;
   if (system !== 'cartesian' && r.has('annotations')) fail('annotations', 'needs a Cartesian chart');
+  return withColorAxis(r, checkSystem(r, base, series, system, reserve));
+}
+
+function checkSystem(r: Fields, base: CheckedChartBase, series: CheckedSeries[], system: System, reserve: ReservePoints): CheckedChart {
   switch (system) {
     case 'cartesian':
       return checkCartesianChart(r, base, seriesOf(series, 'cartesian'), reserve);
@@ -485,6 +524,8 @@ export function checkChart(spec: ChartSpec, font: Font = excalifont): CheckedCha
       return checkGaugeChart(r, base, seriesOf(series, 'gauge'));
     case 'timeline':
       return checkTimelineChart(r, base, seriesOf(series, 'timeline'));
+    case 'calendar':
+      return checkCalendarChart(r, base, seriesOf(series, 'calendar'));
   }
 }
 
@@ -591,8 +632,8 @@ function checkCartesianChart(
   const x = axes.required('x', checkAxis(CARTESIAN_KEYS, true));
   const y = axes.required('y', checkAxis(CARTESIAN_KEYS, true));
   const y2 = axes.optional('y2', checkY2Axis);
-  const roles = rolesOf(x, y, y2);
-  const { band } = roles;
+  const roles = rolesOf(x, y, y2, series);
+  const band = roles.kind === 'band' ? roles.band : roles.kind === 'cells' ? roles.x : undefined;
   for (const linear of [x, y, y2]) {
     if (linear?.type === 'linear' && linear.percent && !band) {
       fail(`${linear.path}.percent`, `needs a band axis: only stacking series (${STACKING}) use it`);
@@ -603,7 +644,7 @@ function checkCartesianChart(
   for (const entry of series) {
     const { axes } = SERIES_RULES[entry.type];
     if (!fitsAxes(axes, roles)) fail(entry.path, `is ${aSeries(entry.type)}, which needs ${AXES_NEEDED[axes]}`);
-    const onAxis = roles.band && valueAxisOf(entry, roles);
+    const onAxis = roles.kind === 'band' && valueAxisOf(entry, roles);
     if (onAxis && onAxis.percent && !isStacking(entry)) {
       const which = `a percent axis, which only stacking series (${STACKING}) can use`;
       fail(entry.path, `is ${aSeries(entry.type)} on ${onAxis.path}, ${which}`);
@@ -629,9 +670,9 @@ function checkCartesianChart(
       stacked.set(`${entry.axis}|${entry.stack}`, first);
     }
   }
-  resolveValues(series, roles);
+  resolveValues(series, roles, { x, y });
   stackStatistics(series, reserve);
-  return { ...base, system: 'cartesian', x, y, y2, band, series, annotations: checkAnnotations(r, { x, y, y2 }, color) };
+  return { ...base, system: 'cartesian', x, y, y2, roles, series, annotations: checkAnnotations(r, { x, y, y2 }, color) };
 }
 
 /**
@@ -640,13 +681,21 @@ function checkCartesianChart(
  * axis can show. A series a kind of axis cannot draw is rejected. Values are replaced in place, in the
  * lists validation copied.
  */
-function resolveValues(series: readonly SeriesOf<'cartesian'>[], roles: AxisRoles): void {
+function resolveValues(
+  series: readonly SeriesOf<'cartesian'>[],
+  roles: AxisRoles,
+  axes: { x: CheckedAxis; y: CheckedAxis },
+): void {
   for (const entry of series) {
     // Statistical series compute their geometry in linear data units: there is nothing to read.
     if (inDataUnits(entry)) continue;
-    if (entry.type === 'xRange' && roles.band) {
+    if (entry.type === 'heatmap') {
+      resolveCells(entry, axes);
+    } else if (entry.type === 'horizon' && roles.kind === 'band') {
+      resolveHorizon(entry, roles.value, roles.band);
+    } else if (entry.type === 'xRange' && roles.kind === 'band') {
       resolveXRange(entry, readerOn(roles.value), roles.band);
-    } else if (entry.type !== 'xRange' && !('axis' in entry) && !roles.band) {
+    } else if (entry.type !== 'xRange' && entry.type !== 'horizon' && !('axis' in entry) && roles.kind === 'continuous') {
       // Both axes are continuous: each coordinate is read by the axis it is on.
       const [x, y] = [readerOn(roles.x), readerOn(roles.y)];
       const readers = entry.type === 'bubble' ? [x, y, anyValue] : entry.type === 'xyArea' ? [x, y, y] : [x, y];
@@ -654,7 +703,7 @@ function resolveValues(series: readonly SeriesOf<'cartesian'>[], roles: AxisRole
       if (entry.type === 'xyArea') {
         checkArea(entry);
       }
-    } else if ('axis' in entry && roles.band) {
+    } else if ('axis' in entry && roles.kind === 'band') {
       resolveOnAxis(entry, valueAxisOf(entry, roles));
     } else {
       // Each other pairing of a series and the chart's axes was rejected before: a series here is
@@ -664,28 +713,32 @@ function resolveValues(series: readonly SeriesOf<'cartesian'>[], roles: AxisRole
   }
 }
 
-// A series type as a message names it, with the article it is read with: "a bar series", "an area
-// series", "an xRange series".
-function aSeries(type: string): string {
-  return `${/^[aeiox]/.test(type) ? 'an' : 'a'} ${type} series`;
-}
+/**
+ * A cartesian chart's axes by role: a band axis and the value axes across it, two continuous axes,
+ * or two band axes, which only cells can be drawn on.
+ */
+export type AxisRoles =
+  /** `along` is the axis the bands are on: with `y`, bars run horizontally. */
+  | { kind: 'band'; band: CheckedBandAxis; along: 'x' | 'y'; value: CheckedLinearAxis; y2: CheckedLinearAxis | undefined }
+  | { kind: 'continuous'; x: CheckedLinearAxis; y: CheckedLinearAxis }
+  | { kind: 'cells'; x: CheckedBandAxis; y: CheckedBandAxis };
 
-/** A cartesian chart's axes by role: a band axis and the value axes across it, or two continuous axes. */
-type AxisRoles =
-  | { band: CheckedBandAxis; value: CheckedLinearAxis; y2: CheckedLinearAxis | undefined }
-  | { band: undefined; x: CheckedLinearAxis; y: CheckedLinearAxis };
-
-function rolesOf(x: CheckedAxis, y: CheckedAxis, y2: CheckedLinearAxis | undefined): AxisRoles {
+function rolesOf(x: CheckedAxis, y: CheckedAxis, y2: CheckedLinearAxis | undefined, series: readonly SeriesOf<'cartesian'>[]): AxisRoles {
   if (x.type === 'band') {
     if (y.type === 'band') {
-      fail('axes', 'has two band axes; one of x and y must be continuous: linear, time, log or sqrt');
+      const other = series.find((entry) => SERIES_RULES[entry.type].axes !== 'any');
+      if (other) {
+        fail('axes', `has two band axes, which only heatmap series can share, but ${other.path} is ${aSeries(other.type)}`);
+      }
+      if (y2) fail('axes.y2', 'needs y to be continuous');
+      return { kind: 'cells', x, y };
     }
-    return { band: x, value: y, y2 };
+    return { kind: 'band', band: x, along: 'x', value: y, y2 };
   }
   if (y2) {
     fail('axes.y2', 'needs x to be the band axis');
   }
-  return y.type === 'band' ? { band: y, value: x, y2: undefined } : { band: undefined, x, y };
+  return y.type === 'band' ? { kind: 'band', band: y, along: 'y', value: x, y2: undefined } : { kind: 'continuous', x, y };
 }
 
 /** The types whose geometry is computed in linear data units. */
@@ -698,13 +751,19 @@ function inDataUnits(entry: SeriesOf<'cartesian'>): entry is Extract<SeriesOf<'c
 
 /** Whether a series that needs `axes` can be drawn on these. */
 function fitsAxes(axes: CartesianAxes, roles: AxisRoles): boolean {
-  if (roles.band) return axes === 'band';
-  return axes === 'continuous' || (axes === 'linear' && roles.x.kind === 'linear' && roles.y.kind === 'linear');
+  switch (roles.kind) {
+    case 'cells':
+      return axes === 'any';
+    case 'band':
+      return axes === 'band' || axes === 'any' || (axes === 'rows' && roles.along === 'y');
+    case 'continuous':
+      return axes === 'continuous' || axes === 'any' || (axes === 'linear' && roles.x.kind === 'linear' && roles.y.kind === 'linear');
+  }
 }
 
 // The axis a series on a band chart is drawn against: y2 when it says so, else the value axis. A
 // series with no axis key (xRange) is on the value axis.
-function valueAxisOf(entry: SeriesOf<'cartesian'>, roles: Extract<AxisRoles, { band: CheckedBandAxis }>): CheckedLinearAxis {
+function valueAxisOf(entry: SeriesOf<'cartesian'>, roles: Extract<AxisRoles, { kind: 'band' }>): CheckedLinearAxis {
   if (!('axis' in entry) || entry.axis !== 'y2') {
     return roles.value;
   }
@@ -731,45 +790,16 @@ function resolveOnAxis(entry: Extract<SeriesOf<'cartesian'>, { axis: unknown }>,
   }
 }
 
-// How a value on a continuous axis is read: a time on a time axis, else a number.
-function readerOn(axis: CheckedLinearAxis): Check<number> {
-  return axis.kind === 'time' ? valueReader('time') : numberOn(axis);
-}
-
 // Each item's row among the band axis' categories, and its ends read by the value axis.
 function resolveXRange(entry: Extract<SeriesOf<'cartesian'>, { type: 'xRange' }>, value: Check<number>, band: CheckedBandAxis): void {
-  const rows = new Map(band.categories.map((name, i) => [name, i]));
   entry.data.forEach((item, i) => {
     const path = `${entry.path}.data[${i}]`;
-    item.category = rows.get(item.row) ?? fail(`${path}.row`, `is not a category of ${band.path}, got ${show(item.row)}`);
+    item.category = categoryOf(band, item.row, `${path}.row`);
     item.from = value(`${path}.from`, item.from);
     item.to = item.to === undefined ? undefined : value(`${path}.to`, item.to);
     if (item.to !== undefined && !(item.to > item.from)) {
       fail(`${path}.to`, 'must be after from; leave it out for a milestone');
     }
-  });
-}
-
-// A number on a continuous axis that is not a time axis: a string is a mistake there, and a log axis
-// takes only what it can show.
-function numberOn(axis: CheckedLinearAxis): Check<number> {
-  const value = valueReader(axis.kind);
-  return (path, raw) => {
-    if (typeof raw === 'string') {
-      fail(path, `must be a number, since ${axis.path} is not a time axis, got ${show(raw)}`);
-    }
-    return value(path, raw);
-  };
-}
-
-// Each entry of each point, read in place by the reader for its position. The points are the arrays
-// `coordinates` made, so writing them changes nothing of the caller's.
-function readEach(points: readonly (readonly number[] | null)[], path: string, readers: readonly Check<number>[]): void {
-  points.forEach((point, i) => {
-    const entries = point as number[] | null;
-    entries?.forEach((raw, k) => {
-      entries[k] = readers[k]!(`${path}[${i}][${k}]`, raw);
-    });
   });
 }
 
@@ -806,7 +836,7 @@ function checkPolarChart(r: Fields, base: CheckedChartBase, series: SeriesOf<'po
   }
   const radius: CheckedRadiusAxis = {
     ...radiusAxis,
-    shape: shape ?? (series.every((entry) => SERIES_RULES[entry.type].polar.polygon) ? 'polygon' : 'circle'),
+    shape: shape ?? (series.every(isPolygon) ? 'polygon' : 'circle'),
   };
   if (radius.shape === 'polygon' && angle.type !== 'band') {
     fail('axes.radius.shape', 'is polygon, which needs a band angle axis for its corners');
@@ -820,12 +850,15 @@ function checkPolarChart(r: Fields, base: CheckedChartBase, series: SeriesOf<'po
     });
   }
   const spokes = angle.type === 'band' ? angle.categories.length : 0;
-  const polygonal = series.find((entry) => SERIES_RULES[entry.type].polar.polygon);
+  const polygonal = series.find(isPolygon);
   if (spokes < 3 && (polygonal || radius.shape === 'polygon')) {
     const what = polygonal ? `${polygonal.path}, ${aSeries(polygonal.type)}` : 'the polygon gridlines of axes.radius';
     fail('axes.angle.categories', `must have at least 3 categories for ${what}, got ${spokes}`);
   }
   const band = angle.type === 'band' ? angle : radius.type === 'band' ? radius : undefined;
+  for (const entry of series) {
+    if (entry.type === 'polarHeatmap') resolvePolarCells(entry, bandAxisOf(angle), bandAxisOf(radius));
+  }
   for (const entry of series) {
     const rule = SERIES_RULES[entry.type];
     if (band && rule.band && entry.data.length !== band.categories.length) {
@@ -853,6 +886,20 @@ function checkPolarChart(r: Fields, base: CheckedChartBase, series: SeriesOf<'po
     });
   }
   return { ...base, system: 'polar', angle, radius, series };
+}
+
+/**
+ * Whether a polar series draws polygons through the spokes, so needs at least 3 categories: by its
+ * type, or a polar heatmap by its `display`.
+ */
+function isPolygon(entry: SeriesOf<'polar'>): boolean {
+  return SERIES_RULES[entry.type].polar.polygon || (entry.type === 'polarHeatmap' && entry.display === 'polygon');
+}
+
+// A polar axis a series' rule says is a band axis, as validation has made sure it is.
+function bandAxisOf(axis: CheckedAngleAxis | CheckedRadiusAxis): CheckedBandAxis {
+  if (axis.type !== 'band') throw new Error(`${axis.path} is a linear axis where a series needs a band one`);
+  return axis;
 }
 
 const GAUGE_SWEEP: [number, number] = [-120, 120];
@@ -1116,4 +1163,3 @@ function checkSeed(path: string, raw: unknown): Seed {
   }
   return raw as Seed;
 }
-

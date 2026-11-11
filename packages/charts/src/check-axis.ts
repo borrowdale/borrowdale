@@ -359,3 +359,26 @@ const checkInterval: Check<TimeInterval> = (path, raw) => {
   r.allow(['unit', 'every']);
   return interval(r.required('unit', oneOf(TIME_UNITS)), r.optional('every', integer(1, MAX_EVERY)) ?? 1);
 };
+
+/** How a value on a continuous axis is read: a time on a time axis, else a number. */
+export function readerOn(axis: CheckedLinearAxis): Check<number> {
+  return axis.kind === 'time' ? valueReader('time') : numberOn(axis);
+}
+
+// A number on a continuous axis that is not a time axis: a string is a mistake there, and a log axis
+// takes only what it can show.
+function numberOn(axis: CheckedLinearAxis): Check<number> {
+  const value = valueReader(axis.kind);
+  return (path, raw) => {
+    if (typeof raw === 'string') {
+      fail(path, `must be a number, since ${axis.path} is not a time axis, got ${show(raw)}`);
+    }
+    return value(path, raw);
+  };
+}
+
+/** The index of `given` among the band axis' categories; anything else is an error at `path`. */
+export function categoryOf(axis: CheckedBandAxis, given: unknown, path: string): number {
+  const index = typeof given === 'string' ? axis.categories.indexOf(given) : -1;
+  return index >= 0 ? index : fail(path, `is not a category of ${axis.path}, got ${show(given)}`);
+}
