@@ -1,6 +1,6 @@
 // Reading a chart spec that came from JSON: through own properties only, arrays by index, and every
 // problem reported as one named error that says where in the spec it is.
-import { escaped, show } from '@borrowdale/core/internal';
+import { escaped, MAX_PAINT, show } from '@borrowdale/core/internal';
 import { measureText } from '@borrowdale/text';
 
 // The longest text @borrowdale/text lays out.
@@ -238,3 +238,48 @@ export function unique(names: readonly string[], pathOf: (index: number) => stri
     seen.add(name);
   });
 }
+
+/**
+ * Throws at the first item whose key repeats an earlier one's; `failAt` names both, the item and the
+ * first with its key.
+ */
+export function uniqueBy<T>(items: readonly T[], keyOf: (item: T) => string, failAt: (index: number, first: number) => never): void {
+  const seen = new Map<string, number>();
+  items.forEach((item, i) => {
+    const key = keyOf(item);
+    const first = seen.get(key);
+    if (first !== undefined) failAt(i, first);
+    seen.set(key, i);
+  });
+}
+
+// A series type as a message names it, with the article it is read with: "a bar series", "an area
+// series", "an xRange series".
+export function aSeries(type: string): string {
+  return `${/^[aeiox]/.test(type) ? 'an' : 'a'} ${type} series`;
+}
+
+/**
+ * Each entry of each point, read in place by the reader for its position. The points are the arrays
+ * `coordinates` made, so writing them changes nothing of the caller's.
+ */
+export function readEach(points: readonly (readonly number[] | null)[], path: string, readers: readonly Check<number>[]): void {
+  points.forEach((point, i) => {
+    const entries = point as number[] | null;
+    entries?.forEach((raw, k) => {
+      entries[k] = readers[k]!(`${path}[${i}][${k}]`, raw);
+    });
+  });
+}
+
+/**
+ * A 3, 4, 6 or 8-digit hex colour. Canvas gradients reject invalid CSS colours rather than ignoring
+ * them; a hex-only contract can be checked without a browser and gives every renderer the same paints.
+ */
+export const hexColor: Check<string> = (path, value) => {
+  const given = text(MAX_PAINT)(path, value);
+  if (!/^#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(given)) {
+    fail(path, 'must be a 3, 4, 6 or 8-digit hex colour');
+  }
+  return given;
+};
