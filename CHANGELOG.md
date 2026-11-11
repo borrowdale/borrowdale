@@ -8,6 +8,21 @@ The four packages share one version and are released together. Each release also
 [GitHub](https://github.com/borrowdale/borrowdale/releases), and the
 [commit history](https://github.com/borrowdale/borrowdale/commits/main/) records every source change.
 
+## 0.3.0
+
+Published on 11 November 2026:
+
+- **`@borrowdale/charts`:** colour by value. A chart's `colorAxis` colours cells through a
+  sequential, diverging, quantize, quantile or threshold scale, with a ramp or class legend. It draws
+  heatmaps on band or continuous axes, punch cards, hexagon heatmaps and correlation matrices, polar
+  and radar heatmaps, calendar heatmaps over any date range, and horizon charts. A count cell of a
+  `histogram2d` or `hexbin` series now keeps its hachure density when a `style` sets `fillStyle` or
+  `hachureGap`.
+- **`@borrowdale/core`, `@borrowdale/fills` and `@borrowdale/text`:** only the version changes.
+
+Everything else 0.2.0 offered works as before. The website's playground has 15 colour-by-value
+examples.
+
 ## 0.2.0
 
 Published on 10 November 2026:
