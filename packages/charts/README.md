@@ -52,6 +52,10 @@ regression methods, so code that switches over them needs a default branch:
 | `pie`, up to 10 as nested rings | none |
 | `gauge`, any number sharing the dial | optionally `angle` (`linear`) |
 | `timeline`, any number sharing the track | optionally `time` (`time` or `linear`), with its `path` |
+| `heatmap`, any number, alone or with the series of the first three rows | `x` and `y` of any kinds, both `band` included |
+| `horizon`, one per row | `x` continuous: `linear` or `time`; `y` `band` |
+| `polarHeatmap` | `angle` and `radius`, both `band` |
+| `calendar`, one | none |
 
 | `type` | `data` | Options |
 |---|---|---|
@@ -172,7 +176,7 @@ A `relationship` series takes numeric pairs.
 
 | `display` | Input and interpretation |
 |---|---|
-| `histogram2d`, `hexbin` | Count observations in rectangles or flat-top hexagons. Cells with more observations have denser hachure, in the series colour. `binWidth` (default 1) and `binHeight` (default `binWidth`) give each cell's extent in data units: a rectangle's width and height, or a hexagon's width from vertex to vertex and height from flat side to flat side. A regular hexagon is about 0.866 times as high as it is wide. |
+| `histogram2d`, `hexbin` | Count observations in rectangles or flat-top hexagons. Cells with more observations have denser hachure, in the series colour. The density shows the count, so it is drawn over a `fillStyle` or `hachureGap` in the chart's or the series' `style`. `binWidth` (default 1) and `binHeight` (default `binWidth`) give each cell's extent in data units: a rectangle's width and height, or a hexagon's width from vertex to vertex and height from flat side to flat side. A regular hexagon is about 0.866 times as high as it is wide. |
 | `stanford` | Nonnegative position error and protection level. Cells are hatched by count, as for `histogram2d`. The diagonal and the required positive `alertLimit` delimit integrity regions. The boundaries are dashed reference lines in the axis colour. |
 | `regression` | Select `method` from `linear` (the default), `polynomial` (`degree` 1–5, default 2), `exponential`, `logarithmic` and `loess` (`span` 0.05–1, default 0.5). Exponential fits regress log response and logarithmic fits regress on log input, so they need positive responses and positive inputs respectively. The curve runs from the lowest to the highest observed x. LOESS uses local linear fits with tricube weights. A curve that reaches the highest or lowest observation is kept at it, so axis limits at the data extent hold; one that passes beyond the observations, as a parabola can between them, is drawn as calculated and needs the axis to leave room for it. Add a scatter series to show the observations. |
 | `qq` | Sort both columns independently and pair their ranks to compare two equal-sized samples. |
@@ -336,13 +340,119 @@ stretches of the track; with `dataLabels`, labels go on its right, moving out up
 the labels placed before them, and then to its left, beyond the tick labels. On a crowded track,
 such as a tightly wound spiral, some labels can still overlap.
 
+## Colour by value
+
+Heatmap, horizon, polar heatmap and calendar series colour their cells by value, through the chart's
+colour axis, `colorAxis`. The legend shows that axis in place of an entry for each of these series.
+The values in the examples below are illustrative.
+
+### Colour axes
+
+`colorAxis` is a linear axis of the values: it takes `type: 'linear'`, `title`, `min`, `max`, `step`,
+`ticks` and `format` as a linear axis does, and its free ends round out to ticks in the same way. A
+value beyond a fixed end is an error, as on any axis: `colorAxis.max is 10, but the data reach 11`.
+Values are never clamped to the ends. A chart with a series coloured by value gets a default colour
+axis without one, and `colorAxis` on a chart without such a series is an error.
+
+| `scale` | Colours | Options |
+|---|---|---|
+| `sequential` (the default) | from the first colour at the lower end to the last at the upper end | |
+| `diverging` | from the first colour to the middle one at `midpoint`, and on to the last | `midpoint`, inside the domain: by default 0 where the domain spans it, else its middle |
+| `quantize` | `classes` equal parts of the domain, one colour each | `classes`, 2 to 12, default 5 |
+| `quantile` | `classes` parts holding as many values each | `classes`, 2 to 12, default 5; more classes than distinct values, or ties that leave a class empty, is an error |
+| `threshold` | a class below the first of `breaks`, one from each break to the next, and one from the last up | `breaks`, 1 to 11 increasing values, required |
+
+The colours come from `scheme` or `stops`, not both. `scheme` is `viridis`, dark purple to yellow (the
+default, and CC0), `red-blue`, dark red through white to dark blue (the default for `diverging`,
+from ColorBrewer's RdBu), or `blue-red`, the same reversed, for values where high reads as warm. All
+three stay readable with the common forms of colour blindness. `stops` gives 2 to 32 colours of your
+own, each a 3, 4, 6 or 8-digit hex code. Colours between stops are mixed in sRGB bytes and rounded,
+so every engine picks the same colour for a value. A classed scale samples its colours evenly from
+first to last, and a value on a class boundary is in the class above it.
+
+The legend draws a continuous scale as a ramp between its end values, and a classed one as a swatch
+per class between labels at its boundaries, written with the fewest decimals that write every
+boundary exactly, but no more than two significant digits of a class's width. A threshold scale's
+outer classes have no end label. The axis' `title` is written before the ramp or swatches. Where a
+cell has no value, the legend adds a "no value" swatch: such a cell is drawn as an outline only,
+never in the colour of the lowest value.
+
+A style `fill`, on the chart or on a series coloured by value, would hide its colours, so it is an
+error, and so is a `color` on such a series. Other style options apply as usual.
+
+### Heatmaps and cells
+
+A `heatmap` series draws one cell per `[x, y, value]`: a place on each axis and a value, or `null` for
+a cell with no value. On a `band` axis a place is a category; on a `linear`, `time`, `log` or `sqrt`
+axis it is a `[from, to]` stretch, `to` after `from`. So a heatmap can stand on two band axes, the
+one case where a chart may have both, on one band axis across a time axis, or on two continuous
+axes. Two values for the same category or the same stretch, and a category not on its axis, are
+errors naming the cell; stretches that only overlap are drawn as given, the later over the earlier.
+
+```js
+{
+  width: 560, height: 340,
+  colorAxis: { type: 'linear', title: 'Requests' },
+  axes: {
+    x: { type: 'band', categories: ['6am', '9am', '12pm'] },
+    y: { type: 'band', categories: ['Mon', 'Tue'] },
+  },
+  series: [{ type: 'heatmap', name: 'Requests', data: [['6am', 'Mon', 3], ['9am', 'Mon', 8], ['12pm', 'Tue', null]] }],
+}
+```
+
+| `display` | Cell |
+|---|---|
+| `rect` (the default) | fills its place: a heatmap or matrix on band axes, warming stripes or a heat lane along a time axis with a single hidden category on `y`, a lasagna chart with a row per category |
+| `circle` | a circle in its place, its area growing with the value's size against the largest: a punch card |
+| `hex` | a flat-topped hexagon, on two `linear` axes, for a hexagon heatmap or tile map: x and y are its column and row, whole numbers, columns 0.75 apart and each half a row above the one before it, one unit across |
+| `correlation` | as `rect`, for coefficients from −1 to 1, an error beyond them: the colour axis is `diverging` and fixed at −1 and 1 unless set |
+
+`dataLabels` writes each value on its cell, on a `rect`, `hex` or `correlation` cell in white where the
+colour is dark. A circle may be smaller than its label, so its label stays in the usual ink, and a
+circle for a value of 0 has no area and is not drawn. Tooltips name the series, both
+places and the value: `Requests, 6am, Mon: 3`.
+
+A `horizon` series folds a row of values into layers, so a tall range fits a short row. It stands in
+the category `row` of a band `y` axis, with points `[x, value]` along a `linear` or `time` `x` axis, x
+increasing across gaps too, and `null` for a gap; a row holds one horizon. Each of its `bands` layers (2 to 6, default 3) holds the next
+stretch of values, up from the baseline and darker than the one below. Negative values fold the
+same way in the colours below 0, mirrored up from the baseline (`mode: 'mirror'`, the default) or
+hanging from the top of the row (`mode: 'offset'`). Its colour axis is a `quantize` scale with twice
+`bands` classes, 4 to 12, `red-blue` by default, symmetric about 0, so every row of a chart shares `bands`,
+and a `colorAxis` that sets another scale, other classes or ends that are not opposite is an error.
+
+A `polarHeatmap` series draws a cell per `[angle, radius, value]` on band `angle` and `radius` axes:
+annular sectors, or with `display: 'polygon'` rings through the spokes, a radar heatmap, which needs at
+least 3 angle categories. The radius axis' category labels lie along the start of the sweep, over the
+cells there: start the sweep past 0 to leave them a gap, or hide them and name the rings in the
+title.
+
+### Calendars
+
+A `calendar` series is the one series of a chart with no axes: a cell per day from `from` to `to`, in
+weeks, coloured by its `[date, value]`. Dates are read as on a time axis, and must have no time of
+day; a date outside the range, and two values for one day, are errors. `from` and `to` default to
+the first of January of the earliest date's year and the last of December of the latest's. A day
+with no value is drawn as an outline.
+
+| Option | Default | |
+|---|---|---|
+| `weekStart` | `monday` | `monday` or `sunday` |
+| `orientation` | `horizontal` | `horizontal`: weeks left to right and the days down, years stacked; `vertical`: weeks down and the days across, years side by side |
+| `format` | English | `months`, the 12 names of the months, January first; `weekdays`, the 7 names of the days, Monday first; each at most 20 characters |
+
+Each month is outlined, and named at its first full week; a month with too little room in the range
+for even "…" is left unnamed. Weekday names are written beside or above every row or column, or
+every second or more, as room allows.
+
 ## Chart options
 
 | Option | Default | |
 |---|---|---|
 | `width`, `height` | required | 1 to 10,000 user units |
 | `title` | none | drawn at the top, and the drawing's accessible name; cut short to fit, as below |
-| `legend` | `top` with two or more entries, else `none` | `top`, `bottom`, `right` or `none`; `right` takes one column, which must fit the height |
+| `legend` | `top` with two or more entries or a colour axis, else `none` | `top`, `bottom`, `right` or `none`; `right` takes one column, which must fit the height |
 | `seed` | 1 | a number, or a string of at most 100 characters; varies every stroke |
 | `fontSize` | 12 | 1 to 200 units, for every label; the title is 4 units larger |
 | `style` | none | core style options for every shape, under each series' own `style`, except that lines, the edges of areas, gridlines, axis lines, ticks and a gauge's track are never filled; `stroke` and `fill` are colours, as for `color`, and `strokeWidth` and `fillWeight` from 0 to 100; no `seed`: each mark gets its own from the chart `seed` |
@@ -430,7 +540,8 @@ A chart holds at most 100 series, 1,000 categories and 100,000 data points in al
 within ±10¹⁵. Validation reserves each series' point count before copying its data and stops as
 soon as the total exceeds the limit, without reading later series. A limit error reports the
 count reached so far, not a count of unread data. A pie holds at most 1,000 slices, and a chart
-at most 10 nested pies. A gauge's dial
+at most 10 nested pies. A calendar counts one point per day of its range, reserved before any cell
+is made, so a range of more than 100,000 days, about 273 years, is an error. A gauge's dial
 holds as many bar rings as fit outside its hub. Titles and stack names hold at most 1,000
 characters, and names, categories and colours at most 100. All of a chart's strokes share one
 budget of 400,000 units of drawing work, about a second at most, and a chart that needs more throws
@@ -500,7 +611,7 @@ The area of equally shaped bubbles remains proportional to their size value.
 A tick is a vertical stroke. New symbol choices are also shown in point legends.
 
 `dataLabels: true` adds values to bars, intervals, lines, numeric lines, scatter,
-bubbles and polar scatter, and labels to xRange items and timeline events; pies show slice names and values. Defaults stay off.
+bubbles, polar scatter and heatmap cells, and labels to xRange items and timeline events; pies show slice names and values. Defaults stay off.
 Labels use the relevant value-axis format where available, retain raw values for
 percent bars, fit the plotting rectangle, and can overlap in dense charts. Pie
 labels use each actual slice's offset and radius. A label that cannot fit even
@@ -593,7 +704,11 @@ run `node apps/examples/cartesian.mjs` after building to render each one. Its
 range bars, a Gantt chart, an x-range chart, an annotation chart, a cycle plot, a Marey chart, log and
 square-root axes, and serpentine, spiral and polyline timelines. `apps/examples/statistical-cases.json`
 holds 40 statistical and financial charts, rendered with the other chart kinds by
-`npm run example:charts`.
+`npm run example:charts`. `apps/examples/grid-cases.json` holds 15 charts coloured by value, rendered
+by `node apps/examples/grid.mjs`: heatmaps, a punch card, a correlation matrix, a hexagon heatmap,
+warming stripes, a lasagna chart, a heat lane, polar and radar heatmaps, a two-year and a date-range
+calendar, a short calendar across a month's end, a heatmap with long category names, and horizon
+charts on a linear and a time axis.
 
 | Chart | Preparation and composition |
 |---|---|
