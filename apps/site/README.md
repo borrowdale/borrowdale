@@ -1,6 +1,6 @@
 # BorrowdaleJS website
 
-The product website, documentation and playground, using the unpublished BorrowdaleJS workspace packages directly.
+The product website, documentation and playground, using the BorrowdaleJS workspace packages directly, so it shows `main`, which can be ahead of the release on npm.
 
 Requires **Node.js 24**. From the repository root:
 
@@ -22,7 +22,7 @@ The playground accepts named imports from the four local packages and `@borrowda
 
 ## Open-data dashboards
 
-Each chart includes a table of its data and its copyable chart spec. Controls use stored snapshots; no live data service is needed. Download buttons export the corresponding saved JSON.
+Each chart includes a table of its data and its copyable chart spec. A histogram's table lists its bins and counts, a sample its observations, and a fitted curve one row naming the fit. Controls use stored snapshots; no live data service is needed. Download buttons export the corresponding saved JSON.
 
 - **World atlas:** World Bank World Development Indicators, CC BY 4.0. Twelve selected countries, 2010–2024; GDP per capita in current US dollars, life expectancy, and population. Missing observations remain missing; country comparisons do not represent the entire world. Source query is stored in `src/data/world.json`.
 - **Climate notebook:** NASA GISS GISTEMP v4 global land–ocean anomalies, relative to 1951–1980. Annual and monthly values from the official CSV are stored in `src/data/climate.json`; incomplete annual values are excluded from annual charts. The monthly envelope is a range, not an uncertainty estimate. Cite GISTEMP Team (2026), and Lenssen et al. (2024), https://doi.org/10.1029/2023JD040179.
