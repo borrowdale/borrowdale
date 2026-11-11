@@ -3,6 +3,7 @@ import { allPaths, pageHtml, pageTitle, route } from '../src/pages';
 import { docs, documentPage } from '../src/documents';
 import { legacyPath } from '../src/routing';
 import { escape } from '../src/drawing';
+import { codeBlock } from '../src/gallery';
 
 // The first heading of a Markdown source, as the page renders it.
 const firstHeading = (markdown: string) => escape(markdown.match(/^#{1,2} (.+)$/m)![1]!);
@@ -56,6 +57,16 @@ describe('static website routes and shared documentation', () => {
     }
     expect(html).not.toContain('>Dashboards</a>');
     expect(html).toContain('Borrowdale<span class="brand-js">JS');
+  });
+  it('installs the published packages from npm on the home page', () => {
+    const html = pageHtml('/');
+    expect(html).toContain('<code>npm install @borrowdale/charts @borrowdale/text</code>');
+    expect(html).not.toContain('not published');
+    expect(html).toContain('Until 1.0, a minor release can include breaking changes.');
+    expect(html).toContain('<div class="code-bar"><span>JavaScript</span>');
+  });
+  it('labels every code block as JavaScript', () => {
+    expect(codeBlock('render(42)')).toContain('<div class="code-bar"><span>JavaScript</span>');
   });
   it('preserves old links and handles missing pages honestly', () => {
     expect(legacyPath('#gallery?category=text')).toBe('/playground/?category=text');

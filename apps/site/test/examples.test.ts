@@ -5,7 +5,8 @@ import { editorCode } from '../src/editor';
 import { pageHtml } from '../src/pages';
 import { executeExample } from '../src/playground-runtime';
 import { worldAt, countryValue, world, climate, quakes, median, dailyCounts } from '../src/data';
-import { dashboardState, worldDashboard, climateDashboard, quakeDashboard } from '../src/dashboards';
+import { dashboardState, worldDashboard, climateDashboard, quakeDashboard, boxChart } from '../src/dashboards';
+import { dataRows } from '../src/data-table';
 import { chart, chartSpec, reseed } from '../src/drawing';
 import cartesianCases from '../../examples/cartesian-cases.json';
 import timeCases from '../../examples/time-cases.json';
@@ -182,6 +183,175 @@ describe('data integrity and derived views', () => {
       expect(quakeDashboard()).not.toMatch(/NaN|Infinity|render-error/);
     },
   );
+});
+
+describe('statistical charts in the notebooks', () => {
+  it('lists the magnitude histogram by bin, with each tenth of magnitude in its own bin', () => {
+    const html = quakeDashboard();
+    expect(html).toContain('<td>4.45–4.55</td><td>143</td>');
+    expect(html).toContain('<td>7.65–7.75</td><td>1</td>');
+  });
+  it('counts the events in each depth layer the box chart shares with the depth chart', () => {
+    const html = quakeDashboard();
+    expect(html).toContain('<th scope="row">Events</th><td>Below 70 km</td><td>588</td>');
+    expect(html).toContain('<th scope="row">Events</th><td>70–299 km</td><td>118</td>');
+    expect(html).toContain('<th scope="row">Events</th><td>300 km or deeper</td><td>31</td>');
+  });
+  it.each([
+    [4.5, '4.45–4.55', 33],
+    [5, '4.95–5.05', 28],
+    [6, '5.95–6.05', 18],
+    [7, '6.95–7.05', 8],
+  ])('starts the histogram half a tenth below magnitude %s, in bin %s, with %s bins', (magnitude, first, bins) => {
+    dashboardState.magnitude = magnitude;
+    const html = quakeDashboard();
+    expect(html).toContain(`<td>${first}</td>`);
+    expect(html.match(/<td>\d\.\d5–\d\.\d5<\/td>/g)).toHaveLength(bins);
+  });
+  it('draws the magnitudes of every depth layer that holds events', () => {
+    dashboardState.magnitude = 6;
+    const html = quakeDashboard();
+    expect(html).toContain('<th scope="row">Below 70 km</th><td>Sample 1</td>');
+    expect(html).toContain('<th scope="row">70–299 km</th><td>Sample 1</td>');
+    expect(html).toContain('<th scope="row">300 km or deeper</th><td>Sample 1</td>');
+    expect(html).toContain('&quot;label&quot;: &quot;70–299 km&quot;');
+  });
+  it('leaves out a depth layer with no events, while the depth chart still counts it as zero', () => {
+    dashboardState.magnitude = 7;
+    const html = quakeDashboard();
+    expect(html).toContain('<th scope="row">Below 70 km</th><td>Sample 1</td><td>7</td>');
+    expect(html).toContain('<th scope="row">Below 70 km</th><td>Sample 2</td><td>7.7</td>');
+    expect(html).not.toContain('&quot;label&quot;: &quot;70–299 km&quot;');
+    expect(html).toContain('<th scope="row">Events</th><td>70–299 km</td><td>0</td>');
+  });
+  it('leaves out the magnitude boxes when no event reaches the threshold', () => {
+    dashboardState.magnitude = 10;
+    expect(quakeDashboard()).not.toContain('Strength at every depth');
+  });
+  it('draws one box per decade, from the complete years in view', () => {
+    dashboardState.since = 2000;
+    const html = climateDashboard();
+    expect(html).toContain('<th scope="row">2000s</th><td>Sample 1</td><td>0.39</td>');
+    expect(html).toContain('<th scope="row">2000s</th><td>Sample 10</td>');
+    expect(html).not.toContain('<th scope="row">2000s</th><td>Sample 11</td>');
+    expect(html).toContain('<th scope="row">2020s</th>');
+    expect(html).not.toContain('<th scope="row">1990s</th>');
+  });
+  it('smooths the annual anomalies with a LOESS curve, listing years without a separator', () => {
+    dashboardState.since = 2000;
+    const html = climateDashboard();
+    expect(html).toContain('<th scope="row">Annual anomaly</th><td>1</td><td>2000 · 0.39</td>');
+    expect(html).toContain('<th scope="row">LOESS trend</th><td></td><td>LOESS fit to 26 observations</td>');
+  });
+  it('fits life expectancy to the logarithm of income across the complete countries', () => {
+    const html = worldDashboard();
+    expect(html).toContain('<th scope="row">Logarithmic fit</th><td></td><td>Logarithmic fit to 12 observations</td>');
+    // Fitted on the bubbles' own x, GDP per person in US$ thousands, not in dollars.
+    expect(html).toContain(
+      '&quot;name&quot;: &quot;Logarithmic fit&quot;,\n      &quot;color&quot;: &quot;#263b33&quot;,\n      &quot;data&quot;: [\n        [\n          65.0583773146674,',
+    );
+  });
+});
+
+describe('data tables', () => {
+  const trips = {
+    width: 400,
+    height: 300,
+    axes: { x: { type: 'linear' }, y: { type: 'linear' } },
+    series: [{ type: 'histogram', name: 'Trips', edges: [0, 10, 20, 30], data: [5, 7, 10, 12, 18, 30] }],
+  } as const;
+  it.each([
+    [{}, '2', '3', '1'],
+    [{ cumulative: true }, '2', '5', '6'],
+    [{ frequency: 'relative' }, '0.33', '0.5', '0.17'],
+    [{ frequency: 'relative', cumulative: true }, '0.33', '0.83', '1'],
+  ])('lists a histogram with %o by the heights it draws, the last bin holding its right edge', (options, first, second, third) => {
+    const spec = { ...trips, series: [{ ...trips.series[0], ...options }] } as ChartSpec;
+    expect(dataRows(spec)).toEqual([
+      ['Trips', '0–10', first],
+      ['Trips', '10–20', second],
+      ['Trips', '20–30', third],
+    ]);
+  });
+  // The table counts bins with its own copy of the chart's rule, so the two must agree where samples
+  // sit on an interior edge (10) and on the final edge (30).
+  it('lists the same bin counts the chart draws', () => {
+    expect(dataRows({ ...trips } as ChartSpec)).toEqual([
+      ['Trips', '0–10', '2'],
+      ['Trips', '10–20', '3'],
+      ['Trips', '20–30', '1'],
+    ]);
+    const svg = chart({ ...trips } as ChartSpec);
+    expect(svg).toContain('<title>Trips, [0, 10): 2</title>');
+    expect(svg).toContain('<title>Trips, [10, 20): 3</title>');
+    expect(svg).toContain('<title>Trips, [20, 30]: 1</title>');
+  });
+  it('lists an empty relative histogram as zero in every bin', () => {
+    const spec = { ...trips, series: [{ ...trips.series[0], data: [], frequency: 'relative' }] } as ChartSpec;
+    expect(dataRows(spec)).toEqual([
+      ['Trips', '0–10', '0'],
+      ['Trips', '10–20', '0'],
+      ['Trips', '20–30', '0'],
+    ]);
+  });
+  it('lists a histogram without a separator when its axis drops it', () => {
+    const spec = {
+      ...trips,
+      axes: { x: { type: 'linear', format: { thousandsSeparator: '' } }, y: { type: 'linear' } },
+      series: [{ type: 'histogram', name: 'Years', edges: [1990, 2000, 2010], data: [1995, 2000, 2010] }],
+    } as ChartSpec;
+    expect(dataRows(spec)).toEqual([
+      ['Years', '1990–2000', '1'],
+      ['Years', '2000–2010', '2'],
+    ]);
+  });
+  it('lists each sample of a distribution by its number', () => {
+    const spec = {
+      ...trips,
+      series: [{ type: 'distribution', display: 'box', name: 'East', data: [12, 1500] }],
+    } as ChartSpec;
+    expect(dataRows(spec)).toEqual([
+      ['East', 'Sample 1', '12'],
+      ['East', 'Sample 2', '1,500'],
+    ]);
+  });
+  it('names a regression without a method as a linear fit', () => {
+    const spec = {
+      ...trips,
+      series: [{ type: 'relationship', display: 'regression', name: 'Fit', data: [[1, 2], [2, 3], [3, 5]] }],
+    } as ChartSpec;
+    expect(dataRows(spec)).toEqual([['Fit', '', 'Linear fit to 3 observations']]);
+  });
+  it.each([
+    [{}, '1,500'],
+    [{ thousandsSeparator: '' }, '1500'],
+  ])('lists values with an axis format of %o as %s', (format, value) => {
+    const spec = chartSpec('Orders', ['Q1'], [{ type: 'bar', name: 'Orders', data: [1500] }], {
+      axes: { x: { type: 'band', categories: ['Q1'] }, y: { type: 'linear', format } },
+    });
+    expect(dataRows(spec)).toEqual([['Orders', 'Q1', value]]);
+  });
+});
+
+describe('box charts', () => {
+  const groups = [
+    { name: 'East', data: [12, 14, 15] },
+    { name: 'West', data: [10, 11] },
+  ];
+  it('stands each box at its labelled tick, two units apart, with half a unit of room at each end', () => {
+    const spec = boxChart('Journeys', groups, '#397e92', { title: 'Minutes' });
+    expect(spec.axes).toEqual({
+      x: { type: 'linear', min: 0, max: 4, ticks: [{ value: 1, label: 'East' }, { value: 3, label: 'West' }] },
+      y: { type: 'linear', grid: true, title: 'Minutes' },
+    });
+    expect(spec.series).toMatchObject([
+      { type: 'distribution', display: 'box', name: 'East', position: 1, data: [12, 14, 15] },
+      { type: 'distribution', display: 'box', name: 'West', position: 3, data: [10, 11] },
+    ]);
+  });
+  it('hatches the boxes so their median line stays visible', () => {
+    expect(boxChart('Journeys', groups, '#397e92', {}).style).toEqual({ roughness: 0.8, fillStyle: 'hachure' });
+  });
 });
 
 describe('interactive examples', () => {
