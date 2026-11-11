@@ -32,9 +32,12 @@ const shapes: Example[] = coreCases.map((e) => ({
   render: () => shapeSvg(e.shape as Shape, e.options as SketchOptions, 300, 180, true),
 }));
 export const chartExamples = [...chartCases, ...presentationExamples, ...statisticalCases] as ChartExample[];
-/** What a series is called in the gallery: a statistical series by its display, a heatmap by its shape, else its type. */
+/** What a series is called in the gallery: a statistical series by its display, a heatmap by its shape, prefixed `correlation` when it is one, else its type. */
 export function seriesTag(series: ChartSpec['series'][number]): string {
-  if (series.type === 'heatmap') return series.display === undefined || series.display === 'rect' ? 'heatmap' : `${series.display} heatmap`;
+  if (series.type === 'heatmap') {
+    const shape = series.display === undefined || series.display === 'rect' ? 'heatmap' : `${series.display} heatmap`;
+    return series.correlation ? `correlation ${shape}` : shape;
+  }
   return 'display' in series && ['market', 'distribution', 'relationship'].includes(series.type) ? String(series.display) : series.type;
 }
 const charts: Example[] = chartExamples.map((e) => ({

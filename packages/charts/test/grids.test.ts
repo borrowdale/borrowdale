@@ -39,7 +39,7 @@ const markupLoad: ChartSpec = { ...load, axes: { x: { type: 'band', categories: 
 const barsOnTwoBands: ChartSpec = { ...load, colorAxis: undefined, series: [{ type: 'bar', name: 'Bars', data: [1, 2] }] };
 const barsWithColorAxis: ChartSpec = { ...barsOnTwoBands, axes: { x: days, y: { type: 'linear' } }, colorAxis: { type: 'linear' } };
 const hexOnBands: ChartSpec = { ...load, series: [{ type: 'heatmap', display: 'hex', name: 'Load', data: [[0, 0, 1]] }] };
-const correlationBeyondOne: ChartSpec = { ...load, colorAxis: undefined, series: [{ type: 'heatmap', display: 'correlation', name: 'r', data: [['Mon', 'AM', 1.2]] }] };
+const correlationBeyondOne: ChartSpec = { ...load, colorAxis: undefined, series: [{ type: 'heatmap', correlation: true, name: 'r', data: [['Mon', 'AM', 1.2]] }] };
 
 // 2024 is a leap year: 29 February is a Thursday, as 4 January is, and 5 January a Friday.
 const leapYear: ChartSpec = {
@@ -64,7 +64,7 @@ const tiedQuantiles = { ...load, colorAxis: { type: 'linear', scale: 'quantile' 
 
 // A correlation asks for a diverging scale fixed at -1 and 1, a plain heatmap for a sequential one.
 const mixedHeatmaps = { ...load, colorAxis: undefined, axes: { x: days, y: times }, series: [
-  { type: 'heatmap', display: 'correlation', name: 'r', data: [['Mon', 'AM', 0.5]] },
+  { type: 'heatmap', correlation: true, name: 'r', data: [['Mon', 'AM', 0.5]] },
   { type: 'heatmap', name: 'Load', data: [['Tue', 'AM', 5]] },
 ] } as ChartSpec;
 
@@ -101,6 +101,10 @@ const heatmapThenBar = {
   width: 400, height: 300, legend: 'none', axes: { x: days, y: { type: 'linear' } },
   series: [{ type: 'heatmap', name: 'Cells', data: [['Mon', [0, 1], 1]] }, { type: 'bar', name: 'Bars', data: [1, 2] }],
 } as ChartSpec;
+
+// A correlation drawn with circles.
+const circleCorrelation = { ...load, colorAxis: undefined, series: [{ type: 'heatmap', display: 'circle', correlation: true, name: 'r', data: [['Mon', 'AM', -0.5], ['Tue', 'AM', 0.5]] }] } as ChartSpec;
+const correlationDisplay = { ...load, colorAxis: undefined, series: [{ type: 'heatmap', display: 'correlation', name: 'r', data: [['Mon', 'AM', 0.5]] }] } as unknown as ChartSpec;
 
 const laying = (spec: ChartSpec) => () => layoutChart(spec);
 
@@ -250,6 +254,15 @@ describe('colour by value', () => {
     expect(strokesOf(layoutChart(heatmapThenBar), 'Bars, Mon: 1')).toContain('#e69f00');
   });
 
+  // A correlation is a reading of the values, not a shape: it works with circles too, -0.5 and 0.5 on
+  // opposite sides of the diverging scale: halfway between RdBu's 3rd and 4th stops, and its 8th and 9th.
+  it('draws a correlation matrix with circles on a diverging scale', () => {
+    const layout = layoutChart(circleCorrelation);
+
+    expect(fillsOf(layout, 'r, Mon, AM: -0.5')).toContain('#e58368');
+    expect(fillsOf(layout, 'r, Tue, AM: 0.5')).toContain('#6bacd1');
+  });
+
   // A missing value is shown as missing, never in the colour of the lowest value.
   it('draws a cell with no value as an outline, with a "no value" swatch in the legend', () => {
     const layout = layoutChart(missingLoad);
@@ -299,6 +312,7 @@ describe('colour by value', () => {
     ['breaks that do not increase', loadWith([['Mon', 'AM', 1]], { type: 'linear', scale: 'threshold', breaks: [10, 10] }), 'Invalid chart: colorAxis.breaks[1] must be greater than the break before it (10), got 10'],
     ['a hex heatmap with a band axis', bandedHex, 'Invalid chart: series[0] is a hex heatmap, which needs linear x and y axes'],
     ['a stretch that ends where it starts', flatStretch, 'Invalid chart: series[0].data[0][0][1] must be after 2, got 2'],
+    ['correlation given as a display', correlationDisplay, 'Invalid chart: series[0].display must be one of'],
     ['a threshold scale without breaks', loadWith([['Mon', 'AM', 1]], { type: 'linear', scale: 'threshold' }), 'Invalid chart: colorAxis is a threshold scale, which needs breaks'],
     ['classes on a sequential scale', loadWith([['Mon', 'AM', 1]], { type: 'linear', classes: 3 }), 'Invalid chart: colorAxis.classes is only for a quantize or quantile scale, not sequential'],
     ['two values for one calendar day', calendarWith({ data: [['2024-03-01', 1], ['2024-03-01', 2]] }), 'Invalid chart: series[0].data[1] is a second value for 2024-03-01, after series[0].data[0]'],
@@ -368,14 +382,14 @@ const rising: ChartSpec = {
   width: 400,
   height: 200,
   axes: regions,
-  series: [{ type: 'horizon', name: 'North', row: 'North', bands: 3, data: [[0, 0], [1, 30]] }],
+  series: [{ type: 'horizon', name: 'North', row: 'North', layers: 3, data: [[0, 0], [1, 30]] }],
 };
 const horizonWith = (series: object, colorAxis?: object): ChartSpec =>
   ({ ...rising, colorAxis, series: [{ ...rising.series[0]!, ...series }] } as ChartSpec);
 const logHorizon = { ...rising, axes: { ...regions, x: { type: 'log' } } } as ChartSpec;
 const horizonAndHeatmap = { ...rising, series: [rising.series[0]!, { type: 'heatmap', name: 'Cells', data: [[[0, 1], 'South', 1]] }] } as ChartSpec;
 const horizonsInOneRow: ChartSpec = { ...rising, series: [rising.series[0]!, { type: 'horizon', name: 'Also north', row: 'North', data: [[0, 1]] }] };
-const twoHorizons: ChartSpec = { ...rising, series: [rising.series[0]!, { type: 'horizon', name: 'South', row: 'South', bands: 2, data: [[0, 1]] }] };
+const twoHorizons: ChartSpec = { ...rising, series: [rising.series[0]!, { type: 'horizon', name: 'South', row: 'South', layers: 2, data: [[0, 1]] }] };
 
 const compass = { type: 'band', categories: ['N', 'E', 'S', 'W'] } as const;
 const rings = { type: 'band', categories: ['Day', 'Night'] } as const;
@@ -432,12 +446,13 @@ describe('horizons and polar heatmaps', () => {
     ['a horizon row that is not a category', horizonWith({ row: 'East' }), 'Invalid chart: series[0].row is not a category of axes.y, got "East"'],
     ['a horizon value beyond a fixed end', horizonWith({ data: [[0, 1], [1, 11]] }, { type: 'linear', min: -10, max: 10 }), 'Invalid chart: colorAxis.max is 10, but the data reach 11'],
     ['horizon runs that go back across a gap', horizonWith({ data: [[5, 1], null, [1, 2]] }), 'Invalid chart: series[0].data[2][0] must increase, across gaps too'],
+    ['horizon bands, which are its layers', horizonWith({ bands: 3 }), 'Invalid chart: series[0] has an unknown key, "bands"'],
     ['horizon points with equal x', horizonWith({ data: [[1, 1], [1, 2]] }), 'Invalid chart: series[0].data[1][0] must increase, across gaps too'],
-    ['a horizon colour axis with other classes', horizonWith({}, { type: 'linear', classes: 4 }), 'Invalid chart: colorAxis.classes must be 6, twice series[0].bands, got 4'],
+    ['a horizon colour axis with other classes', horizonWith({}, { type: 'linear', classes: 4 }), 'Invalid chart: colorAxis.classes must be 6, twice series[0].layers, got 4'],
     ['a heatmap sharing a horizon\'s colour axis', horizonAndHeatmap, 'Invalid chart: series[1] is a heatmap series, which cannot share the colour axis of series[0], a horizon'],
     ['two horizons in one row', horizonsInOneRow, 'Invalid chart: series[1].row is "North", the row of series[0] too: a row holds one horizon'],
     ['a horizon on a log x axis', logHorizon, 'Invalid chart: series[0] is a horizon series on axes.x, a log axis, but needs a linear or time x axis'],
-    ['horizon rows with different bands', twoHorizons, 'Invalid chart: series[1].bands is 2, but series[0].bands is 3'],
+    ['horizon rows with different layers', twoHorizons, 'Invalid chart: series[1].layers is 2, but series[0].layers is 3'],
     ['a horizon on a sequential colour axis', horizonWith({}, { type: 'linear', scale: 'sequential' }), 'Invalid chart: colorAxis.scale must be quantize on a horizon chart'],
     ['a horizon colour axis that is not symmetric', horizonWith({}, { type: 'linear', min: 0, max: 30 }), 'Invalid chart: colorAxis.min must be -max on a horizon chart'],
     ['two values for one polar cell', windWith({ data: [['N', 'Day', 1], ['N', 'Day', 2]] }), 'Invalid chart: series[0].data[1] is a second value for the cell of series[0].data[0]'],

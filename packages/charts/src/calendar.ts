@@ -148,8 +148,8 @@ interface LabelPlace {
  * A year's name, its months' names at their first full weeks, and the weekdays: every one where it
  * fits beside its cell, else every second or more, as room allows. A month is named only within its
  * own weeks, from the first full one to its last, and a name too long for them is cut short. These
- * labels are not counted toward the cap on placed text: a range holds at most 274 years, so at most
- * about 20 labels a year.
+ * labels are not counted toward the cap on placed text: a range of 100,000 days spans at most 275
+ * calendar years, so at most about 20 labels a year.
  */
 function drawLabels(
   drawing: Drawing,

@@ -28,7 +28,7 @@ const cellValues = (cells: readonly { value: number | null }[]) => cells.map((ce
 const ENCODINGS: { [K in SeriesType]: Encoder<K> } = {
   heatmap: (entry) => ({
     values: given(cellValues(entry.data)),
-    defaults: entry.display === 'correlation' ? { scale: 'diverging', domain: [-1, 1] } : { scale: 'sequential' },
+    defaults: entry.correlation ? { scale: 'diverging', domain: [-1, 1] } : { scale: 'sequential' },
     missing: cellValues(entry.data).includes(null),
   }),
   polarHeatmap: (entry) => ({
@@ -46,7 +46,7 @@ const ENCODINGS: { [K in SeriesType]: Encoder<K> } = {
     // no value.
     return {
       values: entry.data.flatMap((point) => (point === null ? [] : [point[1]])),
-      defaults: { scale: 'quantize', scheme: 'red-blue', classes: 2 * entry.bands, symmetric: true },
+      defaults: { scale: 'quantize', scheme: 'red-blue', classes: 2 * entry.layers, symmetric: true },
       missing: false,
     };
   },
@@ -160,13 +160,13 @@ function checkHorizonColors(axis: CheckedColorAxis, encoded: readonly CheckedSer
     const before = rows.get(entry.row);
     if (before !== undefined) fail(`${entry.path}.row`, `is ${show(entry.row)}, the row of ${before} too: a row holds one horizon`);
     rows.set(entry.row, entry.path);
-    if (entry.bands !== first.bands) {
-      fail(`${entry.path}.bands`, `is ${entry.bands}, but ${first.path}.bands is ${first.bands}: horizon rows share their colours`);
+    if (entry.layers !== first.layers) {
+      fail(`${entry.path}.layers`, `is ${entry.layers}, but ${first.path}.layers is ${first.layers}: horizon rows share their colours`);
     }
   }
   if (axis.scale !== undefined && axis.scale !== 'quantize') fail(`${axis.path}.scale`, `must be quantize on a horizon chart, got ${axis.scale}`);
-  if (axis.classes !== undefined && axis.classes !== 2 * first.bands) {
-    fail(`${axis.path}.classes`, `must be ${2 * first.bands}, twice ${first.path}.bands, got ${axis.classes}`);
+  if (axis.classes !== undefined && axis.classes !== 2 * first.layers) {
+    fail(`${axis.path}.classes`, `must be ${2 * first.layers}, twice ${first.path}.layers, got ${axis.classes}`);
   }
   if ((axis.min !== undefined || axis.max !== undefined) && axis.min !== -(axis.max ?? NaN)) {
     fail(`${axis.path}.min`, 'must be -max on a horizon chart, whose colours are symmetric about 0');

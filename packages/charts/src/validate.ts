@@ -333,8 +333,8 @@ const SERIES_RULES = {
     keys: ['dataLabels', 'data', 'symbol'],
     read: (r: Fields, _path: string, reserve: ReservePoints) => ({ symbol: readSymbol(r), data: readPolarPoints(r, reserve) }),
   },
-  heatmap: { system: 'cartesian', axes: 'any', keys: ['dataLabels', 'data', 'display'], read: readHeatmap },
-  horizon: { system: 'cartesian', axes: 'rows', keys: ['row', 'data', 'bands', 'mode'], read: readHorizon },
+  heatmap: { system: 'cartesian', axes: 'any', keys: ['dataLabels', 'data', 'display', 'correlation'], read: readHeatmap },
+  horizon: { system: 'cartesian', axes: 'rows', keys: ['row', 'data', 'layers', 'mode'], read: readHorizon },
   polarHeatmap: {
     system: 'polar',
     band: false,
