@@ -14,7 +14,9 @@ SVG output gives each chart a title and each mark a `<title>` with its value. Ca
 
 ## Data contracts
 
-Missing values are supported only where documented for the series type. For example, a line can use `null` to create a gap, while radar values must be nonnegative numbers. Do not replace missing observations with zero just to draw them.
+Missing values are supported only where documented for the series type. For example, a line can use `null` to create a gap, while radar values must be nonnegative numbers. A heatmap or calendar cell with a `null` value, or a calendar day without one, is drawn as an outline and the legend adds a "no value" swatch, so it never takes the colour of the lowest value. Do not replace missing observations with zero just to draw them.
+
+Cells coloured by value carry their values in colour alone. Turn on `dataLabels` where a heatmap's exact values matter, or give the data alongside the chart.
 
 Stacked areas require nonnegative values. Chart families have specific axis requirements and cannot all be mixed together. Consult the [chart reference](../../../packages/charts/README.md) before composing series.
 

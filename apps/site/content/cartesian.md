@@ -42,7 +42,7 @@ Put categories on `y` for horizontal intervals. Use `axis: 'y2'` with a secondar
 
 Choose `circle`, `square`, `diamond`, `triangle`, `cross`, `star`, `wye` or `tick` for eligible point markers. Bubble markers retain their size encoding. Endpoint symbols turn intervals into lollipop or dumbbell charts; tick markers make barcode-style plots.
 
-`dataLabels: true` adds values to bars, intervals, lines, numeric lines, scatter, bubbles and polar scatter. Pie labels show names and values. Labels use the relevant axis formatting, fit inside the plot and may overlap in crowded charts. Labels are off by default.
+`dataLabels: true` adds values to bars, intervals, lines, numeric lines, scatter, bubbles, polar scatter and heatmap cells. Pie labels show names and values. Labels use the relevant axis formatting, fit inside the plot and may overlap in crowded charts. Labels are off by default.
 
 Cartesian annotations include reference lines, bands, regions, arrows and labels:
 
