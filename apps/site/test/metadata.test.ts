@@ -21,6 +21,17 @@ it('provides specific metadata and valid structured data on every static page', 
   expect(titles.size).toBe(allPaths().length);
   expect(descriptions.size).toBe(allPaths().length);
 });
+it.each([
+  ['/docs/charts/', 'statistical and financial charts'],
+  ['/docs/getting-started/', 'Install BorrowdaleJS from npm'],
+  ['/docs/getting-started/', 'in Node.js 22 or later'],
+  ['/examples/world/', 'with a fitted income and longevity curve'],
+  ['/changelog/', 'what each release'],
+  ['/examples/climate/', 'decade box plots, a LOESS curve'],
+  ['/examples/earthquakes/', 'a magnitude histogram, box plots of magnitude by depth'],
+])('describes %s as it is now: %s', (path, text) => {
+  expect(metadata(path, '').description).toContain(text);
+});
 it('does not invent a deployment domain and excludes missing pages', () => {
   expect(metadata('/docs/', '').canonical).toBeUndefined();
   expect(metadata('/missing/', 'https://example.test').robots).toBe('noindex, follow');
