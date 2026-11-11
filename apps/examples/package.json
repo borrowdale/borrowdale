@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@borrowdale/charts": "0.2.0",
-    "@borrowdale/core": "0.2.0",
-    "@borrowdale/fills": "0.2.0",
-    "@borrowdale/text": "0.2.0"
+    "@borrowdale/charts": "0.3.0",
+    "@borrowdale/core": "0.3.0",
+    "@borrowdale/fills": "0.3.0",
+    "@borrowdale/text": "0.3.0"
   }
 }
