@@ -93,6 +93,12 @@ been measured rather than what is expected.
   `xyLine`, `linearPath`).
 - Other option values name a style or a behaviour and are kebab-case (`step-before`, `min-max`, and
   a pattern's `kind`, such as `cross-hatch`).
+- A choice between named alternatives is a string union, which a later release can widen, not a
+  boolean: `orientation: 'horizontal' | 'vertical'`, `mode: 'mirror' | 'offset'`. The booleans of
+  0.2.0's statistical series (`horizontal`, `mirrored`) stay as they are. A flag that only switches a
+  behaviour on, such as `dataLabels` or `correlation`, stays a boolean.
+- An option name means one thing across the package: the gauge's `bands` are coloured stretches of
+  the dial, so a horizon's folds are its `layers`.
 - Angles in chart and text options are in degrees. Core's `arc` shape and the `sin` and `cos` of
   `@borrowdale/core/math` take radians.
 - A size option means the same extent wherever it appears: `binWidth` is a cell's full width on
