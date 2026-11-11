@@ -3,7 +3,9 @@ import { layoutChart, toSvgChart, drawChart, type ChartSpec, type ChartImage } f
 import { pattern, type PatternOptions } from '@borrowdale/fills';
 import { layoutText, textBounds, toSvgText, type LayoutTextOptions } from '@borrowdale/text';
 
-export const colors = ['#de9b24', '#397e92', '#3b7662', '#bd6556', '#7b79a3', '#8c8a50'];
+export const colors = ['#de9b24', '#397e92', '#3b7662', '#bd6556', '#7b79a3', '#8c8a50'] as const;
+// Every drawing's outline colour; fitted curves use it too, so they stand apart from the palette.
+export const ink = '#263b33';
 export const escape = (value: unknown) =>
   String(value).replace(
     /[&<>"']/g,
@@ -15,12 +17,12 @@ export function reseed() {
 }
 export const exampleSeed = (original?: string | number) => original === undefined ? seed : `${seed}:${original}`;
 export function shapeSvg(shape: Shape, options: SketchOptions = {}, width = 300, height = 180, fit = false) {
-  return `<svg ${fit ? 'data-fit' : ''} viewBox="0 0 ${width} ${height}" role="img" aria-label="${escape(shape.kind)} drawing">${toSvgSketch(sketch(shape, { stroke: '#263b33', ...options, seed: exampleSeed(options.seed) }))}</svg>`;
+  return `<svg ${fit ? 'data-fit' : ''} viewBox="0 0 ${width} ${height}" role="img" aria-label="${escape(shape.kind)} drawing">${toSvgSketch(sketch(shape, { stroke: ink, ...options, seed: exampleSeed(options.seed) }))}</svg>`;
 }
 // Draws with exactly the seed given, whatever the page's re-sketch seed: for a drawing that must
 // always match a file, such as the header mark and `public/favicon.svg`.
 export function fixedShapeSvg(shape: Shape, options: SketchOptions & { seed: number }, width: number, height: number) {
-  return `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${escape(shape.kind)} drawing">${toSvgSketch(sketch(shape, { stroke: '#263b33', ...options }))}</svg>`;
+  return `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${escape(shape.kind)} drawing">${toSvgSketch(sketch(shape, { stroke: ink, ...options }))}</svg>`;
 }
 // Hides an ornamental drawing from assistive technology, so it adds nothing to the name of the link or
 // button around it.
@@ -41,7 +43,7 @@ export function textSvg(text: string, options: LayoutTextOptions) {
   const layout = layoutText(text, options),
     box = textBounds(layout);
   return {
-    svg: `<svg viewBox="${box.x - 12} ${box.y - 12} ${Math.max(box.width + 24, 40)} ${Math.max(box.height + 24, 40)}" role="img" aria-label="${escape(layout.text)}">${toSvgText(layout, { fill: '#263b33' })}</svg>`,
+    svg: `<svg viewBox="${box.x - 12} ${box.y - 12} ${Math.max(box.width + 24, 40)} ${Math.max(box.height + 24, 40)}" role="img" aria-label="${escape(layout.text)}">${toSvgText(layout, { fill: ink })}</svg>`,
     missing: layout.missing,
   };
 }
