@@ -23,20 +23,38 @@ export function readCalendar(r: Fields, path: string, reserve: (count: number) =
   if (data.length === 0 && (given.from === undefined || given.to === undefined)) {
     fail(`${path}.data`, `is empty, so ${path}.from and ${path}.to are needed`);
   }
+  if (given.from !== undefined && given.to !== undefined && !(given.to >= given.from)) {
+    fail(`${path}.to`, `must be on or after ${formatTime(given.from)}, got ${formatTime(given.to)}`);
+  }
+  // A date beyond an end the spec gives is named by its place in the data, never by an end left out:
+  // those are taken from the data, so they hold every date.
+  data.forEach(([at], i) => {
+    if (given.from !== undefined && at < given.from) {
+      fail(`${path}.data[${i}][0]`, `is ${formatTime(at)}, before ${path}.from, ${formatTime(given.from)}`);
+    }
+    if (given.to !== undefined && at > given.to) {
+      fail(`${path}.data[${i}][0]`, `is ${formatTime(at)}, after ${path}.to, ${formatTime(given.to)}`);
+    }
+  });
   const earliest = data.reduce((low, [at]) => Math.min(low, at), Infinity);
   const latest = data.reduce((high, [at]) => Math.max(high, at), -Infinity);
   const from = given.from ?? timeOf(fieldsOf(earliest).year, 1, 1);
   const to = given.to ?? timeOf(fieldsOf(latest).year, 12, 31);
-  if (!(to >= from)) fail(`${path}.to`, `must be on or after ${formatTime(from)}, got ${formatTime(to)}`);
   // Every day gets a cell, reserved before any is made: the days with a value as they are read, and
   // the rest here, as there is one value at most for each day of the range (checked below).
   const days = (to - from) / DAY + 1;
-  if (days > MAX_POINTS) fail(`${path}.to`, `makes ${days} days from ${formatTime(from)}, more than ${MAX_POINTS}`);
-  data.forEach(([at], i) => {
-    if (at < from || at > to) {
-      fail(`${path}.data[${i}][0]`, `is ${formatTime(at)}, outside ${formatTime(from)} to ${formatTime(to)}`);
+  if (days > MAX_POINTS) {
+    // No range can hold data that span more than the limit, so the data are named first, whatever the
+    // ends. Otherwise the range must shrink around the data, from either end, so the series is named
+    // with both ends and where a default set one.
+    const spanned = (latest - earliest) / DAY + 1;
+    if (spanned > MAX_POINTS) {
+      fail(`${path}.data`, `spans ${spanned} days, more than ${MAX_POINTS}, from ${formatTime(earliest)} to ${formatTime(latest)}`);
     }
-  });
+    const start = given.from === undefined ? `the default start, ${formatTime(from)},` : formatTime(from);
+    const end = given.to === undefined ? `the default end, ${formatTime(to)}` : formatTime(to);
+    fail(path, `spans ${days} days, more than ${MAX_POINTS}, from ${start} to ${end}`);
+  }
   uniqueBy(data, ([at]) => String(at), (i, first) =>
     fail(`${path}.data[${i}]`, `is a second value for ${formatTime(data[i]![0])}, after ${path}.data[${first}]`));
   reserve(days - data.length);

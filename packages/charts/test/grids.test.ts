@@ -54,6 +54,10 @@ const leapYear: ChartSpec = {
 const calendarWith = (series: object): ChartSpec => ({ ...leapYear, series: [{ ...leapYear.series[0]!, ...series }] } as ChartSpec);
 const sundayLeapYear = calendarWith({ weekStart: 'sunday' });
 const verticalLeapYear: ChartSpec = { ...calendarWith({ orientation: 'vertical' }), width: 400, height: 900 };
+// Data spanning exactly 100,000 days, which whole years around them exceed: given a start, the end
+// defaults to 31 December of the last year; given an end, the start to 1 January of the first.
+const longestDataFromStart = calendarWith({ from: '2000-01-01', to: undefined, data: [['2000-01-01', 1], ['2273-10-15', 2]] });
+const longestDataToEnd = calendarWith({ from: undefined, to: '2274-03-16', data: [['2000-06-01', 1], ['2274-03-16', 2]] });
 
 // Quantile classes need at least as many distinct values as classes: these have two.
 const fewDistinct = loadWith([['Mon', 'AM', 1], ['Tue', 'AM', 1], ['Mon', 'PM', 2]], { type: 'linear', scale: 'quantile', classes: 3 });
@@ -387,8 +391,17 @@ describe('colour by value', () => {
     ['classes on a scale given as sequential', loadWith([['Mon', 'AM', 1]], { type: 'linear', scale: 'sequential', classes: 3 }), 'Invalid chart: colorAxis.classes is only for a quantize or quantile scale, not sequential'],
     ['two values for one calendar day', calendarWith({ data: [['2024-03-01', 1], ['2024-03-01', 2]] }), 'Invalid chart: series[0].data[1] is a second value for 2024-03-01, after series[0].data[0]'],
     ['a time of day in a calendar', calendarWith({ data: [['2024-03-01T09:00Z', 1]] }), 'Invalid chart: series[0].data[0][0] has a time of day, but a calendar takes dates'],
-    ['a calendar of more than 100,000 days', calendarWith({ from: '0000-01-01', to: '0300-01-01', data: [] }), 'Invalid chart: series[0].to makes 109574 days from 0000-01-01, more than 100000'],
-    ['a calendar day outside its range', calendarWith({ data: [['2025-01-01', 1]] }), 'Invalid chart: series[0].data[0][0] is 2025-01-01, outside 2024-01-01 to 2024-12-31'],
+    ['a calendar of more than 100,000 days', calendarWith({ from: '0000-01-01', to: '0300-01-01', data: [] }), 'Invalid chart: series[0] spans 109574 days, more than 100000, from 0000-01-01 to 0300-01-01'],
+    ['more than 100,000 days from a given start', calendarWith({ from: '0000-01-01', to: undefined, data: [['0300-01-01', 1]] }), 'Invalid chart: series[0] spans 109938 days, more than 100000, from 0000-01-01 to the default end, 0300-12-31'],
+    ['more than 100,000 days up to a given end', calendarWith({ from: undefined, to: '0300-01-01', data: [['0000-01-01', 1]] }), 'Invalid chart: series[0] spans 109574 days, more than 100000, from the default start, 0000-01-01, to 0300-01-01'],
+    ['more than 100,000 days spanned by the data alone', calendarWith({ from: undefined, to: undefined, data: [['0000-01-01', 1], ['0300-01-01', 2]] }), 'Invalid chart: series[0].data spans 109574 days, more than 100000, from 0000-01-01 to 0300-01-01'],
+    ['data that fit 100,000 days but not the default end after them', longestDataFromStart, 'Invalid chart: series[0] spans 100077 days, more than 100000, from 2000-01-01 to the default end, 2273-12-31'],
+    ['data that fit 100,000 days but not the default start before them', longestDataToEnd, 'Invalid chart: series[0] spans 100152 days, more than 100000, from the default start, 2000-01-01, to 2274-03-16'],
+    ['data that span more than 100,000 days between given ends', calendarWith({ from: '0000-01-01', to: '0300-01-01', data: [['0000-01-01', 1], ['0300-01-01', 2]] }), 'Invalid chart: series[0].data spans 109574 days, more than 100000, from 0000-01-01 to 0300-01-01'],
+    ['a calendar day outside its range', calendarWith({ data: [['2025-01-01', 1]] }), 'Invalid chart: series[0].data[0][0] is 2025-01-01, after series[0].to, 2024-12-31'],
+    ['a calendar day before a given start', calendarWith({ from: '2025-01-01', to: undefined, data: [['2024-03-01', 1]] }), 'Invalid chart: series[0].data[0][0] is 2024-03-01, before series[0].from, 2025-01-01'],
+    ['a calendar day after a given end', calendarWith({ from: undefined, to: '2023-12-31', data: [['2024-03-01', 1]] }), 'Invalid chart: series[0].data[0][0] is 2024-03-01, after series[0].to, 2023-12-31'],
+    ['a calendar that ends before it starts', calendarWith({ from: '2024-06-01', to: '2024-01-01', data: [] }), 'Invalid chart: series[0].to must be on or after 2024-06-01, got 2024-01-01'],
   ])('rejects %s', (_case, spec, message) => {
     expect(laying(spec)).toThrow(message);
   });
