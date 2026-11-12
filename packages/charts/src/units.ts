@@ -10,7 +10,7 @@ import type { Paint } from './palette.js';
 import { unhandled } from './statistics/types.js';
 import { markerNode } from './symbols.js';
 import type { ChartNode } from './types.js';
-import { unitSymbol, type CheckedUnitsChart } from './units-series.js';
+import { failGap, unitSymbol, type CheckedUnitsChart } from './units-series.js';
 
 /** The share of a unit's cell its symbol fills, leaving a gap between units. */
 const FILL = 0.8;
@@ -74,8 +74,11 @@ function drawerOf(drawing: Drawing, units: Units, rect: Rect, paintOf: ReadonlyM
       const { center, radius } = fitSweep(rect, startAngle, endAngle, innerRadius);
       const step = (endAngle - startAngle) / total;
       const pad = total > 1 ? padAngle / 2 : 0;
-      // A segment is as deep as the ring and, at its middle, as long as its sweep less the gaps.
-      assertUnitRoom(Math.min(radius * (1 - innerRadius), radius * ((1 + innerRadius) / 2) * (step - 2 * pad) * RADIANS), chart);
+      // A segment is as deep as the ring and, at its middle, as long as its share of the sweep: the
+      // chart's size bounds both. The gaps between segments then take their part of that length.
+      const middle = radius * ((1 + innerRadius) / 2) * RADIANS;
+      assertUnitRoom(Math.min(radius * (1 - innerRadius), middle * step), chart);
+      if (!(middle * (step - 2 * pad) >= 1)) failGap(units, `which leaves each of the ${total} segments less than 1 unit long`);
       const unit = (category: number, _k: number, index: number): ChartNode => {
         const from = startAngle + index * step;
         const shape = sliceShape(center, radius, radius * innerRadius, from + pad, from + step - pad);

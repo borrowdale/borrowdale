@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { layoutChart, type ChartSpec } from '@borrowdale/charts';
 import { legendEntries } from '../src/layout.js';
+import { placesOf } from './support/layout.js';
 import type { ChartNode } from '../src/types.js';
 import { checkChart } from '../src/validate.js';
 
@@ -29,6 +30,9 @@ const rowsOf = (spec: ChartSpec) =>
 
 /** The symbol each legend entry shows, undefined for a box. */
 const legendSymbols = (spec: ChartSpec) => legendEntries(checkChart(spec)).map((entry) => entry.symbol);
+
+/** Where `name` is written, down the chart, to two decimals. */
+const nameAt = (spec: ChartSpec, name: string) => Math.round(placesOf(layoutChart(spec), name)[0]![1] * 100) / 100;
 
 /** Laying the chart out, run later, so that an error it throws can be expected. */
 function layingOut(spec: ChartSpec) {
@@ -118,6 +122,8 @@ describe('unit charts', () => {
     const spec = units('rows', [{ name: 'A', value: 2 }, { name: 'Empty', value: 0 }, { name: 'C', value: 3 }], {}, [400, 200]);
 
     expect(rowsOf(spec)).toEqual([['name', 'unit', 'unit'], ['name'], ['name', 'unit', 'unit', 'unit']]);
+    // Three rows 61.33 high from y 8: the empty one keeps its line, centred at 100 between A and C.
+    expect(nameAt(spec, 'Empty')).toBe(100);
   });
 
   it('list the categories, not the series, in the legend', () => {
@@ -140,6 +146,33 @@ describe('unit charts', () => {
   it.each([['waffle', {}], ['parliament', {}], ['rows', {}], ['ring', { padAngle: 0 }]])('reject a %s too small to draw each unit 1 unit wide', (display, options) => {
     expect(layingOut(units(display, [{ name: 'A', value: 2000 }], options, [40, 40])))
       .toThrow('Invalid chart: a 40 × 40 chart leaves no room for the plot after its title, legend and labels');
+  });
+
+  // A ring 0.05 of its radius deep: about a third of a unit on this chart, its segments long enough.
+  it('reject a ring too thin to draw its segments 1 unit deep', () => {
+    expect(layingOut(units('ring', [{ name: 'A', value: 4 }], { innerRadius: 0.95 }, [30, 30])))
+      .toThrow('Invalid chart: a 30 × 30 chart leaves no room for the plot after its title, legend and labels');
+  });
+
+  // Each of 179 segments would be 15 units long at the middle of the ring, but the gaps leave 0.08.
+  it('reject a gap between segments that leaves each less than 1 unit long, naming the gap', () => {
+    expect(layingOut(units('ring', [{ name: 'A', value: 179 }], { padAngle: 2 }, [1000, 1000])))
+      .toThrow('series[0].padAngle is 2, which leaves each of the 179 segments less than 1 unit long');
+    expect(layingOut(units('ring', [{ name: 'A', value: 179 }], {}, [1000, 1000])))
+      .toThrow('series[0] has the default padAngle, 2, which leaves each of the 179 segments less than 1 unit long');
+  });
+
+  // 200 segments of 1.8 degrees each: the default gap of 2 degrees is wider than a segment.
+  it('name a default gap as the default when it leaves a ring no room', () => {
+    expect(layingOut(units('ring', [{ name: 'A', value: 200 }])))
+      .toThrow('series[0] has the default padAngle, 2, which leaves no room for 200 segments in 360 degrees');
+  });
+
+  it('reject more than 50 rows of seats, and more than 200 units to a row', () => {
+    expect(layingOut(units('parliament', [{ name: 'A', value: 3 }], { rows: 51 })))
+      .toThrow('series[0].rows must be an integer from 1 to 50, got 51');
+    expect(layingOut(units('waffle', [{ name: 'A', value: 3 }], { columns: 201 })))
+      .toThrow('series[0].columns must be an integer from 1 to 200, got 201');
   });
 
   it('reject rows of pictograms with no room beside their names', () => {

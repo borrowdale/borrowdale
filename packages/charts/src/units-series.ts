@@ -94,15 +94,23 @@ export function readUnits(r: Fields, path: string, reserve: (count: number) => v
   const { startAngle, endAngle } = round ? checkSweep(r, path, ring ? [0, 360] : [-90, 90]) : { startAngle: 0, endAngle: 0 };
   const innerRadius = r.optional('innerRadius', number(0, MAX_HOLE)) ?? (ring ? 0.7 : 0.4);
   const padAngle = r.optional('padAngle', number(0, MAX_PAD_ANGLE)) ?? 2;
+  // Whether the spec gave it: an error about the gap names it only then.
+  const padAngleGiven = r.has('padAngle');
   if (ring && total > 1 && !((endAngle - startAngle) / total > padAngle)) {
-    fail(`${path}.padAngle`, `is ${padAngle}, which leaves no room for ${total} segments in ${endAngle - startAngle} degrees`);
+    failGap({ path, padAngle, padAngleGiven }, `which leaves no room for ${total} segments in ${endAngle - startAngle} degrees`);
   }
   const rows = r.optional('rows', integer(1, MAX_SEAT_ROWS));
   const seating = display === 'parliament' ? seatRows(total, endAngle - startAngle, innerRadius, rows) : { rows: [], size: 0 };
   if (seating === undefined) {
     fail(`${path}.data`, `has ${total} units, more than ${MAX_SEAT_ROWS} rows of seats as deep as a row hold over ${endAngle - startAngle} degrees: give rows, a wider sweep or a smaller innerRadius`);
   }
-  return { display, data, counts, units: shared, columns, startAngle, endAngle, innerRadius, padAngle, seating };
+  return { display, data, counts, units: shared, columns, startAngle, endAngle, innerRadius, padAngle, padAngleGiven, seating };
+}
+
+/** Fails at a ring's gap between segments: at `padAngle` where the spec gives it, else as its default. */
+export function failGap(units: { path: string; padAngle: number; padAngleGiven: boolean }, problem: string): never {
+  if (!units.padAngleGiven) fail(units.path, `has the default padAngle, ${units.padAngle}, ${problem}`);
+  return fail(`${units.path}.padAngle`, `is ${units.padAngle}, ${problem}`);
 }
 
 /** What a category's units are drawn as: its symbol, by default a square in a waffle and a circle otherwise. */
