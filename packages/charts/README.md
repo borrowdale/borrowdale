@@ -498,14 +498,14 @@ given out by largest remainder, a tie to the earlier category. A category above 
 for one unit is an error, not left out, and so is a `padAngle` that leaves a ring's segments no room.
 A chart draws at most 2,000 units. A category's `symbol`, a symbol name or `{ image }`, draws its
 units, by default a square in a waffle and a circle otherwise; a ring takes none. Its legend entry
-shows the symbol its units are drawn as. Units are drawn
-solid by default: a hachure fill on large units uses much more of the drawing budget. A chart too
-small to draw each unit at least 1 unit wide is an error, as one too small for its parts is.
+shows the symbol its units are drawn as. Units are drawn solid by default: a hachure fill on large
+units uses much more of the drawing budget. A chart too small to draw each unit at least 1 unit wide
+is an error, as one too small for its parts is.
 
 ### Funnels
 
-A `funnel` series draws its stages in order, from the top, or from the left with
-`orientation: 'horizontal'`.
+A `funnel` series draws its stages in order, from the top (`orientation: 'vertical'`, the default),
+or from the left with `'horizontal'`.
 `display` picks the drawing:
 
 - `funnel`: stages of equal depth, each as wide as its share of the largest stage. `shape` slopes each
