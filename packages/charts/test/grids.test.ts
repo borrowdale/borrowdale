@@ -54,10 +54,16 @@ const leapYear: ChartSpec = {
 const calendarWith = (series: object): ChartSpec => ({ ...leapYear, series: [{ ...leapYear.series[0]!, ...series }] } as ChartSpec);
 const sundayLeapYear = calendarWith({ weekStart: 'sunday' });
 const verticalLeapYear: ChartSpec = { ...calendarWith({ orientation: 'vertical' }), width: 400, height: 900 };
+// 30 and 31 January end the first week of the range, down the side as across.
+const verticalLateJanuary: ChartSpec = { ...calendarWith({ orientation: 'vertical', from: '2024-01-30', to: '2024-03-31', data: [] }), width: 400, height: 900 };
+// At 388 units wide, May's weeks hold its name but not the half gap kept before June's.
+const narrowYear: ChartSpec = { ...leapYear, width: 388, height: 400, legend: 'none' };
 // Data spanning exactly 100,000 days, which whole years around them exceed: given a start, the end
 // defaults to 31 December of the last year; given an end, the start to 1 January of the first.
 const longestDataFromStart = calendarWith({ from: '2000-01-01', to: undefined, data: [['2000-01-01', 1], ['2273-10-15', 2]] });
 const longestDataToEnd = calendarWith({ from: undefined, to: '2274-03-16', data: [['2000-06-01', 1], ['2274-03-16', 2]] });
+// 2000-01-01 to 2273-10-15 is 100,000 days, the most points a chart holds, on a chart with room for them.
+const longestCalendar: ChartSpec = { ...calendarWith({ from: '2000-01-01', to: '2273-10-15', data: [['2000-01-01', 1]] }), width: 2000, height: 10000 };
 
 // Quantile classes need at least as many distinct values as classes: these have two.
 const fewDistinct = loadWith([['Mon', 'AM', 1], ['Tue', 'AM', 1], ['Mon', 'PM', 2]], { type: 'linear', scale: 'quantile', classes: 3 });
@@ -118,6 +124,9 @@ const roundedEnds = loadWith([['Mon', 'AM', -0.04], ['Tue', 'AM', 1], ['Mon', 'P
 const twentyDecimals = { ...loadWith([['Mon', 'AM', 98765.4321], ['Tue', 'AM', 98765.5], ['Mon', 'PM', 98766], ['Tue', 'PM', 98767]], { type: 'linear', scale: 'quantile', classes: 2, format: { decimals: 20 } }), width: 2400 } as ChartSpec;
 // Every cell without a value leaves a quantile scale nothing to divide.
 const valuelessQuantiles = loadWith([['Mon', 'AM', null]], { type: 'linear', scale: 'quantile', classes: 3 });
+// From -0.1 to 0.2 in three classes 0.1 wide: the boundary computed at 0 is a hair above it in binary,
+// far less than a class' width, so 0 is on it and in the class above, with 0.05.
+const thirds = loadWith([['Mon', 'AM', 0], ['Tue', 'AM', 0.05], ['Mon', 'PM', -0.05]], { type: 'linear', scale: 'quantize', min: -0.1, max: 0.2, classes: 3 });
 // Eleven values in seven quantile classes: the breaks 50.43 and 54 differ, but no value lies between
 // them, as 54 is tied.
 const elevenCategories = { type: 'band', categories: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k'] } as const;
@@ -138,6 +147,13 @@ const tinyBreaks = loadWith([['Mon', 'AM', 0]], { type: 'linear', scale: 'thresh
 const narrowDiverging = loadWith([['Mon', 'AM', 1]], { type: 'linear', scale: 'diverging', min: 1, max: 1.0000000000000002 });
 // A midpoint at an end of a domain the format writes 0 to 0.
 const wholeDiverging = loadWith([['Mon', 'AM', 0.1]], { type: 'linear', scale: 'diverging', min: -0.04, max: 0.24, format: { decimals: 0 }, midpoint: 0.24 });
+// A legend on the right takes at most half of a 400-unit chart, and six classes need more.
+const rightSixths = { ...loadWith([['Mon', 'AM', 0], ['Tue', 'PM', 10]], { type: 'linear', scale: 'quantize', classes: 6 }), legend: 'right' } as ChartSpec;
+// The most a classed scale takes: 12 classes, or 11 breaks.
+const twelfths = { ...loadWith([['Mon', 'AM', 0], ['Tue', 'PM', 10]], { type: 'linear', scale: 'quantize', classes: 12 }), width: 1200 } as ChartSpec;
+const elevenBreaks = { ...loadWith([['Mon', 'AM', 0], ['Tue', 'PM', 10]], { type: 'linear', scale: 'threshold', breaks: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] }), width: 1200 } as ChartSpec;
+const thirteenths = { ...twelfths, colorAxis: { type: 'linear', scale: 'quantize', classes: 13 } } as ChartSpec;
+const twelveBreaks = { ...elevenBreaks, colorAxis: { type: 'linear', scale: 'threshold', breaks: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] } } as ChartSpec;
 // Threshold breaks that a fixed number of decimals does not write as they are: written 1, 0.5 would
 // put 0.7 in the class labelled "from 1"; written 0.1, 0.12 and 0.14 could not be told apart.
 const roundedBreaks = loadWith([['Mon', 'AM', 0.7]], { type: 'linear', scale: 'threshold', breaks: [0.5, 1.5], format: { decimals: 0 } });
@@ -294,8 +310,18 @@ describe('colour by value', () => {
     expect(layoutChart(twentyDecimals).labels).toContain('98,765.43210000000544823706');
   });
 
+  // The tolerance follows the class' width, not the boundary's own size, which is next to nothing at 0.
+  it('takes a quantize boundary computed a hair off 0 as 0', () => {
+    const layout = layoutChart(thirds);
+
+    expect(fillsOf(layout, 'Load, Mon, AM: 0')).toEqual(fillsOf(layout, 'Load, Tue, AM: 0.05'));
+    expect(fillsOf(layout, 'Load, Mon, AM: 0')).not.toEqual(fillsOf(layout, 'Load, Mon, PM: -0.05'));
+  });
+
   // Within the limits on classes, breaks and their decimals, each spec is valid and its legend fits.
   it.each([
+    ['12 quantize classes', twelfths],
+    ['11 threshold breaks', elevenBreaks],
     ['threshold breaks that a fixed number of decimals writes exactly', exactBreaks],
   ])('accepts %s', (_case, spec) => {
     expect(laying(spec)).not.toThrow();
@@ -365,6 +391,9 @@ describe('colour by value', () => {
     ['threshold breaks with more decimals than a label writes', tinyBreaks, 'Invalid chart: colorAxis.breaks[0] must have at most 20 decimals, got -1e-21'],
     ['a diverging scale with no value between its ends for the default midpoint', narrowDiverging, 'Invalid chart: colorAxis has no value strictly between its ends, 1 to 1.0000000000000002, for the default midpoint'],
     ['a midpoint at an end of a domain the format rounds', wholeDiverging, 'Invalid chart: colorAxis.midpoint must be inside the colour domain, -0.04 to 0.24, got 0.24'],
+    ['a colour scale too wide for half the chart, on the right', rightSixths, 'Invalid chart: legend needs 240 units of width for the colour axis, but 192 are left'],
+    ['13 quantize classes', thirteenths, 'Invalid chart: colorAxis.classes must be an integer from 2 to 12, got 13'],
+    ['12 threshold breaks', twelveBreaks, 'Invalid chart: colorAxis.breaks must have 1 to 11 entries, got 12'],
     ['a threshold break that a fixed number of decimals rounds', roundedBreaks, 'Invalid chart: colorAxis.breaks[0] is 0.5, which colorAxis.format.decimals 0 writes as 1'],
     ['threshold breaks that a fixed number of decimals writes alike', alikeBreaks, 'Invalid chart: colorAxis.breaks[0] is 0.12, which colorAxis.format.decimals 1 writes as 0.1'],
     ['a later threshold break that a fixed number of decimals rounds', loadWith([['Mon', 'AM', 0.7]], { type: 'linear', scale: 'threshold', breaks: [1, 1.5], format: { decimals: 0 } }), 'Invalid chart: colorAxis.breaks[1] is 1.5, which colorAxis.format.decimals 0 writes as 2'],
@@ -446,6 +475,25 @@ describe('calendars', () => {
   // 30 and 31 January end the first week, with no full week of their own: the month is left unnamed.
   it('leaves a month with no room in the range unnamed', () => {
     expect(layoutChart(calendarWith({ from: '2024-01-30', to: '2024-03-31', data: [] })).labels).not.toContain('Jan');
+  });
+
+  // Down the side, a month's name takes a line, which January's two days in the range cannot hold.
+  it('leaves a month with no room in the range unnamed when vertical', () => {
+    const labels = layoutChart(verticalLateJanuary).labels;
+
+    expect(labels).not.toContain('Jan');
+    expect(labels).toContain('Feb');
+  });
+
+  // A month's name ends half a gap before the next month's weeks: May is cut short to keep it.
+  it('cuts a month name short to keep a gap before the next month', () => {
+    expect(layoutChart(narrowYear).labels).toContain('M…');
+  });
+
+  // 100,000 days is within the limit on points, so the spec is valid, and a cell for each day runs
+  // past the drawing budget.
+  it('passes the 100,000-day limit and stops at the drawing budget', () => {
+    expect(laying(longestCalendar)).toThrow('Drawing too complex (more than 400000 operations)');
   });
 
   // Monday 1 and Tuesday 2 January share a week: a column across, a row down.
