@@ -43,11 +43,12 @@ describe('data rows of events, ranges, cells and dates', () => {
     expect(dataRows(chart([cells]))).toEqual([['Load', 'Mon, AM', '3'], ['Load', '0 – 10, PM', 'No data']]);
   });
 
-  it('list each point of a horizon row by its x, as its band axis lists rows', () => {
+  // A gap has no x: naming it by its place in the data would put it at an x the row does not have.
+  it('list each point of a horizon row by its x, as its band axis lists rows, and a gap by none', () => {
     const load = { width: 300, height: 200, axes: { x: { type: 'linear' }, y: { type: 'band', categories: ['CPU', 'Memory'] } },
-      series: [{ type: 'horizon', name: 'Load', row: 'CPU', data: [[1, 5], null, [3, -2]] }] } as ChartSpec;
+      series: [{ type: 'horizon', name: 'Load', row: 'CPU', data: [[2000, 5], null, [2010, -2]] }] } as ChartSpec;
 
-    expect(dataRows(load)).toEqual([['Load', '1', '5'], ['Load', '2', 'No data'], ['Load', '3', '-2']]);
+    expect(dataRows(load)).toEqual([['Load', '2,000', '5'], ['Load', '', 'No data'], ['Load', '2,010', '-2']]);
   });
 
   it('list each cell of a polar heatmap by its angle and radius', () => {

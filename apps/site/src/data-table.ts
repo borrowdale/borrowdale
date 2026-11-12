@@ -75,8 +75,8 @@ function seriesRows(series: ChartSpec['series'][number], categories: readonly st
     case 'polarHeatmap':
       return series.data.map(([angle, radius, value]) => [series.name, `${angle}, ${radius}`, written(value, format)]);
     case 'horizon':
-      // Its band axis lists the rows, so each point is named by its x.
-      return series.data.map((point, i) => (point === null ? [series.name, String(i + 1), 'No data'] : [series.name, written(point[0], format), written(point[1], format)]));
+      // Its band axis lists the rows, so each point is named by its x; a gap has none.
+      return series.data.map((point) => (point === null ? [series.name, '', 'No data'] : [series.name, written(point[0], format), written(point[1], format)]));
     case 'bar':
     case 'line':
     case 'area':
