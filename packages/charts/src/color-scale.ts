@@ -1,9 +1,11 @@
 // A colour axis: how values become colours, and what its legend shows. Only + − × ÷ and exact
 // rounding, so every engine picks the same colour for a value.
 import type { CheckedLinearAxis } from './check-axis.js';
+import { writesExactly } from './decimals.js';
 import { fail, MAX_DECIMALS } from './read.js';
-import { formatAxisValue, formatNumber, scaleOf } from './scale.js';
+import { checkWritten, formatAxisValue, formatNumber, roundOut, scaleOf } from './scale.js';
 import { quantile } from './statistics/geometry.js';
+import { writtenOn } from './time.js';
 import type { ColorScaleKind, ColorScheme } from './types.js';
 
 // ColorBrewer's 11-class RdBu (Apache-2.0), from dark red to dark blue.
@@ -91,7 +93,11 @@ const KINDS: Record<ColorScaleKind, (resolved: Resolved) => ColorScale> = {
     const [lo, hi] = domain;
     const middle = axis.midpoint ?? (lo < 0 && hi > 0 ? 0 : (lo + hi) / 2);
     if (!(middle > lo && middle < hi)) {
-      fail(`${axis.path}.midpoint`, `must be inside the colour domain, ${formatAxisValue(lo, axis)} to ${formatAxisValue(hi, axis)}, got ${middle}`);
+      // The ends as they are, not as the format rounds them, which could write them alike.
+      const ends = `${writtenOn(axis.kind, lo)} to ${writtenOn(axis.kind, hi)}`;
+      // A default midpoint fails only when no number lies between the ends: the axis is to change.
+      if (axis.midpoint === undefined) fail(axis.path, `has no value strictly between its ends, ${ends}, for the default midpoint`);
+      fail(`${axis.path}.midpoint`, `must be inside the colour domain, ${ends}, got ${middle}`);
     }
     return continuous(axis, stops, domain, (value) =>
       value < middle ? (0.5 * (value - lo)) / (middle - lo) : 0.5 + (0.5 * (value - middle)) / (hi - middle));
@@ -100,35 +106,49 @@ const KINDS: Record<ColorScaleKind, (resolved: Resolved) => ColorScale> = {
     const [lo, hi] = domain;
     const computed = Array.from({ length: classes - 1 }, (_, k) => lo + ((hi - lo) * (k + 1)) / classes);
     const decimals = boundaryDecimals(axis, [lo, ...computed, hi], (hi - lo) / classes);
-    return classed(axis, stops, computed.map((at) => written(at, decimals, (hi - lo) / classes)), [lo, hi], decimals);
+    return classed(axis, stops, computed.map((at) => written(at, decimals, (hi - lo) / classes)), { domain: [lo, hi], decimals });
   },
   quantile: ({ axis, stops, values, classes }) => {
+    // The number of classes is named where the spec gives it, else as the axis' default.
+    const [where, classesText] = axis.classes === undefined
+      ? [axis.path, `has ${classes} classes, the default`]
+      : [`${axis.path}.classes`, `is ${classes}`];
     const distinct = new Set(values).size;
+    if (distinct === 0) fail(where, `${classesText}, but there are no values`);
     if (classes > distinct) {
-      fail(`${axis.path}.classes`, `is ${classes}, but the values have only ${distinct} distinct ${distinct === 1 ? 'value' : 'values'}`);
+      fail(where, `${classesText}, but the values have only ${distinct} distinct ${distinct === 1 ? 'value' : 'values'}`);
     }
     // Its breaks are values of the data, or between two of them, and are used as they are.
     const breaks = Array.from({ length: classes - 1 }, (_, k) => quantile(values, (k + 1) / classes));
-    // A break at the lowest value, or equal to the one before it, leaves a class with no value.
-    const parts = new Set(breaks.filter((at) => at > values[0]!)).size + 1;
-    if (parts < classes) {
-      fail(`${axis.path}.classes`, `is ${classes}, but ties in the values leave only ${parts} distinct classes`);
+    // Tied or nearly equal values can leave a class with no value: a break at the lowest value, one
+    // equal to the one before it, or two breaks with no value between them.
+    const filled = new Set(values.map((value) => classOf(breaks, value))).size;
+    if (filled < classes) {
+      fail(where, `${classesText}, but only ${filled} of them would hold a value`);
     }
     // A fixed end is an end of the outer class; the values lie within it.
     const [lo, hi] = [axis.min ?? values[0]!, axis.max ?? values.at(-1)!];
-    return classed(axis, stops, breaks, [lo, hi], boundaryDecimals(axis, [lo, ...breaks, hi], (hi - lo) / classes));
+    return classed(axis, stops, breaks, { domain: [lo, hi], decimals: boundaryDecimals(axis, [lo, ...breaks, hi], (hi - lo) / classes) });
   },
-  threshold: ({ axis, stops }) => classed(axis, stops, axis.breaks!, undefined, undefined),
+  threshold: ({ axis, stops }) => {
+    const breaks = axis.breaks!;
+    // The legend writes each break as the class boundary it is: 0.5 written as 1 would put 0.7 in the
+    // class labelled "from 1".
+    breaks.forEach((at, i) => checkWritten(at, `${axis.path}.breaks[${i}]`, axis));
+    return classed(axis, stops, breaks, undefined);
+  },
 };
 
 /** The colour scale of `axis` over `values`, with the series' defaults where the axis sets none. */
 export function colorScaleOf(axis: CheckedColorAxis, values: readonly number[], defaults: ColorDefaults): ColorScale {
   const kind = axis.scale ?? defaults.scale;
   const classedKind = kind === 'quantize' || kind === 'quantile';
-  if (axis.classes !== undefined && !classedKind) fail(`${axis.path}.classes`, `is only for a quantize or quantile scale, not ${kind}`);
+  // The scale an option does not belong to, said to be the default where the spec leaves it out.
+  const named = axis.scale === undefined ? `the default ${kind} scale` : kind;
+  if (axis.classes !== undefined && !classedKind) fail(`${axis.path}.classes`, `is only for a quantize or quantile scale, not ${named}`);
   if (axis.breaks === undefined && kind === 'threshold') fail(axis.path, 'is a threshold scale, which needs breaks');
-  if (axis.breaks !== undefined && kind !== 'threshold') fail(`${axis.path}.breaks`, `is only for a threshold scale, not ${kind}`);
-  if (axis.midpoint !== undefined && kind !== 'diverging') fail(`${axis.path}.midpoint`, `is only for a diverging scale, not ${kind}`);
+  if (axis.breaks !== undefined && kind !== 'threshold') fail(`${axis.path}.breaks`, `is only for a threshold scale, not ${named}`);
+  if (axis.midpoint !== undefined && kind !== 'diverging') fail(`${axis.path}.midpoint`, `is only for a diverging scale, not ${named}`);
   const sorted = [...values].sort((a, b) => a - b);
   const fixed: CheckedColorAxis = defaults.domain && axis.min === undefined && axis.max === undefined
     ? { ...axis, min: defaults.domain[0], max: defaults.domain[1] }
@@ -186,30 +206,43 @@ function inverse(fraction: (value: number) => number, t: number, lo: number, hi:
   return (low + high) / 2;
 }
 
+/** The class of `value` among increasing `breaks`, counted from 0: a value at a break is in the class above it. */
+function classOf(breaks: readonly number[], value: number): number {
+  return breaks.filter((at) => value >= at).length;
+}
+
+/** The outer boundaries of a classed scale, and the decimals its legend writes every boundary with. */
+interface Ends {
+  domain: [number, number];
+  decimals: number;
+}
+
 /**
  * Classes split at increasing `breaks`, each coloured by an even sample of the stops. A value at a
- * break is in the class above it. `ends` label the outer boundaries; a threshold scale's are open.
+ * break is in the class above it. `ends` label the outer boundaries, rounded away from the classes so
+ * the written range holds every value: to one decimal, a lower end of -0.04 is -0.1, not 0.0. A
+ * threshold scale's ends are open, and its breaks are written in the axis' format.
  */
-function classed(
-  axis: CheckedLinearAxis,
-  stops: readonly string[],
-  breaks: readonly number[],
-  ends: [number, number] | undefined,
-  decimals: number | undefined,
-): ColorScale {
+function classed(axis: CheckedLinearAxis, stops: readonly string[], breaks: readonly number[], ends: Ends | undefined): ColorScale {
   const count = breaks.length + 1;
   const colors = Array.from({ length: count }, (_, k) => interpolate(stops, k / (count - 1)));
-  const boundary = (value: number) => decimals === undefined ? formatAxisValue(value, axis) : formatNumber(value, decimals, axis.format);
-  const written = breaks.map(boundary);
+  const boundary = (value: number) => ends ? formatNumber(value, ends.decimals, axis.format) : formatAxisValue(value, axis);
+  const inner = breaks.map(boundary);
   return {
-    domain: ends ?? [breaks[0]!, breaks.at(-1)!],
-    color: (value) => colors[breaks.filter((at) => value >= at).length]!,
+    domain: ends?.domain ?? [breaks[0]!, breaks.at(-1)!],
+    color: (value) => colors[classOf(breaks, value)]!,
     format: (value) => formatAxisValue(value, axis),
     title: axis.title,
     legend: {
       kind: 'classes',
       colors,
-      labels: ends ? [boundary(ends[0]), ...written, boundary(ends[1])] : ['', ...written, ''],
+      labels: ends
+        ? [
+            boundary(roundOut(ends.domain[0], ends.decimals, 'lower')),
+            ...inner,
+            boundary(roundOut(ends.domain[1], ends.decimals, 'upper')),
+          ]
+        : ['', ...inner, ''],
     },
   };
 }
@@ -235,7 +268,7 @@ function boundaryDecimals(axis: CheckedLinearAxis, boundaries: readonly number[]
   let most = 0;
   for (let scaled = width; scaled > 0 && scaled < 10 && most < MAX_DECIMALS; scaled *= 10) most++;
   let decimals = 0;
-  while (decimals < most && !boundaries.every((value) => Number(value.toFixed(decimals)) === value)) decimals++;
+  while (decimals < most && !boundaries.every((value) => writesExactly(value, decimals))) decimals++;
   return decimals;
 }
 

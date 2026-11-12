@@ -187,7 +187,10 @@ export interface HistogramSeries extends SeriesBase {
   type: 'histogram';
   /** Stack series with matching edges and frequency options under the same name. */
   stack?: string | undefined;
-  /** Strictly increasing bin edges, including both outer limits. */
+  /**
+   * Strictly increasing bin edges, including both outer limits, each one the x axis' `format` writes
+   * exactly, as the bins' tooltips state them.
+   */
   edges: readonly number[];
   /** Every sample must fall within the outer edges. An interior edge starts a bin. */
   data: readonly number[];

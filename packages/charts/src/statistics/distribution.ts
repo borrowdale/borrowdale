@@ -40,6 +40,16 @@ function normalQuantile(p: number): number {
 /** The most points a kernel density curve is drawn with. */
 const MAX_DENSITY_POINTS = 2_000;
 
+// A bandwidth that does not work for the samples: named where the spec gives it, else said to be the
+// default, so the spec has a key to add.
+function badBandwidth(path: string, h: number, given: boolean, problem: string): never {
+  if (given) fail(`${path}.bandwidth`, `is ${h}, ${problem}`);
+  return fail(path, `has the default bandwidth, ${h}, which is ${problem}`);
+}
+
+/** A bandwidth with no width at the samples' magnitude. */
+const UNRESOLVABLE = 'too small to resolve at the sample coordinates';
+
 // KDE points: 65 across the samples and three bandwidths past each end, refined to at most a
 // quarter bandwidth apart within three bandwidths of every sample. A sample's peak then lies at
 // most an eighth of a bandwidth from a drawn point, so no isolated peak is drawn more than 1% low.
@@ -48,7 +58,7 @@ function densityGrid(path: string, sorted: readonly number[], h: number, given: 
   const values = grid(low - 3 * h, high + 3 * h);
   const step = h / 4;
   if ((high + 3 * h - (low - 3 * h)) / (values.length - 1) <= step) {
-    if (!increasing(values)) fail(path, 'needs a bandwidth resolvable at the sample coordinates');
+    if (!increasing(values)) badBandwidth(path, h, given, UNRESOLVABLE);
     return values;
   }
   const runs: [number, number][] = [];
@@ -58,20 +68,16 @@ function densityGrid(path: string, sorted: readonly number[], h: number, given: 
     else runs.push([sample - 3 * h, sample + 3 * h]);
   }
   // A bandwidth too small for a sample's magnitude leaves its run, or the step, without width.
-  if (!(step > 0) || runs.some(([from, to]) => !(to > from))) {
-    fail(path, 'needs a bandwidth resolvable at the sample coordinates');
-  }
+  if (!(step > 0) || runs.some(([from, to]) => !(to > from))) badBandwidth(path, h, given, UNRESOLVABLE);
   const counts = runs.map(([from, to]) => Math.ceil((to - from) / step) + 1);
   const total = counts.reduce((sum, count) => sum + count, values.length);
   if (!(total <= MAX_DENSITY_POINTS)) {
-    const problem = `its density needs ${total} points, more than ${MAX_DENSITY_POINTS}`;
-    if (given) fail(`${path}.bandwidth`, `is ${h}, too narrow for the sample range: ${problem}`);
-    fail(path, `needs a bandwidth: the default ${h} is too narrow for the sample range, and ${problem}`);
+    badBandwidth(path, h, given, `too narrow for the sample range: its density needs ${total} points, more than ${MAX_DENSITY_POINTS}`);
   }
   const points = [...values];
   runs.forEach(([from, to], i) => {
     const run = grid(from, to, counts[i]);
-    if (!increasing(run)) fail(path, 'needs a bandwidth resolvable at the sample coordinates');
+    if (!increasing(run)) badBandwidth(path, h, given, UNRESOLVABLE);
     points.push(...run);
   });
   points.sort((a, b) => a - b);
@@ -101,14 +107,15 @@ function kernelDensity(
 ): Curve {
   const sd = data.length > 1 ? deviation(data, true) : 0;
   const h = bandwidth ?? (sd ? 1.06 * sd * exp(-0.2 * log(data.length)) : Math.max(1, Math.abs(sorted[0]!) * 0.01));
-  const values = densityGrid(path, sorted, h, bandwidth !== undefined);
+  const given = bandwidth !== undefined;
+  const values = densityGrid(path, sorted, h, given);
   reserve(values.length);
   const result = curve(
     values,
     values.map((v) => data.reduce((s, d) => s + gaussian((v - d) / h), 0) / (data.length * h)),
   );
   // A bandwidth too small for the samples' magnitude overflows the density.
-  if (!(result.peak < Infinity)) fail(path, 'needs a bandwidth resolvable at the sample coordinates');
+  if (!(result.peak < Infinity)) badBandwidth(path, h, given, UNRESOLVABLE);
   return result;
 }
 

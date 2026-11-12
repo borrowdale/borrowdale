@@ -640,7 +640,7 @@ it('spreads a vertical swarm across x and a horizontal one across y', () => {
 
 it('rejects a bandwidth that underflows to nothing between samples', () => {
   const series: Series = { type: 'distribution', display: 'density', name: 'D', data: [0, 1], bandwidth: 1e-323 };
-  const message = 'Invalid chart: series[0] needs a bandwidth resolvable at the sample coordinates';
+  const message = 'Invalid chart: series[0].bandwidth is 1e-323, too small to resolve at the sample coordinates';
   expect(outcome(spec(series))).toBe(message);
   // Each sample's run keeps a width here, but a quarter bandwidth, the grid step, does not.
   expect(outcome(spec({ ...series, data: [0, 1e-320] }))).toBe(message);
@@ -648,12 +648,30 @@ it('rejects a bandwidth that underflows to nothing between samples', () => {
 
 it('rejects a bandwidth with no width at the magnitude of one sample', () => {
   const series: Series = { type: 'distribution', display: 'density', name: 'D', data: [0, 1e15], bandwidth: 0.01 };
-  const message = 'Invalid chart: series[0] needs a bandwidth resolvable at the sample coordinates';
+  const message = 'Invalid chart: series[0].bandwidth is 0.01, too small to resolve at the sample coordinates';
   expect(outcome(spec(series))).toBe(message);
   // Wide enough to give each sample's run a width, but not distinct points within it.
-  expect(outcome(spec({ ...series, bandwidth: 0.1 }))).toBe(message);
+  expect(outcome(spec({ ...series, bandwidth: 0.1 }))).toBe('Invalid chart: series[0].bandwidth is 0.1, too small to resolve at the sample coordinates');
   // A single sample keeps the 65-point curve, whose points coincide at that magnitude.
   expect(outcome(spec({ ...series, data: [1e15] }))).toBe(message);
+});
+
+// Samples whose default bandwidth has no width at their magnitude, one for each place it is found:
+// the first grid of points, a sample's run, the points of a run, and the density's peak.
+const densityOf = (data: number[]): Series => ({ type: 'distribution', display: 'density', name: 'D', data });
+const NEAR_LIMIT_DENSITY = densityOf([1e15 - 0.25, 1e15 - 0.125, 1e15]);
+const NEAR_LIMIT_RUN = densityOf([1e15 - 2, ...Array<number>(999).fill(1e15)]);
+const NEAR_LIMIT_RUN_POINTS = densityOf([1e15 - 2.5, ...Array<number>(999).fill(1e15)]);
+const SUBNORMAL_PEAK = densityOf([0, 1e-310]);
+
+// Without a bandwidth, the default is the one to change, and the spec has no key to name.
+it.each([
+  ['the first grid', NEAR_LIMIT_DENSITY, 0.10636325693323058],
+  ['a sample\'s run', NEAR_LIMIT_RUN, 0.016848184775619345],
+  ['the points of a run', NEAR_LIMIT_RUN_POINTS, 0.021060230969524182],
+  ['the peak', SUBNORMAL_PEAK, 6.525065390728e-311],
+])('says when the default bandwidth is too small for %s', (_place, series, h) => {
+  expect(outcome(spec(series))).toBe(`Invalid chart: series[0] has the default bandwidth, ${h}, which is too small to resolve at the sample coordinates`);
 });
 
 it('names logarithms that coincide in a logarithmic fit', () => {
@@ -932,7 +950,9 @@ it.each([
   ['a normal curve of constant samples', { type: 'distribution', display: 'normal', name: 'N', data: [3, 3] },
     'Invalid chart: series[0] needs sample variance above zero to fit a normal curve'],
   ['a polynomial with too few distinct x values', { type: 'relationship', display: 'regression', method: 'polynomial', degree: 3, name: 'R', data: [[0, 1], [1, 2], [2, 3]] },
-    'Invalid chart: series[0] needs more distinct x values than the polynomial degree'],
+    'Invalid chart: series[0].degree is 3, which needs more than 3 distinct x values, but the data have 3'],
+  ['a polynomial of the default degree with too few distinct x values', { type: 'relationship', display: 'regression', method: 'polynomial', name: 'R', data: [[1, 1], [2, 3], [1, 2]] },
+    'Invalid chart: series[0] needs more than 2 distinct x values for the default polynomial degree, 2, but the data have 2'],
   ['a fit at one x value', { type: 'relationship', display: 'regression', name: 'R', data: [[1, 1], [1, 2]] },
     'Invalid chart: series[0] needs distinct x values'],
   ['bins too narrow for the data', { type: 'relationship', display: 'histogram2d', name: 'S', binWidth: 1e-10, data: [[1e15, 0]] },

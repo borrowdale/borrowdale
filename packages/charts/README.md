@@ -127,6 +127,9 @@ On linear x and y axes, supply raw samples and 2 to 1,001 strictly increasing bi
 This gives three adjacent bars with heights 2, 3 and 1. Each bin includes its left edge, and
 the final bin also includes its right edge. Samples outside the edges raise an error. The x axis
 shows each bin at its numeric width. Heights show counts by default, even for unequal widths.
+Each bin's tooltip states its edges in the x axis' format, so an edge must be one that format
+writes exactly: with a fixed `format.decimals`, a value those decimals write without rounding, and
+otherwise one with at most 20 decimals.
 
 Use `frequency: 'relative'` to divide each count by the series' sample count, or
 `cumulative: true` to sum through each successive bin. Together they show the fraction of
@@ -360,8 +363,8 @@ axis without one, and `colorAxis` on a chart without such a series is an error.
 | `sequential` (the default) | from the first colour at the lower end to the last at the upper end | |
 | `diverging` | from the first colour to the middle one at `midpoint`, and on to the last | `midpoint`, inside the domain: by default 0 where the domain spans it, else its middle |
 | `quantize` | `classes` equal parts of the domain, one colour each | `classes`, 2 to 12, default 5 |
-| `quantile` | `classes` parts holding as many values each | `classes`, 2 to 12, default 5; more classes than distinct values, or ties that leave a class empty, is an error |
-| `threshold` | a class below the first of `breaks`, one from each break to the next, and one from the last up | `breaks`, 1 to 11 increasing values, required |
+| `quantile` | `classes` parts holding as many values each | `classes`, 2 to 12, default 5; more classes than distinct values, or tied or nearly equal values that would leave a class empty, is an error |
+| `threshold` | a class below the first of `breaks`, one from each break to the next, and one from the last up | `breaks`, 1 to 11 increasing values, required, each written exactly (below) |
 
 The colours come from `scheme` or `stops`, not both. `scheme` is `viridis`, dark purple to yellow (the
 default, and CC0), `red-blue`, dark red through white to dark blue (the default for `diverging`,
@@ -372,11 +375,16 @@ so every engine picks the same colour for a value. A classed scale samples its c
 first to last, and a value on a class boundary is in the class above it.
 
 The legend draws a continuous scale as a ramp between its end values, and a classed one as a swatch
-per class between labels at its boundaries, written with the fewest decimals that write every
-boundary exactly, but no more than two significant digits of a class's width. A threshold scale's
-outer classes have no end label. The axis' `title` is written before the ramp or swatches. Where a
-cell has no value, the legend adds a "no value" swatch: such a cell is drawn as an outline only,
-never in the colour of the lowest value.
+per class between labels at its boundaries. A quantize or quantile scale writes them with the
+axis' fixed `format.decimals`, or else with the fewest decimals that write every boundary exactly,
+but no more than two significant digits of a class's width. Its two outer labels are rounded
+outward, the lower one down and the upper one up, so that they hold every value: a lowest value of
+−0.04 written to one decimal is labelled −0.1. A threshold scale writes its breaks in the axis'
+format, which must write each exactly: with a fixed `format.decimals`, a break those decimals write
+without rounding, and otherwise one with at most 20 decimals. Its outer classes have no end label.
+The axis' `title` is written before the ramp or swatches. Where a cell has no value, the legend adds
+a "no value" swatch: such a cell is drawn as an outline only, never in the colour of the lowest
+value.
 
 A style `fill`, on the chart or on a series coloured by value, would hide its colours, so it is an
 error, and so is a `color` on such a series. Other style options apply as usual.
@@ -532,7 +540,7 @@ Each of these is an `InvalidChartError`, exported by the package, with the place
 (`series[2].data[5]`) and the rest of the message as `problem`. The class and `path` are stable;
 the wording of `problem`, and of every other message, is for people and can change in any release,
 so do not match on it in code. A chart too small for its parts has no single place in the spec, so
-its `path` is `''`:
+its `path` is `''`, as is a legend too wide for its row where the spec leaves `legend` out:
 
 ```
 Invalid chart: a 20 × 20 chart leaves no room for the plot after its title, legend and labels
@@ -546,7 +554,12 @@ soon as the total exceeds the limit, without reading later series. A limit error
 count reached so far, not a count of unread data. A pie holds at most 1,000 slices, and a chart
 at most 10 nested pies. A hex heatmap's columns and rows are whole numbers within ±100,000. A
 calendar counts one point per day of its range, reserved before any cell
-is made, so a range of more than 100,000 days, about 273 years, is an error. A gauge's dial
+is made, so a range of more than 100,000 days, about 273 years, is an error. The drawing budget
+below is reached first. Measured from 1 January, on a 2000 × 10000 chart and on a 10000 × 10000
+one, a calendar with a value on every day draws at most 34,703 days, about 95 years, and one with a
+single value 46,913 days. A smaller chart runs out of room sooner: from 1 January, a 1200 × 800
+chart holds 8,766 days, 24 years. A range of as many days starting on another day spans one more
+calendar year, and so holds fewer. A gauge's dial
 holds as many bar rings as fit outside its hub. Titles and stack names hold at most 1,000
 characters, and names, categories and colours at most 100. All of a chart's strokes share one
 budget of 400,000 units of drawing work, about a second at most, and a chart that needs more throws

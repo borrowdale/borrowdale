@@ -1,5 +1,6 @@
-import { MAX_CATEGORIES } from '../check-axis.js';
+import { MAX_CATEGORIES, type CheckedLinearAxis } from '../check-axis.js';
 import { boolean, fail, list, MAX_POINTS, MAX_VALUE, number, oneOf, text, type Fields } from '../read.js';
+import { checkWritten } from '../scale.js';
 import type { SeriesOf } from '../validate.js';
 
 type Histogram = Extract<SeriesOf<'cartesian'>, { type: 'histogram' }>;
@@ -36,6 +37,11 @@ export function readHistogram(r: Fields, path: string, reserve: (count: number) 
     return (cumulative ? total : count) / (relative && samples.length ? samples.length : 1);
   });
   return { edges, data: heights, stack: r.optional('stack', text()), relative, cumulative };
+}
+
+/** Each bin's tooltip states its edges in the x axis' format, which must write every edge exactly. */
+export function checkHistogramEdges(series: readonly Histogram[], x: CheckedLinearAxis): void {
+  for (const entry of series) entry.edges.forEach((edge, i) => checkWritten(edge, `${entry.path}.edges[${i}]`, x));
 }
 
 /** Histograms stack only on the same bins, counted the same way. */

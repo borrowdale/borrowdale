@@ -159,7 +159,10 @@ function trackOf(axis: CheckedTimelineChart['axis'], area: Rect, rowSpacing: num
             : spacing < rowSpacing
               ? `has room for ${room}`
               : `needs at least ${fewest} for the turns between them to fit across it`;
-        return fail(`${axis.path}.path.rows`, `is ${track.rows}, but ${aChart(chart.width, chart.height)} ${needs}`);
+        const chartNeeds = `${aChart(chart.width, chart.height)} ${needs}`;
+        // Default rows are named by the path the spec gives, not by a rows key it leaves out.
+        if (!track.rowsGiven) return fail(`${axis.path}.path`, `has ${track.rows} rows, the default, but ${chartNeeds}`);
+        return fail(`${axis.path}.path.rows`, `is ${track.rows}, but ${chartNeeds}`);
       }
       const radius = spacing / 2;
       const points: Point[] = [];

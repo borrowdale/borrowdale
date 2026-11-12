@@ -17,11 +17,14 @@ import { keyOf, readDisplay, REGRESSIONS, RELATIONSHIPS, unhandled, type Regress
 
 // A least-squares polynomial in centred, scaled coordinates, by orthogonalising the Vandermonde
 // columns.
-function polynomial(data: XY[], degree: number, path: string): (x: number) => number {
+function polynomial(data: XY[], degree: number, path: string, given: boolean): (x: number) => number {
   const xs = data.map(([x]) => x);
   const low = Math.min(...xs), high = Math.max(...xs);
-  if (low === high || new Set(xs).size <= degree) {
-    fail(path, 'needs more distinct x values than the polynomial degree');
+  const distinct = new Set(xs).size;
+  if (low === high || distinct <= degree) {
+    // Named where the spec gives the degree, else said to be the default, so the spec has a key to add.
+    if (given) fail(`${path}.degree`, `is ${degree}, which needs more than ${degree} distinct x values, but the data have ${distinct}`);
+    fail(path, `needs more than ${degree} distinct x values for the default polynomial degree, ${degree}, but the data have ${distinct}`);
   }
   const scale = (x: number) => ((x - low) / (high - low)) * 2 - 1;
   if (degree === 1) {
@@ -137,7 +140,7 @@ function regression(r: Fields, path: string, data: readonly (readonly [number, n
   const fit =
     method === 'loess' && data.length > 2
       ? (x: number) => loess(transformed, x, Math.max(3, Math.ceil(data.length * span)))
-      : polynomial(transformed, degree, path);
+      : polynomial(transformed, degree, path, r.has('degree'));
   const ys = data.map((point) => point[1]);
   const minY = Math.min(...ys), maxY = Math.max(...ys);
   // A fit that reaches the observed extent can pass it by a few rounding units, in the fitted

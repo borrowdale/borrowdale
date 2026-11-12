@@ -196,7 +196,12 @@ function legendItems(
   if (chart.color) items.push(colorItem(drawing, chart.color, row));
   if (missing) items.push(noValueItem(drawing));
   for (const item of items) {
-    if (item.width > row) fail('legend', `needs ${Math.ceil(item.width)} units of width for ${item.what}, but ${Math.floor(row)} are left`);
+    if (item.width > row) {
+      const needs = `needs ${Math.ceil(item.width)} units of width for ${item.what}, but ${Math.floor(row)} are left`;
+      // A legend the spec leaves out is placed by default: the chart, not `legend`, is the place.
+      if (chart.legend === undefined) fail('', `the legend, at the ${position} by default, ${needs}`);
+      fail('legend', needs);
+    }
   }
   return items;
 }
@@ -231,10 +236,11 @@ function colorItem(drawing: Drawing, color: ColorScale, row: number): LegendItem
     });
     parts.push(label(legend.labels.at(-1)!));
   }
-  if (color.title === undefined) return pieces('the colour axis', parts);
+  const scale = pieces('the colour axis', parts);
+  // A scale wider than the row is the problem whatever its title: the legend's width check names it.
+  if (color.title === undefined || scale.width > row) return scale;
   // The title takes what the scale leaves of the row, cut short as other titles are.
-  const scale = pieces('the colour axis', parts).width;
-  return pieces('the colour axis', [label(drawing.fit(color.title, row - scale - SWATCH_GAP, 'colorAxis.title')), ...parts]);
+  return pieces('the colour axis', [label(drawing.fit(color.title, row - scale.width - SWATCH_GAP, 'colorAxis.title')), ...parts]);
 }
 
 /** An outlined, empty swatch: what a cell with no value is drawn as. */
