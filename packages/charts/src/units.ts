@@ -3,14 +3,14 @@
 import type { Point } from '@borrowdale/core';
 import type { Drawing } from './drawing.js';
 import { assertRoom, GAP, type Rect } from './frame.js';
-import { fitSweep, onCircle, RADIANS, sliceShape } from './geometry.js';
+import { fitSweep, onCircle, sliceShape } from './geometry.js';
 import { solid } from './marks.js';
 import type { Paint } from './palette.js';
 import { formatValue } from './scale.js';
 import { unhandled } from './statistics/types.js';
 import { markerNode } from './symbols.js';
 import type { ChartNode } from './types.js';
-import { rowReaches, type CheckedUnitsChart } from './units-series.js';
+import { unitSymbol, type CheckedUnitsChart } from './units-series.js';
 
 /** The share of a unit's cell its symbol fills, leaving a gap between units. */
 const FILL = 0.8;
@@ -53,10 +53,9 @@ export function layoutUnits(drawing: Drawing, chart: CheckedUnitsChart, rect: Re
 function drawerOf(drawing: Drawing, units: Units, rect: Rect, paintOf: ReadonlyMap<string, Paint>, chart: CheckedUnitsChart) {
   const style = (category: number) => solid(paintOf.get(units.data[category]!.name)!.color);
   const key = (index: number) => [units.name, 'unit', index];
-  const symbol = (category: number) => units.data[category]!.symbol ?? (units.display === 'waffle' ? 'square' : 'circle');
   const marker = (place: Place) => (category: number, k: number, index: number): ChartNode => {
     const { center, size } = place(category, k, index);
-    return markerNode(drawing, symbol(category), center, size, style(category), key(index), units.style);
+    return markerNode(drawing, unitSymbol(units.display, units.data[category]!.symbol), center, size, style(category), key(index), units.style);
   };
   const total = units.counts.reduce((sum, count) => sum + count, 0);
   switch (units.display) {
@@ -109,19 +108,13 @@ function grid(rect: Rect, columns: number, lines: number, chart: CheckedUnitsCha
  * wedge from the start of the sweep.
  */
 function parliament(units: Units, rect: Rect, chart: CheckedUnitsChart): Place {
-  const { startAngle, endAngle, innerRadius, seats } = units;
+  const { startAngle, endAngle, innerRadius, seating } = units;
   const { center, radius } = fitSweep(rect, startAngle, endAngle, innerRadius);
   const sweep = endAngle - startAngle;
-  const reaches = rowReaches(seats.length, innerRadius);
-  const spots = seats
-    .flatMap((count, row) => Array.from({ length: count }, (_, i) => ({
-      angle: startAngle + ((i + 0.5) * sweep) / count,
-      reach: reaches[row]!,
-    })))
+  const spots = seating.rows
+    .flatMap(({ reach, seats }) => Array.from({ length: seats }, (_, i) => ({ angle: startAngle + ((i + 0.5) * sweep) / seats, reach })))
     .sort((a, b) => a.angle - b.angle || a.reach - b.reach);
-  // As deep as a row, but no wider than the most crowded row leaves each seat.
-  const crowded = Math.min(...seats.map((count, row) => (count === 0 ? Infinity : (sweep * RADIANS * reaches[row]!) / count)));
-  const seat = radius * Math.min((1 - innerRadius) / seats.length, crowded);
+  const seat = radius * seating.size;
   assertUnitRoom(seat, chart);
   const size = seat * FILL;
   return (_category, _k, index) => {

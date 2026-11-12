@@ -9,6 +9,7 @@ import { hatched, INK, LINE_WIDTH, paints, type Paint } from './palette.js';
 import { EMPTY_CELL, NO_VALUE } from './marks.js';
 import { layoutGauge } from './gauge.js';
 import { layoutUnits } from './units.js';
+import { unitSymbol } from './units-series.js';
 import { layoutFunnel } from './funnel.js';
 import { layoutLiquid } from './liquid.js';
 import { layoutPie } from './pie.js';
@@ -67,6 +68,8 @@ export function layoutChart(spec: ChartSpec, options: LayoutChartOptions = {}): 
   drawLegend(drawing, chart, entries, rect);
 
   const entryPaints = entries.map((entry) => entry.paint);
+  // A system that lists names in its legend paints each named value by its name.
+  const paintOf = new Map(entries.map((entry) => [entry.name, entry.paint]));
   switch (chart.system) {
     case 'cartesian':
       layoutCartesian(drawing, chart, rect, entryPaints);
@@ -75,7 +78,7 @@ export function layoutChart(spec: ChartSpec, options: LayoutChartOptions = {}): 
       layoutPolar(drawing, chart, rect, entryPaints);
       break;
     case 'pie':
-      layoutPie(drawing, chart, rect, new Map(entries.map((entry) => [entry.name, entry.paint])));
+      layoutPie(drawing, chart, rect, paintOf);
       break;
     case 'gauge':
       layoutGauge(drawing, chart, rect, entryPaints);
@@ -87,10 +90,10 @@ export function layoutChart(spec: ChartSpec, options: LayoutChartOptions = {}): 
       layoutCalendar(drawing, chart, rect);
       break;
     case 'units':
-      layoutUnits(drawing, chart, rect, new Map(entries.map((entry) => [entry.name, entry.paint])));
+      layoutUnits(drawing, chart, rect, paintOf);
       break;
     case 'funnel':
-      layoutFunnel(drawing, chart, rect, new Map(entries.map((entry) => [entry.name, entry.paint])));
+      layoutFunnel(drawing, chart, rect, paintOf);
       break;
     case 'liquid':
       layoutLiquid(drawing, chart, rect, entryPaints);
@@ -132,11 +135,13 @@ const listsNames = (chart: CheckedChart): chart is Extract<CheckedChart, { syste
 
 /**
  * What a series lists in the legend by name: its data, then the parts a pie breaks a slice out into,
- * each with the symbol a unit chart draws its units as, shown as a point legend shows it.
+ * each with the symbol a unit chart draws its units as. A ring draws segments, shown by a box.
  */
 function namedItems(entry: Extract<CheckedChart, { system: NamedSystem }>['series'][number]) {
+  const symbolOf = (item: { symbol?: Marker | undefined }) =>
+    entry.type === 'units' && entry.display !== 'ring' ? unitSymbol(entry.display, item.symbol) : undefined;
   const items = (data: readonly { name: string; color: string | undefined; symbol?: Marker | undefined }[], path: string) =>
-    data.map((item, i) => ({ name: item.name, color: item.color, path: `${path}.data[${i}]`, symbol: legendSymbol(item.symbol) }));
+    data.map((item, i) => ({ name: item.name, color: item.color, path: `${path}.data[${i}]`, symbol: symbolOf(item) }));
   const parts = 'breakout' in entry && entry.breakout ? items(entry.breakout.data, `${entry.path}.breakout`) : [];
   return [...items(entry.data, entry.path), ...parts];
 }

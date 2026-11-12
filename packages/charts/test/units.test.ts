@@ -126,11 +126,13 @@ describe('unit charts', () => {
     expect(layoutChart(spec).labels).toEqual(['A', 'B']);
   });
 
-  // As a point legend does, the legend shows a circle, and a unit left to its default, as a box.
+  // The legend shows what the units are drawn as, their default included; a ring's segments are shown by a box.
   it('show the symbol of each category in the legend', () => {
     const data = [{ name: 'A', value: 2, symbol: 'star' }, { name: 'B', value: 1, symbol: 'circle' }, { name: 'C', value: 1 }];
 
-    expect(legendSymbols(units('rows', data))).toEqual(['star', undefined, undefined]);
+    expect(legendSymbols(units('rows', data))).toEqual(['star', 'circle', 'circle']);
+    expect(legendSymbols(units('waffle', [{ name: 'A', value: 4 }]))).toEqual(['square']);
+    expect(legendSymbols(units('ring', [{ name: 'A', value: 4 }]))).toEqual([undefined]);
   });
 
   // As in a calendar, a unit narrower than 1 unit of the drawing is an error rather than a speck.

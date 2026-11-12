@@ -97,11 +97,16 @@ export function readUnits(r: Fields, path: string, reserve: (count: number) => v
     fail(`${path}.padAngle`, `is ${padAngle}, which leaves no room for ${total} segments in ${endAngle - startAngle} degrees`);
   }
   const rows = r.optional('rows', integer(1, MAX_SEAT_ROWS));
-  const seats = display === 'parliament' ? seatRows(total, endAngle - startAngle, innerRadius, rows) : [];
-  if (seats === undefined) {
+  const seating = display === 'parliament' ? seatRows(total, endAngle - startAngle, innerRadius, rows) : { rows: [], size: 0 };
+  if (seating === undefined) {
     fail(`${path}.data`, `has ${total} units, more than ${MAX_SEAT_ROWS} rows over ${endAngle - startAngle} degrees can seat`);
   }
-  return { display, data, counts, units: shared, columns, startAngle, endAngle, innerRadius, padAngle, seats };
+  return { display, data, counts, units: shared, columns, startAngle, endAngle, innerRadius, padAngle, seating };
+}
+
+/** What a category's units are drawn as: its symbol, by default a square in a waffle and a circle otherwise. */
+export function unitSymbol(display: keyof typeof UNITS_DISPLAYS, symbol: Marker | undefined): Marker {
+  return symbol ?? (display === 'waffle' ? 'square' : 'circle');
 }
 
 export function checkUnitsChart(r: Fields, base: CheckedChartBase, series: SeriesOf<'units'>[]): CheckedUnitsChart {
@@ -117,18 +122,11 @@ function wholeCounts(data: readonly { value: number }[], path: string): number[]
 }
 
 /**
- * `units` given out in proportion to the values, by largest remainder, ties to the earlier item. A
- * value above 0 that would get no unit is an error, so no category is drawn as nothing.
+ * `units` given out in proportion to the values. A value above 0 that would get no unit is an error,
+ * so no category is drawn as nothing.
  */
 function allot(data: readonly { value: number }[], units: number, path: string): number[] {
-  const sum = data.reduce((total, { value }) => total + value, 0);
-  const exact = data.map(({ value }) => (value / sum) * units);
-  const counts = exact.map(Math.floor);
-  const left = units - counts.reduce((total, count) => total + count, 0);
-  const order = exact.map((share, i) => ({ i, rest: share - counts[i]! })).sort((a, b) => b.rest - a.rest || a.i - b.i);
-  order.slice(0, left).forEach(({ i }) => {
-    counts[i]! += 1;
-  });
+  const counts = largestRemainder(data.map(({ value }) => value), units);
   counts.forEach((count, i) => {
     if (count === 0 && data[i]!.value > 0) {
       fail(`${path}.data[${i}].value`, `is ${data[i]!.value}, too small a share to get one of the ${units} units`);
@@ -138,32 +136,46 @@ function allot(data: readonly { value: number }[], units: number, path: string):
 }
 
 /**
- * How many seats each row of a parliament holds, innermost first, shared in proportion to the rows'
- * lengths. The rows fill the ring between the hole and the rim of a circle of radius 1: `rows` of
+ * `total` shared out in proportion to `weights` by largest remainder: each takes the whole part of its
+ * exact share, and what is left goes one at a time to the largest fractions, a tie to the earlier.
+ */
+function largestRemainder(weights: readonly number[], total: number): number[] {
+  const sum = weights.reduce((all, weight) => all + weight, 0);
+  const exact = weights.map((weight) => (weight / sum) * total);
+  const counts = exact.map(Math.floor);
+  const left = total - counts.reduce((all, count) => all + count, 0);
+  exact.map((share, i) => ({ i, rest: share - counts[i]! }))
+    .sort((a, b) => b.rest - a.rest || a.i - b.i)
+    .slice(0, left)
+    .forEach(({ i }) => {
+      counts[i]! += 1;
+    });
+  return counts;
+}
+
+/** A row of a parliament: the radius of its middle, as a share of the parliament's, and its seats. */
+interface SeatRow {
+  reach: number;
+  seats: number;
+}
+
+/**
+ * A parliament's rows, innermost first, the seats shared in proportion to their lengths, and the size
+ * of a seat: as deep as a row, but no wider than the most crowded row leaves each, as a share of the
+ * radius. The rows fill the ring between the hole and the rim of a circle of radius 1: `rows` of
  * them, or else the fewest in which seats as deep as a row all fit. Undefined when 50 such rows do not.
  */
-export function seatRows(count: number, sweep: number, hole: number, rows?: number): number[] | undefined {
+function seatRows(count: number, sweep: number, hole: number, rows?: number): { rows: SeatRow[]; size: number } | undefined {
   const k = rows ?? Array.from({ length: MAX_SEAT_ROWS }, (_, i) => i + 1).find((tried) =>
     rowReaches(tried, hole).reduce((seats, reach) => seats + Math.floor((sweep * RADIANS * reach * tried) / (1 - hole)), 0) >= count);
-  return k === undefined ? undefined : allotRows(rowReaches(k, hole), count);
+  if (k === undefined) return undefined;
+  const reaches = rowReaches(k, hole);
+  const seats = largestRemainder(reaches, count);
+  const crowded = Math.min(...seats.map((n, row) => (n === 0 ? Infinity : (sweep * RADIANS * reaches[row]!) / n)));
+  return { rows: reaches.map((reach, row) => ({ reach, seats: seats[row]! })), size: Math.min((1 - hole) / k, crowded) };
 }
 
 /** The radius of the middle of each of `rows` rows between the hole and the rim, innermost first. */
-export function rowReaches(rows: number, hole: number): number[] {
+function rowReaches(rows: number, hole: number): number[] {
   return Array.from({ length: rows }, (_, j) => hole + ((j + 0.5) * (1 - hole)) / rows);
-}
-
-/** `count` seats shared over rows in proportion to their lengths, by largest remainder. */
-function allotRows(reaches: readonly number[], count: number): number[] {
-  const length = reaches.reduce((sum, reach) => sum + reach, 0);
-  const exact = reaches.map((reach) => (reach * count) / length);
-  const rows = exact.map(Math.floor);
-  const left = count - rows.reduce((sum, row) => sum + row, 0);
-  exact.map((share, j) => ({ j, rest: share - rows[j]! }))
-    .sort((a, b) => b.rest - a.rest || a.j - b.j)
-    .slice(0, left)
-    .forEach(({ j }) => {
-      rows[j]! += 1;
-    });
-  return rows;
 }
