@@ -60,6 +60,8 @@ import { checkCalendarChart, readCalendar } from './calendar-series.js';
 import { readHeatmap, readHorizon, readPolarHeatmap, resolveCells, resolveHorizon, resolvePolarCells } from './cell-series.js';
 import { withColorAxis } from './color-axis.js';
 import { checkNameColors, readNamedValues } from './named-values.js';
+import { checkMarker } from './symbols.js';
+import { checkUnitsChart, readUnits, UNITS_DISPLAYS, type CheckedUnitsChart } from './units-series.js';
 import type { ColorScale } from './color-scale.js';
 import {
   CURVES,
@@ -85,7 +87,7 @@ const MIN_NEEDLE = 0.1;
 const DEFAULT_NEEDLE = 0.8;
 const MAX_BANDS = 100;
 
-export type System = 'cartesian' | 'polar' | 'pie' | 'gauge' | 'timeline' | 'calendar';
+export type System = 'cartesian' | 'polar' | 'pie' | 'gauge' | 'timeline' | 'calendar' | 'units';
 
 type ReservePoints = (count: number) => void;
 const categoryValues = (reserve: ReservePoints) =>
@@ -99,12 +101,6 @@ const curve = oneOf(CURVES);
 const readAxis = (r: Fields) => r.optional('axis', valueAxis) ?? 'y';
 const readStack = (r: Fields) => r.optional('stack', text());
 const readCurve = (r: Fields) => r.optional('curve', curve) ?? 'linear';
-const checkMarker: Check<Marker> = (path, value) => {
-  if (typeof value === 'string') return oneOf(SYMBOL_NAMES)(path, value);
-  const r = fields(path, value);
-  r.allow(['image']);
-  return { image: r.required('image', text(MAX_NAME)) };
-};
 const readSymbol = (r: Fields) => r.optional('symbol', checkMarker) ?? 'circle';
 
 /** A bar's shape, and the symbol a pictorial bar repeats, which only a pictorial bar takes. */
@@ -365,6 +361,7 @@ const SERIES_RULES = {
       needleLength: r.optional('needleLength', number(MIN_NEEDLE, 1)) ?? DEFAULT_NEEDLE,
     }),
   },
+  units: { system: 'units', keys: displayKeys(UNITS_DISPLAYS), read: readUnits },
 } as const satisfies Record<SeriesType, Rule>;
 
 type Rules = typeof SERIES_RULES;
@@ -481,7 +478,8 @@ export type CheckedChart =
   | CheckedPieChart
   | CheckedGaugeChart
   | CheckedTimelineChart
-  | CheckedCalendarChart;
+  | CheckedCalendarChart
+  | CheckedUnitsChart;
 
 /**
  * Throws a named error, starting "Invalid chart:" and naming the place in the spec, for anything that
@@ -535,6 +533,8 @@ function checkSystem(r: Fields, base: CheckedChartBase, series: CheckedSeries[],
       return checkTimelineChart(r, base, seriesOf(series, 'timeline'));
     case 'calendar':
       return checkCalendarChart(r, base, seriesOf(series, 'calendar'));
+    case 'units':
+      return checkUnitsChart(r, base, seriesOf(series, 'units'));
   }
 }
 

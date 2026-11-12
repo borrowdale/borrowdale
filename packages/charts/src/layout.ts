@@ -8,6 +8,7 @@ import { GAP, PAD, type Rect } from './frame.js';
 import { hatched, INK, LINE_WIDTH, paints, type Paint } from './palette.js';
 import { EMPTY_CELL, NO_VALUE } from './marks.js';
 import { layoutGauge } from './gauge.js';
+import { layoutUnits } from './units.js';
 import { layoutPie } from './pie.js';
 import { layoutPolar, polarLegendOf } from './polar.js';
 import { fail } from './read.js';
@@ -83,6 +84,9 @@ export function layoutChart(spec: ChartSpec, options: LayoutChartOptions = {}): 
     case 'calendar':
       layoutCalendar(drawing, chart, rect);
       break;
+    case 'units':
+      layoutUnits(drawing, chart, rect, new Map(entries.map((entry) => [entry.name, entry.paint])));
+      break;
     default:
       unknownSystem(chart);
   }
@@ -108,6 +112,7 @@ const LEGENDS = {
   gauge: 'series',
   timeline: 'series',
   calendar: 'series',
+  units: 'names',
 } as const satisfies Record<System, 'names' | 'series'>;
 
 type NamedSystem = { [S in System]: (typeof LEGENDS)[S] extends 'names' ? S : never }[System];

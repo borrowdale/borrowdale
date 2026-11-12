@@ -72,3 +72,4 @@ export type {
 export type { ChartImage, ChartRenderOptions } from './images.js';
 
 export type { DistributionSeries, HistogramSeries, MarketSeries, RelationshipSeries } from './statistics/types.js';
+export type { UnitsDatum, UnitsSeries } from './units-series.js';
