@@ -146,11 +146,12 @@ export function checkAxis<X extends object = object>(
   keys: AxisKeys,
   grid: boolean,
   extra: Extra<X> & Beyond<X> = noExtra as Extra<X> & Beyond<X>,
+  onStacks?: (path: string) => undefined,
 ): Check<(CheckedBandAxis | CheckedLinearAxis) & X> {
   return (path, raw) => {
     const type = readType(path, raw, Object.keys(keys));
     return type === 'band'
-      ? checkBandAxis(keys.band, extra)(path, raw)
+      ? checkBandAxis(keys.band, extra, onStacks)(path, raw)
       : checkLinearAxis(keys[type as AxisKind]!, grid, extra, type as AxisKind)(path, raw);
   };
 }
@@ -186,9 +187,14 @@ export const CARTESIAN_KEYS = { band: ['type', 'categories', 'weights', 'title',
 /** The second value axis, on the right: continuous, but never time. */
 export const checkY2Axis = checkContinuousAxis({ linear: LINEAR_KEYS, log: LOG_KEYS, sqrt: SQRT_KEYS }, false);
 
+/**
+ * `onStacks` is told the path of `weights: "stacks"`, which only a chart that knows its series can
+ * turn into weights; without it, `"stacks"` is not a weight.
+ */
 function checkBandAxis<X extends object = object>(
   keys: readonly string[],
   extra: Extra<X> & Beyond<X> = noExtra as Extra<X> & Beyond<X>,
+  onStacks?: (path: string) => undefined,
 ): Check<CheckedBandAxis & X> {
   return (path, raw) => {
     const r = fields(path, raw);
@@ -198,7 +204,9 @@ function checkBandAxis<X extends object = object>(
     );
     const categories = r.required('categories', list(1, MAX_CATEGORIES, text(MAX_NAME)));
     unique(categories, (i) => `${path}.categories[${i}]`);
-    const weights = r.optional('weights', list(categories.length, categories.length, number(0.000001, 1000000)));
+    const weighted = list(categories.length, categories.length, number(0.000001, 1000000));
+    const weights = r.optional('weights', (weightsPath, given) =>
+      given === 'stacks' && onStacks ? onStacks(weightsPath) : weighted(weightsPath, given));
     const title = r.optional('title', text());
     const hidden = r.optional('hidden', boolean) ?? false;
     return {

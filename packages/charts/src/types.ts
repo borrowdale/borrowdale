@@ -218,8 +218,12 @@ export interface BandAxis {
   type: 'band';
   /** 1 to 1,000 names, each unique and at most 100 characters. */
   categories: readonly string[];
-  /** Relative Cartesian category widths, one per category, each from 0.000001 to 1000000. */
-  weights?: readonly number[] | undefined;
+  /**
+   * Relative Cartesian category widths, one per category, each from 0.000001 to 1000000. Or `stacks`:
+   * each category as wide as the total of its stack, as a Marimekko or mosaic chart draws it. That
+   * needs every series to be a bar of one stack, on a percent axis.
+   */
+  weights?: readonly number[] | 'stacks' | undefined;
   title?: string | undefined;
   /** Draws neither the axis nor its labels, as in a sparkline. */
   hidden?: boolean | undefined;
