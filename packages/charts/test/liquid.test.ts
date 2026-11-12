@@ -46,10 +46,17 @@ describe('liquid fills', () => {
     expect(outline).toContain(' L150 192 ');
   });
 
+  // A quarter wave in, at x 43.5, a wave on a full rectangle would crest 3.68 below its top.
   it('keep a full container flat to its top, and draw no liquid in an empty one', () => {
     expect(surface(liquid(1))).toContain(' L150 8 ');
+    expect(surface(liquid(1, { shape: 'rectangle' }))).toContain(' L43.5 8 ');
     expect(kinds(liquid(0))).toEqual(['sketch', 'text']);
     expect(kinds(liquid(0.5))).toEqual(['sketch', 'sketch', 'text']);
+  });
+
+  // Near the left of the circle its foot is above the level, so the liquid stops at the foot.
+  it('keep a low level inside the circle', () => {
+    expect(surface(liquid(0.03))).toMatch(/^M58 100 L58.77 111.85 /);
   });
 
   it('write the level as a whole percentage in the middle and the tooltip', () => {

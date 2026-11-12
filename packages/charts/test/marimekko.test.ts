@@ -51,6 +51,18 @@ describe('weights from stacks', () => {
       .toThrow('axes.x.weights is "stacks", which needs every bar in one stack, but series[0] has no stack');
   });
 
+  it('needs every bar on one value axis', () => {
+    const split = { ...chart('stacks', [bars[0]!, { ...bars[1], axis: 'y2' }]), axes: { ...chart('stacks').axes, y2: { type: 'linear', percent: true } } } as ChartSpec;
+
+    expect(layingOut(split))
+      .toThrow('axes.x.weights is "stacks", which needs every bar in one stack, but series[1] is on y2, and series[0] on y');
+  });
+
+  // A millionth of the largest is the narrowest a column may be, and is allowed.
+  it('takes a column a millionth as wide as the largest', () => {
+    expect(layingOut(chart('stacks', [{ type: 'bar', name: 'S1', stack: 'all', data: [1, 1000000, 1000000] }]))).not.toThrow();
+  });
+
   it('needs the stacks shown as shares', () => {
     expect(layingOut(chart('stacks', bars, { type: 'linear' })))
       .toThrow('axes.x.weights is "stacks", which needs the stacks shown as shares: set percent on axes.y');
