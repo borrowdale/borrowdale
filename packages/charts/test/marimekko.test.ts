@@ -56,6 +56,12 @@ describe('weights from stacks', () => {
       .toThrow('axes.x.weights is "stacks", which needs the stacks shown as shares: set percent on axes.y');
   });
 
+  // Only a linear axis takes percent, so on another kind the advice is to change the kind.
+  it('needs a linear value axis to show the stacks as shares', () => {
+    expect(layingOut(chart('stacks', bars, { type: 'sqrt' })))
+      .toThrow('axes.x.weights is "stacks", which needs the stacks shown as shares: axes.y is sqrt: make it linear, with percent');
+  });
+
   it('rejects a column too thin to draw, naming its category', () => {
     expect(layingOut(chart('stacks', [{ type: 'bar', name: 'S1', stack: 'all', data: [30, 0, 40] }])))
       .toThrow('axes.x.weights is "stacks", but the stack of "B" totals 0, less than a millionth of the largest, 40');

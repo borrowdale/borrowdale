@@ -1,5 +1,5 @@
 import { stackStatistics } from './statistics/stacks.js';
-import { stackWeights } from './stack.js';
+import { stackWeights } from './stack-weights.js';
 import { checkHistogramEdges, readHistogram } from './statistics/histogram.js';
 import { displayKeys, DISTRIBUTIONS, MARKET_DISPLAYS, RELATIONSHIPS } from './statistics/types.js';
 import { readDistribution } from './statistics/distribution.js';
@@ -639,14 +639,8 @@ function checkCartesianChart(
 ): CheckedCartesianChart {
   const axes = r.required('axes', fields);
   axes.allow(['x', 'y', 'y2']);
-  // Where weights are "stacks", which the series' stacks turn into weights once they are checked.
-  let stacksPath: string | undefined;
-  const onStacks = (path: string): undefined => {
-    stacksPath = path;
-    return undefined;
-  };
-  const x = axes.required('x', checkAxis(CARTESIAN_KEYS, true, undefined, onStacks));
-  const y = axes.required('y', checkAxis(CARTESIAN_KEYS, true, undefined, onStacks));
+  const x = axes.required('x', checkAxis(CARTESIAN_KEYS, true));
+  const y = axes.required('y', checkAxis(CARTESIAN_KEYS, true));
   const y2 = axes.optional('y2', checkY2Axis);
   const roles = rolesOf(x, y, y2, series);
   const band = roles.kind === 'band' ? roles.band : roles.kind === 'cells' ? roles.x : undefined;
@@ -689,11 +683,14 @@ function checkCartesianChart(
       stacked.set(`${entry.axis}|${entry.stack}`, first);
     }
   }
-  if (stacksPath !== undefined) {
-    const band = roles.kind === 'band' ? roles : fail(stacksPath, 'is "stacks", which needs bars on one band axis');
-    band.band.weights = stackWeights(series, band.band, valueAxisOf(series[0]!, band), stacksPath);
-  }
   resolveValues(series, roles, { x, y });
+  // Weights given as "stacks" are the bars' stack totals, known once the series are checked.
+  const byStacks = [x, y].find((axis) => axis.type === 'band' && axis.weightsByStacks);
+  if (byStacks) {
+    const path = `${byStacks.path}.weights`;
+    const band = roles.kind === 'band' ? roles : fail(path, 'is "stacks", which needs bars on one band axis');
+    band.band.weights = stackWeights(series, band.band, valueAxisOf(series[0]!, band), path);
+  }
   // Histograms need linear x and y, so they are only ever on a continuous chart.
   if (roles.kind === 'continuous') checkHistogramEdges(series.filter((entry) => entry.type === 'histogram'), roles.x);
   stackStatistics(series, reserve);
