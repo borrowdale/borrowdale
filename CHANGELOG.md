@@ -8,6 +8,23 @@ The four packages share one version and are released together. Each release also
 [GitHub](https://github.com/borrowdale/borrowdale/releases), and the
 [commit history](https://github.com/borrowdale/borrowdale/commits/main/) records every source change.
 
+## 0.4.0
+
+Published on 12 November 2026:
+
+- **`@borrowdale/charts`:** classed colour legends state their classes truthfully. A quantile scale
+  rejects classes that tied or nearly equal values would leave empty, a threshold break and a
+  histogram edge must be written exactly by their axis' format, and the outer labels of a quantize or
+  quantile legend round outward so that they hold every value. Errors name the option the spec
+  gives, never one it leaves out, and say when a value is a default; an error that echoes a format's
+  text writes its invisible and bidirectional characters as escapes.
+- **Why a minor release:** about 13 errors now report a different `path`, and specs whose legend
+  misstated its classes are rejected. The [`@borrowdale/charts` changelog](packages/charts/CHANGELOG.md)
+  lists each moved path.
+- **`@borrowdale/core`, `@borrowdale/fills` and `@borrowdale/text`:** only the version changes.
+
+Everything else 0.3.0 offered works as before.
+
 ## 0.3.0
 
 Published on 11 November 2026:
