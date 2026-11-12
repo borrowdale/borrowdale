@@ -1,7 +1,7 @@
 // Lays out a funnel chart. Stages run along the chart, top to bottom or left to right, and spread
 // across it: each display works in those two directions, and `point` turns them into x and y.
 import type { Point, Shape } from '@borrowdale/core';
-import type { Drawing } from './drawing.js';
+import type { Drawing, SeedKey } from './drawing.js';
 import { assertRoom, GAP, type Rect } from './frame.js';
 import type { CheckedFunnelChart } from './funnel-series.js';
 import { shareTitle, valueLabel } from './named-values.js';
@@ -20,7 +20,7 @@ interface Stage extends Edges {
   half: [number, number];
 }
 /** What a stage draws, and where its label goes: undefined for a stage with nothing to draw. */
-type DrawStage<S> = (stage: S, paint: (shape: Shape) => ChartNode) => { node: ChartNode; center: Point } | undefined;
+type DrawStage<S> = (stage: S, paint: (shape: Shape, key?: SeedKey) => ChartNode) => { node: ChartNode; center: Point } | undefined;
 
 /** The share of its foot a funnel area keeps of its top, as Plotly's `baseratio` does. */
 const FOOT = 1 / 3;
@@ -127,7 +127,8 @@ function drawStages<S extends Edges>(
   const total = entry.data.reduce((sum, item) => sum + item.value, 0);
   stages.forEach((stage, i) => {
     const item = entry.data[i]!;
-    const paint = (shape: Shape) => drawing.shape(shape, hatched(paintOf.get(item.name)!), [entry.name, item.name, 'stage'], entry.style);
+    const paint = (shape: Shape, key: SeedKey = [entry.name, item.name, 'stage']) =>
+      drawing.shape(shape, hatched(paintOf.get(item.name)!), key, entry.style);
     const drawn = stage.to > stage.from ? draw(stage, paint) : undefined;
     if (!drawn) return;
     const nodes = [drawn.node];
@@ -166,21 +167,28 @@ function smooth(from: number, to: number, [a0, b0]: [number, number], [a1, b1]: 
 }
 
 /**
- * The silhouette fitted into the chart, drawn once per stage and cut to the stage's band of it: each
- * band as deep as its share of the total.
+ * The silhouette fitted into the chart, drawn once per stage in that stage's colour and cut to its
+ * band: each band as deep as its share of the total. Every band draws the same sketch of the outline,
+ * so it runs on unbroken across them, and is cut between stages: across the plot, and before the
+ * first stage and after the last, the cut reaches the plot's edge.
  */
 function drawSilhouette(drawing: Drawing, entry: Funnel, rect: Rect, paintOf: ReadonlyMap<string, Paint>): void {
   const fitted = drawing.fitPath(entry.silhouette!, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top);
   const { box } = fitted;
   const horizontal = entry.orientation === 'horizontal';
   const length = horizontal ? box.width : box.height;
+  const origin = horizontal ? box.x : box.y;
+  const [first, last] = horizontal ? [rect.left, rect.right] : [rect.top, rect.bottom];
   drawStages(drawing, entry, edges(entry, length, (share) => share), rect, paintOf, '', ({ from, to }, paint) => {
+    const start = from === 0 ? first : origin + from;
+    const end = to === length ? last : origin + to;
     const band = horizontal
-      ? { x: box.x + from, y: box.y, width: to - from, height: box.height }
-      : { x: box.x, y: box.y + from, width: box.width, height: to - from };
+      ? { x: start, y: rect.top, width: end - start, height: rect.bottom - rect.top }
+      : { x: rect.left, y: start, width: rect.right - rect.left, height: end - start };
+    const middle = origin + (from + to) / 2;
     return {
-      node: drawing.clip(band.x, band.y, band.width, band.height, [paint({ kind: 'path', d: fitted.d })]),
-      center: [band.x + band.width / 2, band.y + band.height / 2],
+      node: drawing.clip(band.x, band.y, band.width, band.height, [paint({ kind: 'path', d: fitted.d }, [entry.name, 'silhouette'])]),
+      center: horizontal ? [middle, box.y + box.height / 2] : [box.x + box.width / 2, middle],
     };
   });
 }

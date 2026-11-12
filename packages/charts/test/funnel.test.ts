@@ -18,6 +18,10 @@ const outlines = (spec: ChartSpec) =>
 const bands = (spec: ChartSpec) =>
   marksOf(spec).map((mark) => (mark.nodes[0]!.kind === 'clip' ? mark.nodes[0]!.box : mark.nodes[0]));
 const stageNames = (spec: ChartSpec) => layoutChart({ ...spec, legend: 'top' } as ChartSpec).labels;
+const titles = (spec: ChartSpec) => marksOf(spec).map((mark) => mark.title);
+/** Each band's drawing of a silhouette, its own colours aside: the path data inside its clip. */
+const bandSketches = (spec: ChartSpec) =>
+  marksOf(spec).map((mark) => (mark.nodes[0]!.kind === 'clip' && mark.nodes[0]!.nodes[0]!.kind === 'sketch' ? mark.nodes[0]!.nodes[0]!.sketch.paths.map((path) => path.d) : []));
 
 const bottle = 'M0 0 L10 0 L10 20 L0 20 Z';
 const pair = (first: object, second: object): ChartSpec => ({
@@ -63,20 +67,43 @@ describe('funnels', () => {
       .toBe('M8 8 L292 8 L255.84 78.28 L44.16 78.28');
   });
 
+  // A 10 by 20 rectangle scaled by 9.2 is 92 by 184 from y 8. The bands are cut only between stages:
+  // across the chart, and to its edges before the first stage and after the last.
   it('cut a silhouette into bands as deep as their values, the first at the top', () => {
-    // A 10 by 20 rectangle scaled by 9.2 is 92 by 184, centred at x 104.
     expect(bands(funnel('pictorialStacked', [{ name: 'A', value: 1 }, { name: 'B', value: 3 }], { silhouette: bottle })))
-      .toEqual([{ x: 104, y: 8, width: 92, height: 46 }, { x: 104, y: 54, width: 92, height: 138 }]);
+      .toEqual([{ x: 8, y: 8, width: 284, height: 46 }, { x: 8, y: 54, width: 284, height: 138 }]);
+  });
+
+  // Hand-drawn, each band draws the same sketch, so the outline runs on unbroken across the bands.
+  it('draw a silhouette with one sketch in every band', () => {
+    const sketched = { ...funnel('pictorialStacked', [{ name: 'A', value: 1 }, { name: 'B', value: 3 }], { silhouette: bottle }), style: { roughness: 1 } } as ChartSpec;
+
+    expect(bandSketches(sketched)[1]).toEqual(bandSketches(sketched)[0]);
+  });
+
+  // The bottle, 10 by 20, fits 92 wide from x 104: the cut between the bands is a quarter of that in,
+  // at x 127, and the bands reach the chart's edges at x 8 and x 292.
+  it('cut a horizontal silhouette into bands as long as their values, the first at the left', () => {
+    const silhouette = funnel('pictorialStacked', [{ name: 'A', value: 1 }, { name: 'B', value: 3 }], { silhouette: bottle, orientation: 'horizontal' });
+
+    expect(bands(silhouette)).toEqual([{ x: 8, y: 8, width: 119, height: 184 }, { x: 127, y: 8, width: 165, height: 184 }]);
+  });
+
+  // A last stage of 0 has no width, and a stage of 0 in a pyramid no depth: neither is drawn.
+  it('draw no stage with no width or no depth', () => {
+    expect(titles(funnel('funnel', [{ name: 'A', value: 100 }, { name: 'B', value: 0 }]))).toEqual(['A: 100 (100.0%)']);
+    expect(titles(funnel('pyramid', [{ name: 'A', value: 1 }, { name: 'B', value: 0 }, { name: 'C', value: 1 }])))
+      .toEqual(['A: 1 (50.0%)', 'C: 1 (50.0%)']);
   });
 
   it('list their stages in the legend and show the share of each stage in its tooltip', () => {
     expect(stageNames(funnel('funnel', two))).toEqual(['A', 'B']);
-    expect(marksOf(funnel('funnel', two)).map((mark) => mark.title)).toEqual(['A: 100 (66.7%)', 'B: 50 (33.3%)']);
+    expect(titles(funnel('funnel', two))).toEqual(['A: 100 (66.7%)', 'B: 50 (33.3%)']);
   });
 
   it('stand back to back as two funnels with the same stages, each named over its half', () => {
     expect(layoutChart(pair({}, {})).labels).toEqual(['2025', '2026']);
-    expect(marksOf(pair({}, {})).map((mark) => mark.title))
+    expect(titles(pair({}, {})))
       .toEqual(['2025, A: 100 (66.7%)', '2025, B: 50 (33.3%)', '2026, A: 100 (66.7%)', '2026, B: 50 (33.3%)']);
   });
 
