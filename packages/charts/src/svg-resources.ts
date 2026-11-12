@@ -53,9 +53,14 @@ export function svgResources(
   const automatic = parent !== undefined && idPrefix === undefined;
   let index = automatic ? nextPrefix : 0n;
   const root = parent?.getRootNode();
-  const occupied = (id: string) => parent?.ownerDocument.getElementById(id)
-    || (root?.nodeType === 1 && (root as Element).id === id)
-    || (root && 'querySelector' in root && (root as ParentNode).querySelector(`[id="${id}"]`));
+  // The ids under the root, read once: a search per id would cost the whole page for each of a
+  // chart's ids, and a chart can define thousands.
+  const rootIds = new Set<string>();
+  if (automatic && root) {
+    if (root.nodeType === 1) rootIds.add((root as Element).id);
+    if ('querySelectorAll' in root) for (const node of (root as ParentNode).querySelectorAll('[id]')) rootIds.add(node.id);
+  }
+  const occupied = (id: string) => parent?.ownerDocument.getElementById(id) || rootIds.has(id);
   for (;;) {
     const prefix = idPrefix ?? (index === 0n ? 'chart' : `chart-${index}`);
     const named = <N>(indexes: ReadonlyMap<N, number>, family: string) =>

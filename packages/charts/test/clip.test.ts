@@ -17,6 +17,13 @@ function layoutOf(nodes: ChartNode[]): ChartLayout {
 
 const clipped = layoutOf([{ kind: 'clip', box, nodes: [line] }]);
 const twice = layoutOf([{ kind: 'clip', box, nodes: [line] }, { kind: 'clip', box, nodes: [line] }]);
+/** Two clips whose boxes differ in their height only. */
+const taller = layoutOf([{ kind: 'clip', box, nodes: [line] }, { kind: 'clip', box: { ...box, height: 41 }, nodes: [line] }]);
+/** Three clips with boxes of their own, so three ids to place. */
+const three = layoutOf([1, 2, 3].map((width) => ({ kind: 'clip' as const, box: { ...box, width }, nodes: [line] })));
+
+/** A parent in the document, removed after each test. */
+const inDocument = () => document.body.appendChild(document.createElement('div'));
 const wrappingGradient = layoutOf([{ kind: 'clip', box, nodes: [gradient] }]);
 const wrappingImage = layoutOf([{ kind: 'mark', title: 'Bar', nodes: [{ kind: 'clip', box, nodes: [image] }] }]);
 
@@ -44,7 +51,11 @@ class RecordingContext {
   setLineDash(): void {}
   fill(): void { this.calls.push('fill'); }
   stroke(): void { this.calls.push('stroke'); }
+  drawImage(): void { this.calls.push('drawImage'); }
 }
+
+/** A Canvas source for the image, which the recording context never reads. */
+const photo = new Map([['photo', { dataUrl: raster, source: {} as CanvasImageSource }]]);
 
 class RecordingPath2D {
   constructor(readonly d: string) {}
@@ -52,6 +63,8 @@ class RecordingPath2D {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+  document.body.replaceChildren();
 });
 
 describe('clip nodes in SVG', () => {
@@ -67,6 +80,10 @@ describe('clip nodes in SVG', () => {
 
     expect(svg.split('<clipPath ').length - 1).toBe(1);
     expect(svg.split('clip-path="url(#chart-clip-0)"').length - 1).toBe(2);
+  });
+
+  it('defines a clip path for each box, however little the boxes differ', () => {
+    expect(toSvgChart(taller).split('<clipPath ').length - 1).toBe(2);
   });
 
   it('defines a gradient drawn inside a clip', () => {
@@ -96,6 +113,25 @@ describe('clip nodes in SVG', () => {
 });
 
 describe('clip nodes in the DOM', () => {
+  // Searching the page for each id would cost the page's size for every clip a chart defines.
+  it('reads the ids in the page once, however many clips a chart defines', () => {
+    const parent = inDocument();
+    const scans = vi.spyOn(document, 'querySelectorAll');
+    const searches = vi.spyOn(document, 'querySelector');
+
+    appendChart(parent, three);
+
+    expect(scans).toHaveBeenCalledTimes(1);
+    expect(searches).not.toHaveBeenCalled();
+  });
+
+  it('appends the clipped nodes inside the group that cuts them', () => {
+    const parent = document.createElement('div');
+    appendChart(parent, clipped);
+
+    expect(parent.querySelectorAll('g[clip-path] > path')).toHaveLength(1);
+  });
+
   it('gives the clips of two charts in one document distinct ids, each group using its own', () => {
     const parent = document.createElement('div');
     const first = appendChart(parent, clipped);
@@ -122,5 +158,14 @@ describe('clip nodes on a canvas', () => {
     drawChart(context as unknown as CanvasRenderingContext2D, clipped);
 
     expect(context.calls).toEqual(['save', 'beginPath', 'rect 10 20 30 40', 'clip', 'save', 'stroke', 'restore', 'restore']);
+  });
+
+  it('draws an image inside a clip inside a mark', () => {
+    vi.stubGlobal('Path2D', RecordingPath2D);
+    const context = new RecordingContext();
+
+    drawChart(context as unknown as CanvasRenderingContext2D, wrappingImage, { images: photo });
+
+    expect(context.calls).toEqual(['save', 'beginPath', 'rect 10 20 30 40', 'clip', 'drawImage', 'restore']);
   });
 });
