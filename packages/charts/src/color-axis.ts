@@ -156,19 +156,26 @@ function checkHorizonColors(axis: CheckedColorAxis, encoded: readonly CheckedSer
   const other = encoded.find((entry) => entry.type !== 'horizon');
   if (other) fail(other.path, `is ${aSeries(other.type)}, which cannot share the colour axis of ${first.path}, a horizon`);
   const rows = new Map<string, string>();
+  // The first row's layers, said to be the default where its spec leaves them out.
+  const theirs = first.layersGiven ? `${first.path}.layers is ${first.layers}` : `${first.path} has ${first.layers} layers, the default`;
   for (const entry of horizons) {
     const before = rows.get(entry.row);
     if (before !== undefined) fail(`${entry.path}.row`, `is ${show(entry.row)}, the row of ${before} too: a row holds one horizon`);
     rows.set(entry.row, entry.path);
     if (entry.layers !== first.layers) {
-      fail(`${entry.path}.layers`, `is ${entry.layers}, but ${first.path}.layers is ${first.layers}: horizon rows share their colours`);
+      if (!entry.layersGiven) fail(entry.path, `has ${entry.layers} layers, the default, but ${theirs}: horizon rows share their colours`);
+      fail(`${entry.path}.layers`, `is ${entry.layers}, but ${theirs}: horizon rows share their colours`);
     }
   }
   if (axis.scale !== undefined && axis.scale !== 'quantize') fail(`${axis.path}.scale`, `must be quantize on a horizon chart, got ${axis.scale}`);
   if (axis.classes !== undefined && axis.classes !== 2 * first.layers) {
-    fail(`${axis.path}.classes`, `must be ${2 * first.layers}, twice ${first.path}.layers, got ${axis.classes}`);
+    const layersText = first.layersGiven ? `${first.path}.layers` : `${first.path}'s ${first.layers} layers, the default`;
+    fail(`${axis.path}.classes`, `must be ${2 * first.layers}, twice ${layersText}, got ${axis.classes}`);
   }
-  if ((axis.min !== undefined || axis.max !== undefined) && axis.min !== -(axis.max ?? NaN)) {
+  // Each end is named where the spec gives it: the one left out is not the one to change.
+  if (axis.min === undefined && axis.max !== undefined) fail(`${axis.path}.max`, 'needs min, at -max, on a horizon chart, whose colours are symmetric about 0');
+  if (axis.max === undefined && axis.min !== undefined) fail(`${axis.path}.min`, 'needs max, at -min, on a horizon chart, whose colours are symmetric about 0');
+  if (axis.min !== undefined && axis.max !== undefined && axis.min !== -axis.max) {
     fail(`${axis.path}.min`, 'must be -max on a horizon chart, whose colours are symmetric about 0');
   }
 }

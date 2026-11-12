@@ -1,6 +1,6 @@
 import { log } from '@borrowdale/core/math';
 import type { CheckedFormat, CheckedLinearAxis, CheckedTick } from './check-axis.js';
-import { decimalsOf } from './decimals.js';
+import { decimalsOf, writesExactly } from './decimals.js';
 import { bound, fail, MAX_DECIMALS, MAX_TICKS, MAX_VALUE } from './read.js';
 import { formatTick, formatTime, timeScale, writtenOn } from './time.js';
 
@@ -318,7 +318,7 @@ function logScale(axis: CheckedLinearAxis, [lo, hi]: [number, number], length: n
   return {
     domain,
     ticks,
-    labels: ticks.map((tick) => formatNumber(tick, axis.format.decimals ?? Math.min(MAX_DECIMALS, decimalsOf(tick)), axis.format)),
+    labels: ticks.map((tick) => formatNumber(tick, decimalsFor(tick, axis.format), axis.format)),
     fraction,
     labelled: (room, at) => labelledDecades(chosen, room, at),
   };
@@ -557,7 +557,12 @@ export function formatNumber(value: number, decimals: number, format: CheckedFor
 
 /** A value in a tooltip: all the decimals it has (at most MAX_DECIMALS), unless the format fixes them. */
 export function formatValue(value: number, format: CheckedFormat = PLAIN_FORMAT): string {
-  return formatNumber(value, format.decimals ?? Math.min(MAX_DECIMALS, decimalsOf(value)), format);
+  return formatNumber(value, decimalsFor(value, format), format);
+}
+
+/** All the decimals `value` has, up to MAX_DECIMALS, unless the format fixes them. */
+function decimalsFor(value: number, format: CheckedFormat): number {
+  return format.decimals ?? Math.min(MAX_DECIMALS, decimalsOf(value));
 }
 
 /** A share from 0 to 1 as a percentage, written with the share's own decimals less two: 0.07 is 7. */
@@ -568,4 +573,28 @@ export function formatShare(share: number): string {
 /** Raw data values keep the value axis' format, without a percent-stack suffix; times are written by formatTime. */
 export function formatAxisValue(value: number, axis: CheckedLinearAxis): string {
   return axis.kind === 'time' ? formatTime(value) : formatValue(value, { ...axis.format, suffix: axis.percent ? '' : axis.format.suffix });
+}
+
+/**
+ * Fails at `path` unless `axis` writes the boundary `at` as it is: a label that states where a class
+ * or bin starts must state the value it starts at. A fixed `format.decimals` must write it without
+ * rounding; otherwise it may have no more decimals than a label writes.
+ */
+export function checkWritten(at: number, path: string, axis: CheckedLinearAxis): void {
+  const { decimals } = axis.format;
+  if (writesExactly(at, decimalsFor(at, axis.format))) return;
+  if (decimals === undefined) fail(path, `must have at most ${MAX_DECIMALS} decimals, got ${at}`);
+  fail(path, `is ${at}, which ${axis.path}.format.decimals ${decimals} writes as ${formatAxisValue(at, axis)}: give a value it writes exactly, or more decimals`);
+}
+
+/**
+ * `value` rounded to `decimals` away from a range it bounds: down as its `lower` end, up as its
+ * `upper` one. On the same exact steps as an axis' free ends, so the result is the decimal itself.
+ */
+export function roundOut(value: number, decimals: number, end: 'lower' | 'upper'): number {
+  // A value the decimals write already needs no step, whose arithmetic at many decimals passes 2^53
+  // and could land on the wrong side of it.
+  if (writesExactly(value, decimals)) return value;
+  const step = givenStep(POWERS[EXPONENT_OFFSET - decimals]!);
+  return step.tick(end === 'lower' ? step.floor(value) : step.ceil(value));
 }

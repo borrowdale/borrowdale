@@ -153,6 +153,8 @@ export function readHorizon(r: Fields, _path: string, reserve: (count: number) =
     category: -1,
     data: r.required('data', list(0, MAX_POINTS, nullable(coordinates(['x', 'value'])), reserve)),
     layers: r.optional('layers', integer(MIN_HORIZON_LAYERS, MAX_HORIZON_LAYERS)) ?? 3,
+    // Whether the spec gave the layers: an error about them names them only then.
+    layersGiven: r.has('layers'),
     mode: r.optional('mode', oneOf(['mirror', 'offset'] as const)) ?? 'mirror',
   };
 }

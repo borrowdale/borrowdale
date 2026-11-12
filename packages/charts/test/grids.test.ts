@@ -106,6 +106,41 @@ const heatmapThenBar = {
 const circleCorrelation = { ...load, colorAxis: undefined, series: [{ type: 'heatmap', display: 'circle', correlation: true, name: 'r', data: [['Mon', 'AM', -0.5], ['Tue', 'AM', 0.5]] }] } as ChartSpec;
 const correlationDisplay = { ...load, colorAxis: undefined, series: [{ type: 'heatmap', display: 'correlation', name: 'r', data: [['Mon', 'AM', 0.5]] }] } as unknown as ChartSpec;
 
+// From -0.04 to 2.94 in two quantile classes, written to one decimal: rounded to the nearest, the ends
+// would be written 0.0 and 2.9, both inside the values they end.
+const roundedEnds = loadWith([['Mon', 'AM', -0.04], ['Tue', 'AM', 1], ['Mon', 'PM', 2], ['Tue', 'PM', 2.94]], { type: 'linear', scale: 'quantile', classes: 2 });
+// Twenty decimals: the lowest value, 98765.4321, is written 98765.43210000000544823706, which the
+// legend's lower label must not exceed.
+const twentyDecimals = { ...loadWith([['Mon', 'AM', 98765.4321], ['Tue', 'AM', 98765.5], ['Mon', 'PM', 98766], ['Tue', 'PM', 98767]], { type: 'linear', scale: 'quantile', classes: 2, format: { decimals: 20 } }), width: 2400 } as ChartSpec;
+// Every cell without a value leaves a quantile scale nothing to divide.
+const valuelessQuantiles = loadWith([['Mon', 'AM', null]], { type: 'linear', scale: 'quantile', classes: 3 });
+// Eleven values in seven quantile classes: the breaks 50.43 and 54 differ, but no value lies between
+// them, as 54 is tied.
+const elevenCategories = { type: 'band', categories: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k'] } as const;
+const gappedQuantiles = { ...load, width: 900, colorAxis: { type: 'linear', scale: 'quantile', classes: 7 }, axes: { x: elevenCategories, y: times },
+  series: [{ type: 'heatmap', name: 'Load', data: [['a', 'AM', 2], ['b', 'AM', 10], ['c', 'AM', 10], ['d', 'AM', 23], ['e', 'AM', 49], ['f', 'AM', 54], ['g', 'AM', 54], ['h', 'AM', 63], ['i', 'AM', 73], ['j', 'AM', 78], ['k', 'AM', 84]] }] } as ChartSpec;
+// Two distinct values, fewer than the five quantile classes a colour axis has by default.
+const defaultQuantiles = loadWith([['Mon', 'AM', 1], ['Tue', 'AM', 2]], { type: 'linear', scale: 'quantile' });
+// Twelve classes need more than a 200-unit row before any title, at the top by default or as given.
+const crowdedTitledLoad = { ...loadWith([['Mon', 'AM', 0], ['Tue', 'PM', 10]], { type: 'linear', scale: 'quantize', classes: 12, title: 'T' }), width: 200 } as ChartSpec;
+const crowdedTopLoad = { ...crowdedTitledLoad, legend: 'top' } as ChartSpec;
+// The twelve classes take 551 units: at 566 wide the row is a unit short of them, and at 567 they fit
+// with no room left for the title.
+const scaleJustTooWide = { ...crowdedTitledLoad, width: 566 } as ChartSpec;
+const titleJustTooWide = { ...crowdedTitledLoad, width: 567 } as ChartSpec;
+// Breaks too small for the 20 decimals a label writes: both would be written 0.00000000000000000000.
+const tinyBreaks = loadWith([['Mon', 'AM', 0]], { type: 'linear', scale: 'threshold', breaks: [-1e-21, 1e-21] });
+// A diverging scale between two neighbouring numbers has no value between them for its midpoint.
+const narrowDiverging = loadWith([['Mon', 'AM', 1]], { type: 'linear', scale: 'diverging', min: 1, max: 1.0000000000000002 });
+// A midpoint at an end of a domain the format writes 0 to 0.
+const wholeDiverging = loadWith([['Mon', 'AM', 0.1]], { type: 'linear', scale: 'diverging', min: -0.04, max: 0.24, format: { decimals: 0 }, midpoint: 0.24 });
+// Threshold breaks that a fixed number of decimals does not write as they are: written 1, 0.5 would
+// put 0.7 in the class labelled "from 1"; written 0.1, 0.12 and 0.14 could not be told apart.
+const roundedBreaks = loadWith([['Mon', 'AM', 0.7]], { type: 'linear', scale: 'threshold', breaks: [0.5, 1.5], format: { decimals: 0 } });
+const alikeBreaks = loadWith([['Mon', 'AM', 0.13]], { type: 'linear', scale: 'threshold', breaks: [0.12, 0.14], format: { decimals: 1 } });
+// Breaks the fixed decimals write exactly.
+const exactBreaks = loadWith([['Mon', 'AM', 0.7]], { type: 'linear', scale: 'threshold', breaks: [0.5, 1.5], format: { decimals: 1 } });
+
 const laying = (spec: ChartSpec) => () => layoutChart(spec);
 
 /** How many marks have a tooltip starting with `prefix`. */
@@ -244,6 +279,24 @@ describe('colour by value', () => {
     expect(cellColours(layoutChart(noisyMedian), 'Load')).toBe(2);
   });
 
+  // The lower end is written rounded down and the upper end rounded up, so the legend's range holds
+  // every value: -0.04 keeps its sign as -0.1.
+  it('rounds the ends of a classed legend outward', () => {
+    expect(layoutChart(roundedEnds).labels).toEqual(expect.arrayContaining(['-0.1', '1.5', '3.0']));
+  });
+
+  // An end the decimals already write exactly is written as it is, however many decimals there are.
+  it('keeps an outer label exact at 20 decimals', () => {
+    expect(layoutChart(twentyDecimals).labels).toContain('98,765.43210000000544823706');
+  });
+
+  // Within the limits on classes, breaks and their decimals, each spec is valid and its legend fits.
+  it.each([
+    ['threshold breaks that a fixed number of decimals writes exactly', exactBreaks],
+  ])('accepts %s', (_case, spec) => {
+    expect(laying(spec)).not.toThrow();
+  });
+
   // Series coloured by value take no colour and hatching pair from the palette.
   it('draws more series coloured by value than the palette has pairs', () => {
     expect(marksStarting(layoutChart(manyHorizons), 'r28, r28')).toBe(1);
@@ -295,9 +348,25 @@ describe('colour by value', () => {
     ['a fill in the chart\'s style with a series coloured by value', filledChartLoad, 'Invalid chart: style.fill is not allowed'],
     ['a colour on a series coloured by value', colouredLoad, 'Invalid chart: series[0].color is not allowed'],
     ['a value beyond a fixed end of the colour axis', loadWith([['Mon', 'AM', 11]], { type: 'linear', max: 10 }), 'Invalid chart: colorAxis.max is 10, but the data reach 11'],
-    ['a quantile break at the lowest value', lowQuantiles, 'Invalid chart: colorAxis.classes is 4, but ties in the values leave only 3 distinct classes'],
-    ['quantile classes that ties leave empty', tiedQuantiles, 'Invalid chart: colorAxis.classes is 5, but ties in the values leave only 2 distinct classes'],
+    ['a quantile break at the lowest value', lowQuantiles, 'Invalid chart: colorAxis.classes is 4, but only 3 of them would hold a value'],
+    ['quantile classes that ties leave empty', tiedQuantiles, 'Invalid chart: colorAxis has 5 classes, the default, but only 2 of them would hold a value'],
+    ['a quantile class with no value between distinct breaks', gappedQuantiles, 'Invalid chart: colorAxis.classes is 7, but only 6 of them would hold a value'],
+    ['a quantile scale with no values', valuelessQuantiles, 'Invalid chart: colorAxis.classes is 3, but there are no values'],
     ['more quantile classes than distinct values', fewDistinct, 'Invalid chart: colorAxis.classes is 3, but the values have only 2 distinct values'],
+    ['more default quantile classes than distinct values', defaultQuantiles, 'Invalid chart: colorAxis has 5 classes, the default, but the values have only 2 distinct values'],
+    ['a colour scale too wide for its legend row, with a title', crowdedTitledLoad, 'Invalid chart: the legend, at the top by default, needs 551 units of width for the colour axis, but 184 are left'],
+    ['a colour scale too wide for a legend placed at the top', crowdedTopLoad, 'Invalid chart: legend needs 551 units of width for the colour axis, but 184 are left'],
+    ['a colour scale a unit too wide for its row', scaleJustTooWide, 'Invalid chart: the legend, at the top by default, needs 551 units of width for the colour axis, but 550 are left'],
+    ['a colour title with no room beside a scale that fits', titleJustTooWide, 'Invalid chart: colorAxis.title does not fit even cut short: there are 0 units for it'],
+    ['threshold breaks with more decimals than a label writes', tinyBreaks, 'Invalid chart: colorAxis.breaks[0] must have at most 20 decimals, got -1e-21'],
+    ['a diverging scale with no value between its ends for the default midpoint', narrowDiverging, 'Invalid chart: colorAxis has no value strictly between its ends, 1 to 1.0000000000000002, for the default midpoint'],
+    ['a midpoint at an end of a domain the format rounds', wholeDiverging, 'Invalid chart: colorAxis.midpoint must be inside the colour domain, -0.04 to 0.24, got 0.24'],
+    ['a threshold break that a fixed number of decimals rounds', roundedBreaks, 'Invalid chart: colorAxis.breaks[0] is 0.5, which colorAxis.format.decimals 0 writes as 1'],
+    ['threshold breaks that a fixed number of decimals writes alike', alikeBreaks, 'Invalid chart: colorAxis.breaks[0] is 0.12, which colorAxis.format.decimals 1 writes as 0.1'],
+    ['a later threshold break that a fixed number of decimals rounds', loadWith([['Mon', 'AM', 0.7]], { type: 'linear', scale: 'threshold', breaks: [1, 1.5], format: { decimals: 0 } }), 'Invalid chart: colorAxis.breaks[1] is 1.5, which colorAxis.format.decimals 0 writes as 2'],
+    ['a rounded threshold break, written with the format\'s prefix', loadWith([['Mon', 'AM', 0.7]], { type: 'linear', scale: 'threshold', breaks: [0.5], format: { decimals: 0, prefix: '$' } }), 'Invalid chart: colorAxis.breaks[0] is 0.5, which colorAxis.format.decimals 0 writes as $1'],
+    ['breaks on the default scale', loadWith([['Mon', 'AM', 1]], { type: 'linear', breaks: [1] }), 'Invalid chart: colorAxis.breaks is only for a threshold scale, not the default sequential scale'],
+    ['a midpoint on a scale given as quantize', loadWith([['Mon', 'AM', 1]], { type: 'linear', scale: 'quantize', midpoint: 0 }), 'Invalid chart: colorAxis.midpoint is only for a diverging scale, not quantize'],
     ['series that need different colour scales', mixedHeatmaps, 'Invalid chart: series[1] cannot share the colour axis of series[0]: their values need different scales'],
     ['two values for one cell', loadWith([['Mon', 'AM', 1], ['Mon', 'AM', 2]]), 'Invalid chart: series[0].data[1] is a second value for the cell of series[0].data[0]'],
     ['a category not on its axis', loadWith([['Wed', 'AM', 1]]), 'Invalid chart: series[0].data[0][0] is not a category of axes.x, got "Wed"'],
@@ -306,7 +375,7 @@ describe('colour by value', () => {
     ['a hex heatmap on band axes', hexOnBands, 'Invalid chart: series[0] is a hex heatmap, which needs linear x and y axes'],
     ['a correlation beyond 1', correlationBeyondOne, 'Invalid chart: series[0].data[0][2] must be a coefficient from -1 to 1, got 1.2'],
     ['a midpoint at an end of the domain', loadWith([['Mon', 'AM', 1]], { type: 'linear', scale: 'diverging', min: 0, max: 10, midpoint: 0 }), 'Invalid chart: colorAxis.midpoint must be inside the colour domain, 0 to 10, got 0'],
-    ['a midpoint on a sequential scale', loadWith([['Mon', 'AM', 1]], { type: 'linear', midpoint: 0 }), 'Invalid chart: colorAxis.midpoint is only for a diverging scale, not sequential'],
+    ['a midpoint on a sequential scale', loadWith([['Mon', 'AM', 1]], { type: 'linear', midpoint: 0 }), 'Invalid chart: colorAxis.midpoint is only for a diverging scale, not the default sequential scale'],
     ['breaks on a quantize scale', loadWith([['Mon', 'AM', 1]], { type: 'linear', scale: 'quantize', breaks: [1] }), 'Invalid chart: colorAxis.breaks is only for a threshold scale, not quantize'],
     ['both a scheme and stops', loadWith([['Mon', 'AM', 1]], { type: 'linear', scheme: 'viridis', stops: ['#000000', '#ffffff'] }), 'Invalid chart: colorAxis cannot combine scheme and stops'],
     ['breaks that do not increase', loadWith([['Mon', 'AM', 1]], { type: 'linear', scale: 'threshold', breaks: [10, 10] }), 'Invalid chart: colorAxis.breaks[1] must be greater than the break before it (10), got 10'],
@@ -314,7 +383,8 @@ describe('colour by value', () => {
     ['a stretch that ends where it starts', flatStretch, 'Invalid chart: series[0].data[0][0][1] must be after 2, got 2'],
     ['correlation given as a display', correlationDisplay, 'Invalid chart: series[0].display must be one of'],
     ['a threshold scale without breaks', loadWith([['Mon', 'AM', 1]], { type: 'linear', scale: 'threshold' }), 'Invalid chart: colorAxis is a threshold scale, which needs breaks'],
-    ['classes on a sequential scale', loadWith([['Mon', 'AM', 1]], { type: 'linear', classes: 3 }), 'Invalid chart: colorAxis.classes is only for a quantize or quantile scale, not sequential'],
+    ['classes on a sequential scale', loadWith([['Mon', 'AM', 1]], { type: 'linear', classes: 3 }), 'Invalid chart: colorAxis.classes is only for a quantize or quantile scale, not the default sequential scale'],
+    ['classes on a scale given as sequential', loadWith([['Mon', 'AM', 1]], { type: 'linear', scale: 'sequential', classes: 3 }), 'Invalid chart: colorAxis.classes is only for a quantize or quantile scale, not sequential'],
     ['two values for one calendar day', calendarWith({ data: [['2024-03-01', 1], ['2024-03-01', 2]] }), 'Invalid chart: series[0].data[1] is a second value for 2024-03-01, after series[0].data[0]'],
     ['a time of day in a calendar', calendarWith({ data: [['2024-03-01T09:00Z', 1]] }), 'Invalid chart: series[0].data[0][0] has a time of day, but a calendar takes dates'],
     ['a calendar of more than 100,000 days', calendarWith({ from: '0000-01-01', to: '0300-01-01', data: [] }), 'Invalid chart: series[0].to makes 109574 days from 0000-01-01, more than 100000'],
@@ -390,6 +460,9 @@ const logHorizon = { ...rising, axes: { ...regions, x: { type: 'log' } } } as Ch
 const horizonAndHeatmap = { ...rising, series: [rising.series[0]!, { type: 'heatmap', name: 'Cells', data: [[[0, 1], 'South', 1]] }] } as ChartSpec;
 const horizonsInOneRow: ChartSpec = { ...rising, series: [rising.series[0]!, { type: 'horizon', name: 'Also north', row: 'North', data: [[0, 1]] }] };
 const twoHorizons: ChartSpec = { ...rising, series: [rising.series[0]!, { type: 'horizon', name: 'South', row: 'South', layers: 2, data: [[0, 1]] }] };
+// One row of 3 layers by default beside one of 2, in either order.
+const defaultThenTwoLayers = { ...twoHorizons, series: [{ ...rising.series[0]!, layers: undefined }, twoHorizons.series[1]!] } as ChartSpec;
+const twoThenDefaultLayers = { ...twoHorizons, series: [{ ...rising.series[0]!, layers: 2 }, { ...twoHorizons.series[1]!, layers: undefined }] } as ChartSpec;
 
 const compass = { type: 'band', categories: ['N', 'E', 'S', 'W'] } as const;
 const rings = { type: 'band', categories: ['Day', 'Night'] } as const;
@@ -453,6 +526,11 @@ describe('horizons and polar heatmaps', () => {
     ['two horizons in one row', horizonsInOneRow, 'Invalid chart: series[1].row is "North", the row of series[0] too: a row holds one horizon'],
     ['a horizon on a log x axis', logHorizon, 'Invalid chart: series[0] is a horizon series on axes.x, a log axis, but needs a linear or time x axis'],
     ['horizon rows with different layers', twoHorizons, 'Invalid chart: series[1].layers is 2, but series[0].layers is 3'],
+    ['horizon rows with given layers after the default', defaultThenTwoLayers, 'Invalid chart: series[1].layers is 2, but series[0] has 3 layers, the default: horizon rows share their colours'],
+    ['horizon rows with the default layers after given ones', twoThenDefaultLayers, 'Invalid chart: series[1] has 3 layers, the default, but series[0].layers is 2: horizon rows share their colours'],
+    ['a horizon colour axis with other classes than the default layers', horizonWith({ layers: undefined }, { type: 'linear', classes: 4 }), 'Invalid chart: colorAxis.classes must be 6, twice series[0]\'s 3 layers, the default, got 4'],
+    ['a horizon colour axis with only a max', horizonWith({}, { type: 'linear', max: 10 }), 'Invalid chart: colorAxis.max needs min, at -max, on a horizon chart'],
+    ['a horizon colour axis with only a min', horizonWith({}, { type: 'linear', min: -10 }), 'Invalid chart: colorAxis.min needs max, at -min, on a horizon chart'],
     ['a horizon on a sequential colour axis', horizonWith({}, { type: 'linear', scale: 'sequential' }), 'Invalid chart: colorAxis.scale must be quantize on a horizon chart'],
     ['a horizon colour axis that is not symmetric', horizonWith({}, { type: 'linear', min: 0, max: 30 }), 'Invalid chart: colorAxis.min must be -max on a horizon chart'],
     ['two values for one polar cell', windWith({ data: [['N', 'Day', 1], ['N', 'Day', 2]] }), 'Invalid chart: series[0].data[1] is a second value for the cell of series[0].data[0]'],

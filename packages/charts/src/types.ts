@@ -84,11 +84,14 @@ export interface ColorAxis extends Omit<LinearAxis, 'percent' | 'grid' | 'hidden
   stops?: readonly string[] | undefined;
   /**
    * For `quantize` and `quantile`: 2 to 12 classes. Defaults to 5, and to twice `layers` on a horizon
-   * chart. Quantile classes need as many distinct values, and ties that leave a class empty are an
-   * error.
+   * chart. Quantile classes need as many distinct values, and tied or nearly equal values that would
+   * leave a class empty are an error.
    */
   classes?: number | undefined;
-  /** For `threshold`, which needs them: 1 to 11 increasing values, each starting a class. */
+  /**
+   * For `threshold`, which needs them: 1 to 11 increasing values, each starting a class, and each one
+   * the axis' `format` writes exactly, as the legend states it.
+   */
   breaks?: readonly number[] | undefined;
   /**
    * For `diverging`: the value of the middle colour, inside the domain. Defaults to 0 when the domain
