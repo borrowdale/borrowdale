@@ -11,6 +11,7 @@ import { chart, chartSpec, reseed } from '../src/drawing';
 import cartesianCases from '../../examples/cartesian-cases.json';
 import timeCases from '../../examples/time-cases.json';
 import gridCases from '../../examples/grid-cases.json';
+import proportionCases from '../../examples/proportion-cases.json';
 import type { ChartSpec } from '@borrowdale/charts';
 
 // The gallery's chart examples with a name, and the spec the gallery holds under it.
@@ -77,7 +78,7 @@ describe('gallery coverage and actual rendering', () => {
     expect(timeCases.length).toBeGreaterThan(0);
   });
 
-  it.each([...timeCases, ...statisticalCases, ...gridCases])('includes the $name composition in the editable gallery', ({ name, spec }) => {
+  it.each([...timeCases, ...statisticalCases, ...gridCases, ...proportionCases])('includes the $name composition in the editable gallery', ({ name, spec }) => {
     expect(galleryCharts(name)).toHaveLength(1);
     expect(gallerySpec(name)).toEqual(spec);
     expect(executeExample(editorCode(galleryCharts(name)[0]!))).toContain('<svg');
@@ -152,6 +153,9 @@ describe('gallery coverage and actual rendering', () => {
         'scatter',
         'timeline',
         'xRange',
+        'units',
+        'funnel',
+        'liquid',
       ].sort(),
     );
     expect([...new Set(examples.filter((x) => x.category === 'shapes').map((x) => x.tag))].sort()).toEqual(
