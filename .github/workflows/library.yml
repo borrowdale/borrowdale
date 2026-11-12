@@ -85,7 +85,7 @@ jobs:
       # cache never decides the name it gets. This guards apt's folder only: the restore itself can write
       # wherever the runner user can, so an entry is only as trusted as the runs that can write it, which
       # are runs on main and, for its own entries, a pull request. The step prints how many restored
-      # packages it handed over, and runs with pipefail so that a failed index read fails the step instead
+      # packages it passed to apt, and runs with pipefail so that a failed index read fails the step instead
       # of passing quietly.
       - name: Hand the restored packages to apt
         if: steps.restore-library-packages.outputs.cache-matched-key != ''
