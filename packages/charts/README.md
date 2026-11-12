@@ -107,7 +107,8 @@ With several pies, each slice's tooltip starts with its ring's name.
 its right: a pie of pie. The parts must add up to the slice's value and be named apart from the
 slices; each is a legend entry, and its tooltip gives its share of the slice. The pie turns so that
 the slice faces the second pie, joined to its top and foot by two lines, so it takes no `startAngle`
-or `endAngle`, and it must be the chart's only ring.
+or `endAngle`, and it must be the chart's only ring. The slice must be drawn for the lines to join
+it: one whose value or radius is 0, or that `padAngle` takes up, is an error.
 
 The polar types share the rules of their cartesian twins: a `rose` is a `bar` wrapped around a band
 angle axis, a `radialBar` a bar bent along a ring, and `polarLine`, `polarArea` and `polarScatter`

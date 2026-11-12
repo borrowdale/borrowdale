@@ -1,6 +1,8 @@
-// The named values a pie, a unit chart or a funnel shows: read alike, and coloured alike by name.
+// The named values a pie, a unit chart or a funnel shows: read alike, coloured alike by name, and
+// written alike as labels and tooltips.
 import { MAX_CATEGORIES, MAX_NAME } from './check-axis.js';
 import { color, fail, fields, list, MAX_VALUE, number, show, text, unique, type Fields } from './read.js';
+import { formatNumber, formatValue, PLAIN_FORMAT } from './scale.js';
 
 export interface NamedValue {
   name: string;
@@ -48,4 +50,14 @@ export function checkNameColors(series: readonly { path: string; data: readonly 
       }
     });
   }
+}
+
+/** A named value's data label: its name and value. */
+export function valueLabel({ name, value }: { name: string; value: number }): string {
+  return `${name}: ${formatValue(value)}`;
+}
+
+/** A named value's tooltip: its label, then its share of `total` to one decimal place, after `prefix`. */
+export function shareTitle(item: { name: string; value: number }, total: number, prefix = ''): string {
+  return `${prefix}${valueLabel(item)} (${formatNumber((item.value / total) * 100, 1, PLAIN_FORMAT)}%)`;
 }

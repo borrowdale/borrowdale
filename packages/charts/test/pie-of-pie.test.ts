@@ -30,6 +30,11 @@ const sliceOutline = (spec: ChartSpec, name: string) =>
   layoutChart(spec).nodes.flatMap((node) =>
     (node.kind === 'mark' && node.title.startsWith(`${name}: `) && node.nodes[0]!.kind === 'sketch' ? [node.nodes[0]!.sketch.paths[0]!.d] : []));
 
+/** The slices, with Europe as given, and the others as they are. */
+const withEurope = (europe: object) => ({ data: [slices[0], { ...slices[1], ...europe }, slices[2], slices[3]] });
+/** The slices, each with a radius, Europe's as given. */
+const sized = (radius: number) => ({ data: [{ ...slices[0], radius: 2 }, { ...slices[1], radius }, { ...slices[2], radius: 1 }, { ...slices[3], radius: 1 }] });
+
 /** Where a path starts, written as a path passing through it writes the point: `, x y `. */
 const through = (d: string) => `, ${/^M(\S+ \S+)/.exec(d)![1]} `;
 
@@ -91,9 +96,21 @@ describe('pie of pie', () => {
       .toThrow('series[0].breakout.data[0].name is "Asia", the name of a slice of the pie: parts are named apart from the slices');
   });
 
+  // The lines join the slice where it is drawn, so a slice that is not drawn cannot be broken out.
+  it('breaks out only a slice that is drawn', () => {
+    expect(layingOut(pie({ slice: 'Europe', data: parts }, sized(0))))
+      .toThrow('series[0].breakout.slice is "Europe", a slice whose radius is 0, so it is not drawn and there is nothing to break out');
+    expect(layingOut(pie({ slice: 'Europe', data: [{ name: 'France', value: 0 }] }, withEurope({ value: 0 }))))
+      .toThrow('series[0].breakout.slice is "Europe", a slice whose value is 0, so it is not drawn and there is nothing to break out');
+    expect(layingOut(pie({ slice: 'Europe', data: [{ name: 'France', value: 10 }] }, { ...withEurope({ value: 10 }), padAngle: 10 })))
+      .toThrow('series[0].breakout.slice is "Europe", which the space between slices takes up, so it is not drawn and there is nothing to break out');
+  });
+
   it('turns the pie itself, so it takes no angles', () => {
     expect(layingOut(pie({ slice: 'Europe', data: parts }, { startAngle: 0 })))
       .toThrow('series[0].startAngle must be left out with breakout: the pie turns so that the slice it breaks out faces its parts');
+    expect(layingOut(pie({ slice: 'Europe', data: parts }, { endAngle: 999 })))
+      .toThrow('series[0].endAngle must be left out with breakout: the pie turns so that the slice it breaks out faces its parts');
   });
 
   it('breaks out of a pie of one ring only', () => {

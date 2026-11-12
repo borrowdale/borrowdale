@@ -22,7 +22,6 @@ import {
   checkSweep,
   checkY2Axis,
   MAX_CATEGORIES,
-  MAX_HOLE,
   MAX_NAME,
   readerOn,
   type CheckedAngleAxis,
@@ -59,7 +58,7 @@ import {
 import { checkCalendarChart, readCalendar } from './calendar-series.js';
 import { readHeatmap, readHorizon, readPolarHeatmap, resolveCells, resolveHorizon, resolvePolarCells } from './cell-series.js';
 import { withColorAxis } from './color-axis.js';
-import { checkNameColors, readNamedValues } from './named-values.js';
+import { checkPieChart, checkPieSeries, type CheckedPieChart } from './pie-series.js';
 import { checkMarker } from './symbols.js';
 import { checkUnitsChart, readUnits, UNITS_DISPLAYS, type CheckedUnitsChart } from './units-series.js';
 import { checkFunnelChart, FUNNEL_DISPLAYS, readFunnel, type CheckedFunnelChart } from './funnel-series.js';
@@ -433,15 +432,6 @@ export interface CheckedPolarChart extends CheckedChartBase {
   angle: CheckedAngleAxis;
   radius: CheckedRadiusAxis;
   series: SeriesOf<'polar'>[];
-}
-
-/** A pie series with its ring resolved: where it starts and ends, as shares of the radius. */
-export type CheckedPie = SeriesOf<'pie'> & { innerRadius: number; outerRadius: number };
-
-export interface CheckedPieChart extends CheckedChartBase {
-  system: 'pie';
-  /** Nested rings, the first outermost by default. */
-  series: CheckedPie[];
 }
 
 export interface CheckedGaugeBand {
@@ -988,105 +978,6 @@ function checkGaugeBands(bands: CheckedGaugeBand[]): CheckedGaugeBand[] {
     }
   });
   return bands;
-}
-
-const MAX_RINGS = 10;
-const MAX_PAD_ANGLE = 10;
-const MAX_CORNER_RADIUS = 1_000;
-const MAX_OFFSET = 0.5;
-const MIN_OUTER = 0.05;
-
-function checkPieChart(r: Fields, base: CheckedChartBase, series: SeriesOf<'pie'>[]): CheckedPieChart {
-  if (r.has('axes')) {
-    fail('axes', 'must be left out: a pie chart has no axes');
-  }
-  if (series.length > MAX_RINGS) {
-    fail('series', `of a pie chart must be 1 to ${MAX_RINGS} pie series, got ${series.length}`);
-  }
-  const breaking = series.find((pie) => pie.breakout);
-  if (breaking && series.length > 1) fail(`${breaking.path}.breakout`, 'needs a pie of one ring: nested rings cannot break a slice out');
-  const first = series[0]!;
-  const count = series.length;
-  const rings = series.map((pie, k) => {
-    for (const key of ['startAngle', 'endAngle'] as const) {
-      if (pie[key] !== first[key]) {
-        // Name the angle the spec gave, and say which is the default.
-        const theirs = first.sweepGiven[key] ? `${first.path}.${key} is ${first[key]}` : `${first.path} has the default, ${first[key]}`;
-        if (!pie.sweepGiven[key]) fail(pie.path, `has the default ${key}, ${pie[key]}, but ${theirs}: nested rings share their sweep`);
-        fail(`${pie.path}.${key}`, `is ${pie[key]}, but ${theirs}: nested rings share their sweep`);
-      }
-    }
-    // Nested rings split the radius equally, the first outermost.
-    const outerRadius = pie.outerRadius ?? 1 - k / count;
-    const innerRadius = pie.innerRadius ?? (count === 1 ? 0 : 1 - (k + 1) / count);
-    if (!(outerRadius > innerRadius)) {
-      // Name the key the spec gave: a defaulted outerRadius is not the one to change.
-      if (pie.outerRadius === undefined) {
-        const limit = `must be less than the ring's default outerRadius (${outerRadius})`;
-        fail(`${pie.path}.innerRadius`, `${limit}, got ${innerRadius}`);
-      }
-      const inner = pie.innerRadius === undefined ? `the ring's default innerRadius` : 'innerRadius';
-      fail(`${pie.path}.outerRadius`, `must be greater than ${inner} (${innerRadius}), got ${outerRadius}`);
-    }
-    return { ...pie, innerRadius, outerRadius };
-  });
-  checkNameColors(rings);
-  return { ...base, system: 'pie', series: rings };
-}
-
-/**
- * The slice a pie breaks out and its parts: they add up to its value, give or take rounding, and are
- * named apart from the slices, as each is a legend entry of its own.
- */
-function readBreakout(path: string, raw: unknown, slices: readonly { name: string; value: number }[], reserve: ReservePoints) {
-  const r = fields(path, raw);
-  r.allow(['slice', 'data']);
-  const slice = r.required('slice', text(MAX_NAME));
-  const of = slices.find((item) => item.name === slice) ?? fail(`${path}.slice`, `is ${show(slice)}, which names no slice of the pie`);
-  const data = readNamedValues(r, path, reserve, [], () => ({}));
-  data.forEach((part, i) => {
-    if (slices.some((item) => item.name === part.name)) {
-      fail(`${path}.data[${i}].name`, `is ${show(part.name)}, the name of a slice of the pie: parts are named apart from the slices`);
-    }
-  });
-  const sum = data.reduce((total, part) => total + part.value, 0);
-  if (Math.abs(sum - of.value) > 1e-9 * Math.max(1, of.value)) {
-    fail(`${path}.data`, `adds up to ${sum}, but the slice it breaks out, ${show(slice)}, is ${of.value}`);
-  }
-  return { slice, data };
-}
-
-function checkPieSeries(r: Fields, path: string, reserve: ReservePoints) {
-  const data = readNamedValues(r, path, reserve, ['offset', 'radius'], (slice) => ({
-    offset: slice.optional('offset', number(0, MAX_OFFSET)) ?? 0,
-    radius: slice.optional('radius', number(0, MAX_VALUE)),
-  }));
-  const sized = data.filter((slice) => slice.radius !== undefined).length;
-  if (sized > 0 && sized < data.length) {
-    const i = data.findIndex((slice) => slice.radius === undefined);
-    fail(`${path}.data[${i}].radius`, 'is missing: every slice has a radius, or none does');
-  }
-  // A slice is drawn only with a share of the pie and a reach beyond the hole.
-  if (sized > 0 && !data.some((slice) => slice.value > 0 && (slice.radius ?? 0) > 0)) {
-    fail(`${path}.data`, 'has no slice with both a value and a radius above 0, so there is nothing to draw');
-  }
-  const { startAngle, endAngle } = checkSweep(r, path);
-  const breakout = r.optional('breakout', (breakoutPath, raw) => readBreakout(breakoutPath, raw, data, reserve));
-  for (const key of breakout ? (['startAngle', 'endAngle'] as const) : []) {
-    if (r.has(key)) fail(`${path}.${key}`, 'must be left out with breakout: the pie turns so that the slice it breaks out faces its parts');
-  }
-  return {
-    data,
-    breakout,
-    innerRadius: r.optional('innerRadius', number(0, MAX_HOLE)),
-    outerRadius: r.optional('outerRadius', number(MIN_OUTER, 1)),
-    startAngle,
-    endAngle,
-    // Which angles the spec gave: the check that nested rings share a sweep names only those.
-    sweepGiven: { startAngle: r.has('startAngle'), endAngle: r.has('endAngle') },
-    padAngle: r.optional('padAngle', number(0, MAX_PAD_ANGLE)) ?? 0,
-    cornerRadius: r.optional('cornerRadius', number(0, MAX_CORNER_RADIUS)) ?? 0,
-  };
 }
 
 // Checked by core itself, so charts accepts what `sketch` accepts, with colours and widths capped.
