@@ -3,19 +3,24 @@
 import type { Point, Shape } from '@borrowdale/core';
 import type { Drawing } from './drawing.js';
 import { assertRoom, GAP, type Rect } from './frame.js';
+import type { CheckedFunnelChart } from './funnel-series.js';
+import { shareTitle, valueLabel } from './named-values.js';
 import { hatched, type Paint } from './palette.js';
-import { formatNumber, formatValue, PLAIN_FORMAT } from './scale.js';
 import { unhandled } from './statistics/types.js';
 import type { ChartNode } from './types.js';
-import type { CheckedFunnelChart } from './funnel-series.js';
 
 type Funnel = CheckedFunnelChart['series'][number];
-/** A stage's extent: from `from` to `to` along the chart, `half` either side of the middle at each end. */
-interface Stage {
+/** Where a stage starts and ends along the chart. */
+interface Edges {
   from: number;
   to: number;
+}
+/** A stage's extent: its edges, and `half` either side of the middle at each end. */
+interface Stage extends Edges {
   half: [number, number];
 }
+/** What a stage draws, and where its label goes: undefined for a stage with nothing to draw. */
+type DrawStage<S> = (stage: S, paint: (shape: Shape) => ChartNode) => { node: ChartNode; center: Point } | undefined;
 
 /** The share of its foot a funnel area keeps of its top, as Plotly's `baseratio` does. */
 const FOOT = 1 / 3;
@@ -33,19 +38,18 @@ export function layoutFunnel(drawing: Drawing, chart: CheckedFunnelChart, rect: 
   const breadth = horizontal ? rect.bottom - rect.top : rect.right - rect.left;
   const middle = horizontal ? (rect.top + rect.bottom) / 2 : (rect.left + rect.right) / 2;
   const point = ([along, across]: Point): Point => (horizontal ? [start + along, across] : [across, start + along]);
+  // A funnel back to back with another is named in its stages' tooltips.
   const draw = (entry: Funnel, stages: readonly Stage[], side: -1 | 0 | 1) =>
-    drawStages(drawing, entry, stages, side, middle, point, rect, paintOf, chart.series.length > 1);
-  if (second) {
-    // Back to back: each a half, its widths on one scale with the other's.
-    const largest = Math.max(...first.data.map((item) => item.value), ...second.data.map((item) => item.value));
-    draw(first, funnelStages(first, length, breadth / 2, largest), -1);
-    draw(second, funnelStages(second, length, breadth / 2, largest), 1);
-    return;
-  }
+    drawStages(drawing, entry, stages, rect, paintOf, side === 0 ? '' : `${entry.name}, `, trapezoid(entry, side, middle, point));
   switch (first.display) {
-    case 'funnel':
-      draw(first, funnelStages(first, length, breadth / 2, Math.max(...first.data.map((item) => item.value))), 0);
+    case 'funnel': {
+      // Back to back, each funnel is a half, its widths on one scale with the other's.
+      const funnels = second ? [first, second] : [first];
+      const sides = second ? ([-1, 1] as const) : ([0] as const);
+      const largest = Math.max(...funnels.flatMap((entry) => entry.data.map((item) => item.value)));
+      funnels.forEach((entry, i) => draw(entry, funnelStages(entry, length, breadth / 2, largest), sides[i]!));
       return;
+    }
     case 'pyramid':
       // From the apex, the area above depth y grows with y squared.
       draw(first, cumulative(first, length, (share) => Math.sqrt(share), (along) => (breadth / 2) * (along / length)), 0);
@@ -94,46 +98,61 @@ function funnelStages(entry: Funnel, length: number, half: number, largest: numb
 }
 
 /**
- * Stages filling `length` in turn: `depth` turns the share of the total above a stage's edge into the
- * edge's share of the length, and `halfAt` gives the half width at a position along the chart.
+ * The stages' edges, filling `length` in turn: `depth` turns the share of the total above an edge into
+ * the edge's share of the length.
  */
-function cumulative(entry: Funnel, length: number, depth: (share: number) => number, halfAt: (along: number) => number): Stage[] {
+function edges(entry: Funnel, length: number, depth: (share: number) => number): Edges[] {
   const total = entry.data.reduce((sum, item) => sum + item.value, 0);
   let above = 0;
   return entry.data.map((item) => {
     const from = length * depth(above / total);
     above += item.value;
-    const to = length * depth(Math.min(1, above / total));
-    return { from, to, half: [halfAt(from), halfAt(to)] };
+    return { from, to: length * depth(Math.min(1, above / total)) };
+  });
+}
+
+/** Stages between those edges, `halfAt` giving the half width at a position along the chart. */
+function cumulative(entry: Funnel, length: number, depth: (share: number) => number, halfAt: (along: number) => number): Stage[] {
+  return edges(entry, length, depth).map(({ from, to }) => ({ from, to, half: [halfAt(from), halfAt(to)] }));
+}
+
+/**
+ * Each stage as a mark: what `draw` makes of it, with its label, and its share of the total in its
+ * tooltip after `prefix`. A stage with no depth has nothing to draw.
+ */
+function drawStages<S extends Edges>(
+  drawing: Drawing, entry: Funnel, stages: readonly S[], rect: Rect, paintOf: ReadonlyMap<string, Paint>, prefix: string,
+  draw: DrawStage<S>,
+): void {
+  const total = entry.data.reduce((sum, item) => sum + item.value, 0);
+  stages.forEach((stage, i) => {
+    const item = entry.data[i]!;
+    const paint = (shape: Shape) => drawing.shape(shape, hatched(paintOf.get(item.name)!), [entry.name, item.name, 'stage'], entry.style);
+    const drawn = stage.to > stage.from ? draw(stage, paint) : undefined;
+    if (!drawn) return;
+    const nodes = [drawn.node];
+    if (entry.dataLabels) {
+      nodes.push(drawing.label(valueLabel(item), drawn.center[0], drawn.center[1], rect, `${entry.path}.dataLabels`));
+    }
+    drawing.mark(shareTitle(item, total, prefix), nodes);
   });
 }
 
 /**
- * Each stage as a mark: its shape, `side` of the middle (both sides for 0), and its label. A stage
- * with no depth or no width has nothing to draw.
+ * A stage as a trapezoid, or with curved sides for a smooth funnel, `side` of the middle (both sides
+ * for 0). A stage with no width has nothing to draw.
  */
-function drawStages(
-  drawing: Drawing, entry: Funnel, stages: readonly Stage[], side: -1 | 0 | 1, middle: number,
-  point: (position: Point) => Point, rect: Rect, paintOf: ReadonlyMap<string, Paint>, pair: boolean,
-): void {
-  const total = entry.data.reduce((sum, item) => sum + item.value, 0);
-  stages.forEach(({ from, to, half: [top, bottom] }, i) => {
-    const item = entry.data[i]!;
-    if (!(to > from) || !(Math.max(top, bottom) > 0)) return;
-    // The outer edge at each end, and the inner one: the middle for a half, the far edge otherwise.
-    const outer = (h: number) => middle + (side === 0 ? h : side * h);
-    const inner = (h: number) => (side === 0 ? middle - h : middle);
-    const shape: Shape = entry.display === 'funnel' && entry.shape === 'smooth'
+function trapezoid(entry: Funnel, side: -1 | 0 | 1, middle: number, point: (position: Point) => Point): DrawStage<Stage> {
+  // The outer edge at each end, and the inner one: the middle for a half, the far edge otherwise.
+  const outer = (h: number) => middle + (side === 0 ? h : side * h);
+  const inner = (h: number) => (side === 0 ? middle - h : middle);
+  return ({ from, to, half: [top, bottom] }, paint) => {
+    if (!(Math.max(top, bottom) > 0)) return undefined;
+    const shape: Shape = entry.shape === 'smooth'
       ? smooth(from, to, [inner(top), outer(top)], [inner(bottom), outer(bottom)], point)
       : { kind: 'polygon', points: [point([from, inner(top)]), point([from, outer(top)]), point([to, outer(bottom)]), point([to, inner(bottom)])] };
-    const percent = formatNumber((item.value / total) * 100, 1, PLAIN_FORMAT);
-    const nodes: ChartNode[] = [drawing.shape(shape, hatched(paintOf.get(item.name)!), [entry.name, item.name, 'stage'], entry.style)];
-    if (entry.dataLabels) {
-      const [x, y] = point([(from + to) / 2, (inner((top + bottom) / 2) + outer((top + bottom) / 2)) / 2]);
-      nodes.push(drawing.label(`${item.name}: ${formatValue(item.value)}`, x, y, rect, `${entry.path}.dataLabels`));
-    }
-    drawing.mark(`${pair ? `${entry.name}, ` : ''}${item.name}: ${formatValue(item.value)} (${percent}%)`, nodes);
-  });
+    return { node: paint(shape), center: point([(from + to) / 2, (inner((top + bottom) / 2) + outer((top + bottom) / 2)) / 2]) };
+  };
 }
 
 /** A stage whose sides curve from their width at `from` to their width at `to`, level at both ends. */
@@ -153,23 +172,14 @@ function smooth(from: number, to: number, [a0, b0]: [number, number], [a1, b1]: 
 function drawSilhouette(drawing: Drawing, entry: Funnel, rect: Rect, paintOf: ReadonlyMap<string, Paint>): void {
   const fitted = drawing.fitPath(entry.silhouette!, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top);
   const { box } = fitted;
-  const total = entry.data.reduce((sum, item) => sum + item.value, 0);
   const length = entry.horizontal ? box.width : box.height;
-  let above = 0;
-  entry.data.forEach((item) => {
-    const from = (length * above) / total;
-    above += item.value;
-    const to = (length * Math.min(total, above)) / total;
-    if (!(to > from)) return;
+  drawStages(drawing, entry, edges(entry, length, (share) => share), rect, paintOf, '', ({ from, to }, paint) => {
     const band = entry.horizontal
       ? { x: box.x + from, y: box.y, width: to - from, height: box.height }
       : { x: box.x, y: box.y + from, width: box.width, height: to - from };
-    const shape = drawing.shape({ kind: 'path', d: fitted.d }, hatched(paintOf.get(item.name)!), [entry.name, item.name, 'stage'], entry.style);
-    const nodes: ChartNode[] = [drawing.clip(band.x, band.y, band.width, band.height, [shape])];
-    if (entry.dataLabels) {
-      nodes.push(drawing.label(`${item.name}: ${formatValue(item.value)}`, band.x + band.width / 2, band.y + band.height / 2, rect, `${entry.path}.dataLabels`));
-    }
-    const percent = formatNumber((item.value / total) * 100, 1, PLAIN_FORMAT);
-    drawing.mark(`${item.name}: ${formatValue(item.value)} (${percent}%)`, nodes);
+    return {
+      node: drawing.clip(band.x, band.y, band.width, band.height, [paint({ kind: 'path', d: fitted.d })]),
+      center: [band.x + band.width / 2, band.y + band.height / 2],
+    };
   });
 }
