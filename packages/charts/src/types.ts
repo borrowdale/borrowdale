@@ -2,6 +2,7 @@ import type { Seed, Sketch, SketchStyle } from '@borrowdale/core';
 import type { Font, TextLayout } from '@borrowdale/text';
 import type { DistributionSeries, HistogramSeries, MarketSeries, RelationshipSeries } from './statistics/types.js';
 import type { UnitsSeries } from './units-series.js';
+import type { FunnelSeries } from './funnel-series.js';
 
 /**
  * A chart, as plain data that can come from JSON. Its series' type picks its coordinate system, and
@@ -830,7 +831,8 @@ export type Series =
   | PolarAreaSeries
   | PolarScatterSeries
   | GaugeSeries
-  | UnitsSeries;
+  | UnitsSeries
+  | FunnelSeries;
 
 export type SeriesType = Series['type'];
 

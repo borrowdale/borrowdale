@@ -1,4 +1,5 @@
 import { Budget, sketch, type Shape, type SketchPath, type SketchStyle } from '@borrowdale/core';
+import { fitPath, type FitBox } from '@borrowdale/core/internal';
 import { fitText, layoutText, measureText, textBounds, type LayoutTextOptions } from '@borrowdale/text';
 import { INK } from './palette.js';
 import { fail } from './read.js';
@@ -206,6 +207,11 @@ export class Drawing {
 
   push(...nodes: ChartNode[]): void {
     this.nodes.push(...nodes);
+  }
+
+  /** Path data `d` scaled to fit, keeping its proportions, centred in the box; the work counts against this drawing. */
+  fitPath(d: string, x: number, y: number, width: number, height: number): { d: string; box: FitBox } {
+    return fitPath(d, { x, y, width, height }, this.#budget);
   }
 
   /** `nodes`, cut to the box: the part of them outside it is not drawn. */

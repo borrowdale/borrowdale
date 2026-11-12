@@ -74,6 +74,7 @@ const ENCODINGS: { [K in SeriesType]: Encoder<K> } = {
   polarScatter: undefined,
   gauge: undefined,
   units: undefined,
+  funnel: undefined,
 };
 
 const BY_VALUE = (Object.keys(ENCODINGS) as SeriesType[]).filter((type) => ENCODINGS[type] !== undefined);
