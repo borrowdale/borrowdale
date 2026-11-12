@@ -208,6 +208,11 @@ export class Drawing {
     this.nodes.push(...nodes);
   }
 
+  /** `nodes`, cut to the box: the part of them outside it is not drawn. */
+  clip(x: number, y: number, width: number, height: number, nodes: ChartNode[]): ChartNode {
+    return { kind: 'clip', box: { x, y, width, height }, nodes };
+  }
+
   /** A mark: its nodes, with `title` as its tooltip. */
   mark(title: string, nodes: ChartNode[]): void {
     this.#write(title);

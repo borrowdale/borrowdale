@@ -1,7 +1,10 @@
 import { svgElement } from '@borrowdale/core';
 import { gradientAttributes, gradientIds, gradientSvg } from './gradients.js';
 import type { ChartImage, ChartRenderOptions } from './images.js';
+import { eachNode } from './nodes.js';
 import type { ChartNode } from './types.js';
+
+type ClipNode = Extract<ChartNode, { kind: 'clip' }>;
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 // Reserve prefixes when charts are constructed, including before they enter the document.
@@ -14,6 +17,20 @@ const automaticIndex = (prefix: string) => /^chart(?:-(0|[1-9]\d*))?$/.test(pref
 export interface SvgResources {
   gradients: ReturnType<typeof gradientIds>;
   images: Map<string, string>;
+  clips: Map<ClipNode, string>;
+}
+
+/** Clips with the same box cut alike, so they share one id. */
+function clipIds(nodes: readonly ChartNode[], prefix: string): Map<ClipNode, string> {
+  const ids = new Map<ClipNode, string>();
+  const byBox = new Map<string, string>();
+  eachNode(nodes, (node) => {
+    if (node.kind !== 'clip' || ids.has(node)) return;
+    const box = JSON.stringify([node.box.x, node.box.y, node.box.width, node.box.height]);
+    if (!byBox.has(box)) byBox.set(box, `${prefix}-clip-${byBox.size}`);
+    ids.set(node, byBox.get(box)!);
+  });
+  return ids;
 }
 
 export function svgResources(
@@ -30,8 +47,8 @@ export function svgResources(
   for (;;) {
     const prefix = idPrefix ?? (index === 0n ? 'chart' : `chart-${index}`);
     const result = { gradients: gradientIds(nodes, prefix),
-      images: new Map([...images.keys()].map((name, i) => [name, `${prefix}-image-${i}`])) };
-    const ids = [...result.gradients.values(), ...result.images.values()];
+      images: new Map([...images.keys()].map((name, i) => [name, `${prefix}-image-${i}`])), clips: clipIds(nodes, prefix) };
+    const ids = [...result.gradients.values(), ...result.images.values(), ...result.clips.values()];
     if (!automatic || ids.length === 0 || (!reservedPrefixes.has(prefix) && ids.every((id) => !occupied(id)))) {
       if (parent && ids.length > 0) {
         if (automatic) nextPrefix = index + 1n;
@@ -52,16 +69,19 @@ const rasterAttributes = (image: ChartImage) => ({ href: image.dataUrl, width: 1
 
 /** One definition per id: nodes that paint alike share it. */
 const uniqueGradients = (resources: SvgResources) => new Map([...resources.gradients].map(([node, id]) => [id, node]));
+const uniqueClips = (resources: SvgResources) => new Map([...resources.clips].map(([node, id]) => [id, node]));
+const clipRect = ({ box }: ClipNode) => ({ x: box.x, y: box.y, width: box.width, height: box.height });
 
 export function resourceSvg(resources: SvgResources, images: ReadonlyMap<string, ChartImage>): string {
   const gradients = [...uniqueGradients(resources)].map(([id, node]) => gradientSvg(node, id)).join('');
   const rasters = [...resources.images].map(([name, id]) =>
     svgElement('symbol', symbolAttributes(id), svgElement('image', rasterAttributes(images.get(name)!)))).join('');
-  return gradients || rasters ? svgElement('defs', {}, gradients + rasters) : '';
+  const clips = [...uniqueClips(resources)].map(([id, node]) => svgElement('clipPath', { id }, svgElement('rect', clipRect(node)))).join('');
+  return gradients || rasters || clips ? svgElement('defs', {}, gradients + rasters + clips) : '';
 }
 
 export function appendResources(parent: Element, resources: SvgResources, images: ReadonlyMap<string, ChartImage>): void {
-  if (resources.gradients.size + resources.images.size === 0) return;
+  if (resources.gradients.size + resources.images.size + resources.clips.size === 0) return;
   const document = parent.ownerDocument;
   const element = (tag: string, attributes: Record<string, string | number>): SVGElement => {
     const node = document.createElementNS(SVG_NS, tag);
@@ -78,6 +98,11 @@ export function appendResources(parent: Element, resources: SvgResources, images
     const symbol = element('symbol', symbolAttributes(id));
     symbol.appendChild(element('image', rasterAttributes(images.get(name)!)));
     defs.appendChild(symbol);
+  }
+  for (const [id, node] of uniqueClips(resources)) {
+    const clip = element('clipPath', { id });
+    clip.appendChild(element('rect', clipRect(node)));
+    defs.appendChild(clip);
   }
   parent.appendChild(defs);
 }

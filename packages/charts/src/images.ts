@@ -1,3 +1,4 @@
+import { eachNode } from './nodes.js';
 import type { ChartNode } from './types.js';
 
 /** Trusted raster bytes for SVG export and an already loaded source for Canvas. */
@@ -18,21 +19,17 @@ export interface ChartRenderOptions {
 /** Resolve once before rendering, so a missing resource cannot leave a partial drawing. */
 export function resolveImages(nodes: readonly ChartNode[], options: ChartRenderOptions, canvas = false): Map<string, ChartImage> {
   const resolved = new Map<string, ChartImage>();
-  const visit = (entries: readonly ChartNode[]): void => {
-    for (const node of entries) {
-      if (node.kind === 'mark') visit(node.nodes);
-      if (node.kind !== 'image' || resolved.has(node.asset)) continue;
-      const image = options.images?.get(node.asset);
-      if (!image) throw new Error(`Missing chart image: ${node.asset}`);
-      const { dataUrl, source } = image;
-      if (!/^data:image\/(?:png|jpeg|gif|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(dataUrl)) {
-        throw new Error(`Chart image ${node.asset} must contain a raster data URL`);
-      }
-      if (canvas && !source) throw new Error(`Chart image ${node.asset} has no preloaded Canvas source`);
-      resolved.set(node.asset, { dataUrl, source });
+  eachNode(nodes, (node) => {
+    if (node.kind !== 'image' || resolved.has(node.asset)) return;
+    const image = options.images?.get(node.asset);
+    if (!image) throw new Error(`Missing chart image: ${node.asset}`);
+    const { dataUrl, source } = image;
+    if (!/^data:image\/(?:png|jpeg|gif|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(dataUrl)) {
+      throw new Error(`Chart image ${node.asset} must contain a raster data URL`);
     }
-  };
-  visit(nodes);
+    if (canvas && !source) throw new Error(`Chart image ${node.asset} has no preloaded Canvas source`);
+    resolved.set(node.asset, { dataUrl, source });
+  });
   return resolved;
 }
 

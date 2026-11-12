@@ -851,4 +851,10 @@ export type ChartNode =
       /** The mark's tooltip, in SVG and the DOM. */
       title: string;
       nodes: ChartNode[];
+    }
+  | {
+      kind: 'clip';
+      /** The rectangle its nodes show through; anything outside it is cut away. */
+      box: { x: number; y: number; width: number; height: number };
+      nodes: ChartNode[];
     };
