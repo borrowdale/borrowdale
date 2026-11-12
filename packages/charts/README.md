@@ -108,7 +108,8 @@ its right: a pie of pie. The parts must add up to the slice's value and be named
 slices; each is a legend entry, and its tooltip gives its share of the slice. The pie turns so that
 the slice faces the second pie, joined to its top and foot by two lines, so it takes no `startAngle`
 or `endAngle`, and it must be the chart's only ring. The slice must be drawn for the lines to join
-it: one whose value or radius is 0, or that `padAngle` takes up, is an error.
+it: one whose value or radius is 0, that `padAngle` takes up, or that is too small a share or too
+short to show is an error. A slice that is the whole pie is joined at its top and foot.
 
 The polar types share the rules of their cartesian twins: a `rose` is a `bar` wrapped around a band
 angle axis, a `radialBar` a bar bent along a ring, and `polarLine`, `polarArea` and `polarScatter`
@@ -620,8 +621,10 @@ A chart holds at most 100 series, 1,000 categories and 100,000 data points in al
 within ±10¹⁵. Validation reserves each series' point count before copying its data and stops as
 soon as the total exceeds the limit, without reading later series. A limit error reports the
 count reached so far, not a count of unread data. A pie holds at most 1,000 slices, and a chart
-at most 10 nested pies. A hex heatmap's columns and rows are whole numbers within ±100,000. A
-calendar counts one point per day of its range, reserved before any cell
+at most 10 nested pies. A unit chart draws at most 2,000 units, and a parliament has at most 50 rows
+of seats. A funnel's silhouette is at most 10,000 characters of path data. A Marimekko chart's
+narrowest column is at least a millionth as wide as its widest. A hex heatmap's columns and rows
+are whole numbers within ±100,000. A calendar counts one point per day of its range, reserved before any cell
 is made, so a range of more than 100,000 days, about 273 years, is an error. The drawing budget
 below is reached first. Measured from 1 January, on a 2000 × 10000 chart and on a 10000 × 10000
 one, a calendar with a value on every day draws at most 34,703 days, about 95 years, and one with a
@@ -759,7 +762,8 @@ units, and pyramids taper from their first endpoint to the second. A bar also ac
 `shape: 'pictorial'` with a `symbol`, a symbol name or `{ image }`: the symbol is repeated from the
 bar's base, each as wide as the bar, and the last is cut at the value. Its legend entry shows the
 symbol. A bar far longer than it is wide can need more symbols than the
-[drawing budget](#errors-and-limits) allows.
+[drawing budget](#errors-and-limits) allows, or, repeating an image, more than the 10,000 labels and
+images a chart holds.
 
 An `xyLine` can supply `segments`, one entry per adjacent pair of data slots.
 Each entry is `null` or `{ color?, strokeWidth?, dash? }`; an edge touching a null point
