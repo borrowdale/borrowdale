@@ -15,7 +15,7 @@ import { markerNode } from './symbols.js';
 import { layoutTimeline } from './timeline.js';
 import type { ChartLayout, ChartSpec, LayoutChartOptions, LegendPosition, Marker } from './types.js';
 import { encodingOf } from './color-axis.js';
-import { checkChart, type CheckedChart } from './validate.js';
+import { checkChart, type CheckedChart, type System } from './validate.js';
 
 const SWATCH = 10;
 const SWATCH_GAP = 4;
@@ -98,11 +98,29 @@ export function layoutChart(spec: ChartSpec, options: LayoutChartOptions = {}): 
 }
 
 /**
- * One entry per slice name of a pie's rings, in the order they first appear, else one per series,
- * each with its colour and hatching.
+ * What each system's legend lists: the names in its series' data, or its series. A system missing
+ * here fails to compile.
+ */
+const LEGENDS = {
+  cartesian: 'series',
+  polar: 'series',
+  pie: 'names',
+  gauge: 'series',
+  timeline: 'series',
+  calendar: 'series',
+} as const satisfies Record<System, 'names' | 'series'>;
+
+type NamedSystem = { [S in System]: (typeof LEGENDS)[S] extends 'names' ? S : never }[System];
+
+const listsNames = (chart: CheckedChart): chart is Extract<CheckedChart, { system: NamedSystem }> =>
+  LEGENDS[chart.system] === 'names';
+
+/**
+ * One entry per name in the series' data, in the order they first appear, where the system lists
+ * names, else one per series, each with its colour and hatching.
  */
 function legendEntries(chart: CheckedChart): LegendEntry[] {
-  if (chart.system === 'pie') {
+  if (listsNames(chart)) {
     const first = new Map<string, { name: string; color: string | undefined; path: string; style: SketchStyle }>();
     for (const pie of chart.series) {
       pie.data.forEach((slice, i) => {
@@ -263,8 +281,8 @@ function noValueItem(drawing: Drawing): LegendItem {
  * the top with two or more items, or a colour axis, and to none otherwise.
  */
 function drawLegend(drawing: Drawing, chart: CheckedChart, entries: readonly LegendEntry[], rect: Rect): void {
-  // A pie's entries are its slices; every other chart's are its series, less those coloured by value.
-  const encodings = chart.system === 'pie' ? [] : chart.series.map(encodingOf);
+  // Named entries are the series' data; other entries are series, less those coloured by value.
+  const encodings = listsNames(chart) ? [] : chart.series.map(encodingOf);
   const shown = entries.filter((_, i) => encodings[i] === undefined);
   const missing = encodings.some((encoding) => encoding?.missing);
   const count = shown.length + (chart.color ? 1 : 0) + (missing ? 1 : 0);

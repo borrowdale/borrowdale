@@ -7,7 +7,7 @@ import { readRelationship } from './statistics/relationship.js';
 import { readMarket } from './statistics/market.js';
 import { checkAnnotations, type CheckedAnnotation } from './annotations.js';
 import { sketch, assertDrawable, type Seed, type SketchStyle } from '@borrowdale/core';
-import { COLOR_RULE, isColor, MAX_PAINT, ownDash } from '@borrowdale/core/internal';
+import { ownDash } from '@borrowdale/core/internal';
 import { aSeries, hexColor, readEach } from './read.js';
 import { excalifont, type Font } from '@borrowdale/text';
 import {
@@ -42,6 +42,7 @@ import {
   list,
   MAX_POINTS,
   MAX_VALUE,
+  color,
   nullable,
   number,
   oneOf,
@@ -58,6 +59,7 @@ import {
 import { checkCalendarChart, readCalendar } from './calendar-series.js';
 import { readHeatmap, readHorizon, readPolarHeatmap, resolveCells, resolveHorizon, resolvePolarCells } from './cell-series.js';
 import { withColorAxis } from './color-axis.js';
+import { checkNameColors, readNamedValues } from './named-values.js';
 import type { ColorScale } from './color-scale.js';
 import {
   CURVES,
@@ -91,13 +93,6 @@ const categoryValues = (reserve: ReservePoints) =>
 const valueAxis = oneOf(['y', 'y2'] as const);
 const curve = oneOf(CURVES);
 
-const color: Check<string> = (path, value) => {
-  const given = text(MAX_PAINT)(path, value);
-  if (!isColor(given)) {
-    fail(path, `must be ${COLOR_RULE}, got ${show(given)}`);
-  }
-  return given;
-};
 
 // Each field a series type may have, read the same way by every type that has it, so a cartesian
 // type and its polar twin take the same values, except that a polar chart's points are numbers only.
@@ -1023,45 +1018,15 @@ function checkPieChart(r: Fields, base: CheckedChartBase, series: SeriesOf<'pie'
     }
     return { ...pie, innerRadius, outerRadius };
   });
-  // A name in two rings is one legend entry with one colour.
-  const colors = new Map<string, { color: string | undefined; path: string }>();
-  for (const pie of rings) {
-    pie.data.forEach((slice, i) => {
-      const seen = colors.get(slice.name);
-      if (seen && slice.color !== undefined && slice.color !== seen.color) {
-        const given = seen.color === undefined ? 'none' : show(seen.color);
-        fail(
-          `${pie.path}.data[${i}].color`,
-          `is ${show(slice.color)}, but ${seen.path}, of the same name, gives ${given}`,
-        );
-      }
-      if (!seen) {
-        colors.set(slice.name, { color: slice.color, path: `${pie.path}.data[${i}].color` });
-      }
-    });
-  }
+  checkNameColors(rings);
   return { ...base, system: 'pie', series: rings };
 }
 
 function checkPieSeries(r: Fields, path: string, reserve: ReservePoints) {
-  const data = r.required(
-    'data',
-    list(1, MAX_CATEGORIES, (slicePath, raw) => {
-      const slice = fields(slicePath, raw);
-      slice.allow(['name', 'value', 'color', 'offset', 'radius']);
-      return {
-        name: slice.required('name', text(MAX_NAME)),
-        value: slice.required('value', number(0, MAX_VALUE)),
-        color: slice.optional('color', color),
-        offset: slice.optional('offset', number(0, MAX_OFFSET)) ?? 0,
-        radius: slice.optional('radius', number(0, MAX_VALUE)),
-      };
-    }, reserve),
-  );
-  unique(data.map((slice) => slice.name), (i) => `${path}.data[${i}].name`);
-  if (!data.some((slice) => slice.value > 0)) {
-    fail(`${path}.data`, 'has no value above 0, so there is nothing to draw');
-  }
+  const data = readNamedValues(r, path, reserve, ['offset', 'radius'], (slice) => ({
+    offset: slice.optional('offset', number(0, MAX_OFFSET)) ?? 0,
+    radius: slice.optional('radius', number(0, MAX_VALUE)),
+  }));
   const sized = data.filter((slice) => slice.radius !== undefined).length;
   if (sized > 0 && sized < data.length) {
     const i = data.findIndex((slice) => slice.radius === undefined);
