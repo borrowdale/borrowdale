@@ -310,7 +310,7 @@ export const checkAngleAxis = checkAxis(polarKeys(SWEEP_KEYS), true, (r, path) =
 export const checkRadiusAxis = checkAxis(polarKeys([...HOLE_KEYS, 'shape']), true, (r, _path, type) => ({
   innerRadius: r.optional('innerRadius', number(0, MAX_HOLE)) ?? 0,
   // Resolved against the series once they are known.
-  shapeGiven:
+  givenShape:
     type === 'band'
       ? r.optional('shape', (shapePath) => fail(shapePath, 'is only for a linear radius axis'))
       : r.optional('shape', oneOf(['polygon', 'circle'] as const)),
@@ -324,7 +324,11 @@ export function checkSweep(r: Fields, path: string, [start, end]: [number, numbe
   const startAngle = r.optional('startAngle', number(-360, 360)) ?? start;
   const endAngle = r.optional('endAngle', number(-360, 720)) ?? end;
   if (!(endAngle > startAngle && endAngle - startAngle <= 360 + TURN_ROUNDING)) {
-    const after = `greater than startAngle (${startAngle}) and at most 360 past it`;
+    // Name the angle the spec gave: a defaulted one is not the one to change.
+    if (!r.has('endAngle')) {
+      fail(`${path}.startAngle`, `must be less than the default endAngle (${endAngle}) and at most 360 before it, got ${startAngle}`);
+    }
+    const after = `greater than ${r.has('startAngle') ? '' : 'the default '}startAngle (${startAngle}) and at most 360 past it`;
     fail(`${path}.endAngle`, `must be ${after}, got ${endAngle}`);
   }
   return { startAngle, endAngle };

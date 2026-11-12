@@ -184,7 +184,8 @@ const SERIES_RULES = {
     system: 'cartesian',
     axes: 'band',
     keys: ['axis', 'data', 'stack', 'curve'],
-    read: (r: Fields, _path: string, reserve: ReservePoints) => ({ axis: readAxis(r), stack: readStack(r), curve: readCurve(r), data: readValues(r, reserve) }),
+    // Whether the spec gave the curve: the check that a stack shares one names it only then.
+    read: (r: Fields, _path: string, reserve: ReservePoints) => ({ axis: readAxis(r), stack: readStack(r), curve: readCurve(r), curveGiven: r.has('curve'), data: readValues(r, reserve) }),
   },
   rangeArea: {
     system: 'cartesian',
@@ -450,7 +451,7 @@ export interface CheckedGaugeChart extends CheckedChartBase {
 /** The track of a timeline, with its defaults filled in. */
 type CheckedTimelinePath =
   | { type: 'line' }
-  | { type: 'serpentine'; rows: number }
+  | { type: 'serpentine'; rows: number; rowsGiven: boolean }
   | { type: 'spiral'; turns: number; innerRadius: number }
   | { type: 'polyline'; points: [number, number][] };
 
@@ -567,7 +568,8 @@ const checkTrack: Check<CheckedTimelinePath> = (path, raw) => {
       return { type };
     case 'serpentine':
       r.allow(['type', 'rows']);
-      return { type, rows: r.optional('rows', integer(1, MAX_ROWS)) ?? 3 };
+      // Whether the spec gave the rows: a room error names them only then.
+      return { type, rows: r.optional('rows', integer(1, MAX_ROWS)) ?? 3, rowsGiven: r.has('rows') };
     case 'spiral':
       r.allow(['type', 'turns', 'innerRadius']);
       return { type, turns: r.optional('turns', number(1, MAX_TURNS)) ?? 3, innerRadius: r.optional('innerRadius', number(0, 0.9)) ?? 0.2 };
@@ -665,7 +667,10 @@ function checkCartesianChart(
       // Each area of a stack starts at the edge of the one below, so they must share a curve.
       const first = stacked.get(`${entry.axis}|${entry.stack}`) ?? entry;
       if (first.curve !== entry.curve) {
-        fail(`${entry.path}.curve`, `is ${entry.curve}, but ${first.path}, in the same stack, is ${first.curve}`);
+        // Name the curve the spec gave, and say which is the default.
+        const theirs = `${first.path}, in the same stack, ${first.curveGiven ? 'is' : 'has the default,'} ${first.curve}`;
+        if (!entry.curveGiven) fail(entry.path, `has the default curve, ${entry.curve}, but ${theirs}`);
+        fail(`${entry.path}.curve`, `is ${entry.curve}, but ${theirs}`);
       }
       stacked.set(`${entry.axis}|${entry.stack}`, first);
     }
@@ -818,7 +823,7 @@ function checkPolarChart(r: Fields, base: CheckedChartBase, series: SeriesOf<'po
   const axes = r.required('axes', fields);
   axes.allow(['angle', 'radius']);
   const angle = axes.required('angle', checkAngleAxis);
-  const { shapeGiven: shape, ...radiusAxis } =
+  const { givenShape: shape, ...radiusAxis } =
     axes.optional('radius', checkRadiusAxis) ?? checkRadiusAxis('axes.radius', { type: 'linear' });
   for (const entry of series) {
     const needs = SERIES_RULES[entry.type].polar;
@@ -827,10 +832,9 @@ function checkPolarChart(r: Fields, base: CheckedChartBase, series: SeriesOf<'po
       ['radius', radiusAxis],
     ] as const) {
       if (axis.type !== needs[key]) {
-        fail(
-          entry.path,
-          `is ${aSeries(entry.type)}, which needs a ${needs[key]} ${key} axis, but axes.${key} is ${axis.type}`,
-        );
+        // An axis left out is linear by default: say so rather than describe it as given.
+        const is = axes.has(key) ? `is ${axis.type}` : `is left out, which makes it ${axis.type}`;
+        fail(entry.path, `is ${aSeries(entry.type)}, which needs a ${needs[key]} ${key} axis, but axes.${key} ${is}`);
       }
     }
   }
@@ -974,10 +978,10 @@ function checkPieChart(r: Fields, base: CheckedChartBase, series: SeriesOf<'pie'
   const rings = series.map((pie, k) => {
     for (const key of ['startAngle', 'endAngle'] as const) {
       if (pie[key] !== first[key]) {
-        fail(
-          `${pie.path}.${key}`,
-          `is ${pie[key]}, but series[0].${key} is ${first[key]}: nested rings share their sweep`,
-        );
+        // Name the angle the spec gave, and say which is the default.
+        const theirs = first.sweepGiven[key] ? `${first.path}.${key} is ${first[key]}` : `${first.path} has the default, ${first[key]}`;
+        if (!pie.sweepGiven[key]) fail(pie.path, `has the default ${key}, ${pie[key]}, but ${theirs}: nested rings share their sweep`);
+        fail(`${pie.path}.${key}`, `is ${pie[key]}, but ${theirs}: nested rings share their sweep`);
       }
     }
     // Nested rings split the radius equally, the first outermost.
@@ -989,7 +993,8 @@ function checkPieChart(r: Fields, base: CheckedChartBase, series: SeriesOf<'pie'
         const limit = `must be less than the ring's default outerRadius (${outerRadius})`;
         fail(`${pie.path}.innerRadius`, `${limit}, got ${innerRadius}`);
       }
-      fail(`${pie.path}.outerRadius`, `must be greater than innerRadius (${innerRadius}), got ${outerRadius}`);
+      const inner = pie.innerRadius === undefined ? `the ring's default innerRadius` : 'innerRadius';
+      fail(`${pie.path}.outerRadius`, `must be greater than ${inner} (${innerRadius}), got ${outerRadius}`);
     }
     return { ...pie, innerRadius, outerRadius };
   });
@@ -1048,6 +1053,8 @@ function checkPieSeries(r: Fields, path: string, reserve: ReservePoints) {
     outerRadius: r.optional('outerRadius', number(MIN_OUTER, 1)),
     startAngle,
     endAngle,
+    // Which angles the spec gave: the check that nested rings share a sweep names only those.
+    sweepGiven: { startAngle: r.has('startAngle'), endAngle: r.has('endAngle') },
     padAngle: r.optional('padAngle', number(0, MAX_PAD_ANGLE)) ?? 0,
     cornerRadius: r.optional('cornerRadius', number(0, MAX_CORNER_RADIUS)) ?? 0,
   };
