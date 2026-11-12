@@ -627,6 +627,23 @@ export interface PieSeries extends SeriesBase {
   padAngle?: number | undefined;
   /** Rounds each slice's corners to this radius, in user units, from 0 to 1,000. Defaults to 0. */
   cornerRadius?: number | undefined;
+  /**
+   * Breaks one slice out into a second pie, half as wide, beside this one: a pie of pie. The pie turns
+   * so that the slice faces its parts, so it takes no `startAngle` or `endAngle`, and it must be the
+   * chart's only ring.
+   */
+  breakout?: PieBreakout | undefined;
+}
+
+/** A slice of a pie and the parts it breaks out into. */
+export interface PieBreakout {
+  /** The name of the slice to break out. */
+  slice: string;
+  /**
+   * Its parts: 1 to 1,000, adding up to the slice's value, each named apart from the pie's slices
+   * and a legend entry of its own.
+   */
+  data: readonly { name: string; value: number; color?: string | undefined }[];
 }
 
 export interface RadarSeries extends SeriesBase {

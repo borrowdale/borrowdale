@@ -125,6 +125,14 @@ type NamedSystem = { [S in System]: (typeof LEGENDS)[S] extends 'names' ? S : ne
 const listsNames = (chart: CheckedChart): chart is Extract<CheckedChart, { system: NamedSystem }> =>
   LEGENDS[chart.system] === 'names';
 
+/** What a series lists in the legend by name: its data, then the parts a pie breaks a slice out into. */
+function namedItems(entry: Extract<CheckedChart, { system: NamedSystem }>['series'][number]) {
+  const items = (data: readonly { name: string; color: string | undefined }[], path: string) =>
+    data.map((item, i) => ({ name: item.name, color: item.color, path: `${path}.data[${i}]` }));
+  const parts = 'breakout' in entry && entry.breakout ? items(entry.breakout.data, `${entry.path}.breakout`) : [];
+  return [...items(entry.data, entry.path), ...parts];
+}
+
 /**
  * One entry per name in the series' data, in the order they first appear, where the system lists
  * names, else one per series, each with its colour and hatching.
@@ -132,17 +140,12 @@ const listsNames = (chart: CheckedChart): chart is Extract<CheckedChart, { syste
 function legendEntries(chart: CheckedChart): LegendEntry[] {
   if (listsNames(chart)) {
     const first = new Map<string, { name: string; color: string | undefined; path: string; style: SketchStyle }>();
-    for (const pie of chart.series) {
-      pie.data.forEach((slice, i) => {
-        if (!first.has(slice.name)) {
-          first.set(slice.name, {
-            name: slice.name,
-            color: slice.color,
-            path: `${pie.path}.data[${i}]`,
-            style: pie.style,
-          });
+    for (const entry of chart.series) {
+      for (const item of namedItems(entry)) {
+        if (!first.has(item.name)) {
+          first.set(item.name, { ...item, style: entry.style });
         }
-      });
+      }
     }
     const slices = [...first.values()];
     return paints(slices).map((paint, i) => ({

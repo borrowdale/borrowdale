@@ -292,7 +292,7 @@ const SERIES_RULES = {
   },
   pie: {
     system: 'pie',
-    keys: ['dataLabels', 'data', 'innerRadius', 'outerRadius', 'startAngle', 'endAngle', 'padAngle', 'cornerRadius'],
+    keys: ['dataLabels', 'data', 'innerRadius', 'outerRadius', 'startAngle', 'endAngle', 'padAngle', 'cornerRadius', 'breakout'],
     read: checkPieSeries,
   },
   radar: {
@@ -998,6 +998,8 @@ function checkPieChart(r: Fields, base: CheckedChartBase, series: SeriesOf<'pie'
   if (series.length > MAX_RINGS) {
     fail('series', `of a pie chart must be 1 to ${MAX_RINGS} pie series, got ${series.length}`);
   }
+  const breaking = series.find((pie) => pie.breakout);
+  if (breaking && series.length > 1) fail(`${breaking.path}.breakout`, 'needs a pie of one ring: nested rings cannot break a slice out');
   const first = series[0]!;
   const count = series.length;
   const rings = series.map((pie, k) => {
@@ -1027,6 +1029,28 @@ function checkPieChart(r: Fields, base: CheckedChartBase, series: SeriesOf<'pie'
   return { ...base, system: 'pie', series: rings };
 }
 
+/**
+ * The slice a pie breaks out and its parts: they add up to its value, give or take rounding, and are
+ * named apart from the slices, as each is a legend entry of its own.
+ */
+function readBreakout(path: string, raw: unknown, slices: readonly { name: string; value: number }[], reserve: ReservePoints) {
+  const r = fields(path, raw);
+  r.allow(['slice', 'data']);
+  const slice = r.required('slice', text(MAX_NAME));
+  const of = slices.find((item) => item.name === slice) ?? fail(`${path}.slice`, `is ${show(slice)}, which names no slice of the pie`);
+  const data = readNamedValues(r, path, reserve, [], () => ({}));
+  data.forEach((part, i) => {
+    if (slices.some((item) => item.name === part.name)) {
+      fail(`${path}.data[${i}].name`, `is ${show(part.name)}, the name of a slice of the pie: parts are named apart from the slices`);
+    }
+  });
+  const sum = data.reduce((total, part) => total + part.value, 0);
+  if (Math.abs(sum - of.value) > 1e-9 * Math.max(1, of.value)) {
+    fail(`${path}.data`, `adds up to ${sum}, but the slice it breaks out, ${show(slice)}, is ${of.value}`);
+  }
+  return { slice, data };
+}
+
 function checkPieSeries(r: Fields, path: string, reserve: ReservePoints) {
   const data = readNamedValues(r, path, reserve, ['offset', 'radius'], (slice) => ({
     offset: slice.optional('offset', number(0, MAX_OFFSET)) ?? 0,
@@ -1042,8 +1066,13 @@ function checkPieSeries(r: Fields, path: string, reserve: ReservePoints) {
     fail(`${path}.data`, 'has no slice with both a value and a radius above 0, so there is nothing to draw');
   }
   const { startAngle, endAngle } = checkSweep(r, path);
+  const breakout = r.optional('breakout', (breakoutPath, raw) => readBreakout(breakoutPath, raw, data, reserve));
+  for (const key of breakout ? (['startAngle', 'endAngle'] as const) : []) {
+    if (r.has(key)) fail(`${path}.${key}`, 'must be left out with breakout: the pie turns so that the slice it breaks out faces its parts');
+  }
   return {
     data,
+    breakout,
     innerRadius: r.optional('innerRadius', number(0, MAX_HOLE)),
     outerRadius: r.optional('outerRadius', number(MIN_OUTER, 1)),
     startAngle,

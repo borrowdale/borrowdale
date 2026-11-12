@@ -26,6 +26,7 @@ export type {
   GaugeAxis,
   GaugeBand,
   GaugeSeries,
+  PieBreakout,
   HeatmapSeries,
   HorizonSeries,
   LayoutChartOptions,
