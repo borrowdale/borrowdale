@@ -1,3 +1,4 @@
+import { escaped } from '@borrowdale/core/internal';
 import { log } from '@borrowdale/core/math';
 import type { CheckedFormat, CheckedLinearAxis, CheckedTick } from './check-axis.js';
 import { decimalsOf, writesExactly } from './decimals.js';
@@ -584,7 +585,8 @@ export function checkWritten(at: number, path: string, axis: CheckedLinearAxis):
   const { decimals } = axis.format;
   if (writesExactly(at, decimalsFor(at, axis.format))) return;
   if (decimals === undefined) fail(path, `must have at most ${MAX_DECIMALS} decimals, got ${at}`);
-  fail(path, `is ${at}, which ${axis.path}.format.decimals ${decimals} writes as ${formatAxisValue(at, axis)}: give a value it writes exactly, or more decimals`);
+  // The format's prefix, suffix and separators are the caller's text, escaped as every message's is.
+  fail(path, `is ${at}, which ${axis.path}.format.decimals ${decimals} writes as ${escaped(formatAxisValue(at, axis))}: give a value it writes exactly, or more decimals`);
 }
 
 /**
