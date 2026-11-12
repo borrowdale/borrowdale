@@ -17,4 +17,8 @@ describe('data rows of the proportion charts', () => {
 
     expect(dataRows(chart([pie]))).toEqual([['Sales', 'Europe', '3'], ['Sales', 'Asia', '1'], ['Sales', 'France', '2'], ['Sales', 'Other', '1']]);
   });
+
+  it('give a liquid fill its level as a percentage', () => {
+    expect(dataRows(chart([{ type: 'liquid', name: 'Tank', value: 0.456 }]))).toEqual([['Tank', '', '45.6%']]);
+  });
 });

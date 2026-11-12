@@ -50,6 +50,8 @@ function seriesRows(series: ChartSpec['series'][number], categories: readonly st
   switch (series.type) {
     case 'gauge':
       return [[series.name, '', format(series.value)]];
+    case 'liquid':
+      return [[series.name, '', `${format(series.value * 100)}%`]];
     case 'histogram':
       return histogramRows(series, format);
     case 'distribution':

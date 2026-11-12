@@ -3,6 +3,7 @@ import type { Font, TextLayout } from '@borrowdale/text';
 import type { DistributionSeries, HistogramSeries, MarketSeries, RelationshipSeries } from './statistics/types.js';
 import type { UnitsSeries } from './units-series.js';
 import type { FunnelSeries } from './funnel-series.js';
+import type { LiquidSeries } from './liquid-series.js';
 
 /**
  * A chart, as plain data that can come from JSON. Its series' type picks its coordinate system, and
@@ -849,7 +850,8 @@ export type Series =
   | PolarScatterSeries
   | GaugeSeries
   | UnitsSeries
-  | FunnelSeries;
+  | FunnelSeries
+  | LiquidSeries;
 
 export type SeriesType = Series['type'];
 

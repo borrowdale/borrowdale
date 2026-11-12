@@ -63,6 +63,7 @@ import { checkNameColors, readNamedValues } from './named-values.js';
 import { checkMarker } from './symbols.js';
 import { checkUnitsChart, readUnits, UNITS_DISPLAYS, type CheckedUnitsChart } from './units-series.js';
 import { checkFunnelChart, FUNNEL_DISPLAYS, readFunnel, type CheckedFunnelChart } from './funnel-series.js';
+import { checkLiquidChart, readLiquid, type CheckedLiquidChart } from './liquid-series.js';
 import type { ColorScale } from './color-scale.js';
 import {
   CURVES,
@@ -88,7 +89,7 @@ const MIN_NEEDLE = 0.1;
 const DEFAULT_NEEDLE = 0.8;
 const MAX_BANDS = 100;
 
-export type System = 'cartesian' | 'polar' | 'pie' | 'gauge' | 'timeline' | 'calendar' | 'units' | 'funnel';
+export type System = 'cartesian' | 'polar' | 'pie' | 'gauge' | 'timeline' | 'calendar' | 'units' | 'funnel' | 'liquid';
 
 type ReservePoints = (count: number) => void;
 const categoryValues = (reserve: ReservePoints) =>
@@ -364,6 +365,7 @@ const SERIES_RULES = {
   },
   units: { system: 'units', keys: displayKeys(UNITS_DISPLAYS), read: readUnits },
   funnel: { system: 'funnel', keys: displayKeys(FUNNEL_DISPLAYS), read: readFunnel },
+  liquid: { system: 'liquid', keys: ['value', 'shape', 'waves'], read: readLiquid },
 } as const satisfies Record<SeriesType, Rule>;
 
 type Rules = typeof SERIES_RULES;
@@ -482,7 +484,8 @@ export type CheckedChart =
   | CheckedTimelineChart
   | CheckedCalendarChart
   | CheckedUnitsChart
-  | CheckedFunnelChart;
+  | CheckedFunnelChart
+  | CheckedLiquidChart;
 
 /**
  * Throws a named error, starting "Invalid chart:" and naming the place in the spec, for anything that
@@ -540,6 +543,8 @@ function checkSystem(r: Fields, base: CheckedChartBase, series: CheckedSeries[],
       return checkUnitsChart(r, base, seriesOf(series, 'units'));
     case 'funnel':
       return checkFunnelChart(r, base, seriesOf(series, 'funnel'));
+    case 'liquid':
+      return checkLiquidChart(r, base, seriesOf(series, 'liquid'));
   }
 }
 

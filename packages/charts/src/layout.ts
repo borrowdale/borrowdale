@@ -10,6 +10,7 @@ import { EMPTY_CELL, NO_VALUE } from './marks.js';
 import { layoutGauge } from './gauge.js';
 import { layoutUnits } from './units.js';
 import { layoutFunnel } from './funnel.js';
+import { layoutLiquid } from './liquid.js';
 import { layoutPie } from './pie.js';
 import { layoutPolar, polarLegendOf } from './polar.js';
 import { fail } from './read.js';
@@ -91,6 +92,9 @@ export function layoutChart(spec: ChartSpec, options: LayoutChartOptions = {}): 
     case 'funnel':
       layoutFunnel(drawing, chart, rect, new Map(entries.map((entry) => [entry.name, entry.paint])));
       break;
+    case 'liquid':
+      layoutLiquid(drawing, chart, rect, entryPaints);
+      break;
     default:
       unknownSystem(chart);
   }
@@ -118,6 +122,7 @@ const LEGENDS = {
   calendar: 'series',
   units: 'names',
   funnel: 'names',
+  liquid: 'series',
 } as const satisfies Record<System, 'names' | 'series'>;
 
 type NamedSystem = { [S in System]: (typeof LEGENDS)[S] extends 'names' ? S : never }[System];
