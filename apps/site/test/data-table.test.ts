@@ -22,3 +22,30 @@ describe('data rows of the proportion charts', () => {
     expect(dataRows(chart([{ type: 'liquid', name: 'Tank', value: 0.456 }]))).toEqual([['Tank', '', '45.6%']]);
   });
 });
+
+// Rows that hold events, ranges, dates or categories rather than numbers write them as they are.
+describe('data rows of events, ranges, cells and dates', () => {
+  it('list each event of a timeline by its label, else its number, with its extent', () => {
+    const plan = { type: 'timeline', name: 'Plan', data: [{ from: '2026-01-01', to: '2026-02-01', label: 'Build' }, { from: 3 }] };
+
+    expect(dataRows(chart([plan]))).toEqual([['Plan', 'Build', '2026-01-01 – 2026-02-01'], ['Plan', '2', '3']]);
+  });
+
+  it('list each item of an x-range in its row, with its extent', () => {
+    const tasks = { type: 'xRange', name: 'Tasks', data: [{ row: 'Design', from: 1, to: 2.5 }, { row: 'Launch', from: 4 }] };
+
+    expect(dataRows(chart([tasks]))).toEqual([['Tasks', 'Design', '1 – 2.5'], ['Tasks', 'Launch', '4']]);
+  });
+
+  it('list each cell of a heatmap by its place, a stretch written as its ends', () => {
+    const cells = { type: 'heatmap', name: 'Load', data: [['Mon', 'AM', 3], [[0, 10], 'PM', null]] };
+
+    expect(dataRows(chart([cells]))).toEqual([['Load', 'Mon, AM', '3'], ['Load', '0 – 10, PM', 'No data']]);
+  });
+
+  it('write the date of a calendar day as given', () => {
+    const steps = { type: 'calendar', name: 'Steps', data: [['2026-01-05', 4200]] };
+
+    expect(dataRows(chart([steps]))).toEqual([['Steps', '1', '2026-01-05 · 4,200']]);
+  });
+});
