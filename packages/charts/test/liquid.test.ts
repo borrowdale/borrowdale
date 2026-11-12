@@ -24,10 +24,10 @@ function layingOut(spec: ChartSpec) {
 }
 
 describe('liquid fills', () => {
-  it('fill a rect to its level, the surface a wave about it', () => {
+  it('fill a rectangle to its level, the surface a wave about it', () => {
     // Half full: level 100. The surface rises 0.02 * 184 = 3.68, at its height a quarter wave in,
     // 284 / 8 = 35.5 along.
-    const outline = surface(liquid(0.5, { shape: 'rect' }));
+    const outline = surface(liquid(0.5, { shape: 'rectangle' }));
 
     expect(outline.startsWith('M8 100 ')).toBe(true);
     expect(outline).toContain(' L43.5 103.68 ');
@@ -64,10 +64,10 @@ describe('liquid fills', () => {
       .toThrow('series[0].value does not fit even cut short: there are 4 units for it');
   });
 
-  it('take a level from 0 to 1, 1 to 5 waves, and a circle or a rect', () => {
+  it('take a level from 0 to 1, 1 to 5 waves, and a circle or a rectangle', () => {
     expect(layingOut(liquid(1.2))).toThrow('series[0].value must be a number from 0 to 1, got 1.2');
     expect(layingOut(liquid(0.5, { waves: 6 }))).toThrow('series[0].waves must be');
-    expect(layingOut(liquid(0.5, { shape: 'star' }))).toThrow('series[0].shape must be one of circle, rect, got "star"');
+    expect(layingOut(liquid(0.5, { shape: 'star' }))).toThrow('series[0].shape must be one of circle, rectangle, got "star"');
   });
 
   it('are one series, with no axes', () => {

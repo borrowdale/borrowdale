@@ -14317,7 +14317,7 @@
      "type": "funnel",
      "name": "Sales",
      "display": "funnel",
-     "horizontal": true,
+     "orientation": "horizontal",
      "data": [
       {
        "name": "Visits",
@@ -14474,7 +14474,7 @@
      "type": "funnel",
      "name": "Bottle",
      "display": "pictorialStacked",
-     "path": "M40 0 L60 0 L60 30 C80 40 90 60 90 80 L90 190 C90 196 86 200 80 200 L20 200 C14 200 10 196 10 190 L10 80 C10 60 20 40 40 30 Z",
+     "silhouette": "M40 0 L60 0 L60 30 C80 40 90 60 90 80 L90 190 C90 196 86 200 80 200 L20 200 C14 200 10 196 10 190 L10 80 C10 60 20 40 40 30 Z",
      "data": [
       {
        "name": "Air",
@@ -14568,7 +14568,7 @@
      "type": "liquid",
      "name": "Tank",
      "value": 0.38,
-     "shape": "rect",
+     "shape": "rectangle",
      "waves": 3
     }
    ]

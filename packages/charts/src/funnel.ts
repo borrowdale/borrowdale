@@ -29,7 +29,7 @@ const FOOT = 1 / 3;
 export function layoutFunnel(drawing: Drawing, chart: CheckedFunnelChart, rect: Rect, paintOf: ReadonlyMap<string, Paint>): void {
   assertRoom(rect, chart.width, chart.height);
   const [first, second] = chart.series as [Funnel, Funnel | undefined];
-  const horizontal = first.horizontal;
+  const horizontal = first.orientation === 'horizontal';
   // Funnels back to back are named at their start: above them, or to their left when horizontal.
   const named = second ? nameHalves(drawing, [first, second], rect, horizontal) : 0;
   assertRoom(horizontal ? { ...rect, left: rect.left + named } : { ...rect, top: rect.top + named }, chart.width, chart.height);
@@ -172,9 +172,10 @@ function smooth(from: number, to: number, [a0, b0]: [number, number], [a1, b1]: 
 function drawSilhouette(drawing: Drawing, entry: Funnel, rect: Rect, paintOf: ReadonlyMap<string, Paint>): void {
   const fitted = drawing.fitPath(entry.silhouette!, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top);
   const { box } = fitted;
-  const length = entry.horizontal ? box.width : box.height;
+  const horizontal = entry.orientation === 'horizontal';
+  const length = horizontal ? box.width : box.height;
   drawStages(drawing, entry, edges(entry, length, (share) => share), rect, paintOf, '', ({ from, to }, paint) => {
-    const band = entry.horizontal
+    const band = horizontal
       ? { x: box.x + from, y: box.y, width: to - from, height: box.height }
       : { x: box.x, y: box.y + from, width: box.width, height: to - from };
     return {

@@ -19,26 +19,26 @@ interface FunnelOptions {
    * default), `bar` keeps each stage straight, and `smooth` curves between them.
    */
   shape?: 'trapezoid' | 'bar' | 'smooth' | undefined;
-  /** Runs the stages from left to right instead of from top to bottom. */
-  horizontal?: boolean | undefined;
+  /** Which way the stages run: `vertical`, from top to bottom (the default), or `horizontal`, from left to right. */
+  orientation?: 'vertical' | 'horizontal' | undefined;
   /** Writes each stage's name and value on it. Labels can overlap on thin stages. */
   dataLabels?: boolean | undefined;
   /**
    * The silhouette a `pictorialStacked` series fills, as SVG path data of at most 10,000 characters.
    * It is scaled to fit the chart, keeping its proportions.
    */
-  path?: string | undefined;
+  silhouette?: string | undefined;
 }
 
 /** The options each display takes. */
 export const FUNNEL_DISPLAYS = {
-  funnel: ['shape', 'horizontal', 'dataLabels'],
-  pyramid: ['horizontal', 'dataLabels'],
-  funnelArea: ['horizontal', 'dataLabels'],
-  pictorialStacked: ['path', 'horizontal', 'dataLabels'],
+  funnel: ['shape', 'orientation', 'dataLabels'],
+  pyramid: ['orientation', 'dataLabels'],
+  funnelArea: ['orientation', 'dataLabels'],
+  pictorialStacked: ['silhouette', 'orientation', 'dataLabels'],
 } as const satisfies Record<string, readonly (keyof FunnelOptions)[]>;
 
-export interface FunnelDatum {
+export interface FunnelStage {
   /** At most 100 characters, unique in the series: the stage's legend entry. */
   name: string;
   /** 0 to 1e15. */
@@ -53,7 +53,7 @@ export interface FunnelDatum {
  * its foot; or `pictorialStacked`, the bands of a silhouette, each as deep as its value. Two funnel
  * displays with the same stages stand back to back.
  */
-export type FunnelSeries = SeriesBase & { type: 'funnel'; data: readonly FunnelDatum[] } & Choices<
+export type FunnelSeries = SeriesBase & { type: 'funnel'; data: readonly FunnelStage[] } & Choices<
     'display',
     FunnelOptions,
     typeof FUNNEL_DISPLAYS
@@ -67,17 +67,17 @@ export interface CheckedFunnelChart extends CheckedChartBase {
 export function readFunnel(r: Fields, path: string, reserve: (count: number) => void) {
   const display = readDisplay(r, FUNNEL_DISPLAYS);
   const data = readNamedValues(r, path, reserve, [], () => ({}));
-  const silhouette = display === 'pictorialStacked' ? r.required('path', shortText(MAX_PATH)) : undefined;
+  const silhouette = display === 'pictorialStacked' ? r.required('silhouette', shortText(MAX_PATH)) : undefined;
   if (silhouette !== undefined) {
-    probe(`${path}.path`, () => fitPath(silhouette, { x: 0, y: 0, width: 1, height: 1 }, new Budget(PATH_WORK)));
+    probe(`${path}.silhouette`, () => fitPath(silhouette, { x: 0, y: 0, width: 1, height: 1 }, new Budget(PATH_WORK)));
   }
   return {
     display,
     data,
     shape: r.optional('shape', oneOf(['trapezoid', 'bar', 'smooth'] as const)) ?? 'trapezoid',
-    horizontal: r.optional('horizontal', boolean) ?? false,
+    orientation: r.optional('orientation', oneOf(['vertical', 'horizontal'] as const)) ?? 'vertical',
     // Whether the spec gave it: the check that funnels back to back run alike names only one given.
-    horizontalGiven: r.has('horizontal'),
+    orientationGiven: r.has('orientation'),
     dataLabels: r.optional('dataLabels', boolean) ?? false,
     silhouette,
   };
@@ -93,10 +93,10 @@ export function checkFunnelChart(r: Fields, base: CheckedChartBase, series: Seri
     for (const entry of series) {
       if (entry.display !== 'funnel') fail(`${entry.path}.display`, `is ${entry.display}, but only funnel displays stand back to back`);
     }
-    if (second.horizontal !== first.horizontal) {
-      const [given, other] = second.horizontalGiven ? [second, first] : [first, second];
-      const theirs = other.horizontalGiven ? `${other.path}.horizontal is ${other.horizontal}` : `${other.path} has the default, ${other.horizontal}`;
-      fail(`${given.path}.horizontal`, `is ${given.horizontal}, but ${theirs}: funnels back to back run the same way`);
+    if (second.orientation !== first.orientation) {
+      const [given, other] = second.orientationGiven ? [second, first] : [first, second];
+      const theirs = other.orientationGiven ? `${other.path}.orientation is ${other.orientation}` : `${other.path} has the default, ${other.orientation}`;
+      fail(`${given.path}.orientation`, `is ${given.orientation}, but ${theirs}: funnels back to back run the same way`);
     }
     if (second.data.length !== first.data.length) {
       fail(`${second.path}.data`, `has ${second.data.length} stages, but ${first.path}.data has ${first.data.length}: funnels back to back share their stages`);

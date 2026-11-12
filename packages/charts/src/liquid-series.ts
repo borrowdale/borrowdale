@@ -8,11 +8,14 @@ export interface LiquidSeries extends SeriesBase {
   type: 'liquid';
   /** The level, from 0 (empty) to 1 (full). */
   value: number;
-  /** The container: a `circle` (the default), or a `rect` filling the chart. */
-  shape?: 'circle' | 'rect' | undefined;
+  /** The container: a `circle` (the default), or a `rectangle` filling the chart. */
+  shape?: 'circle' | 'rectangle' | undefined;
   /** Wave crests across the container, 1 to 5. Defaults to 2. */
   waves?: number | undefined;
 }
+
+/** The most wave crests across a container. */
+export const MAX_WAVES = 5;
 
 export interface CheckedLiquidChart extends CheckedChartBase {
   system: 'liquid';
@@ -22,8 +25,8 @@ export interface CheckedLiquidChart extends CheckedChartBase {
 export function readLiquid(r: Fields) {
   return {
     value: r.required('value', number(0, 1)),
-    shape: r.optional('shape', oneOf(['circle', 'rect'] as const)) ?? 'circle',
-    waves: r.optional('waves', integer(1, 5)) ?? 2,
+    shape: r.optional('shape', oneOf(['circle', 'rectangle'] as const)) ?? 'circle',
+    waves: r.optional('waves', integer(1, MAX_WAVES)) ?? 2,
   };
 }
 

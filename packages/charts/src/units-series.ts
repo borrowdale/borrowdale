@@ -46,7 +46,7 @@ export const UNITS_DISPLAYS = {
   ring: ['units', 'startAngle', 'endAngle', 'innerRadius', 'padAngle'],
 } as const satisfies Record<string, readonly (keyof UnitsOptions)[]>;
 
-export interface UnitsDatum {
+export interface UnitsCategory {
   /** At most 100 characters, unique in the series: the category's legend entry. */
   name: string;
   /** 0 to 1e15: a whole number of units, or a share of the series' `units`. */
@@ -64,7 +64,7 @@ export interface UnitsDatum {
  * seats of a `parliament` on rows of arcs, `rows` of pictograms, one category to a row, or a `ring` of
  * segments, as a segmented doughnut is.
  */
-export type UnitsSeries = SeriesBase & { type: 'units'; data: readonly UnitsDatum[] } & Choices<
+export type UnitsSeries = SeriesBase & { type: 'units'; data: readonly UnitsCategory[] } & Choices<
     'display',
     UnitsOptions,
     typeof UNITS_DISPLAYS

@@ -85,7 +85,7 @@ default branch:
 | `timeline` | `{ from, to?, label? }` moments and periods | `dataLabels`; see [timelines](#timelines) |
 | `units` | `{ name, value, color?, symbol? }` categories | `display`: `waffle`, `parliament`, `rows` or `ring`; see [unit charts](#unit-charts) |
 | `funnel` | `{ name, value, color? }` stages, in order | `display`: `funnel`, `pyramid`, `funnelArea` or `pictorialStacked`; see [funnels](#funnels) |
-| `liquid` | `value`, a level from 0 to 1 | `shape`: `circle` (default) or `rect`; `waves`; see [liquid fills](#liquid-fills) |
+| `liquid` | `value`, a level from 0 to 1 | `shape`: `circle` (default) or `rectangle`; `waves`; see [liquid fills](#liquid-fills) |
 
 A slice's `offset` (0 to 0.5 of the radius) pulls it out from the centre. Give every slice of a pie
 a `radius`, or none: each slice then reaches out in proportion to it, the largest to the full
@@ -502,7 +502,8 @@ small to draw each unit at least 1 unit wide is an error, as one too small for i
 
 ### Funnels
 
-A `funnel` series draws its stages in order, from the top, or from the left when `horizontal`.
+A `funnel` series draws its stages in order, from the top, or from the left with
+`orientation: 'horizontal'`.
 `display` picks the drawing:
 
 - `funnel`: stages of equal depth, each as wide as its share of the largest stage. `shape` slopes each
@@ -510,7 +511,7 @@ A `funnel` series draws its stages in order, from the top, or from the left when
   straight (`bar`), or curves between them (`smooth`).
 - `pyramid`: from an apex, each stage's area in proportion to its value.
 - `funnelArea`: the same in a trapezoid a third as wide at its foot, as Plotly's `funnelarea` is.
-- `pictorialStacked`: a silhouette, `path`, SVG path data of at most 10,000 characters, scaled to fit
+- `pictorialStacked`: a `silhouette`, SVG path data of at most 10,000 characters, scaled to fit
   and keeping its proportions, cut into bands each as deep as its value.
 
 Two `funnel` displays with the same stages, in the same order and running the same way, stand back to
@@ -520,7 +521,7 @@ value on it, and each stage's tooltip gives its share of the total.
 ### Liquid fills
 
 A `liquid` series shows one `value`, from 0 (empty) to 1 (full), as liquid in a `shape`: a `circle`
-(the default), or a `rect` filling the chart. Its surface is a wave of `waves` crests, 1 to 5
+(the default), or a `rectangle` filling the chart. Its surface is a wave of `waves` crests, 1 to 5
 (default 2), and an empty or full container's is flat. The level is written in the middle as a whole
 percentage, kept inside the chart as a data label is: a chart too small for it is an error.
 

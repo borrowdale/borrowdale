@@ -8,7 +8,7 @@ import { hatched, type Paint } from './palette.js';
 import { formatNumber, PLAIN_FORMAT } from './scale.js';
 import type { CheckedLiquidChart } from './liquid-series.js';
 
-/** Points along the surface: a whole number of them to every quarter wave, for 1 to 5 waves. */
+/** Points along the surface: a whole number of them to every quarter wave, for 1 to `MAX_WAVES` waves. */
 const SAMPLES = 240;
 /** How far the surface rises and falls, as a share of the container's smaller side. */
 const AMPLITUDE = 0.02;

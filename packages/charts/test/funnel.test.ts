@@ -47,7 +47,7 @@ describe('funnels', () => {
 
   it('run left to right when horizontal', () => {
     // Half heights of 92 and 46 around y 100.
-    expect(outlines(funnel('funnel', two, { horizontal: true }))[0]).toBe('M8 8 L8 192 L150 146 L150 54');
+    expect(outlines(funnel('funnel', two, { orientation: 'horizontal' }))[0]).toBe('M8 8 L8 192 L150 146 L150 54');
   });
 
   it('give the stages of a pyramid areas in proportion to their values', () => {
@@ -65,7 +65,7 @@ describe('funnels', () => {
 
   it('cut a silhouette into bands as deep as their values, the first at the top', () => {
     // A 10 by 20 rectangle scaled by 9.2 is 92 by 184, centred at x 104.
-    expect(bands(funnel('pictorialStacked', [{ name: 'A', value: 1 }, { name: 'B', value: 3 }], { path: bottle })))
+    expect(bands(funnel('pictorialStacked', [{ name: 'A', value: 1 }, { name: 'B', value: 3 }], { silhouette: bottle })))
       .toEqual([{ x: 104, y: 8, width: 92, height: 46 }, { x: 104, y: 54, width: 92, height: 138 }]);
   });
 
@@ -85,10 +85,10 @@ describe('funnels', () => {
       .toThrow('series[1].data[1].name is "C", but series[0].data[1].name is "B": funnels back to back share their stages, in order');
     expect(layingOut(pair({}, { data: [two[0]] })))
       .toThrow('series[1].data has 1 stages, but series[0].data has 2: funnels back to back share their stages');
-    expect(layingOut(pair({}, { horizontal: true })))
-      .toThrow('series[1].horizontal is true, but series[0] has the default, false: funnels back to back run the same way');
-    expect(layingOut(pair({ horizontal: true }, {})))
-      .toThrow('series[0].horizontal is true, but series[1] has the default, false: funnels back to back run the same way');
+    expect(layingOut(pair({}, { orientation: 'horizontal' })))
+      .toThrow('series[1].orientation is horizontal, but series[0] has the default, vertical: funnels back to back run the same way');
+    expect(layingOut(pair({ orientation: 'horizontal' }, {})))
+      .toThrow('series[0].orientation is horizontal, but series[1] has the default, vertical: funnels back to back run the same way');
     expect(layingOut(pair({}, { display: 'pyramid' })))
       .toThrow('series[1].display is pyramid, but only funnel displays stand back to back');
   });
@@ -115,11 +115,11 @@ describe('funnels', () => {
   });
 
   it('need a silhouette that draws, for a pictorial stack only', () => {
-    expect(layingOut(funnel('pictorialStacked', two))).toThrow('series[0].path is missing');
-    expect(layingOut(funnel('pictorialStacked', two, { path: 'M0 0 L10 0' })))
-      .toThrow('series[0].path is not valid: Invalid shape: path.d needs a width and a height to fit a box');
-    expect(layingOut(funnel('pictorialStacked', two, { path: `M0 0 L${'1'.repeat(10_001)}` })))
-      .toThrow('series[0].path must be a string of at most 10000 characters');
-    expect(layingOut(funnel('funnel', two, { path: bottle }))).toThrow('series[0] has an unknown key, "path"');
+    expect(layingOut(funnel('pictorialStacked', two))).toThrow('series[0].silhouette is missing');
+    expect(layingOut(funnel('pictorialStacked', two, { silhouette: 'M0 0 L10 0' })))
+      .toThrow('series[0].silhouette is not valid: Invalid shape: path.d needs a width and a height to fit a box');
+    expect(layingOut(funnel('pictorialStacked', two, { silhouette: `M0 0 L${'1'.repeat(10_001)}` })))
+      .toThrow('series[0].silhouette must be a string of at most 10000 characters');
+    expect(layingOut(funnel('funnel', two, { silhouette: bottle }))).toThrow('series[0] has an unknown key, "silhouette"');
   });
 });
