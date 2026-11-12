@@ -28,17 +28,14 @@ export function layoutLiquid(drawing: Drawing, chart: CheckedLiquidChart, rect: 
   const rise = liquid.value > 0 && liquid.value < 1 ? AMPLITUDE * Math.min(width, height) : 0;
   const xs = Array.from({ length: SAMPLES + 1 }, (_, i) => box.left + (i * width) / SAMPLES);
   const surface = (x: number) => level + rise * sin((2 * Math.PI * liquid.waves * (x - box.left)) / width);
-  // A circle's edge above and below x: the liquid lies between the higher of its surface and the
-  // circle's top, and the circle's foot.
-  const edge = (x: number): [number, number] => {
-    const half = circle ? Math.sqrt(Math.max(0, radius * radius - (x - cx) * (x - cx))) : height / 2;
-    return [cy - half, cy + half];
-  };
-  const tops: Point[] = xs.map((x) => {
-    const [top, foot] = circle ? edge(x) : [box.top, box.bottom];
-    return [x, Math.min(Math.max(surface(x), top), foot)];
+  // The container's top and foot at x: a circle's edge, or the rect's. The liquid lies between the
+  // higher of its surface and the container's top, and the container's foot.
+  const rims = xs.map((x): [number, number, number] => {
+    const half = Math.sqrt(Math.max(0, radius * radius - (x - cx) * (x - cx)));
+    return circle ? [x, cy - half, cy + half] : [x, box.top, box.bottom];
   });
-  const feet: Point[] = xs.map((x): Point => [x, circle ? edge(x)[1] : box.bottom]).reverse();
+  const tops = rims.map(([x, top, foot]): Point => [x, Math.min(Math.max(surface(x), top), foot)]);
+  const feet = rims.map(([x, , foot]): Point => [x, foot]).reverse();
   const container: Shape = circle
     ? { kind: 'circle', cx, cy, diameter: 2 * radius }
     : { kind: 'rectangle', x: box.left, y: box.top, width, height };
