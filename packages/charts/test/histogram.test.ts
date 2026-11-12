@@ -15,6 +15,8 @@ const exactEdges: ChartSpec = { ...roundedEdges, axes: { x: { type: 'linear', fo
 const tinyEdges = chart({ ...samples, edges: [-3e-21, 3e-21, 1], data: [0] });
 // Whole numbers write the first edge, 0, as it is, and the second, 0.5, as 1.
 const laterRoundedEdge: ChartSpec = { ...roundedEdges, series: [{ ...samples, edges: [0, 0.5, 1], data: [0.2, 0.7] }] };
+// A suffix holding a bidirectional override, which the error must write as its escape.
+const overriddenSuffix: ChartSpec = { ...chart({ ...samples, edges: [0.25, 1], data: [0.5] }), axes: { x: { type: 'linear', format: { decimals: 1, suffix: '\u202e' } }, y: { type: 'linear' } } };
 const laying = (spec: ChartSpec) => () => layoutChart(spec);
 
 describe('histogram', () => {
@@ -51,6 +53,7 @@ describe('histogram', () => {
     ['an edge a fixed number of decimals rounds', roundedEdges, 'Invalid chart: series[0].edges[0] is -0.4, which axes.x.format.decimals 0 writes as 0'],
     ['edges with more decimals than a label writes', tinyEdges, 'Invalid chart: series[0].edges[0] must have at most 20 decimals, got -3e-21'],
     ['a later edge a fixed number of decimals rounds', laterRoundedEdge, 'Invalid chart: series[0].edges[1] is 0.5, which axes.x.format.decimals 0 writes as 1'],
+    ['an edge whose format\'s suffix holds a bidirectional override', overriddenSuffix, 'Invalid chart: series[0].edges[0] is 0.25, which axes.x.format.decimals 1 writes as 0.3\\u202e: give a value it writes exactly, or more decimals'],
   ])('rejects %s', (_case, spec, message) => {
     expect(laying(spec)).toThrow(message);
   });
