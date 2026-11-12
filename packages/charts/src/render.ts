@@ -1,4 +1,4 @@
-import { appendResources, resourceSvg, svgResources, type SvgResources } from './svg-resources.js';
+import { appendResources, clipAttributes, resourceSvg, svgResources, type SvgResources } from './svg-resources.js';
 import { paintedSketch } from './gradients.js';
 import { appendSketch, drawSketch, escapeAttribute, svgElement, toSvgSketch } from '@borrowdale/core';
 import { ownOptions } from '@borrowdale/core/internal';
@@ -63,7 +63,7 @@ function nodeToSvg(node: ChartNode, resources: SvgResources): string {
       return svgElement('g', {}, `${title}${node.nodes.map((child) => nodeToSvg(child, resources)).join('')}`);
     }
     case 'clip':
-      return svgElement('g', { 'clip-path': `url(#${resources.clips.get(node)!})` },
+      return svgElement('g', clipAttributes(node, resources),
         node.nodes.map((child) => nodeToSvg(child, resources)).join(''));
     default:
       return unknownNode(node);
@@ -120,7 +120,7 @@ function appendNodes(parent: Element, nodes: readonly ChartNode[], resources: Sv
       }
       case 'clip': {
         const group = parent.ownerDocument.createElementNS(SVG_NS, 'g');
-        group.setAttribute('clip-path', `url(#${resources.clips.get(node)!})`);
+        for (const [key, value] of Object.entries(clipAttributes(node, resources))) group.setAttribute(key, value);
         appendNodes(group, node.nodes, resources);
         parent.appendChild(group);
         break;

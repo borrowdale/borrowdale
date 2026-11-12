@@ -1,5 +1,5 @@
 import { svgElement } from '@borrowdale/core';
-import { gradientAttributes, gradientIds, gradientSvg } from './gradients.js';
+import { gradientAttributes, gradientKey, gradientSvg, type GradientNode } from './gradients.js';
 import type { ChartImage, ChartRenderOptions } from './images.js';
 import { eachNode } from './nodes.js';
 import type { ChartNode } from './types.js';
@@ -15,22 +15,28 @@ const automaticIndex = (prefix: string) => /^chart(?:-(0|[1-9]\d*))?$/.test(pref
   ? BigInt(prefix === 'chart' ? 0 : prefix.slice(6)) : undefined;
 
 export interface SvgResources {
-  gradients: ReturnType<typeof gradientIds>;
+  gradients: Map<GradientNode, string>;
   images: Map<string, string>;
   clips: Map<ClipNode, string>;
 }
 
-/** Clips with the same box cut alike, so they share one id. */
-function clipIds(nodes: readonly ChartNode[], prefix: string): Map<ClipNode, string> {
-  const ids = new Map<ClipNode, string>();
-  const byBox = new Map<string, string>();
+/** Clips with the same box cut alike, so they share one definition. */
+const clipKey = ({ box }: ClipNode): string => JSON.stringify([box.x, box.y, box.width, box.height]);
+
+/**
+ * The nodes `is` picks, in painting order, each with an index it shares with the nodes of the same
+ * `key`: one definition serves them all.
+ */
+function sharedIndexes<N extends ChartNode>(nodes: readonly ChartNode[], is: (node: ChartNode) => node is N, key: (node: N) => string): Map<N, number> {
+  const indexes = new Map<N, number>();
+  const byKey = new Map<string, number>();
   eachNode(nodes, (node) => {
-    if (node.kind !== 'clip' || ids.has(node)) return;
-    const box = JSON.stringify([node.box.x, node.box.y, node.box.width, node.box.height]);
-    if (!byBox.has(box)) byBox.set(box, `${prefix}-clip-${byBox.size}`);
-    ids.set(node, byBox.get(box)!);
+    if (!is(node) || indexes.has(node)) return;
+    const index = byKey.get(key(node)) ?? byKey.size;
+    byKey.set(key(node), index);
+    indexes.set(node, index);
   });
-  return ids;
+  return indexes;
 }
 
 export function svgResources(
@@ -38,6 +44,12 @@ export function svgResources(
 ): SvgResources {
   // Read once: the loop below must not see a prefix that changes between passes.
   const { idPrefix } = options;
+  if (idPrefix !== undefined && !/^[A-Za-z][A-Za-z0-9_-]{0,99}$/.test(idPrefix)) {
+    throw new Error('Chart idPrefix must be 1 to 100 letters, digits, underscores or hyphens, starting with a letter');
+  }
+  // Which nodes share a definition does not depend on the prefix, so it is found once.
+  const gradients = sharedIndexes(nodes, (node): node is GradientNode => node.kind === 'gradient', gradientKey);
+  const clips = sharedIndexes(nodes, (node): node is ClipNode => node.kind === 'clip', clipKey);
   const automatic = parent !== undefined && idPrefix === undefined;
   let index = automatic ? nextPrefix : 0n;
   const root = parent?.getRootNode();
@@ -46,8 +58,10 @@ export function svgResources(
     || (root && 'querySelector' in root && (root as ParentNode).querySelector(`[id="${id}"]`));
   for (;;) {
     const prefix = idPrefix ?? (index === 0n ? 'chart' : `chart-${index}`);
-    const result = { gradients: gradientIds(nodes, prefix),
-      images: new Map([...images.keys()].map((name, i) => [name, `${prefix}-image-${i}`])), clips: clipIds(nodes, prefix) };
+    const named = <N>(indexes: ReadonlyMap<N, number>, family: string) =>
+      new Map([...indexes].map(([node, i]) => [node, `${prefix}-${family}-${i}`]));
+    const result = { gradients: named(gradients, 'gradient'),
+      images: new Map([...images.keys()].map((name, i) => [name, `${prefix}-image-${i}`])), clips: named(clips, 'clip') };
     const ids = [...result.gradients.values(), ...result.images.values(), ...result.clips.values()];
     if (!automatic || ids.length === 0 || (!reservedPrefixes.has(prefix) && ids.every((id) => !occupied(id)))) {
       if (parent && ids.length > 0) {
@@ -67,16 +81,20 @@ export function svgResources(
 const symbolAttributes = (id: string) => ({ id, viewBox: '0 0 1 1', preserveAspectRatio: 'none' });
 const rasterAttributes = (image: ChartImage) => ({ href: image.dataUrl, width: 1, height: 1, preserveAspectRatio: 'none' });
 
-/** One definition per id: nodes that paint alike share it. */
-const uniqueGradients = (resources: SvgResources) => new Map([...resources.gradients].map(([node, id]) => [id, node]));
-const uniqueClips = (resources: SvgResources) => new Map([...resources.clips].map(([node, id]) => [id, node]));
+/** One definition per id: nodes that draw alike share it. */
+const byId = <N>(ids: ReadonlyMap<N, string>) => new Map([...ids].map(([node, id]) => [id, node]));
 const clipRect = ({ box }: ClipNode) => ({ x: box.x, y: box.y, width: box.width, height: box.height });
 
+/** What a group cut to `node`'s clip carries, in either SVG output. */
+export function clipAttributes(node: ClipNode, resources: SvgResources): { 'clip-path': string } {
+  return { 'clip-path': `url(#${resources.clips.get(node)!})` };
+}
+
 export function resourceSvg(resources: SvgResources, images: ReadonlyMap<string, ChartImage>): string {
-  const gradients = [...uniqueGradients(resources)].map(([id, node]) => gradientSvg(node, id)).join('');
+  const gradients = [...byId(resources.gradients)].map(([id, node]) => gradientSvg(node, id)).join('');
   const rasters = [...resources.images].map(([name, id]) =>
     svgElement('symbol', symbolAttributes(id), svgElement('image', rasterAttributes(images.get(name)!)))).join('');
-  const clips = [...uniqueClips(resources)].map(([id, node]) => svgElement('clipPath', { id }, svgElement('rect', clipRect(node)))).join('');
+  const clips = [...byId(resources.clips)].map(([id, node]) => svgElement('clipPath', { id }, svgElement('rect', clipRect(node)))).join('');
   return gradients || rasters || clips ? svgElement('defs', {}, gradients + rasters + clips) : '';
 }
 
@@ -89,7 +107,7 @@ export function appendResources(parent: Element, resources: SvgResources, images
     return node;
   };
   const defs = element('defs', {});
-  for (const [id, node] of uniqueGradients(resources)) {
+  for (const [id, node] of byId(resources.gradients)) {
     const gradient = element('linearGradient', gradientAttributes(node, id));
     for (const stop of node.stops) gradient.appendChild(element('stop', { offset: stop.offset, 'stop-color': stop.color }));
     defs.appendChild(gradient);
@@ -99,7 +117,7 @@ export function appendResources(parent: Element, resources: SvgResources, images
     symbol.appendChild(element('image', rasterAttributes(images.get(name)!)));
     defs.appendChild(symbol);
   }
-  for (const [id, node] of uniqueClips(resources)) {
+  for (const [id, node] of byId(resources.clips)) {
     const clip = element('clipPath', { id });
     clip.appendChild(element('rect', clipRect(node)));
     defs.appendChild(clip);

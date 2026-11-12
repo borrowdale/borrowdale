@@ -21,8 +21,8 @@ const wrappingGradient = layoutOf([{ kind: 'clip', box, nodes: [gradient] }]);
 const wrappingImage = layoutOf([{ kind: 'mark', title: 'Bar', nodes: [{ kind: 'clip', box, nodes: [image] }] }]);
 
 /** Rendering `layout` to SVG, run later, so that an error it throws can be expected. */
-function rendering(layout: ChartLayout) {
-  return () => toSvgChart(layout);
+function rendering(layout: ChartLayout, options: Parameters<typeof toSvgChart>[1] = {}) {
+  return () => toSvgChart(layout, options);
 }
 
 /** The ids of the clip paths under `parent`, and the clip each group of it refers to. */
@@ -84,6 +84,14 @@ describe('clip nodes in SVG', () => {
 
   it('keeps the box in the ids of an explicit prefix', () => {
     expect(toSvgChart(clipped, { idPrefix: 'sales' })).toContain('<clipPath id="sales-clip-0">');
+  });
+
+  // Checked before any id is made, so a chart with nothing to define rejects one too.
+  it('rejects a prefix that cannot start an id', () => {
+    expect(rendering(clipped, { idPrefix: '1sales' }))
+      .toThrow('Chart idPrefix must be 1 to 100 letters, digits, underscores or hyphens, starting with a letter');
+    expect(rendering(layoutOf([line]), { idPrefix: 'a b' }))
+      .toThrow('Chart idPrefix must be 1 to 100 letters, digits, underscores or hyphens, starting with a letter');
   });
 });
 
