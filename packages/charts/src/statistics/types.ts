@@ -5,7 +5,7 @@ import type { SeriesBase, SymbolName } from '../types.js';
  * One option table drives both the public discriminated union and JSON validation: each key is a
  * value of the discriminant, listing the options it accepts. A misspelt option fails to compile.
  */
-type Choices<Key extends string, Options, Table extends Record<string, readonly (keyof Options)[]>> = {
+export type Choices<Key extends string, Options, Table extends Record<string, readonly (keyof Options)[]>> = {
   [Choice in keyof Table]: { [K in Key]: Choice } & Pick<Options, Table[Choice][number]>;
 }[keyof Table];
 

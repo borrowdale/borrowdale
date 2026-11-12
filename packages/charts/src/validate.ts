@@ -1,4 +1,5 @@
 import { stackStatistics } from './statistics/stacks.js';
+import { stackWeights } from './stack-weights.js';
 import { checkHistogramEdges, readHistogram } from './statistics/histogram.js';
 import { displayKeys, DISTRIBUTIONS, MARKET_DISPLAYS, RELATIONSHIPS } from './statistics/types.js';
 import { readDistribution } from './statistics/distribution.js';
@@ -6,7 +7,7 @@ import { readRelationship } from './statistics/relationship.js';
 import { readMarket } from './statistics/market.js';
 import { checkAnnotations, type CheckedAnnotation } from './annotations.js';
 import { sketch, assertDrawable, type Seed, type SketchStyle } from '@borrowdale/core';
-import { COLOR_RULE, isColor, MAX_PAINT, ownDash } from '@borrowdale/core/internal';
+import { ownDash } from '@borrowdale/core/internal';
 import { aSeries, hexColor, readEach } from './read.js';
 import { excalifont, type Font } from '@borrowdale/text';
 import {
@@ -20,8 +21,6 @@ import {
   categoryOf,
   checkSweep,
   checkY2Axis,
-  MAX_CATEGORIES,
-  MAX_HOLE,
   MAX_NAME,
   readerOn,
   type CheckedAngleAxis,
@@ -41,6 +40,7 @@ import {
   list,
   MAX_POINTS,
   MAX_VALUE,
+  color,
   nullable,
   number,
   oneOf,
@@ -57,13 +57,16 @@ import {
 import { checkCalendarChart, readCalendar } from './calendar-series.js';
 import { readHeatmap, readHorizon, readPolarHeatmap, resolveCells, resolveHorizon, resolvePolarCells } from './cell-series.js';
 import { withColorAxis } from './color-axis.js';
+import { checkPieChart, checkPieSeries, type CheckedPieChart } from './pie-series.js';
+import { checkMarker } from './symbols.js';
+import { checkUnitsChart, readUnits, UNITS_DISPLAYS, type CheckedUnitsChart } from './units-series.js';
+import { checkFunnelChart, FUNNEL_DISPLAYS, readFunnel, type CheckedFunnelChart } from './funnel-series.js';
+import { checkLiquidChart, readLiquid, type CheckedLiquidChart } from './liquid-series.js';
 import type { ColorScale } from './color-scale.js';
 import {
   CURVES,
   LEGEND_POSITIONS,
-  SYMBOL_NAMES,
   type ChartSpec,
-  type Marker,
   type LegendPosition,
   type SeriesType,
 } from './types.js';
@@ -82,7 +85,7 @@ const MIN_NEEDLE = 0.1;
 const DEFAULT_NEEDLE = 0.8;
 const MAX_BANDS = 100;
 
-export type System = 'cartesian' | 'polar' | 'pie' | 'gauge' | 'timeline' | 'calendar';
+export type System = 'cartesian' | 'polar' | 'pie' | 'gauge' | 'timeline' | 'calendar' | 'units' | 'funnel' | 'liquid';
 
 type ReservePoints = (count: number) => void;
 const categoryValues = (reserve: ReservePoints) =>
@@ -90,26 +93,24 @@ const categoryValues = (reserve: ReservePoints) =>
 const valueAxis = oneOf(['y', 'y2'] as const);
 const curve = oneOf(CURVES);
 
-const color: Check<string> = (path, value) => {
-  const given = text(MAX_PAINT)(path, value);
-  if (!isColor(given)) {
-    fail(path, `must be ${COLOR_RULE}, got ${show(given)}`);
-  }
-  return given;
-};
-
 // Each field a series type may have, read the same way by every type that has it, so a cartesian
 // type and its polar twin take the same values, except that a polar chart's points are numbers only.
 const readAxis = (r: Fields) => r.optional('axis', valueAxis) ?? 'y';
 const readStack = (r: Fields) => r.optional('stack', text());
 const readCurve = (r: Fields) => r.optional('curve', curve) ?? 'linear';
-const checkMarker: Check<Marker> = (path, value) => {
-  if (typeof value === 'string') return oneOf(SYMBOL_NAMES)(path, value);
-  const r = fields(path, value);
-  r.allow(['image']);
-  return { image: r.required('image', text(MAX_NAME)) };
-};
 const readSymbol = (r: Fields) => r.optional('symbol', checkMarker) ?? 'circle';
+
+/** A bar's shape, and the symbol a pictorial bar repeats, which only a pictorial bar takes. */
+function readBar(r: Fields, path: string, reserve: ReservePoints) {
+  const shape = r.optional('shape', oneOf(['rectangle', 'rounded', 'pyramid', 'pictorial'] as const)) ?? 'rectangle';
+  const symbol = r.optional('symbol', checkMarker);
+  const rest = { axis: readAxis(r), stack: readStack(r), data: readValues(r, reserve) };
+  if (shape === 'pictorial') {
+    return { ...rest, shape, symbol: symbol ?? fail(`${path}.symbol`, 'is missing: a pictorial bar repeats a symbol or an image') };
+  }
+  if (symbol !== undefined) fail(`${path}.symbol`, 'needs shape "pictorial"');
+  return { ...rest, shape, symbol };
+}
 const readDash = (r: Fields) => r.optional('dash', checkDash);
 const readValues = (r: Fields, reserve: ReservePoints) => r.required('data', categoryValues(reserve));
 const readPoints =
@@ -171,8 +172,8 @@ const SERIES_RULES = {
   bar: {
     system: 'cartesian',
     axes: 'band',
-    keys: ['shape', 'dataLabels', 'axis', 'data', 'stack'],
-    read: (r: Fields, _path: string, reserve: ReservePoints) => ({ shape: r.optional('shape', oneOf(['rectangle', 'rounded', 'pyramid'] as const)) ?? 'rectangle', axis: readAxis(r), stack: readStack(r), data: readValues(r, reserve) }),
+    keys: ['shape', 'symbol', 'dataLabels', 'axis', 'data', 'stack'],
+    read: readBar,
   },
   line: {
     system: 'cartesian',
@@ -287,7 +288,7 @@ const SERIES_RULES = {
   },
   pie: {
     system: 'pie',
-    keys: ['dataLabels', 'data', 'innerRadius', 'outerRadius', 'startAngle', 'endAngle', 'padAngle', 'cornerRadius'],
+    keys: ['dataLabels', 'data', 'innerRadius', 'outerRadius', 'startAngle', 'endAngle', 'padAngle', 'cornerRadius', 'breakout'],
     read: checkPieSeries,
   },
   radar: {
@@ -357,6 +358,9 @@ const SERIES_RULES = {
       needleLength: r.optional('needleLength', number(MIN_NEEDLE, 1)) ?? DEFAULT_NEEDLE,
     }),
   },
+  units: { system: 'units', keys: displayKeys(UNITS_DISPLAYS), read: readUnits },
+  funnel: { system: 'funnel', keys: displayKeys(FUNNEL_DISPLAYS), read: readFunnel },
+  liquid: { system: 'liquid', keys: ['value', 'shape', 'waves'], read: readLiquid },
 } as const satisfies Record<SeriesType, Rule>;
 
 type Rules = typeof SERIES_RULES;
@@ -426,15 +430,6 @@ export interface CheckedPolarChart extends CheckedChartBase {
   series: SeriesOf<'polar'>[];
 }
 
-/** A pie series with its ring resolved: where it starts and ends, as shares of the radius. */
-export type CheckedPie = SeriesOf<'pie'> & { innerRadius: number; outerRadius: number };
-
-export interface CheckedPieChart extends CheckedChartBase {
-  system: 'pie';
-  /** Nested rings, the first outermost by default. */
-  series: CheckedPie[];
-}
-
 export interface CheckedGaugeBand {
   from: number;
   to: number;
@@ -473,7 +468,10 @@ export type CheckedChart =
   | CheckedPieChart
   | CheckedGaugeChart
   | CheckedTimelineChart
-  | CheckedCalendarChart;
+  | CheckedCalendarChart
+  | CheckedUnitsChart
+  | CheckedFunnelChart
+  | CheckedLiquidChart;
 
 /**
  * Throws a named error, starting "Invalid chart:" and naming the place in the spec, for anything that
@@ -527,6 +525,12 @@ function checkSystem(r: Fields, base: CheckedChartBase, series: CheckedSeries[],
       return checkTimelineChart(r, base, seriesOf(series, 'timeline'));
     case 'calendar':
       return checkCalendarChart(r, base, seriesOf(series, 'calendar'));
+    case 'units':
+      return checkUnitsChart(r, base, seriesOf(series, 'units'));
+    case 'funnel':
+      return checkFunnelChart(r, base, seriesOf(series, 'funnel'));
+    case 'liquid':
+      return checkLiquidChart(r, base, seriesOf(series, 'liquid'));
   }
 }
 
@@ -676,6 +680,13 @@ function checkCartesianChart(
     }
   }
   resolveValues(series, roles, { x, y });
+  // Weights given as "stacks" are the bars' stack totals, known once the series are checked.
+  const byStacks = [x, y].find((axis) => axis.type === 'band' && axis.weightsByStacks);
+  if (byStacks) {
+    const path = `${byStacks.path}.weights`;
+    if (roles.kind !== 'band') fail(path, 'is "stacks", which needs bars on one band axis');
+    roles.band.weights = stackWeights(series, roles.band, valueAxisOf(series[0]!, roles), path);
+  }
   // Histograms need linear x and y, so they are only ever on a continuous chart.
   if (roles.kind === 'continuous') checkHistogramEdges(series.filter((entry) => entry.type === 'histogram'), roles.x);
   stackStatistics(series, reserve);
@@ -960,106 +971,6 @@ function checkGaugeBands(bands: CheckedGaugeBand[]): CheckedGaugeBand[] {
     }
   });
   return bands;
-}
-
-const MAX_RINGS = 10;
-const MAX_PAD_ANGLE = 10;
-const MAX_CORNER_RADIUS = 1_000;
-const MAX_OFFSET = 0.5;
-const MIN_OUTER = 0.05;
-
-function checkPieChart(r: Fields, base: CheckedChartBase, series: SeriesOf<'pie'>[]): CheckedPieChart {
-  if (r.has('axes')) {
-    fail('axes', 'must be left out: a pie chart has no axes');
-  }
-  if (series.length > MAX_RINGS) {
-    fail('series', `of a pie chart must be 1 to ${MAX_RINGS} pie series, got ${series.length}`);
-  }
-  const first = series[0]!;
-  const count = series.length;
-  const rings = series.map((pie, k) => {
-    for (const key of ['startAngle', 'endAngle'] as const) {
-      if (pie[key] !== first[key]) {
-        // Name the angle the spec gave, and say which is the default.
-        const theirs = first.sweepGiven[key] ? `${first.path}.${key} is ${first[key]}` : `${first.path} has the default, ${first[key]}`;
-        if (!pie.sweepGiven[key]) fail(pie.path, `has the default ${key}, ${pie[key]}, but ${theirs}: nested rings share their sweep`);
-        fail(`${pie.path}.${key}`, `is ${pie[key]}, but ${theirs}: nested rings share their sweep`);
-      }
-    }
-    // Nested rings split the radius equally, the first outermost.
-    const outerRadius = pie.outerRadius ?? 1 - k / count;
-    const innerRadius = pie.innerRadius ?? (count === 1 ? 0 : 1 - (k + 1) / count);
-    if (!(outerRadius > innerRadius)) {
-      // Name the key the spec gave: a defaulted outerRadius is not the one to change.
-      if (pie.outerRadius === undefined) {
-        const limit = `must be less than the ring's default outerRadius (${outerRadius})`;
-        fail(`${pie.path}.innerRadius`, `${limit}, got ${innerRadius}`);
-      }
-      const inner = pie.innerRadius === undefined ? `the ring's default innerRadius` : 'innerRadius';
-      fail(`${pie.path}.outerRadius`, `must be greater than ${inner} (${innerRadius}), got ${outerRadius}`);
-    }
-    return { ...pie, innerRadius, outerRadius };
-  });
-  // A name in two rings is one legend entry with one colour.
-  const colors = new Map<string, { color: string | undefined; path: string }>();
-  for (const pie of rings) {
-    pie.data.forEach((slice, i) => {
-      const seen = colors.get(slice.name);
-      if (seen && slice.color !== undefined && slice.color !== seen.color) {
-        const given = seen.color === undefined ? 'none' : show(seen.color);
-        fail(
-          `${pie.path}.data[${i}].color`,
-          `is ${show(slice.color)}, but ${seen.path}, of the same name, gives ${given}`,
-        );
-      }
-      if (!seen) {
-        colors.set(slice.name, { color: slice.color, path: `${pie.path}.data[${i}].color` });
-      }
-    });
-  }
-  return { ...base, system: 'pie', series: rings };
-}
-
-function checkPieSeries(r: Fields, path: string, reserve: ReservePoints) {
-  const data = r.required(
-    'data',
-    list(1, MAX_CATEGORIES, (slicePath, raw) => {
-      const slice = fields(slicePath, raw);
-      slice.allow(['name', 'value', 'color', 'offset', 'radius']);
-      return {
-        name: slice.required('name', text(MAX_NAME)),
-        value: slice.required('value', number(0, MAX_VALUE)),
-        color: slice.optional('color', color),
-        offset: slice.optional('offset', number(0, MAX_OFFSET)) ?? 0,
-        radius: slice.optional('radius', number(0, MAX_VALUE)),
-      };
-    }, reserve),
-  );
-  unique(data.map((slice) => slice.name), (i) => `${path}.data[${i}].name`);
-  if (!data.some((slice) => slice.value > 0)) {
-    fail(`${path}.data`, 'has no value above 0, so there is nothing to draw');
-  }
-  const sized = data.filter((slice) => slice.radius !== undefined).length;
-  if (sized > 0 && sized < data.length) {
-    const i = data.findIndex((slice) => slice.radius === undefined);
-    fail(`${path}.data[${i}].radius`, 'is missing: every slice has a radius, or none does');
-  }
-  // A slice is drawn only with a share of the pie and a reach beyond the hole.
-  if (sized > 0 && !data.some((slice) => slice.value > 0 && (slice.radius ?? 0) > 0)) {
-    fail(`${path}.data`, 'has no slice with both a value and a radius above 0, so there is nothing to draw');
-  }
-  const { startAngle, endAngle } = checkSweep(r, path);
-  return {
-    data,
-    innerRadius: r.optional('innerRadius', number(0, MAX_HOLE)),
-    outerRadius: r.optional('outerRadius', number(MIN_OUTER, 1)),
-    startAngle,
-    endAngle,
-    // Which angles the spec gave: the check that nested rings share a sweep names only those.
-    sweepGiven: { startAngle: r.has('startAngle'), endAngle: r.has('endAngle') },
-    padAngle: r.optional('padAngle', number(0, MAX_PAD_ANGLE)) ?? 0,
-    cornerRadius: r.optional('cornerRadius', number(0, MAX_CORNER_RADIUS)) ?? 0,
-  };
 }
 
 // Checked by core itself, so charts accepts what `sketch` accepts, with colours and widths capped.

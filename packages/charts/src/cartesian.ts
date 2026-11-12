@@ -115,7 +115,7 @@ const distribution: Mark<Extract<ComputedSeries, { type: 'distribution' }>> = {
 };
 
 const MARKS: { [K in MarkType]: Mark<Extract<CartesianSeries, { type: K }>> } = {
-  bar: { zero: true, slot: true, legend: boxed, reach: none, draw: drawBars },
+  bar: { zero: true, slot: true, legend: (entry) => (entry.shape === 'pictorial' ? { line: false, symbol: entry.symbol } : BOX), reach: none, draw: drawBars },
   line: { zero: false, slot: false, legend: marked(true), reach: (_size, entry) => entry.symbol ? POINT_SIZE / 2 : 0, draw: drawLine },
   area: { zero: true, slot: false, legend: boxed, reach: none, draw: drawArea },
   rangeArea: { zero: false, slot: false, legend: boxed, reach: none, draw: drawArea },
@@ -805,19 +805,41 @@ function drawBars(
     const width = band.width / slotCount;
     const along = band.start + slot * width + (width * BAR_GAP) / 2;
     const category = context.categories[i]!;
-    const nodes: ChartNode[] = span[0] === span[1] ? [] : [drawing.shape(
-        barShape(entry.shape, along, width * (1 - BAR_GAP), scale.at(span[0]), scale.at(span[1]), frame.point, frame.box),
-        hatched(paint),
-        [entry.name, category, 'bar'],
-        entry.style,
-      )];
+    const [from, to] = [scale.at(span[0]), scale.at(span[1])];
+    const thickness = width * (1 - BAR_GAP);
+    const key = [entry.name, category, 'bar'];
+    const nodes: ChartNode[] = span[0] === span[1] ? [] : entry.shape === 'pictorial'
+      ? pictorialBar(drawing, frame, entry.symbol, along, thickness, from, to, hatched(paint), key, entry.style)
+      : [drawing.shape(barShape(entry.shape, along, thickness, from, to, frame.point, frame.box), hatched(paint), key, entry.style)];
     if (entry.dataLabels) {
       // At the middle of the bar as drawn, which on a square-root axis is not its middle value.
-      const [x, y] = frame.point([along + width * (1 - BAR_GAP) / 2, (scale.at(span[0]) + scale.at(span[1])) / 2]);
+      const [x, y] = frame.point([along + thickness / 2, (from + to) / 2]);
       nodes.push(drawing.label(formatAxisValue(value, placed.axis), x, y, frame.plot, `${entry.path}.dataLabels`));
     }
     drawing.mark(`${entry.name}, ${category}: ${formatAxisValue(value, placed.axis)}`, nodes);
   });
+}
+
+/**
+ * `marker` repeated from the bar's base towards its value, each one `thickness` across and along, the
+ * last cut at the value by a clip to the bar. A bar too short for any symbol draws nothing.
+ */
+function pictorialBar(
+  drawing: Drawing, frame: Frame, marker: Marker, along: number, thickness: number, from: number, to: number,
+  style: SketchStyle, key: SeedKey, own: SketchStyle,
+): ChartNode[] {
+  // Rounding noise must not add a symbol that the clip then cuts to nothing.
+  const count = Math.ceil(Math.abs(to - from) / thickness - 1e-9);
+  const step = Math.sign(to - from) * thickness;
+  // One at a time, so that the drawing's limits stop a bar too long for its width before it is built.
+  const symbols: ChartNode[] = [];
+  for (let i = 0; i < count; i++) {
+    symbols.push(markerNode(drawing, marker, frame.point([along + thickness / 2, from + (i + 0.5) * step]), thickness, style, [...key, i], own));
+  }
+  if (count === 0) return [];
+  const [x0, y0] = frame.point([along, from]);
+  const [x1, y1] = frame.point([along + thickness, to]);
+  return [drawing.clip(Math.min(x0, x1), Math.min(y0, y1), Math.abs(x1 - x0), Math.abs(y1 - y0), symbols)];
 }
 
 function drawLine(

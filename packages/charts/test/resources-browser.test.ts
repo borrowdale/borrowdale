@@ -96,3 +96,32 @@ it('keeps native DOM resource references distinct across detached, shadow and te
   expect(result.ids[3]).not.toBe(result.next);
   expect(result.references).toEqual([true, true, true, true]);
 }, 120_000);
+
+// A red square cut to the left half by a clip, drawn natively and through its SVG; then a fill after
+// the chart, which the clip must not reach. Runs in the browser, so it holds no outside references.
+async function drawClipBothWays() {
+  const api = (globalThis as unknown as { charts: typeof Charts }).charts;
+  const square = { kind: 'sketch' as const, sketch: { paths: [{ d: 'M0 0 L64 0 L64 64 L0 64 Z', stroke: 'none', strokeWidth: 0, fill: '#ff0000' }] } };
+  const layout = { width: 64, height: 64, family: 'test', labels: [], missing: [],
+    nodes: [{ kind: 'clip' as const, box: { x: 0, y: 0, width: 32, height: 64 }, nodes: [square] }] };
+  const canvas = document.createElement('canvas'); canvas.width = 64; canvas.height = 64;
+  const context = canvas.getContext('2d')!;
+  api.drawChart(context, layout);
+  const native = [[...context.getImageData(16, 32, 1, 1).data], [...context.getImageData(48, 32, 1, 1).data]];
+  context.fillStyle = '#0000ff'; context.fillRect(40, 0, 24, 64);
+  const after = [...context.getImageData(48, 32, 1, 1).data];
+  const source = new Image();
+  source.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(api.toSvgChart(layout))}`;
+  await source.decode();
+  context.clearRect(0, 0, 64, 64); context.drawImage(source, 0, 0);
+  const exported = [[...context.getImageData(16, 32, 1, 1).data], [...context.getImageData(48, 32, 1, 1).data]];
+  return { native, exported, after };
+}
+
+it('cuts the nodes of a clip to its box on native Canvas as in SVG, and restores the canvas after it', async () => {
+  const result = await evaluateIn('chromium', new URL('../src/index.ts', import.meta.url), 'charts', '', drawClipBothWays, undefined);
+
+  expect(result.native).toEqual([[255, 0, 0, 255], [0, 0, 0, 0]]);
+  expect(result.exported).toEqual(result.native);
+  expect(result.after).toEqual([0, 0, 255, 255]);
+}, 120_000);

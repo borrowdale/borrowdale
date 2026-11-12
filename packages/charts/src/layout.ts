@@ -8,6 +8,10 @@ import { GAP, PAD, type Rect } from './frame.js';
 import { hatched, INK, LINE_WIDTH, paints, type Paint } from './palette.js';
 import { EMPTY_CELL, NO_VALUE } from './marks.js';
 import { layoutGauge } from './gauge.js';
+import { layoutUnits } from './units.js';
+import { unitSymbol } from './units-series.js';
+import { layoutFunnel } from './funnel.js';
+import { layoutLiquid } from './liquid.js';
 import { layoutPie } from './pie.js';
 import { layoutPolar, polarLegendOf } from './polar.js';
 import { fail } from './read.js';
@@ -15,7 +19,7 @@ import { markerNode } from './symbols.js';
 import { layoutTimeline } from './timeline.js';
 import type { ChartLayout, ChartSpec, LayoutChartOptions, LegendPosition, Marker } from './types.js';
 import { encodingOf } from './color-axis.js';
-import { checkChart, type CheckedChart } from './validate.js';
+import { checkChart, type CheckedChart, type System } from './validate.js';
 
 const SWATCH = 10;
 const SWATCH_GAP = 4;
@@ -33,10 +37,11 @@ interface LegendEntry {
   /** Where the name is in the spec. */
   path: string;
   paint: Paint;
-  /** A series drawn as a line is shown by a line; anything else by a hatched box. */
+  /** A series drawn as a line is shown by a line, one drawn with a symbol by that symbol, anything else by a hatched box. */
   line: boolean;
   dash: number[] | undefined;
   style: SketchStyle;
+  /** The symbol a series or a unit chart's category is drawn with, shown in place of the box. */
   symbol?: Marker | undefined;
 }
 
@@ -64,6 +69,8 @@ export function layoutChart(spec: ChartSpec, options: LayoutChartOptions = {}): 
   drawLegend(drawing, chart, entries, rect);
 
   const entryPaints = entries.map((entry) => entry.paint);
+  // A system that lists names in its legend paints each named value by its name.
+  const paintOf = new Map(entries.map((entry) => [entry.name, entry.paint]));
   switch (chart.system) {
     case 'cartesian':
       layoutCartesian(drawing, chart, rect, entryPaints);
@@ -72,7 +79,7 @@ export function layoutChart(spec: ChartSpec, options: LayoutChartOptions = {}): 
       layoutPolar(drawing, chart, rect, entryPaints);
       break;
     case 'pie':
-      layoutPie(drawing, chart, rect, new Map(entries.map((entry) => [entry.name, entry.paint])));
+      layoutPie(drawing, chart, rect, paintOf);
       break;
     case 'gauge':
       layoutGauge(drawing, chart, rect, entryPaints);
@@ -82,6 +89,15 @@ export function layoutChart(spec: ChartSpec, options: LayoutChartOptions = {}): 
       break;
     case 'calendar':
       layoutCalendar(drawing, chart, rect);
+      break;
+    case 'units':
+      layoutUnits(drawing, chart, rect, paintOf);
+      break;
+    case 'funnel':
+      layoutFunnel(drawing, chart, rect, paintOf);
+      break;
+    case 'liquid':
+      layoutLiquid(drawing, chart, rect, entryPaints);
       break;
     default:
       unknownSystem(chart);
@@ -98,32 +114,62 @@ export function layoutChart(spec: ChartSpec, options: LayoutChartOptions = {}): 
 }
 
 /**
- * One entry per slice name of a pie's rings, in the order they first appear, else one per series,
- * each with its colour and hatching.
+ * What each system's legend lists: the names in its series' data, or its series. A system missing
+ * here fails to compile.
  */
-function legendEntries(chart: CheckedChart): LegendEntry[] {
-  if (chart.system === 'pie') {
-    const first = new Map<string, { name: string; color: string | undefined; path: string; style: SketchStyle }>();
-    for (const pie of chart.series) {
-      pie.data.forEach((slice, i) => {
-        if (!first.has(slice.name)) {
-          first.set(slice.name, {
-            name: slice.name,
-            color: slice.color,
-            path: `${pie.path}.data[${i}]`,
-            style: pie.style,
-          });
+const LEGENDS = {
+  cartesian: 'series',
+  polar: 'series',
+  pie: 'names',
+  gauge: 'series',
+  timeline: 'series',
+  calendar: 'series',
+  units: 'names',
+  funnel: 'names',
+  liquid: 'series',
+} as const satisfies Record<System, 'names' | 'series'>;
+
+type NamedSystem = { [S in System]: (typeof LEGENDS)[S] extends 'names' ? S : never }[System];
+
+const listsNames = (chart: CheckedChart): chart is Extract<CheckedChart, { system: NamedSystem }> =>
+  LEGENDS[chart.system] === 'names';
+
+/**
+ * What a series lists in the legend by name: its data, then the parts a pie breaks a slice out into,
+ * each with the symbol a unit chart draws its units as. A ring draws segments, shown by a box.
+ */
+function namedItems(entry: Extract<CheckedChart, { system: NamedSystem }>['series'][number]) {
+  const symbolOf = (item: { symbol?: Marker | undefined }) =>
+    entry.type === 'units' && entry.display !== 'ring' ? unitSymbol(entry.display, item.symbol) : undefined;
+  const items = (data: readonly { name: string; color: string | undefined; symbol?: Marker | undefined }[], path: string) =>
+    data.map((item, i) => ({ name: item.name, color: item.color, path: `${path}.data[${i}]`, symbol: symbolOf(item) }));
+  const parts = 'breakout' in entry && entry.breakout ? items(entry.breakout.data, `${entry.path}.breakout`) : [];
+  return [...items(entry.data, entry.path), ...parts];
+}
+
+/**
+ * One entry per name in the series' data, in the order they first appear, where the system lists
+ * names, else one per series, each with its colour and hatching.
+ */
+export function legendEntries(chart: CheckedChart): LegendEntry[] {
+  if (listsNames(chart)) {
+    const first = new Map<string, { name: string; color: string | undefined; path: string; style: SketchStyle; symbol: Marker | undefined }>();
+    for (const entry of chart.series) {
+      for (const item of namedItems(entry)) {
+        if (!first.has(item.name)) {
+          first.set(item.name, { ...item, style: entry.style });
         }
-      });
+      }
     }
-    const slices = [...first.values()];
-    return paints(slices).map((paint, i) => ({
-      name: slices[i]!.name,
-      path: `${slices[i]!.path}.name`,
+    const named = [...first.values()];
+    return paints(named).map((paint, i) => ({
+      name: named[i]!.name,
+      path: `${named[i]!.path}.name`,
       paint,
       line: false,
       dash: undefined,
-      style: slices[i]!.style,
+      style: named[i]!.style,
+      symbol: named[i]!.symbol,
     }));
   }
   const symbolOf = (entry: CheckedChart['series'][number]) => legendSymbol('symbol' in entry ? entry.symbol : undefined);
@@ -263,8 +309,8 @@ function noValueItem(drawing: Drawing): LegendItem {
  * the top with two or more items, or a colour axis, and to none otherwise.
  */
 function drawLegend(drawing: Drawing, chart: CheckedChart, entries: readonly LegendEntry[], rect: Rect): void {
-  // A pie's entries are its slices; every other chart's are its series, less those coloured by value.
-  const encodings = chart.system === 'pie' ? [] : chart.series.map(encodingOf);
+  // Named entries are the series' data; other entries are series, less those coloured by value.
+  const encodings = listsNames(chart) ? [] : chart.series.map(encodingOf);
   const shown = entries.filter((_, i) => encodings[i] === undefined);
   const missing = encodings.some((encoding) => encoding?.missing);
   const count = shown.length + (chart.color ? 1 : 0) + (missing ? 1 : 0);

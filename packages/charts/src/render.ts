@@ -1,9 +1,10 @@
-import { appendResources, resourceSvg, svgResources, type SvgResources } from './svg-resources.js';
+import { appendResources, clipAttributes, resourceSvg, svgResources, type SvgResources } from './svg-resources.js';
 import { paintedSketch } from './gradients.js';
 import { appendSketch, drawSketch, escapeAttribute, svgElement, toSvgSketch } from '@borrowdale/core';
 import { ownOptions } from '@borrowdale/core/internal';
 import { appendText, drawText, fontFaceCss, toSvgText, type FontFiles } from '@borrowdale/text';
 import { imageAttributes, resolveImages, type ChartImage, type ChartRenderOptions } from './images.js';
+import { unknownNode } from './nodes.js';
 import { show } from './read.js';
 import type { ChartLayout, ChartNode } from './types.js';
 
@@ -61,6 +62,9 @@ function nodeToSvg(node: ChartNode, resources: SvgResources): string {
       const title = svgElement('title', {}, escapeAttribute(node.title));
       return svgElement('g', {}, `${title}${node.nodes.map((child) => nodeToSvg(child, resources)).join('')}`);
     }
+    case 'clip':
+      return svgElement('g', clipAttributes(node, resources),
+        node.nodes.map((child) => nodeToSvg(child, resources)).join(''));
     default:
       return unknownNode(node);
   }
@@ -114,6 +118,13 @@ function appendNodes(parent: Element, nodes: readonly ChartNode[], resources: Sv
         parent.appendChild(group);
         break;
       }
+      case 'clip': {
+        const group = parent.ownerDocument.createElementNS(SVG_NS, 'g');
+        for (const [key, value] of Object.entries(clipAttributes(node, resources))) group.setAttribute(key, value);
+        appendNodes(group, node.nodes, resources);
+        parent.appendChild(group);
+        break;
+      }
       default:
         unknownNode(node);
     }
@@ -157,12 +168,16 @@ function drawNodes(context: CanvasRenderingContext2D, nodes: readonly ChartNode[
       case 'mark':
         drawNodes(context, node.nodes, images);
         break;
+      case 'clip':
+        context.save();
+        context.beginPath();
+        context.rect(node.box.x, node.box.y, node.box.width, node.box.height);
+        context.clip();
+        drawNodes(context, node.nodes, images);
+        context.restore();
+        break;
       default:
         unknownNode(node);
     }
   }
-}
-
-function unknownNode(node: never): never {
-  throw new Error(`Unknown chart node: ${String((node as { kind?: unknown }).kind)}`);
 }

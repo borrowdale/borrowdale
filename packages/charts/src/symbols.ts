@@ -1,7 +1,17 @@
 import type { Point, Shape, SketchStyle } from '@borrowdale/core';
 import { cos, sin } from '@borrowdale/core/math';
+import { MAX_NAME } from './check-axis.js';
 import type { Drawing, SeedKey } from './drawing.js';
-import type { ChartNode, Marker, SymbolName } from './types.js';
+import { fields, oneOf, text, type Check } from './read.js';
+import { SYMBOL_NAMES, type ChartNode, type Marker, type SymbolName } from './types.js';
+
+/** A marker in a spec: one of the symbols, or `{ image }` naming an image the renderer is given. */
+export const checkMarker: Check<Marker> = (path, value) => {
+  if (typeof value === 'string') return oneOf(SYMBOL_NAMES)(path, value);
+  const r = fields(path, value);
+  r.allow(['image']);
+  return { image: r.required('image', text(MAX_NAME)) };
+};
 
 /** The image reference stays plain data; only the renderer receives trusted assets. */
 export function markerNode(

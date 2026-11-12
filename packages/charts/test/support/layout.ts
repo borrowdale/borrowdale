@@ -4,10 +4,15 @@ import type { Point } from '@borrowdale/core';
 import type { ChartNode } from '../../src/types.js';
 import { textBounds } from '@borrowdale/text';
 import { PAD } from '../../src/frame.js';
+import { eachNode } from '../../src/nodes.js';
 
-/** Every drawn node, those inside marks included, one level down. */
+/** Every drawn node, those inside marks and clips included. */
 function drawnNodes(layout: ChartLayout): ChartNode[] {
-  return layout.nodes.flatMap((node) => (node.kind === 'mark' ? node.nodes : [node]));
+  const drawn: ChartNode[] = [];
+  eachNode(layout.nodes, (node) => {
+    if (node.kind !== 'mark' && node.kind !== 'clip') drawn.push(node);
+  });
+  return drawn;
 }
 
 /** The mark whose tooltip is `title`. */

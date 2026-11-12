@@ -1,6 +1,6 @@
 // Reading a chart spec that came from JSON: through own properties only, arrays by index, and every
 // problem reported as one named error that says where in the spec it is.
-import { escaped, MAX_PAINT, show } from '@borrowdale/core/internal';
+import { COLOR_RULE, escaped, isColor, MAX_PAINT, show } from '@borrowdale/core/internal';
 import { measureText } from '@borrowdale/text';
 
 // The longest text @borrowdale/text lays out.
@@ -150,6 +150,15 @@ export function text(max = MAX_TEXT): Check<string> {
     return string;
   };
 }
+
+/** A colour as core draws one: a hex code, a name, rgb() or hsl(). */
+export const color: Check<string> = (path, value) => {
+  const given = text(MAX_PAINT)(path, value);
+  if (!isColor(given)) {
+    fail(path, `must be ${COLOR_RULE}, got ${show(given)}`);
+  }
+  return given;
+};
 
 /**
  * A string of at most `max` characters, not measured: for one that is checked another way before

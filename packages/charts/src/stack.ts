@@ -12,15 +12,14 @@ export function stackSpans<E extends { data: readonly (number | null)[] }>(
   percentOf: (entry: E) => boolean,
 ): Map<E, Span[]> {
   const spans = new Map<E, Span[]>();
-  const totals = new Map<string, number[]>();
-  const sums = new Map<string, number[][]>();
+  const groups = new Map<string, E[]>();
   for (const entry of entries) {
-    const total = totals.get(groupOf(entry)) ?? entry.data.map(() => 0);
-    entry.data.forEach((value, i) => {
-      total[i]! += Math.abs(value ?? 0);
-    });
-    totals.set(groupOf(entry), total);
+    const members = groups.get(groupOf(entry)) ?? [];
+    members.push(entry);
+    groups.set(groupOf(entry), members);
   }
+  const totals = new Map([...groups].map(([group, members]) => [group, stackTotal(members)]));
+  const sums = new Map<string, number[][]>();
   for (const entry of entries) {
     const group = groupOf(entry);
     const total = totals.get(group)!;
@@ -47,4 +46,9 @@ export function stackSpans<E extends { data: readonly (number | null)[] }>(
 /** The group a series stacks in: its own, or every one of its type with its stack name in `scope`. */
 export function stackGroup(entry: { type: string; index: number; stack: string | undefined }, scope: string): string {
   return `${entry.type}|${scope}|${entry.stack === undefined ? `#${entry.index}` : `@${entry.stack}`}`;
+}
+
+/** The total of series stacked together at each category: the sizes of their parts, whatever their signs. */
+export function stackTotal(entries: readonly { data: readonly (number | null)[] }[]): number[] {
+  return entries[0]?.data.map((_, i) => entries.reduce((sum, entry) => sum + Math.abs(entry.data[i] ?? 0), 0)) ?? [];
 }

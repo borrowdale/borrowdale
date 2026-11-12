@@ -1,0 +1,598 @@
+[
+ {
+  "name": "waffle",
+  "spec": {
+   "width": 420,
+   "height": 420,
+   "title": "Energy mix, per 100 units",
+   "series": [
+    {
+     "type": "units",
+     "name": "Energy",
+     "display": "waffle",
+     "units": 100,
+     "data": [
+      {
+       "name": "Wind",
+       "value": 29.4
+      },
+      {
+       "name": "Solar",
+       "value": 17.8
+      },
+      {
+       "name": "Gas",
+       "value": 31.2
+      },
+      {
+       "name": "Nuclear",
+       "value": 21.6
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "parliament",
+  "spec": {
+   "width": 560,
+   "height": 340,
+   "title": "Seats in a 120-seat chamber",
+   "series": [
+    {
+     "type": "units",
+     "name": "Seats",
+     "display": "parliament",
+     "data": [
+      {
+       "name": "Left",
+       "value": 34
+      },
+      {
+       "name": "Greens",
+       "value": 12
+      },
+      {
+       "name": "Centre",
+       "value": 27
+      },
+      {
+       "name": "Right",
+       "value": 41
+      },
+      {
+       "name": "Independent",
+       "value": 6
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "pictogram-rows",
+  "spec": {
+   "width": 560,
+   "height": 260,
+   "title": "Livestock per farm",
+   "series": [
+    {
+     "type": "units",
+     "name": "Animals",
+     "display": "rows",
+     "data": [
+      {
+       "name": "Cattle",
+       "value": 9,
+       "symbol": "square"
+      },
+      {
+       "name": "Pigs",
+       "value": 14,
+       "symbol": "circle"
+      },
+      {
+       "name": "Sheep",
+       "value": 6,
+       "symbol": "star"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "segmented-doughnut",
+  "spec": {
+   "width": 340,
+   "height": 340,
+   "title": "Steps done",
+   "series": [
+    {
+     "type": "units",
+     "name": "Steps",
+     "display": "ring",
+     "data": [
+      {
+       "name": "Done",
+       "value": 7
+      },
+      {
+       "name": "To do",
+       "value": 3,
+       "color": "#d9d9d9"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "pictorial-bar",
+  "spec": {
+   "width": 560,
+   "height": 340,
+   "title": "Rainfall, millimetres a month",
+   "axes": {
+    "x": {
+     "type": "band",
+     "categories": [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun"
+     ]
+    },
+    "y": {
+     "type": "linear",
+     "min": 0,
+     "max": 90
+    }
+   },
+   "series": [
+    {
+     "type": "bar",
+     "name": "Rainfall",
+     "shape": "pictorial",
+     "symbol": "circle",
+     "data": [
+      78,
+      61,
+      52,
+      40,
+      35,
+      49
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "marimekko",
+  "spec": {
+   "width": 560,
+   "height": 340,
+   "title": "Market share by region",
+   "axes": {
+    "x": {
+     "type": "band",
+     "categories": [
+      "North",
+      "South",
+      "West"
+     ],
+     "weights": "stacks"
+    },
+    "y": {
+     "type": "linear",
+     "percent": true
+    }
+   },
+   "series": [
+    {
+     "type": "bar",
+     "name": "Brand A",
+     "stack": "share",
+     "data": [
+      42,
+      18,
+      30
+     ]
+    },
+    {
+     "type": "bar",
+     "name": "Brand B",
+     "stack": "share",
+     "data": [
+      25,
+      30,
+      12
+     ]
+    },
+    {
+     "type": "bar",
+     "name": "Others",
+     "stack": "share",
+     "data": [
+      13,
+      22,
+      8
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "funnel",
+  "spec": {
+   "width": 560,
+   "height": 340,
+   "title": "Sales funnel",
+   "series": [
+    {
+     "type": "funnel",
+     "name": "Sales",
+     "display": "funnel",
+     "dataLabels": true,
+     "data": [
+      {
+       "name": "Visits",
+       "value": 12000
+      },
+      {
+       "name": "Sign-ups",
+       "value": 5400
+      },
+      {
+       "name": "Trials",
+       "value": 2100
+      },
+      {
+       "name": "Purchases",
+       "value": 640
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "funnel-bars",
+  "spec": {
+   "width": 560,
+   "height": 340,
+   "title": "Sales funnel, as bars",
+   "series": [
+    {
+     "type": "funnel",
+     "name": "Sales",
+     "display": "funnel",
+     "shape": "bar",
+     "data": [
+      {
+       "name": "Visits",
+       "value": 12000
+      },
+      {
+       "name": "Sign-ups",
+       "value": 5400
+      },
+      {
+       "name": "Trials",
+       "value": 2100
+      },
+      {
+       "name": "Purchases",
+       "value": 640
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "funnel-smooth",
+  "spec": {
+   "width": 560,
+   "height": 340,
+   "title": "Sales funnel, smooth",
+   "series": [
+    {
+     "type": "funnel",
+     "name": "Sales",
+     "display": "funnel",
+     "shape": "smooth",
+     "data": [
+      {
+       "name": "Visits",
+       "value": 12000
+      },
+      {
+       "name": "Sign-ups",
+       "value": 5400
+      },
+      {
+       "name": "Trials",
+       "value": 2100
+      },
+      {
+       "name": "Purchases",
+       "value": 640
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "funnel-horizontal",
+  "spec": {
+   "width": 560,
+   "height": 260,
+   "title": "Sales funnel, left to right",
+   "series": [
+    {
+     "type": "funnel",
+     "name": "Sales",
+     "display": "funnel",
+     "orientation": "horizontal",
+     "data": [
+      {
+       "name": "Visits",
+       "value": 12000
+      },
+      {
+       "name": "Sign-ups",
+       "value": 5400
+      },
+      {
+       "name": "Trials",
+       "value": 2100
+      },
+      {
+       "name": "Purchases",
+       "value": 640
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "funnel-back-to-back",
+  "spec": {
+   "width": 560,
+   "height": 340,
+   "title": "This year against last",
+   "series": [
+    {
+     "type": "funnel",
+     "name": "Last year",
+     "display": "funnel",
+     "data": [
+      {
+       "name": "Visits",
+       "value": 12000
+      },
+      {
+       "name": "Sign-ups",
+       "value": 5400
+      },
+      {
+       "name": "Trials",
+       "value": 2100
+      },
+      {
+       "name": "Purchases",
+       "value": 640
+      }
+     ]
+    },
+    {
+     "type": "funnel",
+     "name": "This year",
+     "display": "funnel",
+     "data": [
+      {
+       "name": "Visits",
+       "value": 13500
+      },
+      {
+       "name": "Sign-ups",
+       "value": 6900
+      },
+      {
+       "name": "Trials",
+       "value": 2600
+      },
+      {
+       "name": "Purchases",
+       "value": 910
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "pyramid",
+  "spec": {
+   "width": 460,
+   "height": 400,
+   "title": "Food pyramid",
+   "series": [
+    {
+     "type": "funnel",
+     "name": "Servings",
+     "display": "pyramid",
+     "dataLabels": true,
+     "data": [
+      {
+       "name": "Sweets",
+       "value": 5
+      },
+      {
+       "name": "Protein",
+       "value": 15
+      },
+      {
+       "name": "Fruit and vegetables",
+       "value": 35
+      },
+      {
+       "name": "Grains",
+       "value": 45
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "funnel-area",
+  "spec": {
+   "width": 560,
+   "height": 340,
+   "title": "Support tickets by stage",
+   "series": [
+    {
+     "type": "funnel",
+     "name": "Tickets",
+     "display": "funnelArea",
+     "data": [
+      {
+       "name": "Opened",
+       "value": 480
+      },
+      {
+       "name": "Triaged",
+       "value": 360
+      },
+      {
+       "name": "In progress",
+       "value": 210
+      },
+      {
+       "name": "Resolved",
+       "value": 170
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "pictorial-stacked",
+  "spec": {
+   "width": 340,
+   "height": 420,
+   "title": "What a bottle holds",
+   "series": [
+    {
+     "type": "funnel",
+     "name": "Bottle",
+     "display": "pictorialStacked",
+     "silhouette": "M40 0 L60 0 L60 30 C80 40 90 60 90 80 L90 190 C90 196 86 200 80 200 L20 200 C14 200 10 196 10 190 L10 80 C10 60 20 40 40 30 Z",
+     "data": [
+      {
+       "name": "Air",
+       "value": 25
+      },
+      {
+       "name": "Water",
+       "value": 60
+      },
+      {
+       "name": "Sediment",
+       "value": 15
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "pie-of-pie",
+  "spec": {
+   "width": 620,
+   "height": 340,
+   "title": "Sales by region, Europe broken out",
+   "series": [
+    {
+     "type": "pie",
+     "name": "Sales",
+     "data": [
+      {
+       "name": "Americas",
+       "value": 420
+      },
+      {
+       "name": "Europe",
+       "value": 310
+      },
+      {
+       "name": "Asia",
+       "value": 190
+      },
+      {
+       "name": "Africa",
+       "value": 80
+      }
+     ],
+     "breakout": {
+      "slice": "Europe",
+      "data": [
+       {
+        "name": "France",
+        "value": 120
+       },
+       {
+        "name": "Germany",
+        "value": 105
+       },
+       {
+        "name": "Rest of Europe",
+        "value": 85
+       }
+      ]
+     }
+    }
+   ]
+  }
+ },
+ {
+  "name": "liquid-fill",
+  "spec": {
+   "width": 320,
+   "height": 320,
+   "title": "Reservoir level",
+   "series": [
+    {
+     "type": "liquid",
+     "name": "Reservoir",
+     "value": 0.64
+    }
+   ]
+  }
+ },
+ {
+  "name": "liquid-fill-rect",
+  "spec": {
+   "width": 420,
+   "height": 260,
+   "title": "Tank level",
+   "series": [
+    {
+     "type": "liquid",
+     "name": "Tank",
+     "value": 0.38,
+     "shape": "rectangle",
+     "waves": 3
+    }
+   ]
+  }
+ }
+]

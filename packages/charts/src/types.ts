@@ -1,6 +1,9 @@
 import type { Seed, Sketch, SketchStyle } from '@borrowdale/core';
 import type { Font, TextLayout } from '@borrowdale/text';
 import type { DistributionSeries, HistogramSeries, MarketSeries, RelationshipSeries } from './statistics/types.js';
+import type { UnitsSeries } from './units-series.js';
+import type { FunnelSeries } from './funnel-series.js';
+import type { LiquidSeries } from './liquid-series.js';
 
 /**
  * A chart, as plain data that can come from JSON. Its series' type picks its coordinate system, and
@@ -218,8 +221,12 @@ export interface BandAxis {
   type: 'band';
   /** 1 to 1,000 names, each unique and at most 100 characters. */
   categories: readonly string[];
-  /** Relative Cartesian category widths, one per category, each from 0.000001 to 1000000. */
-  weights?: readonly number[] | undefined;
+  /**
+   * Relative Cartesian category widths, one per category, each from 0.000001 to 1000000. Or `stacks`:
+   * each category as wide as the total of its stack, as a Marimekko or mosaic chart draws it. That
+   * needs every series to be a bar of one stack, on a percent axis.
+   */
+  weights?: readonly number[] | 'stacks' | undefined;
   title?: string | undefined;
   /** Draws neither the axis nor its labels, as in a sparkline. */
   hidden?: boolean | undefined;
@@ -386,7 +393,13 @@ export interface BarSeries extends ValueSeries {
   data: readonly (number | null)[];
   /** Bars of series with the same stack name stack; other series stand side by side. */
   stack?: string | undefined;
-  shape?: 'rectangle' | 'rounded' | 'pyramid' | undefined;
+  /**
+   * How each bar is drawn. `pictorial` repeats `symbol` from the bar's base, each one as wide as the
+   * bar, and cuts the last one at the value. Defaults to `rectangle`.
+   */
+  shape?: 'rectangle' | 'rounded' | 'pyramid' | 'pictorial' | undefined;
+  /** What a pictorial bar repeats: a symbol, or a named image. Needed by `shape: 'pictorial'`, and only by it. */
+  symbol?: Marker | undefined;
 }
 
 export interface LineSeries extends ValueSeries {
@@ -615,6 +628,23 @@ export interface PieSeries extends SeriesBase {
   padAngle?: number | undefined;
   /** Rounds each slice's corners to this radius, in user units, from 0 to 1,000. Defaults to 0. */
   cornerRadius?: number | undefined;
+  /**
+   * Breaks one slice out into a second pie, half as wide, beside this one: a pie of pie. The pie turns
+   * so that the slice faces its parts, so it takes no `startAngle` or `endAngle`, and it must be the
+   * chart's only ring.
+   */
+  breakout?: PieBreakout | undefined;
+}
+
+/** A slice of a pie and the parts it breaks out into. */
+export interface PieBreakout {
+  /** The name of the slice to break out. */
+  slice: string;
+  /**
+   * Its parts: 1 to 1,000, adding up to the slice's value, each named apart from the pie's slices
+   * and a legend entry of its own.
+   */
+  data: readonly { name: string; value: number; color?: string | undefined }[];
 }
 
 export interface RadarSeries extends SeriesBase {
@@ -818,7 +848,10 @@ export type Series =
   | PolarLineSeries
   | PolarAreaSeries
   | PolarScatterSeries
-  | GaugeSeries;
+  | GaugeSeries
+  | UnitsSeries
+  | FunnelSeries
+  | LiquidSeries;
 
 export type SeriesType = Series['type'];
 
@@ -850,5 +883,11 @@ export type ChartNode =
       kind: 'mark';
       /** The mark's tooltip, in SVG and the DOM. */
       title: string;
+      nodes: ChartNode[];
+    }
+  | {
+      kind: 'clip';
+      /** The rectangle its nodes show through; anything outside it is cut away. */
+      box: { x: number; y: number; width: number; height: number };
       nodes: ChartNode[];
     };
