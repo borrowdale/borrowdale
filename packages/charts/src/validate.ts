@@ -110,6 +110,18 @@ const checkMarker: Check<Marker> = (path, value) => {
   return { image: r.required('image', text(MAX_NAME)) };
 };
 const readSymbol = (r: Fields) => r.optional('symbol', checkMarker) ?? 'circle';
+
+/** A bar's shape, and the symbol a pictorial bar repeats, which only a pictorial bar takes. */
+function readBar(r: Fields, path: string, reserve: ReservePoints) {
+  const shape = r.optional('shape', oneOf(['rectangle', 'rounded', 'pyramid', 'pictorial'] as const)) ?? 'rectangle';
+  const symbol = r.optional('symbol', checkMarker);
+  const rest = { axis: readAxis(r), stack: readStack(r), data: readValues(r, reserve) };
+  if (shape === 'pictorial') {
+    return { ...rest, shape, symbol: symbol ?? fail(`${path}.symbol`, 'is missing: a pictorial bar repeats a symbol or an image') };
+  }
+  if (symbol !== undefined) fail(`${path}.symbol`, 'needs shape "pictorial"');
+  return { ...rest, shape, symbol };
+}
 const readDash = (r: Fields) => r.optional('dash', checkDash);
 const readValues = (r: Fields, reserve: ReservePoints) => r.required('data', categoryValues(reserve));
 const readPoints =
@@ -171,8 +183,8 @@ const SERIES_RULES = {
   bar: {
     system: 'cartesian',
     axes: 'band',
-    keys: ['shape', 'dataLabels', 'axis', 'data', 'stack'],
-    read: (r: Fields, _path: string, reserve: ReservePoints) => ({ shape: r.optional('shape', oneOf(['rectangle', 'rounded', 'pyramid'] as const)) ?? 'rectangle', axis: readAxis(r), stack: readStack(r), data: readValues(r, reserve) }),
+    keys: ['shape', 'symbol', 'dataLabels', 'axis', 'data', 'stack'],
+    read: readBar,
   },
   line: {
     system: 'cartesian',

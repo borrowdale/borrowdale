@@ -386,7 +386,13 @@ export interface BarSeries extends ValueSeries {
   data: readonly (number | null)[];
   /** Bars of series with the same stack name stack; other series stand side by side. */
   stack?: string | undefined;
-  shape?: 'rectangle' | 'rounded' | 'pyramid' | undefined;
+  /**
+   * How each bar is drawn. `pictorial` repeats `symbol` from the bar's base, each one as wide as the
+   * bar, and cuts the last one at the value. Defaults to `rectangle`.
+   */
+  shape?: 'rectangle' | 'rounded' | 'pyramid' | 'pictorial' | undefined;
+  /** What a pictorial bar repeats: a symbol, or a named image. Needed by `shape: 'pictorial'`, and only by it. */
+  symbol?: Marker | undefined;
 }
 
 export interface LineSeries extends ValueSeries {
