@@ -35,8 +35,18 @@ const withEurope = (europe: object) => ({ data: [slices[0], { ...slices[1], ...e
 /** The slices, each with a radius, Europe's as given. */
 const sized = (radius: number) => ({ data: [{ ...slices[0], radius: 2 }, { ...slices[1], radius }, { ...slices[2], radius: 1 }, { ...slices[3], radius: 1 }] });
 
+/** Europe broken out and pulled out by 0.3 of the radius. */
+const pulledOut = { ...europe, series: [{ ...europe.series[0]!, data: [slices[0], { ...slices[1], offset: 0.3 }, slices[2], slices[3]] }] } as ChartSpec;
 /** Europe broken out of a pie with a gap of 10 degrees between its slices. */
 const padded = pie({ slice: 'Europe', data: parts }, { padAngle: 10 });
+
+/** A slice that is the whole pie, broken out into two parts. */
+const whole = pie({ slice: 'A', data: [{ name: 'a1', value: 6 }, { name: 'a2', value: 4 }] }, { data: [{ name: 'A', value: 10 }, { name: 'B', value: 0 }] });
+/** Europe a share of the pie too small to show, broken out. */
+const sliver = pie({ slice: 'Europe', data: [{ name: 'France', value: 1e-3 }] }, { data: [{ name: 'Americas', value: 1e15 }, { name: 'Europe', value: 1e-3 }] });
+/** Europe reaching, by its radius, no further than the hole, broken out. */
+const sunk = pie({ slice: 'Europe', data: [{ name: 'France', value: 300 }] },
+  { innerRadius: 0.5, data: [{ name: 'Americas', value: 400, radius: 1e15 }, { name: 'Europe', value: 300, radius: 1e-300 }] });
 
 /** Where a path starts, written as a path passing through it writes the point: `, x y `. */
 const through = (d: string) => `, ${/^M(\S+ \S+)/.exec(d)![1]} `;
@@ -89,6 +99,21 @@ describe('pie of pie', () => {
     expect(sliceOutline(padded, 'Europe')[0]).toContain(through(foot!));
   });
 
+  it('joins the second pie from the slice where it is pulled out to', () => {
+    const [top, foot] = connectors(pulledOut);
+
+    expect(sliceOutline(pulledOut, 'Europe')[0]).toContain(through(top!));
+    expect(sliceOutline(pulledOut, 'Europe')[0]).toContain(through(foot!));
+  });
+
+  // The pie, of radius 142 about 153.5, 150, has no edges to the slice: the lines leave its top and foot.
+  it('joins a slice that is the whole pie from its top and foot', () => {
+    const [top, foot] = connectors(whole);
+
+    expect(top).toMatch(/^M153\.5 8 .*, 437\.5 79$/);
+    expect(foot).toMatch(/^M153\.5 292 .*, 437\.5 221$/);
+  });
+
   it('lists the parts in the legend after the slices', () => {
     expect(layoutChart(pie({ slice: 'Europe', data: parts }, {}, 'top')).labels)
       .toEqual(['Americas', 'Europe', 'Asia', 'Africa', 'France', 'Germany', 'Other']);
@@ -117,6 +142,10 @@ describe('pie of pie', () => {
       .toThrow('series[0].breakout.slice is "Europe", a slice whose value is 0, so it is not drawn and there is nothing to break out');
     expect(layingOut(pie({ slice: 'Europe', data: [{ name: 'France', value: 10 }] }, { ...withEurope({ value: 10 }), padAngle: 10 })))
       .toThrow('series[0].breakout.slice is "Europe", which the space between slices takes up, so it is not drawn and there is nothing to break out');
+    expect(layingOut(sliver))
+      .toThrow('series[0].breakout.slice is "Europe", too small a share of the pie to show, so it is not drawn and there is nothing to break out');
+    expect(layingOut(sunk))
+      .toThrow('series[0].breakout.slice is "Europe", which reaches no further than the hole, so it is not drawn and there is nothing to break out');
   });
 
   it('turns the pie itself, so it takes no angles', () => {

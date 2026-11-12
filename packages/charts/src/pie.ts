@@ -17,6 +17,13 @@ interface DrawnSlice {
   center: Point;
 }
 
+/** Why a slice has nothing to draw, as an error about breaking it out says. */
+const UNDRAWN = {
+  gap: 'which the space between slices takes up',
+  share: 'too small a share of the pie to show',
+  hole: 'which reaches no further than the hole',
+} as const;
+
 /** The second pie's radius, and the gap before it, as shares of the first pie's. */
 const PART_RADIUS = 0.5;
 const PART_GAP = 0.5;
@@ -63,12 +70,12 @@ export function layoutPie(
 /**
  * Draws `slices` as a ring of `pie` around `center`, its radii `radius` times the pie's, from
  * `startAngle` to `endAngle`, each slice a mark whose tooltip starts with `prefix`. Returns where
- * each slice is drawn, or undefined for one with nothing to draw.
+ * each slice is drawn, or why one has nothing to draw.
  */
 function drawRing(
   drawing: Drawing, pie: CheckedPie, slices: readonly Slice[], center: Point, radius: number, outermost: number,
   [startAngle, endAngle]: [number, number], rect: Rect, paintOf: ReadonlyMap<string, Paint>, prefix: string,
-): (DrawnSlice | undefined)[] {
+): (DrawnSlice | keyof typeof UNDRAWN)[] {
   const sum = sumOf(slices);
   const reachOf = reaches(slices, radius * pie.outerRadius, radius * pie.innerRadius);
   const hole = radius * pie.innerRadius;
@@ -81,12 +88,12 @@ function drawRing(
     // A slice whose sweep rounds to nothing, or that the space between slices takes up, has nothing
     // to draw.
     if (!(angle - pad > from + pad)) {
-      return undefined;
+      return pad > 0 ? 'gap' : 'share';
     }
     const reach = reachOf(slice);
     // A slice that reaches no further than the hole has nothing to draw either.
     if (!(reach > hole)) {
-      return undefined;
+      return 'hole';
     }
     // Pulled out by a share of the outermost ring's radius.
     const pull = pullOf(slice, sum) * radius * outermost;
@@ -137,13 +144,16 @@ function layoutPieOfPie(
   const center: Point = [left + (1 + room) * radius, middle];
   const partCenter: Point = [left + (across - PART_RADIUS) * radius, middle];
   const scale = radius / pie.outerRadius;
-  const drawn = drawRing(drawing, pie, pie.data, center, scale, pie.outerRadius, [startAngle, startAngle + 360], rect, paintOf, '')[index]
-    ?? fail(`${pie.path}.breakout.slice`, `is ${show(slice.name)}, which the space between slices takes up, so it is not drawn and there is nothing to break out`);
+  const drawn = drawRing(drawing, pie, pie.data, center, scale, pie.outerRadius, [startAngle, startAngle + 360], rect, paintOf, '')[index]!;
+  if (typeof drawn === 'string') {
+    fail(`${pie.path}.breakout.slice`, `is ${show(slice.name)}, ${UNDRAWN[drawn]}, so it is not drawn and there is nothing to break out`);
+  }
   const edge = (angle: number): Point => {
     const [dx, dy] = onCircle(angle);
     return [drawn.center[0] + drawn.reach * dx, drawn.center[1] + drawn.reach * dy];
   };
-  const [top, foot] = [edge(drawn.from), edge(drawn.to)];
+  // A slice that is the whole pie has no edges: the lines join its top and foot.
+  const [top, foot] = slice.value === sum ? [edge(0), edge(180)] : [edge(drawn.from), edge(drawn.to)];
   const partReach = PART_RADIUS * radius;
   drawing.push(
     drawing.outline({ kind: 'line', x1: top[0], y1: top[1], x2: partCenter[0], y2: middle - partReach }, { stroke: GRID }, [pie.name, 'connector', 0]),
