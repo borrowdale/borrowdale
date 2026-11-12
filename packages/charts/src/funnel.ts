@@ -27,6 +27,7 @@ export function layoutFunnel(drawing: Drawing, chart: CheckedFunnelChart, rect: 
   const horizontal = first.horizontal;
   // Funnels back to back are named at their start: above them, or to their left when horizontal.
   const named = second ? nameHalves(drawing, [first, second], rect, horizontal) : 0;
+  assertRoom(horizontal ? { ...rect, left: rect.left + named } : { ...rect, top: rect.top + named }, chart.width, chart.height);
   const start = (horizontal ? rect.left : rect.top) + named;
   const length = (horizontal ? rect.right - rect.left : rect.bottom - rect.top) - named;
   const breadth = horizontal ? rect.bottom - rect.top : rect.right - rect.left;

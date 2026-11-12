@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { layoutChart, type ChartSpec } from '@borrowdale/charts';
+import { legendEntries } from '../src/layout.js';
 import type { ChartNode } from '../src/types.js';
+import { checkChart } from '../src/validate.js';
 
 function units(display: string, data: object[], options: object = {}, size: [number, number] = [300, 300]): ChartSpec {
   return {
@@ -24,6 +26,9 @@ const undisplayed = { width: 300, height: 300, series: [{ type: 'units', name: '
 /** For each category's mark, whether each node is its name or one of its units. */
 const rowsOf = (spec: ChartSpec) =>
   marksOf(spec).map((mark) => mark.nodes.map((node) => (node.kind === 'text' ? 'name' : 'unit')));
+
+/** The symbol each legend entry shows, undefined for a box. */
+const legendSymbols = (spec: ChartSpec) => legendEntries(checkChart(spec)).map((entry) => entry.symbol);
 
 /** Laying the chart out, run later, so that an error it throws can be expected. */
 function layingOut(spec: ChartSpec) {
@@ -119,6 +124,26 @@ describe('unit charts', () => {
     const spec = { ...units('waffle', [{ name: 'A', value: 3 }, { name: 'B', value: 2 }]), legend: 'top' } as ChartSpec;
 
     expect(layoutChart(spec).labels).toEqual(['A', 'B']);
+  });
+
+  // As a point legend does, the legend shows a circle, and a unit left to its default, as a box.
+  it('show the symbol of each category in the legend', () => {
+    const data = [{ name: 'A', value: 2, symbol: 'star' }, { name: 'B', value: 1, symbol: 'circle' }, { name: 'C', value: 1 }];
+
+    expect(legendSymbols(units('rows', data))).toEqual(['star', undefined, undefined]);
+  });
+
+  // As in a calendar, a unit narrower than 1 unit of the drawing is an error rather than a speck.
+  it.each(['waffle', 'parliament', 'rows'])('reject a %s too small to draw each unit 1 unit wide', (display) => {
+    expect(layingOut(units(display, [{ name: 'A', value: 2000 }], {}, [40, 40])))
+      .toThrow('Invalid chart: a 40 × 40 chart leaves no room for the plot after its title, legend and labels');
+  });
+
+  it('reject rows of pictograms with no room beside their names', () => {
+    const narrow = { ...units('rows', [{ name: 'A', value: 2 }, { name: 'B', value: 3 }], {}, [22, 300]), fontSize: 1 } as ChartSpec;
+
+    expect(layingOut(narrow))
+      .toThrow('Invalid chart: a 22 × 300 chart leaves no room for the plot after its title, legend and labels');
   });
 
   it('take only the options of their display, and no symbol on a ring', () => {

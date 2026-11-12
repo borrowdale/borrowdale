@@ -56,8 +56,8 @@ function drawRing(
   [startAngle, endAngle]: [number, number], rect: Rect, paintOf: ReadonlyMap<string, Paint>, prefix: string,
 ): void {
   const sum = slices.reduce((total, slice) => total + slice.value, 0);
-  const largest = Math.max(...slices.map((slice) => slice.radius ?? 0));
-  const [outer, hole] = [radius * pie.outerRadius, radius * pie.innerRadius];
+  const reachOf = reaches(slices, radius * pie.outerRadius, radius * pie.innerRadius);
+  const hole = radius * pie.innerRadius;
   // Space between slices only where there is more than one slice to part.
   const pad = slices.filter((slice) => slice.value > 0).length > 1 ? pie.padAngle / 2 : 0;
   let angle = startAngle;
@@ -69,7 +69,7 @@ function drawRing(
     if (!(angle - pad > from + pad)) {
       return;
     }
-    const reach = slice.radius === undefined ? outer : hole + ((outer - hole) * slice.radius) / largest;
+    const reach = reachOf(slice);
     // A slice that reaches no further than the hole has nothing to draw either.
     if (!(reach > hole)) {
       return;
@@ -94,6 +94,15 @@ function drawRing(
 }
 
 /**
+ * How far each slice reaches: to `outer`, or with per-slice radii, from `hole` out by its share of
+ * the largest radius.
+ */
+function reaches(slices: readonly Slice[], outer: number, hole: number): (slice: Slice) => number {
+  const largest = Math.max(...slices.map((slice) => slice.radius ?? 0));
+  return (slice) => (slice.radius === undefined ? outer : hole + ((outer - hole) * slice.radius) / largest);
+}
+
+/**
  * A pie with one slice broken out into a second pie of its parts, half as wide, to its right. The
  * pie turns so that the middle of the slice faces the second pie, and two lines join the slice's
  * edge to the second pie's top and foot. Its parts' shares are of the slice.
@@ -108,25 +117,29 @@ function layoutPieOfPie(
   const half = (slice.value / sum) * 180;
   const startAngle = 90 - (before / sum) * 360 - half;
   const pull = slice.value < sum ? slice.offset : 0;
-  // Across: the first pie, its slice's pull, the gap, and the second pie, in radii of the first.
-  const across = 2 + pull + PART_GAP + 2 * PART_RADIUS;
-  const radius = Math.min((rect.right - rect.left) / across, (rect.bottom - rect.top) / 2);
+  // Room on every side for the slices pulled out furthest, as a lone pie leaves it.
+  const room = Math.max(0, ...pie.data.filter((item) => item.value < sum).map((item) => item.offset));
+  // Across: the first pie and its room, the gap, and the second pie, in radii of the first.
+  const across = 2 * (1 + room) + PART_GAP + 2 * PART_RADIUS;
+  const radius = Math.min((rect.right - rect.left) / across, (rect.bottom - rect.top) / (2 * (1 + room)));
   const left = (rect.left + rect.right - across * radius) / 2;
   const middle = (rect.top + rect.bottom) / 2;
-  const center: Point = [left + radius, middle];
+  const center: Point = [left + (1 + room) * radius, middle];
   const partCenter: Point = [left + (across - PART_RADIUS) * radius, middle];
   const scale = radius / pie.outerRadius;
   drawRing(drawing, pie, pie.data, center, scale, pie.outerRadius, [startAngle, startAngle + 360], rect, paintOf, '');
-  // From the slice's edge, pulled out as the slice is, to the second pie's top and foot.
+  // From the slice's edge, as far out as the slice reaches and pulled out as it is, to the second
+  // pie's top and foot.
+  const reach = reaches(pie.data, radius, scale * pie.innerRadius)(slice);
   const edge = (angle: number): Point => {
     const [dx, dy] = onCircle(angle);
-    return [center[0] + pull * radius + radius * dx, center[1] + radius * dy];
+    return [center[0] + pull * radius + reach * dx, center[1] + reach * dy];
   };
   const [top, foot] = [edge(90 - half), edge(90 + half)];
-  const reach = PART_RADIUS * radius;
+  const partReach = PART_RADIUS * radius;
   drawing.push(
-    drawing.shape({ kind: 'line', x1: top[0], y1: top[1], x2: partCenter[0], y2: middle - reach }, { stroke: GRID }, [pie.name, 'connector', 0]),
-    drawing.shape({ kind: 'line', x1: foot[0], y1: foot[1], x2: partCenter[0], y2: middle + reach }, { stroke: GRID }, [pie.name, 'connector', 1]),
+    drawing.outline({ kind: 'line', x1: top[0], y1: top[1], x2: partCenter[0], y2: middle - partReach }, { stroke: GRID }, [pie.name, 'connector', 0]),
+    drawing.outline({ kind: 'line', x1: foot[0], y1: foot[1], x2: partCenter[0], y2: middle + partReach }, { stroke: GRID }, [pie.name, 'connector', 1]),
   );
   const parts = breakout.data.map((part) => ({ ...part, offset: 0, radius: undefined }));
   drawRing(drawing, pie, parts, partCenter, scale * PART_RADIUS, pie.outerRadius, [0, 360], rect, paintOf, `${slice.name}, `);

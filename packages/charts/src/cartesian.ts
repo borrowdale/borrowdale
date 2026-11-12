@@ -830,8 +830,11 @@ function pictorialBar(
   // Rounding noise must not add a symbol that the clip then cuts to nothing.
   const count = Math.ceil(Math.abs(to - from) / thickness - 1e-9);
   const step = Math.sign(to - from) * thickness;
-  const symbols = Array.from({ length: count }, (_, i) =>
-    markerNode(drawing, marker, frame.point([along + thickness / 2, from + (i + 0.5) * step]), thickness, style, [...key, i], own));
+  // One at a time, so that the drawing's limits stop a bar too long for its width before it is built.
+  const symbols: ChartNode[] = [];
+  for (let i = 0; i < count; i++) {
+    symbols.push(markerNode(drawing, marker, frame.point([along + thickness / 2, from + (i + 0.5) * step]), thickness, style, [...key, i], own));
+  }
   const [x0, y0] = frame.point([along, from]);
   const [x1, y1] = frame.point([along + thickness, to]);
   return drawing.clip(Math.min(x0, x1), Math.min(y0, y1), Math.abs(x1 - x0), Math.abs(y1 - y0), symbols);

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { layoutChart, type ChartSpec } from '@borrowdale/charts';
 import { legendOf } from '../src/cartesian.js';
 import type { ChartNode } from '../src/types.js';
+import { pointsOnCurves } from './support/layout.js';
 import type { CheckedCartesianChart } from '../src/validate.js';
 
 const pictorial = { shape: 'pictorial', symbol: 'square' };
@@ -19,6 +20,12 @@ function chart(first: number, bar: object, along: 'x' | 'y' = 'x'): ChartSpec {
     series: [{ type: 'bar', name: 'S', data: [first, 1, 1, 1, 1, 1], ...bar }],
   } as ChartSpec;
 }
+
+/** The six bars, the first a millionth as wide as the second, so that it is far longer than it is wide. */
+const thin = {
+  ...chart(5, pictorial),
+  axes: { x: { type: 'band', categories: ['A', 'B', 'C', 'D', 'E', 'F'], weights: [0.000001, 1000000, 1, 1, 1, 1] }, y: { type: 'linear', min: 0, max: 10 } },
+} as ChartSpec;
 
 /** The nodes the first bar's mark holds. */
 function firstBar(spec: ChartSpec): ChartNode[] {
@@ -91,6 +98,15 @@ describe('pictorial bars', () => {
 
     expect(legendOf(bar as CheckedCartesianChart['series'][number])).toEqual({ line: false, symbol: 'star' });
     expect(legendOf({ ...bar, shape: 'rectangle' } as CheckedCartesianChart['series'][number])).toEqual({ line: false, symbol: undefined });
+  });
+
+  it('stops at the drawing budget a bar too long for its width', () => {
+    expect(layingOut(thin)).toThrow('Drawing too complex (more than 400000 operations)');
+  });
+
+  // The second symbol's corner: the symbols drawn inside the clip are among the points a chart draws.
+  it('has its symbols among the points the chart draws', () => {
+    expect(pointsOnCurves(layoutChart(chart(3, pictorial)))).toContainEqual([42.15, 205.51]);
   });
 
   it('needs a symbol, which other bars do not take', () => {

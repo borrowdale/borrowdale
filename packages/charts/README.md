@@ -494,8 +494,10 @@ Each value is a whole number of units, or with `units` (1 to 2,000) a share of t
 given out by largest remainder, a tie to the earlier category. A category above 0 too small a share
 for one unit is an error, not left out, and so is a `padAngle` that leaves a ring's segments no room.
 A chart draws at most 2,000 units. A category's `symbol`, a symbol name or `{ image }`, draws its
-units, by default a square in a waffle and a circle otherwise; a ring takes none. Units are drawn
-solid by default: a hachure fill on large units uses much more of the drawing budget.
+units, by default a square in a waffle and a circle otherwise; a ring takes none. Its legend entry
+shows the symbol as a point legend does, with a box for a circle or the default. Units are drawn
+solid by default: a hachure fill on large units uses much more of the drawing budget. A chart too
+small to draw each unit at least 1 unit wide is an error, as one too small for its parts is.
 
 ### Funnels
 
@@ -519,7 +521,7 @@ value on it, and each stage's tooltip gives its share of the total.
 A `liquid` series shows one `value`, from 0 (empty) to 1 (full), as liquid in a `shape`: a `circle`
 (the default), or a `rect` filling the chart. Its surface is a wave of `waves` crests, 1 to 5
 (default 2), and an empty or full container's is flat. The level is written in the middle as a whole
-percentage.
+percentage, kept inside the chart as a data label is: a chart too small for it is an error.
 
 ## Chart options
 
@@ -753,7 +755,8 @@ millionth of the largest is an error. Bars and bar intervals accept
 units, and pyramids taper from their first endpoint to the second. A bar also accepts
 `shape: 'pictorial'` with a `symbol`, a symbol name or `{ image }`: the symbol is repeated from the
 bar's base, each as wide as the bar, and the last is cut at the value. Its legend entry shows the
-symbol.
+symbol. A bar far longer than it is wide can need more symbols than the
+[drawing budget](#errors-and-limits) allows.
 
 An `xyLine` can supply `segments`, one entry per adjacent pair of data slots.
 Each entry is `null` or `{ color?, strokeWidth?, dash? }`; an edge touching a null point

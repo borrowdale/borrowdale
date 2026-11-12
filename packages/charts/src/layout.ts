@@ -130,10 +130,13 @@ type NamedSystem = { [S in System]: (typeof LEGENDS)[S] extends 'names' ? S : ne
 const listsNames = (chart: CheckedChart): chart is Extract<CheckedChart, { system: NamedSystem }> =>
   LEGENDS[chart.system] === 'names';
 
-/** What a series lists in the legend by name: its data, then the parts a pie breaks a slice out into. */
+/**
+ * What a series lists in the legend by name: its data, then the parts a pie breaks a slice out into,
+ * each with the symbol a unit chart draws its units as, shown as a point legend shows it.
+ */
 function namedItems(entry: Extract<CheckedChart, { system: NamedSystem }>['series'][number]) {
-  const items = (data: readonly { name: string; color: string | undefined }[], path: string) =>
-    data.map((item, i) => ({ name: item.name, color: item.color, path: `${path}.data[${i}]` }));
+  const items = (data: readonly { name: string; color: string | undefined; symbol?: Marker | undefined }[], path: string) =>
+    data.map((item, i) => ({ name: item.name, color: item.color, path: `${path}.data[${i}]`, symbol: legendSymbol(item.symbol) }));
   const parts = 'breakout' in entry && entry.breakout ? items(entry.breakout.data, `${entry.path}.breakout`) : [];
   return [...items(entry.data, entry.path), ...parts];
 }
@@ -142,9 +145,9 @@ function namedItems(entry: Extract<CheckedChart, { system: NamedSystem }>['serie
  * One entry per name in the series' data, in the order they first appear, where the system lists
  * names, else one per series, each with its colour and hatching.
  */
-function legendEntries(chart: CheckedChart): LegendEntry[] {
+export function legendEntries(chart: CheckedChart): LegendEntry[] {
   if (listsNames(chart)) {
-    const first = new Map<string, { name: string; color: string | undefined; path: string; style: SketchStyle }>();
+    const first = new Map<string, { name: string; color: string | undefined; path: string; style: SketchStyle; symbol: Marker | undefined }>();
     for (const entry of chart.series) {
       for (const item of namedItems(entry)) {
         if (!first.has(item.name)) {
@@ -160,6 +163,7 @@ function legendEntries(chart: CheckedChart): LegendEntry[] {
       line: false,
       dash: undefined,
       style: slices[i]!.style,
+      symbol: slices[i]!.symbol,
     }));
   }
   const symbolOf = (entry: CheckedChart['series'][number]) => legendSymbol('symbol' in entry ? entry.symbol : undefined);

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { layoutChart, type ChartSpec } from '@borrowdale/charts';
+import { labelsOutside } from './support/layout.js';
 
 // 300 by 200: the container fills x 8 to 292 and y 8 to 192; a circle has radius 92 around 150, 100.
 function liquid(value: number, options: object = {}): ChartSpec {
@@ -54,6 +55,13 @@ describe('liquid fills', () => {
   it('write the level as a whole percentage in the middle and the tooltip', () => {
     expect(mark(liquid(0.456)).title).toBe('Tank: 46%');
     expect(layoutChart(liquid(0.456)).labels).toEqual(['46%']);
+  });
+
+  // The level is placed as a data label is: inside the chart, or an error where it cannot fit.
+  it('keep the level inside a small chart', () => {
+    expect(labelsOutside(layoutChart({ ...liquid(0.5), width: 40, height: 40 } as ChartSpec))).toBe(0);
+    expect(layingOut({ ...liquid(0.5), width: 20, height: 20 } as ChartSpec))
+      .toThrow('series[0].value does not fit even cut short: there are 4 units for it');
   });
 
   it('take a level from 0 to 1, 1 to 5 waves, and a circle or a rect', () => {

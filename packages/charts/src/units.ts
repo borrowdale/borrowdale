@@ -35,7 +35,7 @@ export function layoutUnits(drawing: Drawing, chart: CheckedUnitsChart, rect: Re
   assertRoom(rect, chart.width, chart.height);
   const units = chart.series[0]!;
   const starts = startsOf(units.counts);
-  const { unit, names } = drawerOf(drawing, units, rect, paintOf);
+  const { unit, names } = drawerOf(drawing, units, rect, paintOf, chart);
   units.data.forEach((item, i) => {
     const count = units.counts[i]!;
     const nodes = Array.from({ length: count }, (_, k) => unit(i, k, starts[i]! + k));
@@ -50,7 +50,7 @@ export function layoutUnits(drawing: Drawing, chart: CheckedUnitsChart, rect: Re
  * Draws the `k`th unit of a category, the `index`th of the series; and for pictogram rows, the name
  * beside each category's row.
  */
-function drawerOf(drawing: Drawing, units: Units, rect: Rect, paintOf: ReadonlyMap<string, Paint>) {
+function drawerOf(drawing: Drawing, units: Units, rect: Rect, paintOf: ReadonlyMap<string, Paint>, chart: CheckedUnitsChart) {
   const style = (category: number) => solid(paintOf.get(units.data[category]!.name)!.color);
   const key = (index: number) => [units.name, 'unit', index];
   const symbol = (category: number) => units.data[category]!.symbol ?? (units.display === 'waffle' ? 'square' : 'circle');
@@ -62,12 +62,12 @@ function drawerOf(drawing: Drawing, units: Units, rect: Rect, paintOf: ReadonlyM
   switch (units.display) {
     case 'waffle': {
       const columns = units.columns ?? 10;
-      return { unit: marker(grid(rect, columns, Math.ceil(total / columns))), names: undefined };
+      return { unit: marker(grid(rect, columns, Math.ceil(total / columns), chart)), names: undefined };
     }
     case 'parliament':
-      return { unit: marker(parliament(units, rect)), names: undefined };
+      return { unit: marker(parliament(units, rect, chart)), names: undefined };
     case 'rows': {
-      const rows = pictogramRows(drawing, units, rect);
+      const rows = pictogramRows(drawing, units, rect, chart);
       return { unit: marker(rows.place), names: rows.names };
     }
     case 'ring': {
@@ -87,9 +87,15 @@ function drawerOf(drawing: Drawing, units: Units, rect: Rect, paintOf: ReadonlyM
   }
 }
 
+/** Fails, as a chart with no room does, where a unit would be less than one unit of the drawing wide. */
+function assertUnitRoom(size: number, chart: CheckedUnitsChart): void {
+  assertRoom({ left: 0, top: 0, right: size, bottom: size }, chart.width, chart.height);
+}
+
 /** A grid of `columns` by `lines` square cells, centred in `rect`, filled row by row. */
-function grid(rect: Rect, columns: number, lines: number): Place {
+function grid(rect: Rect, columns: number, lines: number, chart: CheckedUnitsChart): Place {
   const cell = Math.min((rect.right - rect.left) / columns, (rect.bottom - rect.top) / lines);
+  assertUnitRoom(cell, chart);
   const left = (rect.left + rect.right - cell * columns) / 2;
   const top = (rect.top + rect.bottom - cell * lines) / 2;
   return (_category, _k, index) => ({
@@ -102,7 +108,7 @@ function grid(rect: Rect, columns: number, lines: number): Place {
  * Seats on rows of arcs between the hole and the rim, filled by angle, so that each category takes a
  * wedge from the start of the sweep.
  */
-function parliament(units: Units, rect: Rect): Place {
+function parliament(units: Units, rect: Rect, chart: CheckedUnitsChart): Place {
   const { startAngle, endAngle, innerRadius, seats } = units;
   const { center, radius } = fitSweep(rect, startAngle, endAngle, innerRadius);
   const sweep = endAngle - startAngle;
@@ -115,7 +121,9 @@ function parliament(units: Units, rect: Rect): Place {
     .sort((a, b) => a.angle - b.angle || a.reach - b.reach);
   // As deep as a row, but no wider than the most crowded row leaves each seat.
   const crowded = Math.min(...seats.map((count, row) => (count === 0 ? Infinity : (sweep * RADIANS * reaches[row]!) / count)));
-  const size = radius * Math.min((1 - innerRadius) / seats.length, crowded) * FILL;
+  const seat = radius * Math.min((1 - innerRadius) / seats.length, crowded);
+  assertUnitRoom(seat, chart);
+  const size = seat * FILL;
   return (_category, _k, index) => {
     const { angle, reach } = spots[index]!;
     const [dx, dy] = onCircle(angle);
@@ -127,7 +135,7 @@ function parliament(units: Units, rect: Rect): Place {
  * One category to a row of pictograms, wrapping after `columns` units, each row's name beside it on
  * the left; a category with no units keeps an empty row.
  */
-function pictogramRows(drawing: Drawing, units: Units, rect: Rect) {
+function pictogramRows(drawing: Drawing, units: Units, rect: Rect, chart: CheckedUnitsChart) {
   const columns = units.columns ?? Math.max(1, ...units.counts);
   const lines = units.counts.map((count) => Math.max(1, Math.ceil(count / columns)));
   const firsts = startsOf(lines);
@@ -136,6 +144,7 @@ function pictogramRows(drawing: Drawing, units: Units, rect: Rect) {
   const room = Math.min(widest, (rect.right - rect.left) * NAME_SHARE);
   const left = rect.left + room + GAP;
   const cell = Math.min((rect.right - left) / columns, (rect.bottom - rect.top) / total);
+  assertUnitRoom(cell, chart);
   const top = (rect.top + rect.bottom - cell * total) / 2;
   const place: Place = (category, k) => ({
     center: [left + ((k % columns) + 0.5) * cell, top + (firsts[category]! + Math.floor(k / columns) + 0.5) * cell],

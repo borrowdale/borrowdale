@@ -93,6 +93,19 @@ describe('funnels', () => {
       .toThrow('series[1].display is pyramid, but only funnel displays stand back to back');
   });
 
+  it('need funnels back to back to give a stage one colour', () => {
+    const red = { data: [{ name: 'A', value: 100, color: '#ff0000' }, two[1]] };
+    const blue = { data: [{ name: 'A', value: 100, color: '#0000ff' }, two[1]] };
+
+    expect(layingOut(pair(red, blue)))
+      .toThrow('series[1].data[0].color is "#0000ff", but series[0].data[0].color, of the same name, gives "#ff0000"');
+  });
+
+  it('need room for funnels back to back after their names', () => {
+    expect(layingOut({ ...pair({}, {}), width: 200, height: 24 } as ChartSpec))
+      .toThrow('Invalid chart: a 200 × 24 chart leaves no room for the plot after its title, legend and labels');
+  });
+
   it('are one or two series, with no axes', () => {
     const spec = funnel('funnel', two);
 

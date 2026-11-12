@@ -47,6 +47,6 @@ export function layoutLiquid(drawing: Drawing, chart: CheckedLiquidChart, rect: 
   drawing.mark(`${liquid.name}: ${percent}`, [
     ...(liquid.value > 0 ? [drawing.shape({ kind: 'polygon', points: [...tops, ...feet] }, hatched(paint), key, liquid.style)] : []),
     drawing.outline(container, { stroke: paint.color }, [liquid.name, 'container'], liquid.style),
-    drawing.text(percent, { x: cx, y: cy, anchor: 'middle', baseline: 'middle' }),
+    drawing.label(percent, cx, cy, rect, `${liquid.path}.value`),
   ]);
 }

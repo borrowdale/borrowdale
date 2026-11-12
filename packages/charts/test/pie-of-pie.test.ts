@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { layoutChart, type ChartSpec } from '@borrowdale/charts';
+import { pointsOutside } from './support/layout.js';
 
 const slices = [{ name: 'Americas', value: 400 }, { name: 'Europe', value: 300 }, { name: 'Asia', value: 200 }, { name: 'Africa', value: 100 }];
 const parts = [{ name: 'France', value: 120 }, { name: 'Germany', value: 100 }, { name: 'Other', value: 80 }];
@@ -12,6 +13,13 @@ function pie(breakout: object, options: object = {}, legend = 'none'): ChartSpec
 }
 
 const europe = pie({ slice: 'Europe', data: parts });
+/** Europe broken out, with Americas pulled out by half the pie's radius. */
+const pulled = { ...europe, series: [{ ...europe.series[0]!, data: [{ ...slices[0]!, offset: 0.5 }, ...slices.slice(1)] }] } as ChartSpec;
+/** Europe broken out of a pie whose slices reach out by their radius, Europe half as far as Americas. */
+const reaching = {
+  ...europe,
+  series: [{ ...europe.series[0]!, data: [{ ...slices[0]!, radius: 4 }, { ...slices[1]!, radius: 2 }, { ...slices[2]!, radius: 3 }, { ...slices[3]!, radius: 1 }] }],
+} as ChartSpec;
 const titles = (spec: ChartSpec) => layoutChart(spec).nodes.flatMap((node) => (node.kind === 'mark' ? [node.title] : []));
 /** The lines drawn outside any mark: the connectors between the pies. */
 const connectors = (spec: ChartSpec) =>
@@ -21,6 +29,9 @@ const connectors = (spec: ChartSpec) =>
 const sliceOutline = (spec: ChartSpec, name: string) =>
   layoutChart(spec).nodes.flatMap((node) =>
     (node.kind === 'mark' && node.title.startsWith(`${name}: `) && node.nodes[0]!.kind === 'sketch' ? [node.nodes[0]!.sketch.paths[0]!.d] : []));
+
+/** Where a path starts, written as a path passing through it writes the point: `, x y `. */
+const through = (d: string) => `, ${/^M(\S+ \S+)/.exec(d)![1]} `;
 
 /** Laying the chart out, run later, so that an error it throws can be expected. */
 function layingOut(spec: ChartSpec) {
@@ -49,6 +60,18 @@ describe('pie of pie', () => {
     // the foot connector's start.
     expect(sliceOutline(europe, 'Europe')[0])
       .toMatch(/^M153\.5 150 C[^C]*, 236\.97 35\.12 C[^C]*, 295\.5 150 C[^C]*, 236\.97 264\.88 /);
+  });
+
+  // As a lone pie does, it leaves room on every side for the slice pulled out furthest.
+  it('keeps a slice pulled out by its offset inside the chart', () => {
+    expect(pointsOutside(layoutChart(pulled))).toBe(0);
+  });
+
+  it('joins the second pie from the edge of a slice that reaches out less than the pie', () => {
+    const [top, foot] = connectors(reaching);
+
+    expect(sliceOutline(reaching, 'Europe')[0]).toContain(through(top!));
+    expect(sliceOutline(reaching, 'Europe')[0]).toContain(through(foot!));
   });
 
   it('lists the parts in the legend after the slices', () => {

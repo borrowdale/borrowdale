@@ -65,6 +65,13 @@ describe('weights from stacks', () => {
       .toThrow('axes.x.weights is "stacks", but the stack of "A" totals 0, as every stack does');
   });
 
+  it('needs bars on one band axis', () => {
+    const cells = [{ type: 'heatmap', name: 'H', data: [['A', 'r', 1], ['B', 'r', 2], ['C', 'r', 3]] }];
+
+    expect(layingOut(chart('stacks', cells, { type: 'band', categories: ['r'] })))
+      .toThrow('axes.x.weights is "stacks", which needs bars on one band axis');
+  });
+
   it('takes no other word for weights', () => {
     expect(layingOut(chart('totals'))).toThrow('axes.x.weights must be an array, got "totals"');
   });
