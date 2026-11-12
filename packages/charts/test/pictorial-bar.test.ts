@@ -100,6 +100,11 @@ describe('pictorial bars', () => {
     expect(legendOf({ ...bar, shape: 'rectangle' } as CheckedCartesianChart['series'][number])).toEqual({ line: false, symbol: undefined });
   });
 
+  // A millionth of a symbol long: no symbol is drawn, and no empty clip either.
+  it('draws nothing for a bar too short for any symbol', () => {
+    expect(firstBar(chart(1e-12, pictorial))).toEqual([]);
+  });
+
   it('stops at the drawing budget a bar too long for its width', () => {
     expect(layingOut(thin)).toThrow('Drawing too complex (more than 400000 operations)');
   });

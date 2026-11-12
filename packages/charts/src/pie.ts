@@ -9,7 +9,7 @@ import { fail, show } from './read.js';
 
 type Slice = Pick<CheckedPie['data'][number], 'name' | 'value' | 'offset' | 'radius'>;
 
-/** Where a slice is drawn: between two angles, out to `reach` from `center`, which its pull moves. */
+/** Where a slice is drawn: between two angles, the space between slices left out, out to `reach` from `center`, which its pull moves. */
 interface DrawnSlice {
   from: number;
   to: number;
@@ -103,7 +103,7 @@ function drawRing(
         pulled[0] + dx * (hole + reach) / 2, pulled[1] + dy * (hole + reach) / 2,
         rect, `${pie.path}.dataLabels`)] : []),
     ]);
-    return { from, to: angle, reach, center: pulled };
+    return { from: from + pad, to: angle - pad, reach, center: pulled };
   });
 }
 

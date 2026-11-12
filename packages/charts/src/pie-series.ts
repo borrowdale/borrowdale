@@ -1,5 +1,5 @@
 // A pie chart: slices of one or more nested rings, and the slice a pie of pie breaks out into parts.
-import { checkSweep, MAX_HOLE, MAX_NAME } from './check-axis.js';
+import { checkSweep, MAX_HOLE, MAX_NAME, MAX_PAD_ANGLE } from './check-axis.js';
 import { checkNameColors, readNamedValues } from './named-values.js';
 import { fail, fields, MAX_VALUE, number, show, text, type Fields } from './read.js';
 import type { CheckedChartBase, SeriesOf } from './validate.js';
@@ -14,7 +14,6 @@ export interface CheckedPieChart extends CheckedChartBase {
 }
 
 const MAX_RINGS = 10;
-const MAX_PAD_ANGLE = 10;
 const MAX_CORNER_RADIUS = 1_000;
 const MAX_OFFSET = 0.5;
 const MIN_OUTER = 0.05;
@@ -81,7 +80,8 @@ function readBreakout<S extends { name: string; value: number; radius: number | 
     }
   });
   const sum = data.reduce((total, part) => total + part.value, 0);
-  if (Math.abs(sum - slice.value) > 1e-9 * Math.max(1, slice.value)) {
+  // Within rounding of the slice, however small: it is above 0.
+  if (Math.abs(sum - slice.value) > 1e-9 * slice.value) {
     fail(`${path}.data`, `adds up to ${sum}, but the slice it breaks out, ${show(name)}, is ${slice.value}`);
   }
   return { slice, index, data };

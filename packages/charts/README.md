@@ -484,7 +484,8 @@ A `units` series draws each category's value as a count of equal units. `display
 - `parliament`: seats on rows of arcs from `startAngle` to `endAngle` (degrees clockwise from the top,
   default −90 to 90) around a hole of `innerRadius` (0 to 0.95, default 0.4), filled by angle so that
   each category takes a wedge. `rows` (1 to 50) sets how many rows, the seats shrinking to fit them;
-  by default, the fewest rows whose seats, as deep as a row, hold every unit.
+  by default, the fewest rows whose seats, as deep as a row, hold every unit; where 50 such rows do
+  not, give `rows`.
 - `rows`: one row of pictograms per category, its name beside it, wrapping after `columns` units (by
   default, the most units of any category).
 - `ring`: a segmented doughnut, one segment per unit from `startAngle` (default 0) to `endAngle`

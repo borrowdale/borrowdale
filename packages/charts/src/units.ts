@@ -3,10 +3,10 @@
 import type { Point } from '@borrowdale/core';
 import type { Drawing } from './drawing.js';
 import { assertRoom, GAP, type Rect } from './frame.js';
-import { fitSweep, onCircle, sliceShape } from './geometry.js';
+import { fitSweep, onCircle, RADIANS, sliceShape } from './geometry.js';
 import { solid } from './marks.js';
+import { valueLabel } from './named-values.js';
 import type { Paint } from './palette.js';
-import { formatValue } from './scale.js';
 import { unhandled } from './statistics/types.js';
 import { markerNode } from './symbols.js';
 import type { ChartNode } from './types.js';
@@ -42,7 +42,7 @@ export function layoutUnits(drawing: Drawing, chart: CheckedUnitsChart, rect: Re
     const name = names?.[i];
     if (count === 0 && name === undefined) return;
     const share = units.units === undefined ? '' : `, ${count} of ${units.units} units`;
-    drawing.mark(`${item.name}: ${formatValue(item.value)}${share}`, name === undefined ? nodes : [name, ...nodes]);
+    drawing.mark(`${valueLabel(item)}${share}`, name === undefined ? nodes : [name, ...nodes]);
   });
 }
 
@@ -74,6 +74,8 @@ function drawerOf(drawing: Drawing, units: Units, rect: Rect, paintOf: ReadonlyM
       const { center, radius } = fitSweep(rect, startAngle, endAngle, innerRadius);
       const step = (endAngle - startAngle) / total;
       const pad = total > 1 ? padAngle / 2 : 0;
+      // A segment is as deep as the ring and, at its middle, as long as its sweep less the gaps.
+      assertUnitRoom(Math.min(radius * (1 - innerRadius), radius * ((1 + innerRadius) / 2) * (step - 2 * pad) * RADIANS), chart);
       const unit = (category: number, _k: number, index: number): ChartNode => {
         const from = startAngle + index * step;
         const shape = sliceShape(center, radius, radius * innerRadius, from + pad, from + step - pad);

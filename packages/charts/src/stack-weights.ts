@@ -1,5 +1,5 @@
 // The weights of a Marimekko chart's band axis, `weights: "stacks"`: each column as wide as its stack.
-import type { CheckedBandAxis, CheckedLinearAxis } from './check-axis.js';
+import { MIN_WEIGHT, type CheckedBandAxis, type CheckedLinearAxis } from './check-axis.js';
 import { aSeries, fail, show } from './read.js';
 import { stackTotal } from './stack.js';
 import type { SeriesOf } from './validate.js';
@@ -29,7 +29,7 @@ export function stackWeights(series: readonly SeriesOf<'cartesian'>[], band: Che
   const largest = Math.max(...totals);
   return totals.map((total, i) => {
     const weight = total / largest;
-    if (weight >= 0.000001) return weight;
+    if (weight >= MIN_WEIGHT) return weight;
     const why = largest === 0 ? 'as every stack does' : `less than a millionth of the largest, ${largest}`;
     return fail(path, `is "stacks", but the stack of ${show(band.categories[i])} totals ${total}, ${why}`);
   });

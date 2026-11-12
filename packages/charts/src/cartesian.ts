@@ -806,13 +806,14 @@ function drawBars(
     const along = band.start + slot * width + (width * BAR_GAP) / 2;
     const category = context.categories[i]!;
     const [from, to] = [scale.at(span[0]), scale.at(span[1])];
+    const thickness = width * (1 - BAR_GAP);
     const key = [entry.name, category, 'bar'];
-    const nodes: ChartNode[] = span[0] === span[1] ? [] : [entry.shape === 'pictorial'
-      ? pictorialBar(drawing, frame, entry.symbol, along, width * (1 - BAR_GAP), from, to, hatched(paint), key, entry.style)
-      : drawing.shape(barShape(entry.shape, along, width * (1 - BAR_GAP), from, to, frame.point, frame.box), hatched(paint), key, entry.style)];
+    const nodes: ChartNode[] = span[0] === span[1] ? [] : entry.shape === 'pictorial'
+      ? pictorialBar(drawing, frame, entry.symbol, along, thickness, from, to, hatched(paint), key, entry.style)
+      : [drawing.shape(barShape(entry.shape, along, thickness, from, to, frame.point, frame.box), hatched(paint), key, entry.style)];
     if (entry.dataLabels) {
       // At the middle of the bar as drawn, which on a square-root axis is not its middle value.
-      const [x, y] = frame.point([along + width * (1 - BAR_GAP) / 2, (scale.at(span[0]) + scale.at(span[1])) / 2]);
+      const [x, y] = frame.point([along + thickness / 2, (from + to) / 2]);
       nodes.push(drawing.label(formatAxisValue(value, placed.axis), x, y, frame.plot, `${entry.path}.dataLabels`));
     }
     drawing.mark(`${entry.name}, ${category}: ${formatAxisValue(value, placed.axis)}`, nodes);
@@ -821,12 +822,12 @@ function drawBars(
 
 /**
  * `marker` repeated from the bar's base towards its value, each one `thickness` across and along, the
- * last cut at the value by a clip to the bar.
+ * last cut at the value by a clip to the bar. A bar too short for any symbol draws nothing.
  */
 function pictorialBar(
   drawing: Drawing, frame: Frame, marker: Marker, along: number, thickness: number, from: number, to: number,
   style: SketchStyle, key: SeedKey, own: SketchStyle,
-): ChartNode {
+): ChartNode[] {
   // Rounding noise must not add a symbol that the clip then cuts to nothing.
   const count = Math.ceil(Math.abs(to - from) / thickness - 1e-9);
   const step = Math.sign(to - from) * thickness;
@@ -835,9 +836,10 @@ function pictorialBar(
   for (let i = 0; i < count; i++) {
     symbols.push(markerNode(drawing, marker, frame.point([along + thickness / 2, from + (i + 0.5) * step]), thickness, style, [...key, i], own));
   }
+  if (count === 0) return [];
   const [x0, y0] = frame.point([along, from]);
   const [x1, y1] = frame.point([along + thickness, to]);
-  return drawing.clip(Math.min(x0, x1), Math.min(y0, y1), Math.abs(x1 - x0), Math.abs(y1 - y0), symbols);
+  return [drawing.clip(Math.min(x0, x1), Math.min(y0, y1), Math.abs(x1 - x0), Math.abs(y1 - y0), symbols)];
 }
 
 function drawLine(

@@ -21,7 +21,6 @@ import {
   categoryOf,
   checkSweep,
   checkY2Axis,
-  MAX_CATEGORIES,
   MAX_NAME,
   readerOn,
   type CheckedAngleAxis,
@@ -67,9 +66,7 @@ import type { ColorScale } from './color-scale.js';
 import {
   CURVES,
   LEGEND_POSITIONS,
-  SYMBOL_NAMES,
   type ChartSpec,
-  type Marker,
   type LegendPosition,
   type SeriesType,
 } from './types.js';
@@ -95,7 +92,6 @@ const categoryValues = (reserve: ReservePoints) =>
   list(0, MAX_POINTS, nullable(number(-MAX_VALUE, MAX_VALUE, 'or null')), reserve);
 const valueAxis = oneOf(['y', 'y2'] as const);
 const curve = oneOf(CURVES);
-
 
 // Each field a series type may have, read the same way by every type that has it, so a cartesian
 // type and its polar twin take the same values, except that a polar chart's points are numbers only.
@@ -688,8 +684,8 @@ function checkCartesianChart(
   const byStacks = [x, y].find((axis) => axis.type === 'band' && axis.weightsByStacks);
   if (byStacks) {
     const path = `${byStacks.path}.weights`;
-    const band = roles.kind === 'band' ? roles : fail(path, 'is "stacks", which needs bars on one band axis');
-    band.band.weights = stackWeights(series, band.band, valueAxisOf(series[0]!, band), path);
+    if (roles.kind !== 'band') fail(path, 'is "stacks", which needs bars on one band axis');
+    roles.band.weights = stackWeights(series, roles.band, valueAxisOf(series[0]!, roles), path);
   }
   // Histograms need linear x and y, so they are only ever on a continuous chart.
   if (roles.kind === 'continuous') checkHistogramEdges(series.filter((entry) => entry.type === 'histogram'), roles.x);

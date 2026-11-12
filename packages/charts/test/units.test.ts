@@ -99,7 +99,7 @@ describe('unit charts', () => {
 
   it('reject more seats than 50 rows of the sweep hold', () => {
     expect(layingOut(units('parliament', [{ name: 'A', value: 2000 }], { startAngle: 0, endAngle: 10 })))
-      .toThrow('series[0].data has 2000 units, more than 50 rows over 10 degrees can seat');
+      .toThrow('series[0].data has 2000 units, more than 50 rows of seats as deep as a row hold over 10 degrees: give rows, a wider sweep or a smaller innerRadius');
   });
 
   it('draw a ring as one segment per unit, clockwise from the top', () => {
@@ -136,8 +136,9 @@ describe('unit charts', () => {
   });
 
   // As in a calendar, a unit narrower than 1 unit of the drawing is an error rather than a speck.
-  it.each(['waffle', 'parliament', 'rows'])('reject a %s too small to draw each unit 1 unit wide', (display) => {
-    expect(layingOut(units(display, [{ name: 'A', value: 2000 }], {}, [40, 40])))
+  // A ring takes no gap here: 2,000 segments with the default gap are rejected for the gap first.
+  it.each([['waffle', {}], ['parliament', {}], ['rows', {}], ['ring', { padAngle: 0 }]])('reject a %s too small to draw each unit 1 unit wide', (display, options) => {
+    expect(layingOut(units(display, [{ name: 'A', value: 2000 }], options, [40, 40])))
       .toThrow('Invalid chart: a 40 × 40 chart leaves no room for the plot after its title, legend and labels');
   });
 

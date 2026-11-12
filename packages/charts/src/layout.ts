@@ -37,10 +37,11 @@ interface LegendEntry {
   /** Where the name is in the spec. */
   path: string;
   paint: Paint;
-  /** A series drawn as a line is shown by a line; anything else by a hatched box. */
+  /** A series drawn as a line is shown by a line, one drawn with a symbol by that symbol, anything else by a hatched box. */
   line: boolean;
   dash: number[] | undefined;
   style: SketchStyle;
+  /** The symbol a series or a unit chart's category is drawn with, shown in place of the box. */
   symbol?: Marker | undefined;
 }
 
@@ -160,15 +161,15 @@ export function legendEntries(chart: CheckedChart): LegendEntry[] {
         }
       }
     }
-    const slices = [...first.values()];
-    return paints(slices).map((paint, i) => ({
-      name: slices[i]!.name,
-      path: `${slices[i]!.path}.name`,
+    const named = [...first.values()];
+    return paints(named).map((paint, i) => ({
+      name: named[i]!.name,
+      path: `${named[i]!.path}.name`,
       paint,
       line: false,
       dash: undefined,
-      style: slices[i]!.style,
-      symbol: slices[i]!.symbol,
+      style: named[i]!.style,
+      symbol: named[i]!.symbol,
     }));
   }
   const symbolOf = (entry: CheckedChart['series'][number]) => legendSymbol('symbol' in entry ? entry.symbol : undefined);

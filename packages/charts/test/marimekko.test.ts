@@ -79,6 +79,6 @@ describe('weights from stacks', () => {
   });
 
   it('takes no other word for weights', () => {
-    expect(layingOut(chart('totals'))).toThrow('axes.x.weights must be an array, got "totals"');
+    expect(layingOut(chart('totals'))).toThrow('axes.x.weights must be "stacks" or an array of 3 weights, got "totals"');
   });
 });

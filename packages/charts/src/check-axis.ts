@@ -43,6 +43,11 @@ const MIN_LOG = 1e-20;
 const MAX_EVERY = 1_000;
 // The largest hole in a radius axis or a pie, as a share of the radius.
 export const MAX_HOLE = 0.95;
+/** The widest gap between a pie's slices or a ring's segments, in degrees. */
+export const MAX_PAD_ANGLE = 10;
+/** The narrowest and widest a band axis' weights make a category, against the others. */
+export const MIN_WEIGHT = 0.000001;
+const MAX_WEIGHT = 1_000_000;
 
 /**
  * Degrees by which a sweep may pass a whole turn, or fall short of it, through rounding and still be
@@ -200,10 +205,13 @@ function checkBandAxis<X extends object = object>(
     );
     const categories = r.required('categories', list(1, MAX_CATEGORIES, text(MAX_NAME)));
     unique(categories, (i) => `${path}.categories[${i}]`);
-    const weighted = list(categories.length, categories.length, number(0.000001, 1000000));
+    const weighted = list(categories.length, categories.length, number(MIN_WEIGHT, MAX_WEIGHT));
     // "stacks" asks for a Marimekko chart's weights, which only its bars can give: the chart fills them
     // in once they are checked.
-    const weights = r.optional('weights', (weightsPath, given) => (given === 'stacks' ? given : weighted(weightsPath, given)));
+    const weights = r.optional('weights', (weightsPath, given) =>
+      given === 'stacks' ? given
+      : typeof given === 'string' ? fail(weightsPath, `must be "stacks" or an array of ${categories.length} weights, got ${show(given)}`)
+      : weighted(weightsPath, given));
     const title = r.optional('title', text());
     const hidden = r.optional('hidden', boolean) ?? false;
     return {

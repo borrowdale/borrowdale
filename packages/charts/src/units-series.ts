@@ -1,6 +1,6 @@
 // A unit chart: each category's value as a count of equal units, in a waffle grid, the seats of a
 // parliament, rows of pictograms, or the segments of a ring.
-import { checkSweep, MAX_HOLE } from './check-axis.js';
+import { checkSweep, MAX_HOLE, MAX_PAD_ANGLE } from './check-axis.js';
 import { RADIANS } from './geometry.js';
 import { readNamedValues } from './named-values.js';
 import { fail, integer, number, type Fields } from './read.js';
@@ -9,11 +9,12 @@ import { checkMarker } from './symbols.js';
 import type { Marker, SeriesBase } from './types.js';
 import type { CheckedChartBase, SeriesOf } from './validate.js';
 
-/** The most units a chart draws, every series together. */
+/** The most units a unit chart draws. */
 export const MAX_UNITS = 2000;
 /** The most rows of seats a parliament has. */
 const MAX_SEAT_ROWS = 50;
-const MAX_PAD_ANGLE = 10;
+/** The most units in a row of a waffle or of pictograms. */
+const MAX_COLUMNS = 200;
 
 interface UnitsOptions {
   /**
@@ -88,7 +89,7 @@ export function readUnits(r: Fields, path: string, reserve: (count: number) => v
     fail(`${path}.data`, `has ${total} units, more than the ${MAX_UNITS} a chart draws: give units to share the values out`);
   }
   reserve(total);
-  const columns = r.optional('columns', integer(1, 200));
+  const columns = r.optional('columns', integer(1, MAX_COLUMNS));
   const round = display === 'parliament' || ring;
   const { startAngle, endAngle } = round ? checkSweep(r, path, ring ? [0, 360] : [-90, 90]) : { startAngle: 0, endAngle: 0 };
   const innerRadius = r.optional('innerRadius', number(0, MAX_HOLE)) ?? (ring ? 0.7 : 0.4);
@@ -99,7 +100,7 @@ export function readUnits(r: Fields, path: string, reserve: (count: number) => v
   const rows = r.optional('rows', integer(1, MAX_SEAT_ROWS));
   const seating = display === 'parliament' ? seatRows(total, endAngle - startAngle, innerRadius, rows) : { rows: [], size: 0 };
   if (seating === undefined) {
-    fail(`${path}.data`, `has ${total} units, more than ${MAX_SEAT_ROWS} rows over ${endAngle - startAngle} degrees can seat`);
+    fail(`${path}.data`, `has ${total} units, more than ${MAX_SEAT_ROWS} rows of seats as deep as a row hold over ${endAngle - startAngle} degrees: give rows, a wider sweep or a smaller innerRadius`);
   }
   return { display, data, counts, units: shared, columns, startAngle, endAngle, innerRadius, padAngle, seating };
 }

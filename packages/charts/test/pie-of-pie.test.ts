@@ -35,6 +35,9 @@ const withEurope = (europe: object) => ({ data: [slices[0], { ...slices[1], ...e
 /** The slices, each with a radius, Europe's as given. */
 const sized = (radius: number) => ({ data: [{ ...slices[0], radius: 2 }, { ...slices[1], radius }, { ...slices[2], radius: 1 }, { ...slices[3], radius: 1 }] });
 
+/** Europe broken out of a pie with a gap of 10 degrees between its slices. */
+const padded = pie({ slice: 'Europe', data: parts }, { padAngle: 10 });
+
 /** Where a path starts, written as a path passing through it writes the point: `, x y `. */
 const through = (d: string) => `, ${/^M(\S+ \S+)/.exec(d)![1]} `;
 
@@ -79,6 +82,13 @@ describe('pie of pie', () => {
     expect(sliceOutline(reaching, 'Europe')[0]).toContain(through(foot!));
   });
 
+  it('joins the second pie from the slice as drawn, the space between slices left out', () => {
+    const [top, foot] = connectors(padded);
+
+    expect(sliceOutline(padded, 'Europe')[0]).toContain(through(top!));
+    expect(sliceOutline(padded, 'Europe')[0]).toContain(through(foot!));
+  });
+
   it('lists the parts in the legend after the slices', () => {
     expect(layoutChart(pie({ slice: 'Europe', data: parts }, {}, 'top')).labels)
       .toEqual(['Americas', 'Europe', 'Asia', 'Africa', 'France', 'Germany', 'Other']);
@@ -87,6 +97,9 @@ describe('pie of pie', () => {
   it('needs parts that add up to the slice', () => {
     expect(layingOut(pie({ slice: 'Europe', data: [...parts, { name: 'Spain', value: 1 }] })))
       .toThrow('series[0].breakout.data adds up to 301, but the slice it breaks out, "Europe", is 300');
+    // However small the slice: here the parts are more than three times it.
+    expect(layingOut(pie({ slice: 'Europe', data: [{ name: 'France', value: 5e-10 }, { name: 'Other', value: 5e-10 }] }, withEurope({ value: 3e-10 }))))
+      .toThrow('series[0].breakout.data adds up to 1e-9, but the slice it breaks out, "Europe", is 3e-10');
   });
 
   it('needs the slice to be one of the pie, and its parts named apart from the slices', () => {
