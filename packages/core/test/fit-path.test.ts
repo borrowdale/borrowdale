@@ -30,6 +30,16 @@ describe('fitPath', () => {
     expect(fitted.box.height).toBeCloseTo(7.5, 1);
   });
 
+  it('takes the extent of a curve from its highest point, not from points along it', () => {
+    // From 0 0 to 1 0, the curve peaks at a third of the way, 4/9 above its ends: 100 wide, 400/9 high.
+    expect(fitPath('M0 0 C0 -1 1 0 1 0 Z', square, new Budget(10_000)).box.height).toBeCloseTo(400 / 9, 9);
+  });
+
+  it('fits a path alike whatever units it is written in', () => {
+    expect(fitPath('M0 0 C0 -0.01 0.01 0 0.01 0 Z', square, new Budget(10_000)).d)
+      .toBe(fitPath('M0 0 C0 -1000 1000 0 1000 0 Z', square, new Budget(10_000)).d);
+  });
+
   it('fits a path with more points than an engine takes as arguments to one call', () => {
     expect(fitPath(longChain, square, new Budget(100_000_000)).box.width).toBe(100);
   });
