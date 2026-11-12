@@ -72,6 +72,11 @@ function seriesRows(series: ChartSpec['series'][number], categories: readonly st
       return series.data.map((item) => [series.name, item.row, span(item, format)]);
     case 'heatmap':
       return series.data.map(([x, y, value]) => [series.name, `${place(x, format)}, ${place(y, format)}`, written(value, format)]);
+    case 'polarHeatmap':
+      return series.data.map(([angle, radius, value]) => [series.name, `${angle}, ${radius}`, written(value, format)]);
+    case 'horizon':
+      // Its band axis lists the rows, so each point is named by its x.
+      return series.data.map((point, i) => (point === null ? [series.name, String(i + 1), 'No data'] : [series.name, written(point[0], format), written(point[1], format)]));
     case 'bar':
     case 'line':
     case 'area':
@@ -88,8 +93,6 @@ function seriesRows(series: ChartSpec['series'][number], categories: readonly st
     case 'polarLine':
     case 'polarArea':
     case 'polarScatter':
-    case 'horizon':
-    case 'polarHeatmap':
     case 'calendar':
       return plainRows(series.name, series.data, categories, format);
     default:

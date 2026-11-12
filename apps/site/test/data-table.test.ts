@@ -43,6 +43,20 @@ describe('data rows of events, ranges, cells and dates', () => {
     expect(dataRows(chart([cells]))).toEqual([['Load', 'Mon, AM', '3'], ['Load', '0 – 10, PM', 'No data']]);
   });
 
+  it('list each point of a horizon row by its x, as its band axis lists rows', () => {
+    const load = { width: 300, height: 200, axes: { x: { type: 'linear' }, y: { type: 'band', categories: ['CPU', 'Memory'] } },
+      series: [{ type: 'horizon', name: 'Load', row: 'CPU', data: [[1, 5], null, [3, -2]] }] } as ChartSpec;
+
+    expect(dataRows(load)).toEqual([['Load', '1', '5'], ['Load', '2', 'No data'], ['Load', '3', '-2']]);
+  });
+
+  it('list each cell of a polar heatmap by its angle and radius', () => {
+    const visits = { width: 300, height: 200, axes: { angle: { type: 'band', categories: ['Mon', 'Tue'] }, radius: { type: 'band', categories: ['9am', '10am'] } },
+      series: [{ type: 'polarHeatmap', name: 'Visits', data: [['Tue', '9am', 5], ['Mon', '10am', null]] }] } as ChartSpec;
+
+    expect(dataRows(visits)).toEqual([['Visits', 'Tue, 9am', '5'], ['Visits', 'Mon, 10am', 'No data']]);
+  });
+
   it('write the date of a calendar day as given', () => {
     const steps = { type: 'calendar', name: 'Steps', data: [['2026-01-05', 4200]] };
 
