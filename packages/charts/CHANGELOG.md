@@ -1,5 +1,41 @@
 # @borrowdale/charts
 
+## 0.4.0
+
+### Minor Changes
+
+- cf0f2b4: Name the calendar option to change when a date or range is out of bounds, and say when an end is a default. Code that matches on an error's `path` sees these changes:
+  
+  - a date before a given `from` or after a given `to` is named at its place in `data`, where an omitted `to` was named before;
+  - a range of more than 100,000 days names `data` when the data alone span that many days, and otherwise the series, with both ends and which of them is a default, where it always named `to`.
+- ed4c47d: Keep a classed colour legend true to the classes it shows. A quantile scale now rejects classes that tied or nearly equal values would leave without a value, also between two different breaks, as documented, and a threshold scale rejects a break its legend cannot write exactly: with a fixed `format.decimals`, one such as 0.5 written as 1, and otherwise one with more than 20 decimals. Both drew a legend that misstated the classes. The two outer labels of a quantize or quantile legend are rounded outward, so they hold every value: a lowest value of `-0.04` written to one decimal is now labelled `-0.1`, not `0.0`.
+  
+  Colour axis errors name the option to change, and say when a value is a default. Code that matches on an error's `path` sees these changes:
+  
+  - a colour scale too wide for its legend row, with a title: `legend`, or `''` when the legend is placed by default, not `colorAxis.title`; without a title and placed by default: `''`, not `legend`;
+  - a quantile scale with the default 5 classes: `colorAxis`, not `colorAxis.classes`;
+  - horizon rows whose `layers` are the default: the series, not its `layers`;
+  - a horizon colour axis with only `max`: `colorAxis.max`, not `colorAxis.min`;
+  - a diverging scale with no value between its ends for the default midpoint: `colorAxis`, not `colorAxis.midpoint`.
+  
+  A diverging scale's midpoint error now writes the domain's ends exactly.
+- b726aaa: Errors name the option the spec gives, never one it leaves out, and say when a value is a default. Code that matches on an error's `path` sees these changes:
+  
+  - a sweep of more than a turn with only `startAngle` given, on a pie, a polar angle axis or a gauge dial: `startAngle`, not `endAngle`;
+  - nested rings whose angles differ where a ring has the default: that ring, not its `startAngle` or `endAngle`;
+  - stacked areas whose curves differ where an area has the default: that series, not its `curve`;
+  - a serpentine timeline whose default rows do not fit: `axes.time.path`, not `axes.time.path.rows`;
+  - a given density `bandwidth` too small for the samples: `bandwidth`, not the series;
+  - a given polynomial `degree` with too few distinct x values: `degree`, not the series.
+  
+  The messages also say when a value is a default: a ring inside its default hole, a polar chart without a radius axis, and a density whose default bandwidth is too small for its samples.
+- cd5b9c8: Reject a histogram edge that the x axis' format cannot write exactly: with a fixed `format.decimals`, one such as 0.5 written as 1, and otherwise one with more than 20 decimals. Each bin's tooltip states its edges, and a rounded edge misstated the bin, or wrote an empty one such as `[1, 1)`.
+
+### Patch Changes
+
+- @borrowdale/core@0.4.0
+  - @borrowdale/text@0.4.0
+
 ## 0.3.0
 
 ### Minor Changes
