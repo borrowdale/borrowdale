@@ -38,13 +38,29 @@ export const chartExamples = [...chartCases, ...presentationExamples, ...statist
  * name, else its type.
  */
 export function seriesTag(series: ChartSpec['series'][number]): string {
-  if (series.type === 'heatmap') {
-    const shape = series.display === undefined || series.display === 'rect' ? 'heatmap' : `${series.display} heatmap`;
-    return series.correlation ? `correlation ${shape}` : shape;
+  switch (series.type) {
+    case 'heatmap': {
+      const shape = series.display === undefined || series.display === 'rect' ? 'heatmap' : `${series.display} heatmap`;
+      return series.correlation ? `correlation ${shape}` : shape;
+    }
+    case 'bar':
+      return series.shape === 'pictorial' ? 'pictorial bar' : series.type;
+    case 'pie':
+      return series.breakout ? 'pie of pie' : series.type;
+    case 'market':
+    case 'distribution':
+    case 'relationship':
+    case 'units':
+    case 'funnel':
+      return series.display;
+    default:
+      return untagged(series);
   }
-  if (series.type === 'bar' && series.shape === 'pictorial') return 'pictorial bar';
-  if (series.type === 'pie' && series.breakout) return 'pie of pie';
-  return 'display' in series && ['market', 'distribution', 'relationship', 'units', 'funnel'].includes(series.type) ? String(series.display) : series.type;
+}
+// The type of a series that need not say its display: one that must, added without a case above,
+// fails to compile here.
+function untagged(series: Exclude<ChartSpec['series'][number], { display: string }>): string {
+  return series.type;
 }
 const charts: Example[] = chartExamples.map((e) => ({
   name: e.name,
