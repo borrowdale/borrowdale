@@ -554,7 +554,12 @@ soon as the total exceeds the limit, without reading later series. A limit error
 count reached so far, not a count of unread data. A pie holds at most 1,000 slices, and a chart
 at most 10 nested pies. A hex heatmap's columns and rows are whole numbers within ±100,000. A
 calendar counts one point per day of its range, reserved before any cell
-is made, so a range of more than 100,000 days, about 273 years, is an error. A gauge's dial
+is made, so a range of more than 100,000 days, about 273 years, is an error. The drawing budget
+below is reached first. Measured from 1 January, on a 2000 × 10000 chart and on a 10000 × 10000
+one, a calendar with a value on every day draws at most 34,703 days, about 95 years, and one with a
+single value 46,913 days. A smaller chart runs out of room sooner: from 1 January, a 1200 × 800
+chart holds 8,766 days, 24 years. A range of as many days starting on another day spans one more
+calendar year, and so holds fewer. A gauge's dial
 holds as many bar rings as fit outside its hub. Titles and stack names hold at most 1,000
 characters, and names, categories and colours at most 100. All of a chart's strokes share one
 budget of 400,000 units of drawing work, about a second at most, and a chart that needs more throws
