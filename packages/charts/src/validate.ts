@@ -1,5 +1,5 @@
 import { stackStatistics } from './statistics/stacks.js';
-import { readHistogram } from './statistics/histogram.js';
+import { checkHistogramEdges, readHistogram } from './statistics/histogram.js';
 import { displayKeys, DISTRIBUTIONS, MARKET_DISPLAYS, RELATIONSHIPS } from './statistics/types.js';
 import { readDistribution } from './statistics/distribution.js';
 import { readRelationship } from './statistics/relationship.js';
@@ -676,6 +676,8 @@ function checkCartesianChart(
     }
   }
   resolveValues(series, roles, { x, y });
+  // Histograms need linear x and y, so they are only ever on a continuous chart.
+  if (roles.kind === 'continuous') checkHistogramEdges(series.filter((entry) => entry.type === 'histogram'), roles.x);
   stackStatistics(series, reserve);
   return { ...base, system: 'cartesian', x, y, y2, roles, series, annotations: checkAnnotations(r, { x, y, y2 }, color) };
 }

@@ -127,6 +127,9 @@ On linear x and y axes, supply raw samples and 2 to 1,001 strictly increasing bi
 This gives three adjacent bars with heights 2, 3 and 1. Each bin includes its left edge, and
 the final bin also includes its right edge. Samples outside the edges raise an error. The x axis
 shows each bin at its numeric width. Heights show counts by default, even for unequal widths.
+Each bin's tooltip states its edges in the x axis' format, so an edge must be one that format
+writes exactly: with a fixed `format.decimals`, a value those decimals write without rounding, and
+otherwise one with at most 20 decimals.
 
 Use `frequency: 'relative'` to divide each count by the series' sample count, or
 `cumulative: true` to sum through each successive bin. Together they show the fraction of
