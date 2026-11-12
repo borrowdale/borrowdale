@@ -35,6 +35,17 @@ describe('fitPath', () => {
     expect(fitPath('M0 0 C0 -1 1 0 1 0 Z', square, new Budget(10_000)).box.height).toBeCloseTo(400 / 9, 9);
   });
 
+  // A curve bulging sideways turns along x; the second turns where c is 0, so only the other root finds it.
+  it.each([
+    ['M0 0 C1 0 1 1 0 1 Z', 75, 100],
+    ['M0 0 C0 0 1 -1 1 0 Z', 100, 400 / 9],
+  ])('takes the extent of %s from where it turns along either axis', (d, width, height) => {
+    const { box } = fitPath(d, square, new Budget(10_000));
+
+    expect(box.width).toBeCloseTo(width, 9);
+    expect(box.height).toBeCloseTo(height, 9);
+  });
+
   it('fits a path alike whatever units it is written in', () => {
     expect(fitPath('M0 0 C0 -0.01 0.01 0 0.01 0 Z', square, new Budget(10_000)).d)
       .toBe(fitPath('M0 0 C0 -1000 1000 0 1000 0 Z', square, new Budget(10_000)).d);
