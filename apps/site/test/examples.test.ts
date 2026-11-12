@@ -61,7 +61,8 @@ describe('gallery coverage and actual rendering', () => {
   });
 
   // A heatmap is tagged by the shape of its cells, and as a correlation when it is one, so the hexagon and
-  // correlation views can be found by name.
+  // correlation views can be found by name. A unit or funnel chart is tagged by its display, and a
+  // pictorial bar and a pie of pie by name.
   it.each([
     ['heatmap', 'heatmap'],
     ['punch-card', 'circle heatmap'],
@@ -70,6 +71,10 @@ describe('gallery coverage and actual rendering', () => {
     ['calendar-heatmap', 'calendar'],
     ['radar-heatmap', 'polarHeatmap'],
     ['horizon', 'horizon'],
+    ['waffle', 'waffle'],
+    ['pictorial-stacked', 'pictorialStacked'],
+    ['pictorial-bar', 'pictorial bar'],
+    ['pie-of-pie', 'pie of pie'],
   ])('tags the example %s as %s', (name, tag) => {
     expect(galleryTag(name)).toBe(tag);
   });
