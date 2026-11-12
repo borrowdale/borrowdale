@@ -57,11 +57,14 @@ default branch:
 | `horizon`, one per row | `x` continuous: `linear` or `time`; `y` `band` |
 | `polarHeatmap` | `angle` and `radius`, both `band` |
 | `calendar`, one | none |
+| `units`, one | none |
+| `funnel`, one, or two funnels back to back | none |
+| `liquid`, one | none |
 
 | `type` | `data` | Options |
 |---|---|---|
 | `histogram` | numeric samples | `edges`, `frequency`, `cumulative`, `stack`. See Histograms below. |
-| `bar` | a value or `null` per category | `stack`: bars with the same stack name stack (positive values up, negative down); others stand side by side. `axis: 'y2'` |
+| `bar` | a value or `null` per category | `stack`: bars with the same stack name stack (positive values up, negative down); others stand side by side. `shape`, `symbol`; see [widths and colours](#widths-crossings-and-colours). `axis: 'y2'` |
 | `line` | a value or `null` (a gap) per category | `curve`, `dash` (dash and gap lengths, for the line and its legend swatch: `style.strokeLineDash` for short), `axis: 'y2'` |
 | `area` | a value or `null` per category | `stack`, `curve`, `axis: 'y2'`. Stacked values must not be negative. Areas of one stack share a `curve` |
 | `rangeArea` | a `[low, high]` pair or `null` per category, high not below low | `curve`, `axis: 'y2'` |
@@ -71,7 +74,7 @@ default branch:
 | `xyArea` | `[x, low, high]` intervals or `null` between runs, x increasing within each run | `difference` permits crossing boundaries; see [widths and colours](#widths-crossings-and-colours) |
 | `scatter` | `[x, y]` points | |
 | `bubble` | `[x, y, size]` points: the size sets the area, and is not negative | |
-| `pie` | `{ name, value, color?, offset?, radius? }` slices | `innerRadius` (0 to 0.95: 0.5 is a donut) and `outerRadius` (0.05 to 1), `startAngle` and `endAngle`, `padAngle` (0 to 10 degrees between slices), `cornerRadius` (0 to 1,000 units). Values must not be negative, and one must be above 0 |
+| `pie` | `{ name, value, color?, offset?, radius? }` slices | `innerRadius` (0 to 0.95: 0.5 is a donut) and `outerRadius` (0.05 to 1), `startAngle` and `endAngle`, `padAngle` (0 to 10 degrees between slices), `cornerRadius` (0 to 1,000 units), `breakout` (a pie of pie). Values must not be negative, and one must be above 0 |
 | `radar` | a value per spoke, none negative; or a `[low, high]` pair per spoke, for a range radar | |
 | `rose` | a value or `null` per category of the angle axis, none negative | `stack`: wedges with the same stack name stack outwards (a wind rose); others share each category's wedge side by side |
 | `radialBar` | a value or `null` per ring of the radius axis | `stack`: bars with the same stack name stack clockwise; others share each ring side by side |
@@ -80,6 +83,9 @@ default branch:
 | `polarScatter` | `[angle, radius]` points | |
 | `gauge` | `value`, a number on the dial | `display`: `needle` (default) or `bar`; `needleLength`: a needle's length as a share of the radius, 0.1 to 1 (default 0.8) |
 | `timeline` | `{ from, to?, label? }` moments and periods | `dataLabels`; see [timelines](#timelines) |
+| `units` | `{ name, value, color?, symbol? }` categories | `display`: `waffle`, `parliament`, `rows` or `ring`; see [unit charts](#unit-charts) |
+| `funnel` | `{ name, value, color? }` stages, in order | `display`: `funnel`, `pyramid`, `funnelArea` or `pictorialStacked`; see [funnels](#funnels) |
+| `liquid` | `value`, a level from 0 to 1 | `shape`: `circle` (default) or `rect`; `waves`; see [liquid fills](#liquid-fills) |
 
 A slice's `offset` (0 to 0.5 of the radius) pulls it out from the centre. Give every slice of a pie
 a `radius`, or none: each slice then reaches out in proportion to it, the largest to the full
@@ -96,6 +102,12 @@ past it; −90 and 90 make a half donut. A slice's `offset` is a share of the ou
 and the pie shrinks to leave room for the largest offset on every side, whichever way the slices are
 pulled; a slice that is the whole of its pie is not pulled out.
 With several pies, each slice's tooltip starts with its ring's name.
+
+`breakout: { slice, data }` breaks one slice out into a second pie of its parts, half as wide, to
+its right: a pie of pie. The parts must add up to the slice's value and be named apart from the
+slices; each is a legend entry, and its tooltip gives its share of the slice. The pie turns so that
+the slice faces the second pie, joined to its top and foot by two lines, so it takes no `startAngle`
+or `endAngle`, and it must be the chart's only ring.
 
 The polar types share the rules of their cartesian twins: a `rose` is a `bar` wrapped around a band
 angle axis, a `radialBar` a bar bent along a ring, and `polarLine`, `polarArea` and `polarScatter`
@@ -458,6 +470,57 @@ Each month is outlined, and named at its first full week; a month with too littl
 for even "…" is left unnamed. Weekday names are written beside or above every row or column, or
 every second or more, as room allows.
 
+## Units, funnels and liquid fills
+
+These charts have no axes. Each holds one series, except two funnels back to back, and their legends
+list categories or stages, not series.
+
+### Unit charts
+
+A `units` series draws each category's value as a count of equal units. `display` picks the layout:
+
+- `waffle`: a grid filled row by row, `columns` units to a row (1 to 200, default 10).
+- `parliament`: seats on rows of arcs from `startAngle` to `endAngle` (degrees clockwise from the top,
+  default −90 to 90) around a hole of `innerRadius` (0 to 0.95, default 0.4), filled by angle so that
+  each category takes a wedge. `rows` (1 to 50) sets how many rows, the seats shrinking to fit them;
+  by default, the fewest rows whose seats, as deep as a row, hold every unit.
+- `rows`: one row of pictograms per category, its name beside it, wrapping after `columns` units (by
+  default, the most units of any category).
+- `ring`: a segmented doughnut, one segment per unit from `startAngle` (default 0) to `endAngle`
+  (default 360), with a hole of `innerRadius` (default 0.7) and `padAngle` degrees between segments
+  (0 to 10, default 2).
+
+Each value is a whole number of units, or with `units` (1 to 2,000) a share of that many units,
+given out by largest remainder, a tie to the earlier category. A category above 0 too small a share
+for one unit is an error, not left out, and so is a `padAngle` that leaves a ring's segments no room.
+A chart draws at most 2,000 units. A category's `symbol`, a symbol name or `{ image }`, draws its
+units, by default a square in a waffle and a circle otherwise; a ring takes none. Units are drawn
+solid by default: a hachure fill on large units uses much more of the drawing budget.
+
+### Funnels
+
+A `funnel` series draws its stages in order, from the top, or from the left when `horizontal`.
+`display` picks the drawing:
+
+- `funnel`: stages of equal depth, each as wide as its share of the largest stage. `shape` slopes each
+  stage to the next one's width (`trapezoid`, the default; the last keeps its width), keeps it
+  straight (`bar`), or curves between them (`smooth`).
+- `pyramid`: from an apex, each stage's area in proportion to its value.
+- `funnelArea`: the same in a trapezoid a third as wide at its foot, as Plotly's `funnelarea` is.
+- `pictorialStacked`: a silhouette, `path`, SVG path data of at most 10,000 characters, scaled to fit
+  and keeping its proportions, cut into bands each as deep as its value.
+
+Two `funnel` displays with the same stages, in the same order and running the same way, stand back to
+back, each named over its half, their widths on one scale. `dataLabels` writes each stage's name and
+value on it, and each stage's tooltip gives its share of the total.
+
+### Liquid fills
+
+A `liquid` series shows one `value`, from 0 (empty) to 1 (full), as liquid in a `shape`: a `circle`
+(the default), or a `rect` filling the chart. Its surface is a wave of `waves` crests, 1 to 5
+(default 2), and an empty or full container's is flat. The level is written in the middle as a whole
+percentage.
+
 ## Chart options
 
 | Option | Default | |
@@ -682,9 +745,15 @@ plot. Polar, pie, gauge and timeline charts take no annotations.
 
 Cartesian band axes accept `weights`, one positive relative width per category
 (each from 0.000001 to 1000000). All category centres, marks, labels and annotations
-use that allocation: this makes a variwide chart. Bars and bar intervals accept
+use that allocation: this makes a variwide chart. `weights: 'stacks'` instead makes each category
+as wide as the total of its stack, as a Marimekko or mosaic chart draws it: every series must be a
+bar of one stack, shown as shares on a `percent` axis, and a category whose stack is less than a
+millionth of the largest is an error. Bars and bar intervals accept
 `shape: 'rounded'` or `'pyramid'`; rounded corners have a radius of at most six
-units, and pyramids taper from their first endpoint to the second.
+units, and pyramids taper from their first endpoint to the second. A bar also accepts
+`shape: 'pictorial'` with a `symbol`, a symbol name or `{ image }`: the symbol is repeated from the
+bar's base, each as wide as the bar, and the last is cut at the value. Its legend entry shows the
+symbol.
 
 An `xyLine` can supply `segments`, one entry per adjacent pair of data slots.
 Each entry is `null` or `{ color?, strokeWidth?, dash? }`; an edge touching a null point
@@ -726,7 +795,10 @@ holds 40 statistical and financial charts, rendered with the other chart kinds b
 by `node apps/examples/grid.mjs`: heatmaps, a punch card, a correlation matrix, a hexagon heatmap,
 warming stripes, a lasagna chart, a heat lane, polar and radar heatmaps, a two-year and a date-range
 calendar, a short calendar across a month's end, a heatmap with long category names, and horizon
-charts on a linear and a time axis.
+charts on a linear and a time axis. `apps/examples/proportion-cases.json` holds 17 charts of parts
+and units, rendered by `node apps/examples/proportion.mjs`: a waffle, a parliament, pictogram rows, a
+segmented doughnut, a pictorial bar, a Marimekko chart, five funnels, a pyramid, a funnel area, a
+pictorial stack, a pie of pie and two liquid fills.
 
 | Chart | Preparation and composition |
 |---|---|
