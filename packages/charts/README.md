@@ -61,6 +61,7 @@ default branch:
 | `funnel`, one, or two funnels back to back | none |
 | `liquid`, one | none |
 | `venn`, one | none |
+| `hierarchy`, one | none |
 
 | `type` | `data` | Options |
 |---|---|---|
@@ -88,6 +89,7 @@ default branch:
 | `funnel` | `{ name, value, color? }` stages, in order | `display`: `funnel`, `pyramid`, `funnelArea` or `pictorialStacked`; see [funnels](#funnels) |
 | `liquid` | `value`, a level from 0 to 1 | `shape`: `circle` (default) or `rectangle`; `waves`; see [liquid fills](#liquid-fills) |
 | `venn` | `{ sets, value, color? }`: each set, and each overlap of sets | `dataLabels`; see [Venn diagrams](#venn-diagrams) |
+| `hierarchy` | `{ name, value?, color?, children? }`, the root of a tree | `display`: `treemap`, `sunburst`, `icicle` or `pack`; `dataLabels`; see [hierarchies](#hierarchies) |
 
 A slice's `offset` (0 to 0.5 of the radius) pulls it out from the centre. Give every slice of a pie
 a `radius`, or none: each slice then reaches out in proportion to it, the largest to the full
@@ -571,6 +573,55 @@ show all of their overlaps. The sizes must also fit together: an overlap no larg
 overlap it is part of, each set at least as large as its overlaps with the others together, and each
 set above 0 and more than a billionth of the largest.
 
+## Hierarchies
+
+A `hierarchy` series draws a tree of named values. Its `data` is the tree's root: each node has a
+`name`, unique among its siblings, and either `children` or, as a leaf, a `value`. A parent takes no
+`value`: it is the sum of its children's. The root is not drawn, and takes no `color`. Each branch
+below it takes the next palette colour and hatching, and every node below the branch takes the same,
+unless a node gives its own `color`, which its descendants then take. The legend lists the branches,
+a branch of 0 included, and the hatching turns 45 degrees on every other level, so a parent and its
+child never hatch alike, and no node hatches like another branch's legend entry unless its own `color`
+repeats a palette colour. `display` picks the
+drawing:
+
+```js
+const spec = {
+  width: 480,
+  height: 320,
+  series: [{
+    type: 'hierarchy',
+    name: 'Budget',
+    display: 'treemap',
+    data: {
+      name: 'Month',
+      children: [
+        { name: 'Home', children: [{ name: 'Rent', value: 1150 }, { name: 'Energy', value: 160 }] },
+        { name: 'Food', children: [{ name: 'Groceries', value: 420 }, { name: 'Eating out', value: 140 }] },
+        { name: 'Savings', value: 400 },
+      ],
+    },
+  }],
+};
+```
+
+| `display` | Draws | Options |
+|---|---|---|
+| `treemap` | each leaf as a rectangle whose area is in proportion to its value | `tile`: `squarify` (default, near square), `binary` (halved by value), `dice` (side by side), `slice` (stacked) or `sliceDice` (alternating by level); `nested`: also draws each parent, its name in a strip along its top; `cascade`: draws each parent with its children set in from its top and left, as stacked cards; `padding` |
+| `sunburst` | each node as a ring segment, a level to a ring, its angle in proportion to its value | `startAngle` and `endAngle` (`-90` and `90` make a semicircle), `innerRadius`, `cornerRadius` for rounded segments |
+| `icicle` | each node as a rectangle, a level to a band, its length in proportion to its value | `orientation`: `down` (default), `up` (a flame graph), `right` or `left`; `padding` |
+| `pack` | each leaf as a circle whose area is in proportion to its value, inside its parent's circle | `padding` |
+
+Every display takes `sort`: siblings are drawn largest first, a tie in the given order, unless `sort`
+is false, which keeps the given order. `padding` is the room between nodes, 0 to 50 units, 2 by
+default. Every node drawn has a tooltip naming its path below the root and its value, as
+`Home › Rent: 1,150`; a treemap that is not nested draws its leaves only. A node that padding leaves
+no width or height is drawn as a line inside the plot, and one too small for any size keeps its tooltip. A name is written inside
+each leaf, each sunburst and icicle segment and each nested treemap parent where it fits, cut short
+with an ellipsis if need be, and left out where not even one character fits; a packed parent's name
+would lie over its children, so it has none. `dataLabels` writes the value after the name. A node of
+0 is not drawn. The layouts are d3-hierarchy's, computed with the same arithmetic in every JavaScript engine.
+
 ## Chart options
 
 | Option | Default | |
@@ -668,7 +719,15 @@ count reached so far, not a count of unread data. A pie holds at most 1,000 slic
 at most 10 nested pies. A unit chart draws at most 2,000 units, and a parliament has at most 50 rows
 of seats. A funnel's silhouette is at most 10,000 characters of path data. A Venn diagram shows 2 or 3 sets,
 each more than a billionth of the largest, and draws a region of 3 sets within 5% of the whole
-diagram's area of its size and at no less than a thousandth of its size, or fails. A Marimekko chart's
+diagram's area of its size and at no less than a thousandth of its size, or fails. A hierarchy has at
+most 2,000 nodes and 10 levels below its root; the limits are checked as each list of children is
+read, before its entries are. The drawing budget below can be reached first where a tree has many
+thin marks, and how soon depends on their shape and orientation, so take these as a guide. Measured
+with the default options on 20 branches of equal leaf counts, adding a leaf to each branch until the
+first layout that does not fit, with every node drawn: a sunburst fits 1,061 nodes on an 800 × 600
+chart and 581 on a 1600 × 1200 one, an icicle 941 and 441 running down and 561 and 261 running
+right, and a treemap and circle packing 1,981, 98 leaves a branch, at both sizes. A count past the
+first failure can fit again, as hatching depends on each mark's exact shape. A Marimekko chart's
 narrowest column is at least a millionth as wide as its widest. A hex heatmap's columns and rows
 are whole numbers within ±100,000. A calendar counts one point per day of its range, reserved before any cell
 is made, so a range of more than 100,000 days, about 273 years, is an error. The drawing budget
@@ -856,7 +915,10 @@ category names, and horizon charts on a linear and a time axis.
 `node apps/examples/proportion.mjs`: a waffle, a parliament, pictogram rows, a segmented doughnut, a
 pictorial bar, a Marimekko chart, five funnels, a pyramid, a funnel area, a pictorial stack, a pie of
 pie, two liquid fills, two Venn diagrams of two and three sets, and two Euler diagrams, one of nested
-sets and one with a set apart.
+sets and one with a set apart. `apps/examples/hierarchy-cases.json` holds 13 hierarchies, rendered by
+`node apps/examples/hierarchy.mjs`: treemaps tiled each of the five ways, nested and cascaded; a
+sunburst and a rounded half sunburst; an icicle down, an icicle to the right, and a flame graph; and
+circle packing.
 
 | Chart | Preparation and composition |
 |---|---|
@@ -882,7 +944,8 @@ sequentially rather than independently from zero.
 
 ## License
 
-MIT. The tick steps are adapted from ISC-licensed code of d3-array; see
+MIT. The tick steps are adapted from ISC-licensed code of d3-array, and the treemap, partition and
+circle-packing layouts are ported from ISC-licensed d3-hierarchy; see
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 Weighted categories retain proportional bar widths with equal inner and outer gaps. Equal weights produce the same bands as omitted weights. Categorical line markers and value labels share their series tooltip group.
