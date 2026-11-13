@@ -44,7 +44,7 @@ Drafts survive navigation in the current tab but are lost on reload. The collect
 
 ## Image assets
 
-Try the permanent [image markers playground](/playground/charts/image-markers/) with a bundled PNG asset. Its synchronous SVG example supplies raster bytes directly; Canvas gallery previews decode the same asset before drawing.
+Try the permanent [image markers playground](/playground/charts/image-markers/) with a bundled PNG asset. Its synchronous SVG example supplies raster bytes directly; Canvas gallery previews decode the same asset before drawing. Unit charts and pictorial bars take the same `{ image }` symbol: see the [image units](/playground/charts/image-units/) and [image pictorial bar](/playground/charts/image-pictorial-bar/) playgrounds.
 
 Image markers refer to a name such as `symbol: { image: 'logo' }`. Your application supplies trusted raster bytes and, for Canvas, a decoded source:
 

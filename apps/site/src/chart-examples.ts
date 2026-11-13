@@ -21,6 +21,28 @@ export const presentationExamples: ChartExample[] = [
     },
   },
   {
+    name: 'image-units',
+    images: { badge },
+    spec: {
+      width: 560, height: 260, title: 'Badges by team',
+      series: [{ type: 'units', name: 'Badges', display: 'rows',
+        data: [{ name: 'Design', value: 6, symbol: { image: 'badge' } },
+          { name: 'Build', value: 9, symbol: { image: 'badge' } },
+          { name: 'Test', value: 4, symbol: { image: 'badge' } }] }],
+    },
+  },
+  {
+    name: 'image-pictorial-bar',
+    images: { badge },
+    spec: {
+      width: 640, height: 340, title: 'Badges a month',
+      axes: { x: { type: 'band', categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] },
+        y: { type: 'linear', min: 0, max: 10 } },
+      series: [{ type: 'bar', name: 'Badges', shape: 'pictorial', symbol: { image: 'badge' },
+        data: [3, 5, 4, 6, 7, 9, 8, 6, 5, 7, 8, 10] }],
+    },
+  },
+  {
     name: 'data-labels',
     spec: {
       width: 640, height: 400, title: 'Data labels',

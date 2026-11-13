@@ -29,7 +29,10 @@ it.each([
   ['/examples/world/', 'with a fitted income and longevity curve'],
   ['/changelog/', 'what each release'],
   ['/examples/climate/', 'decade box plots, a LOESS curve'],
+  ['/examples/climate/', 'warming stripes, a monthly heatmap'],
   ['/examples/earthquakes/', 'a magnitude histogram, box plots of magnitude by depth'],
+  ['/examples/earthquakes/', 'a daily calendar'],
+  ['/examples/earthquakes/', 'a magnitude waffle'],
 ])('describes %s as it is now: %s', (path, text) => {
   expect(metadata(path, '').description).toContain(text);
 });

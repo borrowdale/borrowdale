@@ -13979,6 +13979,250 @@
   }
  },
  {
+  "name": "confusion-matrix",
+  "spec": {
+   "width": 480,
+   "height": 400,
+   "title": "Predicted against actual",
+   "colorAxis": {
+    "type": "linear",
+    "title": "Images"
+   },
+   "axes": {
+    "x": {
+     "type": "band",
+     "title": "Predicted",
+     "categories": [
+      "Cat",
+      "Dog",
+      "Fox"
+     ]
+    },
+    "y": {
+     "type": "band",
+     "title": "Actual",
+     "categories": [
+      "Cat",
+      "Dog",
+      "Fox"
+     ]
+    }
+   },
+   "series": [
+    {
+     "type": "heatmap",
+     "name": "Images",
+     "dataLabels": true,
+     "data": [
+      [
+       "Cat",
+       "Cat",
+       42
+      ],
+      [
+       "Dog",
+       "Cat",
+       6
+      ],
+      [
+       "Fox",
+       "Cat",
+       2
+      ],
+      [
+       "Cat",
+       "Dog",
+       5
+      ],
+      [
+       "Dog",
+       "Dog",
+       38
+      ],
+      [
+       "Fox",
+       "Dog",
+       7
+      ],
+      [
+       "Cat",
+       "Fox",
+       1
+      ],
+      [
+       "Dog",
+       "Fox",
+       9
+      ],
+      [
+       "Fox",
+       "Fox",
+       40
+      ]
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "tile-map",
+  "spec": {
+   "width": 480,
+   "height": 360,
+   "title": "Visitors by region",
+   "colorAxis": {
+    "type": "linear",
+    "title": "Visitors",
+    "stops": [
+     "#f7fbff",
+     "#6baed6"
+    ]
+   },
+   "axes": {
+    "x": {
+     "type": "linear",
+     "min": -2,
+     "max": 2,
+     "hidden": true
+    },
+    "y": {
+     "type": "linear",
+     "min": -1.5,
+     "max": 1.5,
+     "hidden": true
+    }
+   },
+   "series": [
+    {
+     "type": "heatmap",
+     "display": "hex",
+     "name": "Visitors",
+     "data": [
+      [
+       -1,
+       1,
+       6
+      ],
+      [
+       0,
+       1,
+       12
+      ],
+      [
+       1,
+       0,
+       18
+      ],
+      [
+       -2,
+       1,
+       9
+      ],
+      [
+       0,
+       0,
+       40
+      ],
+      [
+       2,
+       -1,
+       25
+      ],
+      [
+       -1,
+       0,
+       15
+      ],
+      [
+       0,
+       -1,
+       22
+      ],
+      [
+       1,
+       -1,
+       31
+      ]
+     ]
+    }
+   ],
+   "annotations": [
+    {
+     "type": "label",
+     "at": [
+      -0.75,
+      0.5
+     ],
+     "text": "NW"
+    },
+    {
+     "type": "label",
+     "at": [
+      0.0,
+      1.0
+     ],
+     "text": "N"
+    },
+    {
+     "type": "label",
+     "at": [
+      0.75,
+      0.5
+     ],
+     "text": "NE"
+    },
+    {
+     "type": "label",
+     "at": [
+      -1.5,
+      0.0
+     ],
+     "text": "W"
+    },
+    {
+     "type": "label",
+     "at": [
+      0.0,
+      0.0
+     ],
+     "text": "C"
+    },
+    {
+     "type": "label",
+     "at": [
+      1.5,
+      0.0
+     ],
+     "text": "E"
+    },
+    {
+     "type": "label",
+     "at": [
+      -0.75,
+      -0.5
+     ],
+     "text": "SW"
+    },
+    {
+     "type": "label",
+     "at": [
+      0.0,
+      -1.0
+     ],
+     "text": "S"
+    },
+    {
+     "type": "label",
+     "at": [
+      0.75,
+      -0.5
+     ],
+     "text": "SE"
+    }
+   ]
+  }
+ },
+ {
   "name": "waffle",
   "spec": {
    "width": 420,

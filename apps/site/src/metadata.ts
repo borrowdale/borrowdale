@@ -30,9 +30,9 @@ const descriptions: Record<string, string> = {
   '/examples/world/':
     'Compare income, life expectancy and population across selected countries, with a fitted income and longevity curve, using World Bank data.',
   '/examples/climate/':
-    'Explore NASA GISTEMP temperature anomalies through hand-drawn annual trends, decade box plots, a LOESS curve, monthly ranges, polar charts and a gauge.',
+    'Explore NASA GISTEMP temperature anomalies through warming stripes, a monthly heatmap, annual trends, decade box plots, a LOESS curve, polar charts and a gauge.',
   '/examples/earthquakes/':
-    'Explore a saved USGS earthquake feed through event counts, a magnitude histogram, box plots of magnitude by depth, cumulative areas and radial charts.',
+    'Explore a saved USGS earthquake feed through a daily calendar, a magnitude histogram, box plots of magnitude by depth, a magnitude waffle and radial charts.',
   '/about/':
     'Discover BorrowdaleJS, a TypeScript toolkit combining measured data visualization with a repeatable hand-drawn style.',
   '/contributing/':

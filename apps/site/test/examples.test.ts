@@ -75,6 +75,10 @@ describe('gallery coverage and actual rendering', () => {
     ['pictorial-stacked', 'pictorialStacked'],
     ['pictorial-bar', 'pictorial bar'],
     ['pie-of-pie', 'pie of pie'],
+    ['confusion-matrix', 'heatmap'],
+    ['tile-map', 'hex heatmap'],
+    ['image-units', 'rows'],
+    ['image-pictorial-bar', 'pictorial bar'],
   ])('tags the example %s as %s', (name, tag) => {
     expect(galleryTag(name)).toBe(tag);
   });
@@ -96,6 +100,20 @@ describe('gallery coverage and actual rendering', () => {
       expect(svg.match(/<use /g)).toHaveLength(3);
     }
     expect(pageHtml('/playground/charts/image-markers/')).toContain('image markers');
+  });
+
+  // 6 + 9 + 4 units, and a legend entry for each of the 3 teams, each drawn as the badge.
+  it('draws every unit of the image unit chart as the badge, in the gallery and in its editable code', () => {
+    expect(galleryCharts('image-units')[0]!.render('svg').match(/<use /g)).toHaveLength(22);
+    expect(executeExample(editorCode(galleryCharts('image-units')[0]!)).match(/<use /g)).toHaveLength(22);
+    expect(editorCode(galleryCharts('image-units')[0]!)).toContain('data:image/png;base64,');
+    expect(pageHtml('/playground/charts/image-units/')).toContain('image units');
+  });
+
+  it('repeats the badge along the pictorial bars, in the gallery and in its editable code', () => {
+    expect(galleryCharts('image-pictorial-bar')[0]!.render('svg')).toContain('data:image/png;base64,');
+    expect(executeExample(editorCode(galleryCharts('image-pictorial-bar')[0]!))).toContain('<use ');
+    expect(pageHtml('/playground/charts/image-pictorial-bar/')).toContain('image pictorial bar');
   });
 
   it('renders data labels beyond the axis tick labels', () => {
@@ -281,6 +299,98 @@ describe('statistical charts in the notebooks', () => {
     expect(html).toContain(
       '&quot;name&quot;: &quot;Logarithmic fit&quot;,\n      &quot;color&quot;: &quot;#263b33&quot;,\n      &quot;data&quot;: [\n        [\n          65.0583773146674,',
     );
+  });
+});
+
+describe('colour and unit charts in the notebooks', () => {
+  // 2000 to 2025: one stripe for each of the 26 complete years, the latest included.
+  it('draws a warming stripe for each complete year in view, the latest included', () => {
+    dashboardState.since = 2000;
+    const html = climateDashboard();
+    expect(html).toContain('<th scope="row">Annual anomaly</th><td>2000 – 2001, Year</td><td>0.39</td>');
+    expect(html).not.toContain('<td>1999 – 2000, Year</td>');
+    expect(html.match(/<th scope="row">Annual anomaly<\/th><td>\d{4} – \d{4}, Year<\/td>/g)).toHaveLength(26);
+    expect(html).toContain('<th scope="row">Annual anomaly</th><td>2025 – 2026, Year</td>');
+  });
+  it('draws all 146 complete years from 1880', () => {
+    dashboardState.since = 1880;
+    expect(climateDashboard().match(/<th scope="row">Annual anomaly<\/th><td>\d{4} – \d{4}, Year<\/td>/g)).toHaveLength(146);
+  });
+  it('starts the stripes axis at the first year in view and ends it at the last stripe', () => {
+    dashboardState.since = 2000;
+    expect(climateDashboard()).toContain('&quot;min&quot;: &quot;2000&quot;,\n      &quot;max&quot;: &quot;2026&quot;');
+  });
+  it('colours the stripes and the month grid on one blue-to-red scale, even about 0', () => {
+    expect(climateDashboard().match(/&quot;scheme&quot;: &quot;blue-red&quot;,\n {4}&quot;min&quot;: -1.5,\n {4}&quot;max&quot;: 1.5,/g)).toHaveLength(2);
+  });
+  it.each([1880, 2000])('keeps the month grid to the last 30 complete years, whatever the view starts from: %s', (since) => {
+    dashboardState.since = since;
+    const html = climateDashboard();
+    expect(html).toContain('<th scope="row">Monthly anomaly</th><td>1996 – 1997, Jan</td><td>0.24</td>');
+    expect(html).toContain('<th scope="row">Monthly anomaly</th><td>2025 – 2026, Dec</td><td>1.05</td>');
+    expect(html).not.toContain('<th scope="row">Monthly anomaly</th><td>1995 – 1996, Dec</td>');
+    expect(html.match(/<th scope="row">Monthly anomaly<\/th>/g)).toHaveLength(360);
+    expect(html).toContain('&quot;min&quot;: &quot;1996&quot;,\n      &quot;max&quot;: &quot;2026&quot;');
+    expect(html).toContain('the last 30 complete years, 1996–2025');
+  });
+  it('puts every day of the feed on the calendar, from its first day to its last', () => {
+    const html = quakeDashboard();
+    expect(html).toContain('<th scope="row">Events</th><td>1</td><td>2026-09-29 · 2</td>');
+    expect(html).toContain('<th scope="row">Events</th><td>31</td><td>2026-10-29 · 17</td>');
+    expect(html).toContain('&quot;from&quot;: &quot;2026-09-29&quot;,\n      &quot;to&quot;: &quot;2026-10-29&quot;,');
+  });
+  it('keeps a day with no event at the threshold on the calendar', () => {
+    dashboardState.magnitude = 6;
+    expect(quakeDashboard()).toContain('<th scope="row">Events</th><td>1</td><td>2026-09-29 · 0</td>');
+  });
+  it('draws one square for each event in each magnitude class', () => {
+    const html = quakeDashboard();
+    expect(html).toContain('<th scope="row">Events</th><td>M 4.5–4.9</td><td>527</td>');
+    expect(html).toContain('<th scope="row">Events</th><td>M 5.0–5.9</td><td>191</td>');
+    expect(html).toContain('<th scope="row">Events</th><td>M 6.0+</td><td>19</td>');
+  });
+  it('leaves out the classes below the threshold, and keeps the colour of the one left', () => {
+    dashboardState.magnitude = 6;
+    const html = quakeDashboard();
+    expect(html).not.toContain('<td>M 4.5–4.9</td>');
+    expect(html).not.toContain('<td>M 5.0–5.9</td>');
+    expect(html).toContain('<th scope="row">Events</th><td>M 6.0+</td><td>19</td>');
+    expect(html).toContain('&quot;name&quot;: &quot;M 6.0+&quot;,\n          &quot;value&quot;: 19,\n          &quot;color&quot;: &quot;#3b7662&quot;');
+  });
+  it('counts the events from M 7 in the M 6.0+ class', () => {
+    dashboardState.magnitude = 7;
+    expect(quakeDashboard()).toContain('<th scope="row">Events</th><td>M 6.0+</td><td>2</td>');
+  });
+  it('leaves out the calendar and the squares when no event reaches the threshold', () => {
+    dashboardState.magnitude = 10;
+    const html = quakeDashboard();
+    expect(html).not.toContain('On the calendar');
+    expect(html).not.toContain('One square, one event');
+  });
+  it('fills a life expectancy cell for each of the 12 countries in each of the 15 years', () => {
+    const html = worldDashboard();
+    expect(html).toContain('<th scope="row">Life expectancy</th><td>2010, Australia</td><td>81.7</td>');
+    expect(html.match(/<th scope="row">Life expectancy<\/th>/g)).toHaveLength(180);
+  });
+  // Five countries and the rest, one palette colour each: the rest take the sixth.
+  it('counts the five most populous countries in tens of millions, and the other seven together', () => {
+    const html = worldDashboard();
+    expect(html).toContain('<th scope="row">Tens of millions</th><td>India</td><td>144</td>');
+    expect(html).toContain('<th scope="row">Tens of millions</th><td>Japan</td><td>12</td>');
+    expect(html).toContain('<th scope="row">Tens of millions</th><td>Other 7 countries</td><td>36</td>');
+    expect(html).not.toContain('<th scope="row">Tens of millions</th><td>Hungary</td>');
+    expect(html.indexOf('<td>India</td><td>144</td>')).toBeLessThan(html.indexOf('<td>China</td><td>141</td>'));
+    expect(html).toContain('&quot;name&quot;: &quot;Other 7 countries&quot;,\n          &quot;value&quot;: 36,\n          &quot;color&quot;: &quot;#8c8a50&quot;');
+  });
+  // In 2010 China still outnumbered India, and the other seven, rounded together, make 33 squares (32 if
+  // each were rounded first): the squares and the note follow the year chosen.
+  it('counts the people in the year chosen, the other countries together', () => {
+    dashboardState.year = 2010;
+    const html = worldDashboard();
+    expect(html).toContain('<th scope="row">Tens of millions</th><td>China</td><td>134</td>');
+    expect(html.indexOf('<td>China</td><td>134</td>')).toBeLessThan(html.indexOf('<td>India</td><td>124</td>'));
+    expect(html).toContain('<th scope="row">Tens of millions</th><td>Other 7 countries</td><td>33</td>');
+    expect(html).toContain('Each square is ten million people in 2010, rounded');
   });
 });
 
