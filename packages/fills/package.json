@@ -1,6 +1,6 @@
 {
   "name": "@borrowdale/fills",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Hand-drawn SVG pattern fills and backgrounds.",
   "license": "MIT",
   "type": "module",
@@ -43,6 +43,6 @@
     "access": "public"
   },
   "dependencies": {
-    "@borrowdale/core": "0.6.0"
+    "@borrowdale/core": "0.7.0"
   }
 }
