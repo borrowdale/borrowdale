@@ -63,6 +63,7 @@ import { checkUnitsChart, readUnits, UNITS_DISPLAYS, type CheckedUnitsChart } fr
 import { checkFunnelChart, FUNNEL_DISPLAYS, readFunnel, type CheckedFunnelChart } from './funnel-series.js';
 import { checkLiquidChart, readLiquid, type CheckedLiquidChart } from './liquid-series.js';
 import { checkVennChart, readVenn, type CheckedVennChart } from './venn-series.js';
+import { checkHierarchyChart, HIERARCHY_DISPLAYS, readHierarchy, type CheckedHierarchyChart } from './hierarchy-series.js';
 import type { ColorScale } from './color-scale.js';
 import {
   CURVES,
@@ -86,7 +87,7 @@ const MIN_NEEDLE = 0.1;
 const DEFAULT_NEEDLE = 0.8;
 const MAX_BANDS = 100;
 
-export type System = 'cartesian' | 'polar' | 'pie' | 'gauge' | 'timeline' | 'calendar' | 'units' | 'funnel' | 'liquid' | 'venn';
+export type System = 'cartesian' | 'polar' | 'pie' | 'gauge' | 'timeline' | 'calendar' | 'units' | 'funnel' | 'liquid' | 'venn' | 'hierarchy';
 
 type ReservePoints = (count: number) => void;
 const categoryValues = (reserve: ReservePoints) =>
@@ -363,6 +364,7 @@ const SERIES_RULES = {
   funnel: { system: 'funnel', keys: displayKeys(FUNNEL_DISPLAYS), read: readFunnel },
   liquid: { system: 'liquid', keys: ['value', 'shape', 'waves'], read: readLiquid },
   venn: { system: 'venn', keys: ['data', 'dataLabels'], read: readVenn },
+  hierarchy: { system: 'hierarchy', keys: displayKeys(HIERARCHY_DISPLAYS), read: readHierarchy },
 } as const satisfies Record<SeriesType, Rule>;
 
 type Rules = typeof SERIES_RULES;
@@ -474,7 +476,8 @@ export type CheckedChart =
   | CheckedUnitsChart
   | CheckedFunnelChart
   | CheckedLiquidChart
-  | CheckedVennChart;
+  | CheckedVennChart
+  | CheckedHierarchyChart;
 
 /**
  * Throws a named error, starting "Invalid chart:" and naming the place in the spec, for anything that
@@ -536,6 +539,8 @@ function checkSystem(r: Fields, base: CheckedChartBase, series: CheckedSeries[],
       return checkLiquidChart(r, base, seriesOf(series, 'liquid'));
     case 'venn':
       return checkVennChart(r, base, seriesOf(series, 'venn'));
+    case 'hierarchy':
+      return checkHierarchyChart(r, base, seriesOf(series, 'hierarchy'));
   }
 }
 

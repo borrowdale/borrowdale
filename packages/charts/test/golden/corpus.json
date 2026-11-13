@@ -15044,5 +15044,1212 @@
     }
    ]
   }
+ },
+ {
+  "name": "treemap",
+  "spec": {
+   "width": 480,
+   "height": 320,
+   "title": "Household budget, per month",
+   "series": [
+    {
+     "type": "hierarchy",
+     "name": "Household budget",
+     "display": "treemap",
+     "dataLabels": true,
+     "data": {
+      "name": "Household budget",
+      "children": [
+       {
+        "name": "Home",
+        "children": [
+         {
+          "name": "Rent",
+          "value": 1150
+         },
+         {
+          "name": "Energy",
+          "value": 160
+         },
+         {
+          "name": "Water",
+          "value": 45
+         },
+         {
+          "name": "Insurance",
+          "value": 30
+         }
+        ]
+       },
+       {
+        "name": "Food",
+        "children": [
+         {
+          "name": "Groceries",
+          "value": 420
+         },
+         {
+          "name": "Eating out",
+          "value": 140
+         },
+         {
+          "name": "Coffee",
+          "value": 35
+         }
+        ]
+       },
+       {
+        "name": "Travel",
+        "children": [
+         {
+          "name": "Train",
+          "value": 190
+         },
+         {
+          "name": "Bike",
+          "value": 25
+         },
+         {
+          "name": "Taxi",
+          "value": 40
+         }
+        ]
+       },
+       {
+        "name": "Leisure",
+        "children": [
+         {
+          "name": "Books",
+          "value": 40
+         },
+         {
+          "name": "Cinema",
+          "value": 30
+         },
+         {
+          "name": "Sport",
+          "value": 55
+         },
+         {
+          "name": "Music",
+          "value": 12
+         }
+        ]
+       },
+       {
+        "name": "Savings",
+        "value": 400
+       }
+      ]
+     }
+    }
+   ]
+  }
+ },
+ {
+  "name": "treemap-binary",
+  "spec": {
+   "width": 480,
+   "height": 320,
+   "title": "Household budget, binary tiling",
+   "series": [
+    {
+     "type": "hierarchy",
+     "name": "Household budget",
+     "display": "treemap",
+     "tile": "binary",
+     "data": {
+      "name": "Household budget",
+      "children": [
+       {
+        "name": "Home",
+        "children": [
+         {
+          "name": "Rent",
+          "value": 1150
+         },
+         {
+          "name": "Energy",
+          "value": 160
+         },
+         {
+          "name": "Water",
+          "value": 45
+         },
+         {
+          "name": "Insurance",
+          "value": 30
+         }
+        ]
+       },
+       {
+        "name": "Food",
+        "children": [
+         {
+          "name": "Groceries",
+          "value": 420
+         },
+         {
+          "name": "Eating out",
+          "value": 140
+         },
+         {
+          "name": "Coffee",
+          "value": 35
+         }
+        ]
+       },
+       {
+        "name": "Travel",
+        "children": [
+         {
+          "name": "Train",
+          "value": 190
+         },
+         {
+          "name": "Bike",
+          "value": 25
+         },
+         {
+          "name": "Taxi",
+          "value": 40
+         }
+        ]
+       },
+       {
+        "name": "Leisure",
+        "children": [
+         {
+          "name": "Books",
+          "value": 40
+         },
+         {
+          "name": "Cinema",
+          "value": 30
+         },
+         {
+          "name": "Sport",
+          "value": 55
+         },
+         {
+          "name": "Music",
+          "value": 12
+         }
+        ]
+       },
+       {
+        "name": "Savings",
+        "value": 400
+       }
+      ]
+     }
+    }
+   ]
+  }
+ },
+ {
+  "name": "treemap-slice-dice",
+  "spec": {
+   "width": 480,
+   "height": 320,
+   "title": "Lines of code, slice and dice",
+   "series": [
+    {
+     "type": "hierarchy",
+     "name": "Lines of code",
+     "display": "treemap",
+     "tile": "sliceDice",
+     "nested": true,
+     "data": {
+      "name": "Package",
+      "children": [
+       {
+        "name": "charts",
+        "children": [
+         {
+          "name": "layout",
+          "children": [
+           {
+            "name": "cartesian",
+            "value": 1800
+           },
+           {
+            "name": "polar",
+            "value": 900
+           },
+           {
+            "name": "pie",
+            "value": 520
+           },
+           {
+            "name": "units",
+            "value": 380
+           }
+          ]
+         },
+         {
+          "name": "series",
+          "children": [
+           {
+            "name": "statistics",
+            "value": 1400
+           },
+           {
+            "name": "cells",
+            "value": 610
+           },
+           {
+            "name": "venn",
+            "value": 450
+           }
+          ]
+         },
+         {
+          "name": "render",
+          "value": 700
+         }
+        ]
+       },
+       {
+        "name": "core",
+        "children": [
+         {
+          "name": "engine",
+          "value": 2100
+         },
+         {
+          "name": "math",
+          "value": 640
+         },
+         {
+          "name": "render",
+          "value": 380
+         }
+        ]
+       },
+       {
+        "name": "text",
+        "children": [
+         {
+          "name": "fonts",
+          "value": 900
+         },
+         {
+          "name": "measure",
+          "value": 420
+         }
+        ]
+       },
+       {
+        "name": "fills",
+        "value": 350
+       }
+      ]
+     }
+    }
+   ]
+  }
+ },
+ {
+  "name": "treemap-dice",
+  "spec": {
+   "width": 480,
+   "height": 240,
+   "title": "Garden birds counted, dice",
+   "series": [
+    {
+     "type": "hierarchy",
+     "name": "Garden birds counted",
+     "display": "treemap",
+     "tile": "dice",
+     "data": {
+      "name": "Garden birds",
+      "children": [
+       {
+        "name": "Finches",
+        "children": [
+         {
+          "name": "Chaffinch",
+          "value": 34
+         },
+         {
+          "name": "Goldfinch",
+          "value": 21
+         },
+         {
+          "name": "Greenfinch",
+          "value": 8
+         }
+        ]
+       },
+       {
+        "name": "Tits",
+        "children": [
+         {
+          "name": "Blue tit",
+          "value": 41
+         },
+         {
+          "name": "Great tit",
+          "value": 27
+         },
+         {
+          "name": "Coal tit",
+          "value": 9
+         },
+         {
+          "name": "Long-tailed tit",
+          "value": 14
+         }
+        ]
+       },
+       {
+        "name": "Thrushes",
+        "children": [
+         {
+          "name": "Blackbird",
+          "value": 30
+         },
+         {
+          "name": "Song thrush",
+          "value": 6
+         }
+        ]
+       },
+       {
+        "name": "Robin",
+        "value": 19
+       },
+       {
+        "name": "Wren",
+        "value": 11
+       }
+      ]
+     }
+    }
+   ]
+  }
+ },
+ {
+  "name": "treemap-slice",
+  "spec": {
+   "width": 320,
+   "height": 360,
+   "title": "Garden birds counted, slice",
+   "series": [
+    {
+     "type": "hierarchy",
+     "name": "Garden birds counted",
+     "display": "treemap",
+     "tile": "slice",
+     "data": {
+      "name": "Garden birds",
+      "children": [
+       {
+        "name": "Finches",
+        "children": [
+         {
+          "name": "Chaffinch",
+          "value": 34
+         },
+         {
+          "name": "Goldfinch",
+          "value": 21
+         },
+         {
+          "name": "Greenfinch",
+          "value": 8
+         }
+        ]
+       },
+       {
+        "name": "Tits",
+        "children": [
+         {
+          "name": "Blue tit",
+          "value": 41
+         },
+         {
+          "name": "Great tit",
+          "value": 27
+         },
+         {
+          "name": "Coal tit",
+          "value": 9
+         },
+         {
+          "name": "Long-tailed tit",
+          "value": 14
+         }
+        ]
+       },
+       {
+        "name": "Thrushes",
+        "children": [
+         {
+          "name": "Blackbird",
+          "value": 30
+         },
+         {
+          "name": "Song thrush",
+          "value": 6
+         }
+        ]
+       },
+       {
+        "name": "Robin",
+        "value": 19
+       },
+       {
+        "name": "Wren",
+        "value": 11
+       }
+      ]
+     }
+    }
+   ]
+  }
+ },
+ {
+  "name": "treemap-nested",
+  "spec": {
+   "width": 480,
+   "height": 320,
+   "title": "Lines of code, nested",
+   "series": [
+    {
+     "type": "hierarchy",
+     "name": "Lines of code",
+     "display": "treemap",
+     "nested": true,
+     "data": {
+      "name": "Package",
+      "children": [
+       {
+        "name": "charts",
+        "children": [
+         {
+          "name": "layout",
+          "children": [
+           {
+            "name": "cartesian",
+            "value": 1800
+           },
+           {
+            "name": "polar",
+            "value": 900
+           },
+           {
+            "name": "pie",
+            "value": 520
+           },
+           {
+            "name": "units",
+            "value": 380
+           }
+          ]
+         },
+         {
+          "name": "series",
+          "children": [
+           {
+            "name": "statistics",
+            "value": 1400
+           },
+           {
+            "name": "cells",
+            "value": 610
+           },
+           {
+            "name": "venn",
+            "value": 450
+           }
+          ]
+         },
+         {
+          "name": "render",
+          "value": 700
+         }
+        ]
+       },
+       {
+        "name": "core",
+        "children": [
+         {
+          "name": "engine",
+          "value": 2100
+         },
+         {
+          "name": "math",
+          "value": 640
+         },
+         {
+          "name": "render",
+          "value": 380
+         }
+        ]
+       },
+       {
+        "name": "text",
+        "children": [
+         {
+          "name": "fonts",
+          "value": 900
+         },
+         {
+          "name": "measure",
+          "value": 420
+         }
+        ]
+       },
+       {
+        "name": "fills",
+        "value": 350
+       }
+      ]
+     }
+    }
+   ]
+  }
+ },
+ {
+  "name": "treemap-cascaded",
+  "spec": {
+   "width": 480,
+   "height": 320,
+   "title": "Lines of code, cascaded",
+   "series": [
+    {
+     "type": "hierarchy",
+     "name": "Lines of code",
+     "display": "treemap",
+     "cascade": true,
+     "data": {
+      "name": "Package",
+      "children": [
+       {
+        "name": "charts",
+        "children": [
+         {
+          "name": "layout",
+          "children": [
+           {
+            "name": "cartesian",
+            "value": 1800
+           },
+           {
+            "name": "polar",
+            "value": 900
+           },
+           {
+            "name": "pie",
+            "value": 520
+           },
+           {
+            "name": "units",
+            "value": 380
+           }
+          ]
+         },
+         {
+          "name": "series",
+          "children": [
+           {
+            "name": "statistics",
+            "value": 1400
+           },
+           {
+            "name": "cells",
+            "value": 610
+           },
+           {
+            "name": "venn",
+            "value": 450
+           }
+          ]
+         },
+         {
+          "name": "render",
+          "value": 700
+         }
+        ]
+       },
+       {
+        "name": "core",
+        "children": [
+         {
+          "name": "engine",
+          "value": 2100
+         },
+         {
+          "name": "math",
+          "value": 640
+         },
+         {
+          "name": "render",
+          "value": 380
+         }
+        ]
+       },
+       {
+        "name": "text",
+        "children": [
+         {
+          "name": "fonts",
+          "value": 900
+         },
+         {
+          "name": "measure",
+          "value": 420
+         }
+        ]
+       },
+       {
+        "name": "fills",
+        "value": 350
+       }
+      ]
+     }
+    }
+   ]
+  }
+ },
+ {
+  "name": "sunburst",
+  "spec": {
+   "width": 420,
+   "height": 420,
+   "title": "Lines of code, by folder",
+   "series": [
+    {
+     "type": "hierarchy",
+     "name": "Lines of code",
+     "display": "sunburst",
+     "data": {
+      "name": "Package",
+      "children": [
+       {
+        "name": "charts",
+        "children": [
+         {
+          "name": "layout",
+          "children": [
+           {
+            "name": "cartesian",
+            "value": 1800
+           },
+           {
+            "name": "polar",
+            "value": 900
+           },
+           {
+            "name": "pie",
+            "value": 520
+           },
+           {
+            "name": "units",
+            "value": 380
+           }
+          ]
+         },
+         {
+          "name": "series",
+          "children": [
+           {
+            "name": "statistics",
+            "value": 1400
+           },
+           {
+            "name": "cells",
+            "value": 610
+           },
+           {
+            "name": "venn",
+            "value": 450
+           }
+          ]
+         },
+         {
+          "name": "render",
+          "value": 700
+         }
+        ]
+       },
+       {
+        "name": "core",
+        "children": [
+         {
+          "name": "engine",
+          "value": 2100
+         },
+         {
+          "name": "math",
+          "value": 640
+         },
+         {
+          "name": "render",
+          "value": 380
+         }
+        ]
+       },
+       {
+        "name": "text",
+        "children": [
+         {
+          "name": "fonts",
+          "value": 900
+         },
+         {
+          "name": "measure",
+          "value": 420
+         }
+        ]
+       },
+       {
+        "name": "fills",
+        "value": 350
+       }
+      ]
+     }
+    }
+   ]
+  }
+ },
+ {
+  "name": "sunburst-semicircle",
+  "spec": {
+   "width": 480,
+   "height": 300,
+   "title": "Garden birds counted, half sunburst",
+   "series": [
+    {
+     "type": "hierarchy",
+     "name": "Garden birds counted",
+     "display": "sunburst",
+     "startAngle": -90,
+     "endAngle": 90,
+     "innerRadius": 0.25,
+     "cornerRadius": 4,
+     "data": {
+      "name": "Garden birds",
+      "children": [
+       {
+        "name": "Finches",
+        "children": [
+         {
+          "name": "Chaffinch",
+          "value": 34
+         },
+         {
+          "name": "Goldfinch",
+          "value": 21
+         },
+         {
+          "name": "Greenfinch",
+          "value": 8
+         }
+        ]
+       },
+       {
+        "name": "Tits",
+        "children": [
+         {
+          "name": "Blue tit",
+          "value": 41
+         },
+         {
+          "name": "Great tit",
+          "value": 27
+         },
+         {
+          "name": "Coal tit",
+          "value": 9
+         },
+         {
+          "name": "Long-tailed tit",
+          "value": 14
+         }
+        ]
+       },
+       {
+        "name": "Thrushes",
+        "children": [
+         {
+          "name": "Blackbird",
+          "value": 30
+         },
+         {
+          "name": "Song thrush",
+          "value": 6
+         }
+        ]
+       },
+       {
+        "name": "Robin",
+        "value": 19
+       },
+       {
+        "name": "Wren",
+        "value": 11
+       }
+      ]
+     }
+    }
+   ]
+  }
+ },
+ {
+  "name": "icicle",
+  "spec": {
+   "width": 480,
+   "height": 320,
+   "title": "Lines of code, icicle",
+   "series": [
+    {
+     "type": "hierarchy",
+     "name": "Lines of code",
+     "display": "icicle",
+     "data": {
+      "name": "Package",
+      "children": [
+       {
+        "name": "charts",
+        "children": [
+         {
+          "name": "layout",
+          "children": [
+           {
+            "name": "cartesian",
+            "value": 1800
+           },
+           {
+            "name": "polar",
+            "value": 900
+           },
+           {
+            "name": "pie",
+            "value": 520
+           },
+           {
+            "name": "units",
+            "value": 380
+           }
+          ]
+         },
+         {
+          "name": "series",
+          "children": [
+           {
+            "name": "statistics",
+            "value": 1400
+           },
+           {
+            "name": "cells",
+            "value": 610
+           },
+           {
+            "name": "venn",
+            "value": 450
+           }
+          ]
+         },
+         {
+          "name": "render",
+          "value": 700
+         }
+        ]
+       },
+       {
+        "name": "core",
+        "children": [
+         {
+          "name": "engine",
+          "value": 2100
+         },
+         {
+          "name": "math",
+          "value": 640
+         },
+         {
+          "name": "render",
+          "value": 380
+         }
+        ]
+       },
+       {
+        "name": "text",
+        "children": [
+         {
+          "name": "fonts",
+          "value": 900
+         },
+         {
+          "name": "measure",
+          "value": 420
+         }
+        ]
+       },
+       {
+        "name": "fills",
+        "value": 350
+       }
+      ]
+     }
+    }
+   ]
+  }
+ },
+ {
+  "name": "flame-graph",
+  "spec": {
+   "width": 480,
+   "height": 320,
+   "title": "Time spent per call, ms",
+   "series": [
+    {
+     "type": "hierarchy",
+     "name": "Time spent per call",
+     "display": "icicle",
+     "orientation": "up",
+     "data": {
+      "name": "main",
+      "children": [
+       {
+        "name": "parse",
+        "children": [
+         {
+          "name": "tokenize",
+          "value": 18
+         },
+         {
+          "name": "tree",
+          "value": 12
+         }
+        ]
+       },
+       {
+        "name": "layout",
+        "children": [
+         {
+          "name": "measure",
+          "children": [
+           {
+            "name": "glyphs",
+            "value": 22
+           },
+           {
+            "name": "kerning",
+            "value": 6
+           }
+          ]
+         },
+         {
+          "name": "place",
+          "value": 14
+         }
+        ]
+       },
+       {
+        "name": "draw",
+        "children": [
+         {
+          "name": "sketch",
+          "value": 26
+         },
+         {
+          "name": "hatch",
+          "value": 17
+         }
+        ]
+       },
+       {
+        "name": "write",
+        "value": 9
+       }
+      ]
+     }
+    }
+   ]
+  }
+ },
+ {
+  "name": "icicle-right",
+  "spec": {
+   "width": 480,
+   "height": 320,
+   "title": "Household budget, icicle",
+   "series": [
+    {
+     "type": "hierarchy",
+     "name": "Household budget",
+     "display": "icicle",
+     "orientation": "right",
+     "data": {
+      "name": "Household budget",
+      "children": [
+       {
+        "name": "Home",
+        "children": [
+         {
+          "name": "Rent",
+          "value": 1150
+         },
+         {
+          "name": "Energy",
+          "value": 160
+         },
+         {
+          "name": "Water",
+          "value": 45
+         },
+         {
+          "name": "Insurance",
+          "value": 30
+         }
+        ]
+       },
+       {
+        "name": "Food",
+        "children": [
+         {
+          "name": "Groceries",
+          "value": 420
+         },
+         {
+          "name": "Eating out",
+          "value": 140
+         },
+         {
+          "name": "Coffee",
+          "value": 35
+         }
+        ]
+       },
+       {
+        "name": "Travel",
+        "children": [
+         {
+          "name": "Train",
+          "value": 190
+         },
+         {
+          "name": "Bike",
+          "value": 25
+         },
+         {
+          "name": "Taxi",
+          "value": 40
+         }
+        ]
+       },
+       {
+        "name": "Leisure",
+        "children": [
+         {
+          "name": "Books",
+          "value": 40
+         },
+         {
+          "name": "Cinema",
+          "value": 30
+         },
+         {
+          "name": "Sport",
+          "value": 55
+         },
+         {
+          "name": "Music",
+          "value": 12
+         }
+        ]
+       },
+       {
+        "name": "Savings",
+        "value": 400
+       }
+      ]
+     }
+    }
+   ]
+  }
+ },
+ {
+  "name": "circle-packing",
+  "spec": {
+   "width": 420,
+   "height": 420,
+   "title": "Garden birds counted, packed",
+   "series": [
+    {
+     "type": "hierarchy",
+     "name": "Garden birds counted",
+     "display": "pack",
+     "data": {
+      "name": "Garden birds",
+      "children": [
+       {
+        "name": "Finches",
+        "children": [
+         {
+          "name": "Chaffinch",
+          "value": 34
+         },
+         {
+          "name": "Goldfinch",
+          "value": 21
+         },
+         {
+          "name": "Greenfinch",
+          "value": 8
+         }
+        ]
+       },
+       {
+        "name": "Tits",
+        "children": [
+         {
+          "name": "Blue tit",
+          "value": 41
+         },
+         {
+          "name": "Great tit",
+          "value": 27
+         },
+         {
+          "name": "Coal tit",
+          "value": 9
+         },
+         {
+          "name": "Long-tailed tit",
+          "value": 14
+         }
+        ]
+       },
+       {
+        "name": "Thrushes",
+        "children": [
+         {
+          "name": "Blackbird",
+          "value": 30
+         },
+         {
+          "name": "Song thrush",
+          "value": 6
+         }
+        ]
+       },
+       {
+        "name": "Robin",
+        "value": 19
+       },
+       {
+        "name": "Wren",
+        "value": 11
+       }
+      ]
+     }
+    }
+   ]
+  }
  }
 ]

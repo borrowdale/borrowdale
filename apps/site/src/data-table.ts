@@ -1,4 +1,4 @@
-import type { CellPlace, ChartSpec, ChartValue, HistogramSeries, RelationshipSeries } from '@borrowdale/charts';
+import type { CellPlace, ChartSpec, ChartValue, HierarchyNode, HistogramSeries, RelationshipSeries } from '@borrowdale/charts';
 import { escape } from './drawing';
 
 type FitMethod = NonNullable<Extract<RelationshipSeries, { display: 'regression' }>['method']>;
@@ -63,6 +63,8 @@ function seriesRows(series: ChartSpec['series'][number], categories: readonly st
       return named(series.data);
     case 'venn':
       return series.data.map((area) => [series.name, area.sets.join(' ∩ '), format(area.value)]);
+    case 'hierarchy':
+      return leafRows(series.data, '').map(([path, value]) => [series.name, path, format(value)]);
     case 'relationship':
       if (series.display === 'regression') {
         return [[series.name, '', `${fitNames[series.method ?? 'linear']} fit to ${series.data.length} observations`]];
@@ -100,6 +102,14 @@ function seriesRows(series: ChartSpec['series'][number], categories: readonly st
     default:
       return unknownSeries(series);
   }
+}
+// One row per leaf below the root, named by its path from the root's children down, as its tooltip is.
+// It walks the spec as given, so it relies on the chart having been laid out, and so validated, first.
+function leafRows(node: HierarchyNode, above: string): [string, number][] {
+  return (node.children ?? []).flatMap((child): [string, number][] => {
+    const path = above === '' ? child.name : `${above} › ${child.name}`;
+    return child.children === undefined ? [[path, child.value]] : leafRows(child, path);
+  });
 }
 type Cell = ChartValue | null;
 // A value as the table writes it: a number formatted, a date or category as given.
