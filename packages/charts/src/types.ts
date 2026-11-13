@@ -4,6 +4,7 @@ import type { DistributionSeries, HistogramSeries, MarketSeries, RelationshipSer
 import type { UnitsSeries } from './units-series.js';
 import type { FunnelSeries } from './funnel-series.js';
 import type { LiquidSeries } from './liquid-series.js';
+import type { VennSeries } from './venn-series.js';
 
 /**
  * A chart, as plain data that can come from JSON. Its series' type picks its coordinate system, and
@@ -851,7 +852,8 @@ export type Series =
   | GaugeSeries
   | UnitsSeries
   | FunnelSeries
-  | LiquidSeries;
+  | LiquidSeries
+  | VennSeries;
 
 export type SeriesType = Series['type'];
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 // Before the module, so a Math.sin it called or kept a reference to would throw.
 import './support/forbid-unportable-calls.js';
-import { cos, exp, log, MAX_EXPONENT, MAX_ANGLE, sin } from '@borrowdale/core/math';
+import { acos, atan2, cos, exp, log, MAX_EXPONENT, MAX_ANGLE, sin } from '@borrowdale/core/math';
 
 // A Proxy that throws when anything looks at it, even a test title.
 const { proxy: revoked, revoke } = Proxy.revocable([], {});
@@ -9,6 +9,7 @@ revoke();
 const sinOfRevoked = (): number => sin(revoked as unknown as number);
 // Calling `fn` with `x`, to be called by `toThrow`.
 const calling = (fn: (x: number) => number, x: unknown) => (): number => fn(x as number);
+const callingAtan2 = (y: unknown, x: unknown) => (): number => atan2(y as number, x as number);
 
 // The published functions are the engine's own, so each value is the same in every JavaScript
 // engine. The expected values are Math.sin and Math.cos in Node, which agree here.
@@ -104,5 +105,76 @@ describe('@borrowdale/core/math', () => {
     [1n, '1n'],
   ])('exp rejects %s with a RangeError', (x, shown) => {
     expect(calling(exp, x)).toThrow(new RangeError(`Invalid argument: exp(x) must be a finite number within ±709, got ${shown}`));
+  });
+
+  // The expected values are Math.acos in Node, which agrees with fdlibm's e_acos.c here.
+  it.each<[number, number]>([
+    [1, 0],
+    [-1, 3.141592653589793],
+    [0, 1.5707963267948966],
+    [-0, 1.5707963267948966],
+    [2 ** -60, 1.5707963267948966],
+    [-(2 ** -30), 1.5707963277262191],
+    [0.25, 1.318116071652818],
+    [0.5, 1.0471975511965979],
+    [0.49999999999999994, 1.0471975511965979],
+    [-0.5, 2.0943951023931957],
+    [-0.75, 2.4188584057763776],
+    [0.9999999, 0.00044721359910904126],
+  ])('computes acos(%s)', (x, expected) => {
+    expect(acos(x)).toBe(expected);
+  });
+
+  it.each<[unknown, string]>([
+    [1 + 2 ** -52, '1.0000000000000002'],
+    [-2, '-2'],
+    [Number.NaN, 'NaN'],
+    [Number.NEGATIVE_INFINITY, '-Infinity'],
+    ['0', '"0"'],
+  ])('acos rejects %s with a RangeError', (x, shown) => {
+    expect(calling(acos, x)).toThrow(new RangeError(`Invalid argument: acos(x) must be a number from -1 to 1, got ${shown}`));
+  });
+
+  // The expected values are Math.atan2 in Node, which agrees with fdlibm's e_atan2.c here, signed
+  // zeros included.
+  it.each<[number, number, number]>([
+    [1, 1, 0.7853981633974483],
+    [1, -1, 2.356194490192345],
+    [-1, -1, -2.356194490192345],
+    [-1, 1, -0.7853981633974483],
+    [0, 1, 0],
+    [-0, 1, -0],
+    [0, 2, 0],
+    [-0, 2, -0],
+    [-1e-300, -1e300, -3.141592653589793],
+    [1, 2 ** -40, 1.570796326793987],
+    [2 ** -70, 1.5, 5.646886315028669e-22],
+    [-1e-300, 2, -5e-301],
+    [0, -1, 3.141592653589793],
+    [-0, -1, -3.141592653589793],
+    [0, 0, 0],
+    [-0, -0, -3.141592653589793],
+    [1, 0, 1.5707963267948966],
+    [-1, -0, -1.5707963267948966],
+    [3, 4, 0.6435011087932844],
+    [2, 1, 1.1071487177940904],
+    [1e300, 1e-300, 1.5707963267948966],
+    [1e-300, -1e300, 3.141592653589793],
+    [-5, 1e-20, -1.5707963267948966],
+    [1, -1e-20, 1.5707963267948966],
+    [-1, -1e-20, -1.5707963267948966],
+  ])('computes atan2(%s, %s)', (y, x, expected) => {
+    expect(atan2(y, x)).toBe(expected);
+  });
+
+  it.each<[unknown, unknown, string]>([
+    [Number.NaN, 1, 'y = NaN'],
+    [1, Number.POSITIVE_INFINITY, 'x = Infinity'],
+    [Number.NEGATIVE_INFINITY, 0, 'y = -Infinity'],
+    [1, '1', 'x = "1"'],
+  ])('atan2 rejects (%s, %s) with a RangeError', (y, x, shown) => {
+    expect(callingAtan2(y, x)).toThrow(
+      new RangeError(`Invalid argument: atan2(y, x) must be given finite numbers, got ${shown}`),
+    );
   });
 });

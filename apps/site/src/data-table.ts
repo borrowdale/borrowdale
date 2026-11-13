@@ -61,6 +61,8 @@ function seriesRows(series: ChartSpec['series'][number], categories: readonly st
     case 'units':
     case 'funnel':
       return named(series.data);
+    case 'venn':
+      return series.data.map((area) => [series.name, area.sets.join(' ∩ '), format(area.value)]);
     case 'relationship':
       if (series.display === 'regression') {
         return [[series.name, '', `${fitNames[series.method ?? 'linear']} fit to ${series.data.length} observations`]];

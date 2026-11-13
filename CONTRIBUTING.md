@@ -53,9 +53,9 @@ Small fixes and documentation improvements can go straight to a pull request.
 The same input must give the same drawing, byte for byte, on every render, in Node and in every
 browser. Drawing code therefore never reads the clock, a random source, the locale or the time zone,
 and never calls a `Math` function whose result the engine is free to approximate. Use
-`@borrowdale/core/math` for `sin`, `cos`, `log` and `exp`, and take randomness from the seed. The test
-guard in `packages/core/test/support/forbid-unportable-calls.ts` makes such calls throw while a
-golden is drawn.
+`@borrowdale/core/math` for `sin`, `cos`, `acos`, `atan2`, `log` and `exp`, and take randomness
+from the seed. The test guard in `packages/core/test/support/forbid-unportable-calls.ts` makes such
+calls throw while a golden is drawn.
 
 Inputs that would make drawing hang or run out of memory must fail with a named error instead, and
 the limit must be documented in the package README.
@@ -99,7 +99,7 @@ been measured rather than what is expected.
   behaviour on, such as `dataLabels` or `correlation`, stays a boolean.
 - An option name means one thing across the package: the gauge's `bands` are coloured stretches of
   the dial, so a horizon's folds are its `layers`.
-- Angles in chart and text options are in degrees. Core's `arc` shape and the `sin` and `cos` of
+- Angles in chart and text options are in degrees. Core's `arc` shape and the trigonometry of
   `@borrowdale/core/math` take radians.
 - A size option means the same extent wherever it appears: `binWidth` is a cell's full width on
   every display that takes it.

@@ -21,6 +21,11 @@ describe('data rows of the proportion charts', () => {
   it('give a liquid fill its level as a percentage', () => {
     expect(dataRows(chart([{ type: 'liquid', name: 'Tank', value: 0.456 }]))).toEqual([['Tank', '', '45.6%']]);
   });
+
+  it('give a Venn diagram a row per set and per overlap, naming its sets', () => {
+    const venn = { type: 'venn', name: 'Readers', data: [{ sets: ['Post'], value: 1200 }, { sets: ['Star'], value: 800 }, { sets: ['Post', 'Star'], value: 300 }] };
+    expect(dataRows(chart([venn]))).toEqual([['Readers', 'Post', '1,200'], ['Readers', 'Star', '800'], ['Readers', 'Post ∩ Star', '300']]);
+  });
 });
 
 // Rows that hold events, ranges, dates or categories rather than numbers write them as they are.

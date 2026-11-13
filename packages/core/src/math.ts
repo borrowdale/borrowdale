@@ -1,7 +1,9 @@
-// The stroke engine's own sine and cosine, and the natural logarithm and exponential, for code that
-// must compute the same numbers in every JavaScript engine: `Math.sin`, `Math.cos`, `Math.log` and
-// `Math.exp` may differ in the last bit between engines. Published as `@borrowdale/core/math` so
-// other packages use these rather than a copy.
+// The stroke engine's own sine and cosine, the arc cosine and two-argument arc tangent, and the
+// natural logarithm and exponential, for code that must compute the same numbers in every
+// JavaScript engine: `Math.sin`, `Math.cos`, `Math.acos`, `Math.atan2`, `Math.log` and `Math.exp`
+// may differ in the last bit between engines. Published as `@borrowdale/core/math` so other packages
+// use these rather than a copy.
+import { acos as portableAcos, atan2 as portableAtan2 } from './inverse-trig.js';
 import { exp as portableExp, log as portableLog } from './logarithm.js';
 import { show } from './show.js';
 import { cos as engineCos, MAX_ANGLE, sin as engineSin } from './trig.js';
@@ -45,6 +47,34 @@ export function exp(x: number): number {
     throw new RangeError(`Invalid argument: exp(x) must be a finite number within ±${MAX_EXPONENT}, got ${show(x)}`);
   }
   return portableExp(x);
+}
+
+/**
+ * The arc cosine of `x`, in radians from 0 to π. Throws a `RangeError` unless `x` is a number from -1
+ * to 1. A port of fdlibm's e_acos.c, the same in every JavaScript engine, and in comparisons with
+ * Node.js 24's `Math.acos` never more than 1 unit in the last place apart.
+ */
+export function acos(x: number): number {
+  if (!(typeof x === 'number' && x >= -1 && x <= 1)) {
+    throw new RangeError(`Invalid argument: acos(x) must be a number from -1 to 1, got ${show(x)}`);
+  }
+  return portableAcos(x);
+}
+
+/**
+ * The angle of the point (`x`, `y`) from the positive x-axis, in radians from -π to π, with the signs
+ * of zeros as in `Math.atan2`. Throws a `RangeError` unless `y` and `x` are finite numbers. Computed
+ * as fdlibm's e_atan2.c computes it, with FreeBSD's correction, the same in every JavaScript engine,
+ * and in comparisons with Node.js 24's `Math.atan2` never more than 1 unit in the last place apart.
+ */
+export function atan2(y: number, x: number): number {
+  if (!Number.isFinite(y)) {
+    throw new RangeError(`Invalid argument: atan2(y, x) must be given finite numbers, got y = ${show(y)}`);
+  }
+  if (!Number.isFinite(x)) {
+    throw new RangeError(`Invalid argument: atan2(y, x) must be given finite numbers, got x = ${show(x)}`);
+  }
+  return portableAtan2(y, x);
 }
 
 // Beyond the range the engine's argument reduction is no longer exact, and the result is a

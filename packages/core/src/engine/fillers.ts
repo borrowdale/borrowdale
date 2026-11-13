@@ -5,7 +5,8 @@
 import { charge } from '../budget.js';
 import { fillWeight, lineLength, type Line, type Op, type OpSet, type Point, type ResolvedOptions } from './core.js';
 import { hachureLines } from './hachure.js';
-import { atan, cos, sin, square } from '../trig.js';
+import { atan } from '../inverse-trig.js';
+import { cos, sin, square } from '../trig.js';
 import { ellipseWithParams, generateEllipseParams, normalizedArc } from './renderer.js';
 import { doubleLineFillOps, nextRandom } from './strokes.js';
 

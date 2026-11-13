@@ -2,10 +2,10 @@
 // IEEE 754 in every JavaScript engine, while Math.sin and friends may differ in the last bit between
 // engines, which can change how many dashes or zigzags a fill draws. Polynomials and constants are
 // from fdlibm (Copyright (C) 1993 by Sun Microsystems, Inc.; see THIRD_PARTY_NOTICES.md). For
-// |x| < 2^20 · π/2, sin, cos and asin are within 2 units in the last place of Math, except near
-// their zeros, where the absolute error stays below 1e-26; atan matches Math; tan, a quotient of
-// the two, is within about 3. Larger arguments are NOT reduced and give wrong results; validation
-// keeps every angle the engine computes within ±MAX_ANGLE.
+// |x| < 2^20 · π/2, sin and cos are within 2 units in the last place of Math, except near their
+// zeros, where the absolute error stays below 1e-26; tan, a quotient of the two, is within about 3.
+// Larger arguments are NOT reduced and give wrong results; validation keeps every angle the engine
+// computes within ±MAX_ANGLE. The inverse functions are in inverse-trig.ts.
 
 /**
  * The largest |x|, in radians, that `sin` and `cos` accept. Their argument reduction is exact to
@@ -32,14 +32,6 @@ const C3 = 2.48015872894767294178e-5;
 const C4 = -2.75573143513906633035e-7;
 const C5 = 2.08757232129817482790e-9;
 const C6 = -1.13596475577881948265e-11;
-
-const ATAN_HI = [4.63647609000806093515e-1, 7.85398163397448278999e-1, 9.82793723247329054082e-1, 1.57079632679489655800] as const;
-const ATAN_LO = [2.26987774529616870924e-17, 3.06161699786838301793e-17, 1.39033110312309984516e-17, 6.12323399573676603587e-17] as const;
-const AT = [
-  3.33333333333329318027e-1, -1.99999999998764832476e-1, 1.42857142725034663711e-1, -1.11111104054623557880e-1,
-  9.09088713343650656196e-2, -7.69187620504482999495e-2, 6.66107313738753120669e-2, -5.83357013379057348645e-2,
-  4.97687799461593236017e-2, -3.65315727442169155270e-2, 1.62858201153657823623e-2,
-] as const;
 
 // sin and cos on [-π/4, π/4].
 function kernelSin(x: number): number {
@@ -92,52 +84,6 @@ export function cos(x: number): number {
 
 export function tan(x: number): number {
   return sin(x) / cos(x);
-}
-
-export function atan(x: number): number {
-  if (Number.isNaN(x)) {
-    return x;
-  }
-  const negative = x < 0;
-  let t = Math.abs(x);
-  if (t >= 2 ** 66) {
-    const z = ATAN_HI[3] + ATAN_LO[3];
-    return negative ? -z : z;
-  }
-  if (t < 2 ** -27) {
-    return x;
-  }
-  let id: number;
-  if (t < 0.4375) {
-    id = -1;
-  } else if (t < 0.6875) {
-    id = 0;
-    t = (2 * t - 1) / (2 + t);
-  } else if (t < 1.1875) {
-    id = 1;
-    t = (t - 1) / (t + 1);
-  } else if (t < 2.4375) {
-    id = 2;
-    t = (t - 1.5) / (1 + 1.5 * t);
-  } else {
-    id = 3;
-    t = -1 / t;
-  }
-  const z = t * t;
-  const w = z * z;
-  const s1 = z * (AT[0] + w * (AT[2] + w * (AT[4] + w * (AT[6] + w * (AT[8] + w * AT[10])))));
-  const s2 = w * (AT[1] + w * (AT[3] + w * (AT[5] + w * (AT[7] + w * AT[9]))));
-  if (id < 0) {
-    const result = t - t * (s1 + s2);
-    return negative ? -result : result;
-  }
-  const result = ATAN_HI[id]! - (t * (s1 + s2) - ATAN_LO[id]! - t);
-  return negative ? -result : result;
-}
-
-// (1 − x)(1 + x) rather than 1 − x², which loses precision as |x| approaches 1.
-export function asin(x: number): number {
-  return atan(x / Math.sqrt((1 - x) * (1 + x)));
 }
 
 // Not Math.pow(x, 2) or x ** 2: both are implementation-approximated and may differ between engines,

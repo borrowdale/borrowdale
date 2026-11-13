@@ -161,6 +161,7 @@ describe('gallery coverage and actual rendering', () => {
         'units',
         'funnel',
         'liquid',
+        'venn',
       ].sort(),
     );
     expect([...new Set(examples.filter((x) => x.category === 'shapes').map((x) => x.tag))].sort()).toEqual(

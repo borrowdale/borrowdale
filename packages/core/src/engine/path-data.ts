@@ -6,7 +6,8 @@ import { pointsOnBezierCurves, simplify } from './bezier.js';
 import { charge } from '../budget.js';
 import { show } from '../show.js';
 import { MAX_COORDINATE, type Point } from './core.js';
-import { asin, cos, sin, tan } from '../trig.js';
+import { asin } from '../inverse-trig.js';
+import { cos, sin, tan } from '../trig.js';
 
 export interface Segment {
   key: string;

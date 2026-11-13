@@ -149,23 +149,29 @@ standalone SVG holding one would not draw at all.
 
 ## Portable maths
 
-`@borrowdale/core/math` exports the engine's own `sin` and `cos`, and the natural logarithm `log` and exponential `exp`, for
-numbers that must be the same in every JavaScript engine (for example points on a circle placed next
-to a drawing, or positions on a logarithmic scale):
+`@borrowdale/core/math` exports the engine's own `sin` and `cos`, the arc cosine `acos` and the
+two-argument arc tangent `atan2`, and the natural logarithm `log` and exponential `exp`, for numbers
+that must be the same in every JavaScript engine (for example points on a circle placed next to a
+drawing, the angle where two circles cross, or positions on a logarithmic scale):
 
 ```js
-import { cos, log, sin } from '@borrowdale/core/math';
+import { atan2, cos, log, sin } from '@borrowdale/core/math';
 
 const point = [cx + r * cos(angle), cy + r * sin(angle)];
+const heading = atan2(y1 - y0, x1 - x0);
 const along = (log(value) - log(low)) / (log(high) - log(low));
 ```
 
 They give the same result in every JavaScript engine. That result can differ from `Math.sin`,
-`Math.cos`, `Math.log` and `Math.exp` in the last bit; `log` and `exp` are within one unit in the
-last place of the true value, so `exp(1)` is 2.7182818284590455 rather than `Math.E`. `exp` accepts finite arguments from −709 to 709 (the exported `MAX_EXPONENT`).
-`sin` and `cos` accept a finite number of radians within ±1,000,000, exported as `MAX_ANGLE`;
-not far past that range the result would be wrong without any sign of it. `log` accepts a finite
-number above 0. Each throws a `RangeError` for anything else.
+`Math.cos`, `Math.acos`, `Math.atan2`, `Math.log` and `Math.exp` in the last bit; `log` and `exp`
+are within one unit in the last place of the true value, so `exp(1)` is 2.7182818284590455 rather
+than `Math.E`. `acos` and `atan2` are ports of fdlibm's: in comparisons with Node.js 24's own over
+millions of arguments, neither was more than one unit in the last place apart. `exp` accepts
+finite arguments from −709 to 709 (the exported `MAX_EXPONENT`). `sin` and `cos` accept a finite number of radians within ±1,000,000,
+exported as `MAX_ANGLE`; not far past that range the result would be wrong without any sign of it.
+`acos` accepts a number from −1 to 1 and returns radians from 0 to π. `atan2(y, x)` accepts any two
+finite numbers and returns radians from −π to π, with the signs of zeros as `Math.atan2` gives them.
+`log` accepts a finite number above 0. Each throws a `RangeError` for anything else.
 
 ## Values in error messages
 
