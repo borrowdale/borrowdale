@@ -8,6 +8,23 @@ The four packages share one version and are released together. Each release also
 [GitHub](https://github.com/borrowdale/borrowdale/releases), and the
 [commit history](https://github.com/borrowdale/borrowdale/commits/main/) records every source change.
 
+## 0.6.0
+
+Published on 13 November 2026:
+
+- **`@borrowdale/charts`:** Venn and Euler diagrams. A `venn` series draws 2 or 3 sets as circles
+  whose areas, and the areas of their overlaps, are in proportion to the sizes given. A set inside
+  another is drawn inside it, and sets that share nothing are drawn apart. Every overlap must be
+  given, with a `value` of 0 where sets do not overlap. Three sets that circles cannot draw within 5%
+  of the whole diagram's area, or that would leave a region out, are an error, and so are four or
+  more.
+- **`@borrowdale/core`:** `@borrowdale/core/math` also exports `acos` and `atan2`, the same in every
+  JavaScript engine.
+- **`@borrowdale/fills` and `@borrowdale/text`:** only the version changes.
+
+Everything else 0.5.0 offered works as before. The website's playground has 4 Venn and Euler
+examples.
+
 ## 0.5.0
 
 Published on 13 November 2026:
