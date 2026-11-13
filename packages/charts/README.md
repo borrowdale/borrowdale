@@ -847,15 +847,16 @@ run `node apps/examples/cartesian.mjs` after building to render each one. Its
 range bars, a Gantt chart, an x-range chart, an annotation chart, a cycle plot, a Marey chart, log and
 square-root axes, and serpentine, spiral and polyline timelines. `apps/examples/statistical-cases.json`
 holds 40 statistical and financial charts, rendered with the other chart kinds by
-`npm run example:charts`. `apps/examples/grid-cases.json` holds 15 charts coloured by value, rendered
-by `node apps/examples/grid.mjs`: heatmaps, a punch card, a correlation matrix, a hexagon heatmap,
-warming stripes, a lasagna chart, a heat lane, polar and radar heatmaps, a two-year and a date-range
-calendar, a short calendar across a month's end, a heatmap with long category names, and horizon
-charts on a linear and a time axis. `apps/examples/proportion-cases.json` holds 21 charts of parts,
-units and sets, rendered by `node apps/examples/proportion.mjs`: a waffle, a parliament, pictogram
-rows, a segmented doughnut, a pictorial bar, a Marimekko chart, five funnels, a pyramid, a funnel area,
-a pictorial stack, a pie of pie, two liquid fills, two Venn diagrams of two and three sets, and two
-Euler diagrams, one of nested sets and one with a set apart.
+`npm run example:charts`. `apps/examples/grid-cases.json` holds 17 charts coloured by value, rendered
+by `node apps/examples/grid.mjs`: heatmaps, a punch card, a correlation and a confusion matrix, a
+hexagon heatmap, a tile map, warming stripes, a lasagna chart, a heat lane, polar and radar heatmaps,
+a two-year and a date-range calendar, a short calendar across a month's end, a heatmap with long
+category names, and horizon charts on a linear and a time axis.
+`apps/examples/proportion-cases.json` holds 21 charts of parts, units and sets, rendered by
+`node apps/examples/proportion.mjs`: a waffle, a parliament, pictogram rows, a segmented doughnut, a
+pictorial bar, a Marimekko chart, five funnels, a pyramid, a funnel area, a pictorial stack, a pie of
+pie, two liquid fills, two Venn diagrams of two and three sets, and two Euler diagrams, one of nested
+sets and one with a set apart.
 
 | Chart | Preparation and composition |
 |---|---|
