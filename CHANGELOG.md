@@ -8,6 +8,22 @@ The four packages share one version and are released together. Each release also
 [GitHub](https://github.com/borrowdale/borrowdale/releases), and the
 [commit history](https://github.com/borrowdale/borrowdale/commits/main/) records every source change.
 
+## 0.7.0
+
+Published on 13 November 2026:
+
+- **`@borrowdale/charts`:** hierarchies. A `hierarchy` series draws a tree of named values as a
+  treemap, a sunburst, an icicle or packed circles, chosen by its `display`. A treemap is tiled
+  `squarify`, `binary`, `dice`, `slice` or `sliceDice`, and its `parents` are `hidden`, `nested` or
+  `cascaded`. A sunburst can be whole, a semicircle or rounded. An icicle runs in any of four
+  `direction`s, and `up` makes a flame graph. Each branch below the root takes the next palette
+  colour, names are written inside their marks where they fit, and every mark's tooltip gives its
+  path and value. A tree has at most 2,000 nodes and 10 levels below its root. Each node's values
+  add up to 0 or to at least 1e-300, and a packed tree's largest value is at least 1e-12.
+- **`@borrowdale/core`, `@borrowdale/fills` and `@borrowdale/text`:** only the version changes.
+
+Everything else 0.6.0 offered works as before. The website's playground has 13 hierarchy examples.
+
 ## 0.6.0
 
 Published on 13 November 2026:
