@@ -721,7 +721,9 @@ of seats. A funnel's silhouette is at most 10,000 characters of path data. A Ven
 each more than a billionth of the largest, and draws a region of 3 sets within 5% of the whole
 diagram's area of its size and at no less than a thousandth of its size, or fails. A hierarchy has at
 most 2,000 nodes and 10 levels below its root; the limits are checked as each list of children is
-read, before its entries are. The drawing budget below can be reached first where a tree has many
+read, before its entries are. Each node's values add up to 0 or to at least 1e-300, and a packed
+tree's largest value is at least 1e-12, as circles are packed to within 1e-9: scale smaller values
+up, as only their proportions are drawn. The drawing budget below can be reached first where a tree has many
 thin marks, and how soon depends on their shape and direction, so take these as a guide. Measured
 with the default options on 20 branches of equal leaf counts, adding a leaf to each branch until the
 first layout that does not fit, with every node drawn: a sunburst fits 1,061 nodes on an 800 × 600

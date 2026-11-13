@@ -136,6 +136,8 @@ function outsideParent(spec: ChartSpec, parent: string): number {
 }
 // Four equal branches, the first named at length.
 const FOUR_FOLDERS = { name: 'r', children: [{ name: 'cartesian', value: 1 }, { name: 'polar', value: 1 }, { name: 'pie', value: 1 }, { name: 'units', value: 1 }] };
+// A branch whose two leaves, 0 and 1e-306, add up to too little to divide a box by.
+const TINY_BRANCH = { name: 'r', children: [{ name: 'a', value: 1 }, { name: 't', children: [{ name: 'z', value: 0 }, { name: 'u', value: 1e-306 }] }] };
 const EIGHT_ICICLE = hierarchy(EIGHT, { display: 'icicle' }, { width: 800 });
 
 describe('hierarchies', () => {
@@ -179,6 +181,26 @@ describe('hierarchies', () => {
 
   it.each([['sunburst', 'sunburst'], ['pack', 'pack']])('keep the tooltip of a leaf too small to draw, in a %s', (_, display) => {
     expect(titles(layoutChart(hierarchy(SPECK, { display })))).toContain('Speck: 0.00000000000000000000');
+  });
+
+  it.each([['slice-dice', { tile: 'sliceDice' }], ['cascaded', { parents: 'cascaded', padding: 50 }]])(
+    'reject a branch whose values add up to too little to draw, in a %s treemap', (_, options) => {
+      expect(laying(hierarchy(TINY_BRANCH, { sort: false, ...options }))).toThrow(
+        'Invalid chart: series[0].data.children[1] has values adding up to 1e-306, too little to draw: they must add up to at least 1e-300');
+    });
+
+  it('reject a pack whose values are too small for its tolerance', () => {
+    expect(laying(hierarchy({ name: 'r', children: [{ name: 'a', value: 2.4e-21 }, { name: 'b', value: 7.6e-78 }] }, { display: 'pack' }))).toThrow(
+      'Invalid chart: series[0].data has no value of at least 1e-12, too small to pack: circles are packed to within 1e-9, so scale the values up');
+  });
+
+  it('reject a pack whose leaves are each too small, though they add up to enough', () => {
+    expect(laying(hierarchy({ name: 'r', children: [{ name: 'a', value: 6e-13 }, { name: 'b', value: 6e-13 }] }, { display: 'pack' }))).toThrow(
+      'Invalid chart: series[0].data has no value of at least 1e-12, too small to pack: circles are packed to within 1e-9, so scale the values up');
+  });
+
+  it('pack a tree whose largest value is 1e-12', () => {
+    expect(titles(layoutChart(hierarchy({ name: 'r', children: [{ name: 'a', value: 1e-12 }, { name: 'b', value: 5e-13 }] }, { display: 'pack' })))).toHaveLength(2);
   });
 
   it('reject a negative value', () => {

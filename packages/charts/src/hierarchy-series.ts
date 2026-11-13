@@ -17,6 +17,11 @@ const MAX_PADDING = 50;
  * draws them more truly.
  */
 const MIN_TOTAL = 1e-300;
+/**
+ * The least the largest value of a packed tree may be. Packing works to d3's fixed slack of 1e-9 in a
+ * radius, the square root of a value, so radii of at least 1e-6 keep that slack a thousandth of them.
+ */
+const MIN_PACKED = 1e-12;
 /** The room between nodes when the spec gives none. */
 const DEFAULT_PADDING = 2;
 
@@ -138,11 +143,17 @@ export function readHierarchy(r: Fields, path: string, reserve: (count: number) 
     if (depth >= MAX_DEPTH) fail(`${at}.children`, `would be level ${depth + 1} below the root, deeper than the ${MAX_DEPTH} levels a hierarchy draws`);
     const children = item.required('children', list(1, MAX_NODES, (childAt, child) => node(childAt, child, depth + 1), count(`${at}.children`)));
     unique(children.map((child) => child.name), (i) => `${at}.children[${i}].name`);
-    return { name, value: children.reduce((sum, child) => sum + child.value, 0), color: own, children, path: at };
+    const value = children.reduce((sum, child) => sum + child.value, 0);
+    // A layout divides each parent's box by its value, so a total of 0 draws nothing and one under
+    // MIN_TOTAL would overflow.
+    if (value > 0 && value < MIN_TOTAL) fail(at, `has values adding up to ${value}, too little to draw: they must add up to at least ${MIN_TOTAL}`);
+    return { name, value, color: own, children, path: at };
   };
   const root = r.required('data', (at, raw) => node(at, raw, 0));
   if (!(root.value > 0)) fail(`${path}.data`, 'has no value above 0, so there is nothing to draw');
-  if (root.value < MIN_TOTAL) fail(`${path}.data`, `has values adding up to ${root.value}, too little to draw: they must add up to at least ${MIN_TOTAL}`);
+  if (display === 'pack' && !(largest(root) >= MIN_PACKED)) {
+    fail(`${path}.data`, `has no value of at least ${MIN_PACKED}, too small to pack: circles are packed to within 1e-9, so scale the values up`);
+  }
   const parents = r.optional('parents', oneOf(PARENTS)) ?? 'hidden';
   const sweep = display === 'sunburst' ? checkSweep(r, path) : { startAngle: 0, endAngle: 360 };
   return {
@@ -163,4 +174,9 @@ export function checkHierarchyChart(r: Fields, base: CheckedChartBase, series: S
   if (r.has('axes')) fail('axes', 'must be left out: a hierarchy has no axes');
   if (series.length > 1) fail('series', `of a hierarchy must be one hierarchy series, got ${series.length}`);
   return { ...base, system: 'hierarchy', series };
+}
+
+/** The largest value of any leaf of `node`. */
+function largest(node: CheckedNode): number {
+  return node.children.length === 0 ? node.value : Math.max(...node.children.map(largest));
 }
