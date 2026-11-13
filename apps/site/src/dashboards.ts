@@ -187,6 +187,49 @@ export function worldDashboard() {
       },
     ],
   };
+  const longevity: ChartSpec = {
+    width: 1000,
+    height: 420,
+    title: 'Life expectancy by year',
+    legend: 'bottom',
+    colorAxis: { type: 'linear', title: 'Years' },
+    axes: {
+      x: { type: 'band', categories: years.map(String) },
+      y: { type: 'band', categories: countries.map((c) => c.name) },
+    },
+    series: [
+      {
+        type: 'heatmap',
+        name: 'Life expectancy',
+        data: countries.flatMap((c) => years.map((y) => [String(y), c.name, countryValue(c.code, y, indicators.life)] as const)),
+      },
+    ],
+  };
+  // A waffle needs a colour of its own for each category, and the palette has six: the most populous
+  // countries take five, and the rest share the sixth.
+  const byPopulation = rows.filter((r) => r.population !== null).sort((a, b) => b.population! - a.population!);
+  const largest = byPopulation.slice(0, colors.length - 1),
+    others = byPopulation.slice(colors.length - 1);
+  const people: ChartSpec = {
+    width: 1000,
+    height: 420,
+    title: 'People, ten million at a time',
+    legend: 'right',
+    series: [
+      {
+        type: 'units',
+        name: 'Tens of millions',
+        display: 'waffle',
+        columns: 40,
+        data: [
+          ...largest.map((r) => ({ name: r.name, population: r.population! })),
+          ...(others.length
+            ? [{ name: `Other ${others.length} countries`, population: others.reduce((n, r) => n + r.population!, 0) }]
+            : []),
+        ].map(({ name, population }, i) => ({ name, value: Math.round(population / 1e7), color: colors[i] })),
+      },
+    ],
+  };
   return (
     heading(
       '01 · WORLD BANK',
@@ -197,8 +240,8 @@ export function worldDashboard() {
       controls,
     ) +
     `<div class="metrics">${metric('COUNTRIES IN VIEW', String(rows.length), 'A selected comparison, not the whole world')}${metric('COMBINED POPULATION', compact(population), `${year} · available observations`)}${metric('MEDIAN LIFE EXPECTANCY', `${pretty(life)} <em>years</em>`, 'Unweighted country median', 'tint-green')}${metric('COMPLETE OBSERVATIONS', `${complete.length} / ${rows.length}`, 'Income + life expectancy + population')}</div>
- <div class="dashboard-grid">${chartPanel('The income picture', 'Current US$ per person · bars use thousands', rank)}${chartPanel('More than an income', 'Bubble area represents population · each bubble is one country · the line is a logarithmic fit across these countries, descriptive only', scatter)}${chartPanel('A longer perspective', `${selected.name} · 2010–2024 · gaps are missing observations`, trend, 'wide')}
- ${chartPanel('People in perspective', `Share of population among these ${countries.length} countries only`, share)}${profileKeys.every((k) => rows.find((r) => r.code === country)![k] !== null) ? chartPanel('Three dimensions', `Each measure is relative to the highest of the ${countries.length} countries (100).`, profile) : '<article class="chart-panel empty"><h2>Profile unavailable</h2><p>One or more measures are missing for this country and year.</p></article>'}</div>` +
+ <div class="dashboard-grid">${chartPanel('The income picture', 'Current US$ per person · bars use thousands', rank)}${chartPanel('More than an income', 'Bubble area represents population · each bubble is one country · the line is a logarithmic fit across these countries, descriptive only', scatter)}${chartPanel('A longer perspective', `${selected.name} · 2010–2024 · gaps are missing observations`, trend, 'wide')}${chartPanel('Longevity across the years', 'Life expectancy at birth in years · each cell is one country and year', longevity, 'wide')}
+ ${chartPanel('People in perspective', `Share of population among these ${countries.length} countries only`, share)}${profileKeys.every((k) => rows.find((r) => r.code === country)![k] !== null) ? chartPanel('Three dimensions', `Each measure is relative to the highest of the ${countries.length} countries (100).`, profile) : '<article class="chart-panel empty"><h2>Profile unavailable</h2><p>One or more measures are missing for this country and year.</p></article>'}${chartPanel('People, counted out', `Each square is ten million people in ${year}, rounded · the ${largest.length} most populous of the ${byPopulation.length} countries with data, and the rest together`, people, 'wide')}</div>` +
     sourceNote(
       `World Bank, <a href="https://datacatalog.worldbank.org/infrastructure-data/search/dataset/0037712/world-development-indicators" target="_blank" rel="noreferrer">World Development Indicators</a>, CC BY 4.0. Indicators: NY.GDP.PCAP.CD, SP.DYN.LE00.IN and SP.POP.TOTL. GDP is in current US dollars, not adjusted for purchasing power or inflation. Missing values stay missing. Bubble positions use complete observations only; the selected-country median is not a population-weighted global estimate. <a href="${escape(world.sourceUrl)}" target="_blank" rel="noreferrer">Original API query ↗</a>`,
     )
@@ -319,6 +362,48 @@ export function climateDashboard() {
     },
     series: [{ type: 'gauge', name: 'Anomaly', color: colors[3], value: latest.annual! }],
   };
+  // One diverging scale for both grids, even about 0 and wide enough for every month on record, so a
+  // colour stands for the same anomaly in each and from any starting year.
+  const bound =
+    Math.ceil(Math.max(...completedYears.flatMap((r) => r.months.flatMap((m) => (m === null ? [] : [Math.abs(m)])))) * 2) / 2;
+  const anomalyScale = { type: 'linear', scale: 'diverging', scheme: 'blue-red', min: -bound, max: bound, format: { suffix: '°C' } } as const;
+  const yearOf = (year: number) => [String(year), String(year + 1)] as const;
+  // The month grid keeps to the last 30 complete years, whatever the view starts from: from 1880 it
+  // would draw 1,752 cells, over a megabyte of page.
+  const lastYears = completedYears.slice(-30);
+  const stripes: ChartSpec = {
+    width: 1000,
+    height: 200,
+    title: 'Warming stripes',
+    legend: 'bottom',
+    colorAxis: anomalyScale,
+    // Fixed ends, so the axis stops at the last stripe rather than rounding out to the next decade.
+    axes: {
+      x: { type: 'time', min: String(rows[0]!.year), max: String(latest.year + 1) },
+      y: { type: 'band', categories: ['Year'], hidden: true },
+    },
+    series: [{ type: 'heatmap', name: 'Annual anomaly', data: rows.map((r) => [yearOf(r.year), 'Year', r.annual] as const) }],
+  };
+  const grid: ChartSpec = {
+    width: 1000,
+    height: 360,
+    title: 'Monthly anomalies by year',
+    legend: 'bottom',
+    colorAxis: anomalyScale,
+    // Fixed ends, as for the stripes: a free end rounds out to the next tick when a newly completed
+    // year moves the window.
+    axes: {
+      x: { type: 'time', min: String(lastYears[0]!.year), max: String(latest.year + 1) },
+      y: { type: 'band', categories: months },
+    },
+    series: [
+      {
+        type: 'heatmap',
+        name: 'Monthly anomaly',
+        data: lastYears.flatMap((r) => r.months.map((value, i) => [yearOf(r.year), months[i]!, value] as const)),
+      },
+    ],
+  };
   return (
     heading(
       '02 · NASA GISS',
@@ -329,7 +414,7 @@ export function climateDashboard() {
       `<label>View from <select id="climate-since">${[1880, 1950, 1970, 2000].map((y) => `<option ${since === y ? 'selected' : ''}>${y}</option>`).join('')}</select></label>`,
     ) +
     `<div class="metrics">${metric('LATEST COMPLETE YEAR', String(latest.year), 'Incomplete annual records are excluded')}${metric('ANNUAL ANOMALY', `${latest.annual! >= 0 ? '+' : ''}${pretty(latest.annual, 2)}<em>°C</em>`, 'Compared with the 1951–1980 mean', 'tint-coral')}${metric('CHANGE IN VIEW', `${change >= 0 ? '+' : ''}${pretty(change, 2)}<em>°C</em>`, `${earliest.year} to ${latest.year} · endpoint difference`)}${metric('WARMEST COMPLETE YEAR', String(warmest.year), `${pretty(warmest.annual, 2)}°C above the baseline`)}</div>
- <div class="dashboard-grid">${chartPanel('The long line', 'Annual global mean · degrees Celsius relative to 1951–1980', annual, 'wide')}${chartPanel('Decades, not days', 'Complete years in each decade · boxes span the middle half, the line marks the median · edge decades may be partial', decades)}${chartPanel('The shape of a year', 'Last three complete years · monthly anomalies in °C', monthly)}${chartPanel('Within each year', 'Monthly minimum–maximum envelope, not an uncertainty interval · °C', spread)}${chartPanel('The latest reading', '1951–1980 baseline · 0–2°C display scale, not a policy target', gauge)}${chartPanel('Beneath the noise', `Annual anomalies with a LOESS curve, span ${span} · a descriptive smoothing, not a forecast`, smooth, 'wide')}</div>` +
+ <div class="dashboard-grid">${chartPanel('The long line', 'Annual global mean · degrees Celsius relative to 1951–1980', annual, 'wide')}${chartPanel('Stripes of change', 'One stripe per complete year · blue is cooler and red warmer than the 1951–1980 mean', stripes, 'wide')}${chartPanel('Decades, not days', 'Complete years in each decade · boxes span the middle half, the line marks the median · edge decades may be partial', decades)}${chartPanel('The shape of a year', 'Last three complete years · monthly anomalies in °C', monthly)}${chartPanel('Within each year', 'Monthly minimum–maximum envelope, not an uncertainty interval · °C', spread)}${chartPanel('The latest reading', '1951–1980 baseline · 0–2°C display scale, not a policy target', gauge)}${chartPanel('Beneath the noise', `Annual anomalies with a LOESS curve, span ${span} · a descriptive smoothing, not a forecast`, smooth, 'wide')}${chartPanel('Month by month', `Each cell is one month of the last 30 complete years, ${lastYears[0]!.year}–${latest.year} · the same colour scale as the stripes`, grid, 'wide')}</div>` +
     sourceNote(
       `NASA GISS/GISTEMP, <a href="https://data.giss.nasa.gov/gistemp/" target="_blank" rel="noreferrer">GISS Surface Temperature Analysis, version 4</a>. GISTEMP Team (2026); Lenssen et al. (2024), <a href="https://doi.org/10.1029/2023JD040179" target="_blank" rel="noreferrer">A GISTEMPv4 observational uncertainty ensemble</a>. Dataset accessed 2026-10-29. Values are anomalies, not absolute temperatures, and this baseline is not pre-industrial. Annual and monthly data may be revised by the source. <a href="${escape(climate.sourceUrl)}" target="_blank" rel="noreferrer">Original CSV ↗</a>`,
     )
@@ -428,6 +513,50 @@ export function quakeDashboard() {
       },
     ],
   };
+  const calendar: ChartSpec = {
+    width: 660,
+    height: 310,
+    title: 'Events per day',
+    colorAxis: { type: 'linear', title: 'Events' },
+    series: [
+      {
+        type: 'calendar',
+        name: 'Events',
+        from: counts[0]!.date,
+        to: counts.at(-1)!.date,
+        data: counts.map((r) => [r.date, r.count] as const),
+      },
+    ],
+  };
+  // One square per event, so no class is rounded away. shortcut: a unit chart draws at most 2,000
+  // units; revisit when a saved feed holds more than 2,000 events at the lowest threshold.
+  const classes = [
+    { name: 'M 4.5–4.9', from: 4.5, to: 5, color: colors[0] },
+    { name: 'M 5.0–5.9', from: 5, to: 6, color: colors[1] },
+    { name: 'M 6.0+', from: 6, to: Infinity, color: colors[2] },
+  ];
+  const squares: ChartSpec = {
+    width: 660,
+    height: 370,
+    title: 'Events by magnitude class',
+    legend: 'bottom',
+    series: [
+      {
+        type: 'units',
+        name: 'Events',
+        display: 'waffle',
+        columns: 40,
+        // Only the classes the threshold leaves events in, each in its own colour at every threshold.
+        data: classes
+          .filter(({ to }) => to > threshold)
+          .map(({ name, from, to, color }) => ({
+            name,
+            value: events.filter((e) => e.magnitude >= from && e.magnitude < to).length,
+            color,
+          })),
+      },
+    ],
+  };
   return (
     heading(
       '03 · USGS',
@@ -439,7 +568,7 @@ export function quakeDashboard() {
     ) +
     `<div class="metrics">${metric('RECORDED EVENTS', pretty(events.length, 0), `Magnitude ${threshold}+ · saved feed`)}${metric('LARGEST MAGNITUDE', strongest === null ? '—' : `M ${pretty(strongest)}`, 'Magnitude types are supplied by USGS', 'tint-blue')}${metric('MEDIAN DEPTH', `${pretty(depth)} <em>km</em>`, 'Below the reference surface')}${metric('FEED WINDOW ENDS', day(quakes.generated).slice(5), 'UTC · archived snapshot, not live monitoring')}</div>
  <div class="dashboard-grid">${chartPanel('Thirty days of movement', 'Events per UTC day · current day may be incomplete', daily, 'wide')}${chartPanel('A sense of scale', 'Events in steps of 0.1 magnitude · magnitude is logarithmic', magnitude)}${events.length ? chartPanel('How deep, how strong?', 'Each point is one event · depth increases upward on this axis', depthChart) : '<article class="chart-panel empty"><h2>No events at this threshold.</h2><p>Choose a lower minimum magnitude.</p></article>'}
- ${chartPanel('Around the clock', 'UTC hour of origin · descriptive counts, not a daily risk forecast', hourly)}${chartPanel('The record grows', 'Cumulative event count across the saved feed window', cumulative)}${events.length ? chartPanel('Layers beneath us', 'Event counts grouped by reported depth', depths) + chartPanel('Strength at every depth', 'Magnitudes in each depth layer · boxes span the middle half · dots are events more than 1.5 box heights beyond the box', strength) : ''}</div>` +
+ ${chartPanel('Around the clock', 'UTC hour of origin · descriptive counts, not a daily risk forecast', hourly)}${chartPanel('The record grows', 'Cumulative event count across the saved feed window', cumulative)}${events.length ? chartPanel('Layers beneath us', 'Event counts grouped by reported depth', depths) + chartPanel('Strength at every depth', 'Magnitudes in each depth layer · boxes span the middle half · dots are events more than 1.5 box heights beyond the box', strength) + chartPanel('On the calendar', 'Events per UTC day · weeks start on Monday · the first and last days may be partial', calendar) + chartPanel('One square, one event', 'Every event in the saved feed at this threshold, by reported magnitude', squares) : ''}</div>` +
     sourceNote(
       `U.S. Geological Survey, <a href="https://earthquake.usgs.gov/earthquakes/feed/v1.0/geojson.php" target="_blank" rel="noreferrer">M4.5+ 30-day GeoJSON feed</a>. USGS-produced data are in the U.S. public domain. Feed generated ${escape(new Date(quakes.generated).toISOString())}. The download preserves the source URL, feed generation time and selected fields. Event estimates may change; this saved demo is not a real-time alert or safety service. The first and last UTC days may represent partial days. <a href="${escape(quakes.sourceUrl)}" target="_blank" rel="noreferrer">Original feed ↗</a>`,
     )
