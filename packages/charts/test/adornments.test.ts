@@ -1,6 +1,8 @@
 // @vitest-environment happy-dom
 import { describe, expect, it, vi } from 'vitest';
-import { appendChart, drawChart, layoutChart, toSvgChart, type ChartLayout, type ChartSpec } from '@borrowdale/charts';
+import {
+  appendChart, drawChart, layoutChart, toSvgChart, type ChartLayout, type ChartRenderOptions, type ChartSpec,
+} from '@borrowdale/charts';
 import { textBounds } from '@borrowdale/text';
 
 const spec: ChartSpec = {
@@ -9,6 +11,22 @@ const spec: ChartSpec = {
   series: [{ type: 'scatter', name: 'S', data: [[0, 0], [10, 10]], symbol: { image: 'photo' } }],
 };
 const raster = 'data:image/png;base64,iVBORw0KGgo=';
+
+/** A unit chart whose image name carries a right-to-left override, which every message must escape. */
+const spoofedName = 'evil\u202etxt.exe';
+const spoofed = layoutChart({
+  width: 300, height: 200, legend: 'none',
+  series: [{ type: 'units', name: 'U', display: 'waffle', data: [{ name: 'A', value: 3, symbol: { image: spoofedName } }] }],
+});
+
+/** Each renderer drawing `layout`, the Canvas one on `context`, run later, so that an error it throws can be expected. */
+function renderers(layout: ChartLayout, options: ChartRenderOptions = {}, context = {} as CanvasRenderingContext2D) {
+  return {
+    svg: () => toSvgChart(layout, options),
+    dom: () => appendChart(document.createElement('div'), layout, options),
+    canvas: () => drawChart(context, layout, options),
+  };
+}
 
 describe('trusted image assets', () => {
   it('embeds a repeated raster only once while retaining two positioned references', () => {
@@ -31,9 +49,38 @@ describe('trusted image assets', () => {
 
   it('rejects missing resources before drawing anything', () => {
     const context = { drawImage: vi.fn(), save: vi.fn() };
-    expect(() => drawChart(context as unknown as CanvasRenderingContext2D, layoutChart(spec))).toThrow('Missing chart image: photo');
+    expect(renderers(layoutChart(spec), {}, context as unknown as CanvasRenderingContext2D).canvas)
+      .toThrow(new Error('Missing chart image: "photo"'));
     expect(context.save).not.toHaveBeenCalled();
     expect(context.drawImage).not.toHaveBeenCalled();
+  });
+
+  it('escapes a missing image name in every renderer', () => {
+    const { svg, dom, canvas } = renderers(spoofed);
+
+    expect(svg).toThrow(new Error('Missing chart image: "evil\\u202etxt.exe"'));
+    expect(dom).toThrow(new Error('Missing chart image: "evil\\u202etxt.exe"'));
+    expect(canvas).toThrow(new Error('Missing chart image: "evil\\u202etxt.exe"'));
+  });
+
+  it('escapes the name of an image given without raster bytes or a Canvas source', () => {
+    const notRaster = renderers(spoofed, { images: new Map([[spoofedName, { dataUrl: 'https://example.com/a.png' }]]) });
+    const noSource = renderers(spoofed, { images: new Map([[spoofedName, { dataUrl: raster }]]) });
+
+    expect(notRaster.svg).toThrow(new Error('Chart image "evil\\u202etxt.exe" must contain a raster data URL'));
+    expect(noSource.canvas).toThrow(new Error('Chart image "evil\\u202etxt.exe" has no preloaded Canvas source'));
+  });
+
+  it('describes an image name over 100 characters by its length', () => {
+    const longName = 'x'.repeat(101);
+    const layout: ChartLayout = { width: 100, height: 100, family: 'test', labels: [], missing: [],
+      nodes: [{ kind: 'image', asset: longName, x: 0, y: 0, width: 1, height: 1 }] };
+
+    expect(renderers(layout).svg).toThrow(new Error('Missing chart image: a string of 101 characters'));
+    expect(renderers(layout, { images: new Map([[longName, { dataUrl: 'https://example.com/a.png' }]]) }).svg)
+      .toThrow(new Error('Chart image a string of 101 characters must contain a raster data URL'));
+    expect(renderers(layout, { images: new Map([[longName, { dataUrl: raster }]]) }).canvas)
+      .toThrow(new Error('Chart image a string of 101 characters has no preloaded Canvas source'));
   });
 
   it('requires a preloaded Canvas source and uses it directly', () => {
