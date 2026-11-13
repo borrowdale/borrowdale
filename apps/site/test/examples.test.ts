@@ -12,6 +12,7 @@ import cartesianCases from '../../examples/cartesian-cases.json';
 import timeCases from '../../examples/time-cases.json';
 import gridCases from '../../examples/grid-cases.json';
 import proportionCases from '../../examples/proportion-cases.json';
+import hierarchyCases from '../../examples/hierarchy-cases.json';
 import type { ChartSpec } from '@borrowdale/charts';
 
 // The gallery's chart examples with a name, and the spec the gallery holds under it.
@@ -62,7 +63,8 @@ describe('gallery coverage and actual rendering', () => {
 
   // A heatmap is tagged by the shape of its cells, and as a correlation when it is one, so the hexagon and
   // correlation views can be found by name. A unit or funnel chart is tagged by its display, and a
-  // pictorial bar and a pie of pie by name.
+  // pictorial bar and a pie of pie by name. A hierarchy is tagged by its display, except that a pack is
+  // circle packing and an upward icicle a flame graph.
   it.each([
     ['heatmap', 'heatmap'],
     ['punch-card', 'circle heatmap'],
@@ -79,6 +81,10 @@ describe('gallery coverage and actual rendering', () => {
     ['tile-map', 'hex heatmap'],
     ['image-units', 'rows'],
     ['image-pictorial-bar', 'pictorial bar'],
+    ['treemap-nested', 'treemap'],
+    ['icicle-right', 'icicle'],
+    ['flame-graph', 'flame graph'],
+    ['circle-packing', 'circle packing'],
   ])('tags the example %s as %s', (name, tag) => {
     expect(galleryTag(name)).toBe(tag);
   });
@@ -87,7 +93,7 @@ describe('gallery coverage and actual rendering', () => {
     expect(timeCases.length).toBeGreaterThan(0);
   });
 
-  it.each([...timeCases, ...statisticalCases, ...gridCases, ...proportionCases])('includes the $name composition in the editable gallery', ({ name, spec }) => {
+  it.each([...timeCases, ...statisticalCases, ...gridCases, ...proportionCases, ...hierarchyCases])('includes the $name composition in the editable gallery', ({ name, spec }) => {
     expect(galleryCharts(name)).toHaveLength(1);
     expect(gallerySpec(name)).toEqual(spec);
     expect(executeExample(editorCode(galleryCharts(name)[0]!))).toContain('<svg');
@@ -180,6 +186,7 @@ describe('gallery coverage and actual rendering', () => {
         'funnel',
         'liquid',
         'venn',
+        'hierarchy',
       ].sort(),
     );
     expect([...new Set(examples.filter((x) => x.category === 'shapes').map((x) => x.tag))].sort()).toEqual(

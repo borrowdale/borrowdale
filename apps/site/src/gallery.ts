@@ -35,7 +35,8 @@ export const chartExamples = [...chartCases, ...presentationExamples, ...statist
 /**
  * What a series is called in the gallery: a statistical, unit or funnel series by its display, a
  * heatmap by its shape, prefixed `correlation` when it is one, a pictorial bar and a pie of pie by
- * name, else its type.
+ * name, a hierarchy by its display, a pack as circle packing and an upward icicle as a flame graph,
+ * else its type.
  */
 export function seriesTag(series: ChartSpec['series'][number]): string {
   switch (series.type) {
@@ -53,6 +54,9 @@ export function seriesTag(series: ChartSpec['series'][number]): string {
     case 'units':
     case 'funnel':
       return series.display;
+    case 'hierarchy':
+      if (series.display === 'pack') return 'circle packing';
+      return series.display === 'icicle' && series.orientation === 'up' ? 'flame graph' : series.display;
     default:
       return untagged(series);
   }

@@ -178,6 +178,22 @@ export class Drawing {
   }
 
   /**
+   * A label in the middle of `box`, or from the middle of its left edge with `start`, cut short to fit
+   * across it: nothing for empty text, when no character of it fits beside the ellipsis (the text package's `…`, or
+   * `...` for a font without it), or a line of it does not fit the box's height. For marks too small
+   * to name, which keep their tooltips.
+   */
+  inside(text: string, box: Rect, start = false): ChartNode | undefined {
+    const fitted = fitText(text, Math.max(0, box.right - box.left), { font: this.#chart.font, fontSize: this.#chart.fontSize });
+    if (fitted === undefined || fitted === '' || (fitted !== text && /^(?:\u2026|\.\.\.)$/.test(fitted))) return undefined;
+    const extent = this.extent(fitted, start ? START : CENTRED);
+    if (extent.up + extent.down > box.bottom - box.top) return undefined;
+    this.#place();
+    const y = (box.top + box.bottom) / 2;
+    return this.text(fitted, { ...(start ? START : CENTRED), x: start ? box.left : (box.left + box.right) / 2, y });
+  }
+
+  /**
    * Text drawn as `text` draws it, never moved or cut, and counted toward the cap on placed text as a
    * data label is. Its caller keeps the room for it.
    */

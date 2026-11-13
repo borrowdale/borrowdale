@@ -23,7 +23,7 @@ it('provides specific metadata and valid structured data on every static page', 
 });
 it.each([
   ['/docs/charts/', 'statistical and financial charts'],
-  ['/docs/charts/', 'unit charts, funnels, liquid fills and Venn diagrams'],
+  ['/docs/charts/', 'unit, Venn and hierarchy charts'],
   ['/docs/getting-started/', 'Install BorrowdaleJS from npm'],
   ['/docs/getting-started/', 'in Node.js 22 or later'],
   ['/examples/world/', 'with a fitted income and longevity curve'],

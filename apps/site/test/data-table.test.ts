@@ -26,6 +26,11 @@ describe('data rows of the proportion charts', () => {
     const venn = { type: 'venn', name: 'Readers', data: [{ sets: ['Post'], value: 1200 }, { sets: ['Star'], value: 800 }, { sets: ['Post', 'Star'], value: 300 }] };
     expect(dataRows(chart([venn]))).toEqual([['Readers', 'Post', '1,200'], ['Readers', 'Star', '800'], ['Readers', 'Post ∩ Star', '300']]);
   });
+
+  it('give a hierarchy a row per leaf, named by its path below the root', () => {
+    const tree = { name: 'All', children: [{ name: 'Fossil', children: [{ name: 'Coal', value: 1300 }] }, { name: 'Nuclear', value: 40 }] };
+    expect(dataRows(chart([{ type: 'hierarchy', name: 'Energy', display: 'treemap', data: tree }]))).toEqual([['Energy', 'Fossil › Coal', '1,300'], ['Energy', 'Nuclear', '40']]);
+  });
 });
 
 // Rows that hold events, ranges, dates or categories rather than numbers write them as they are.

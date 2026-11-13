@@ -4,7 +4,7 @@ BorrowdaleJS code is licensed under the [MIT License](../../../LICENSE). The bun
 
 ## Incorporated code
 
-The drawing engine includes work derived from rough.js, hachure-fill, points-on-curve, points-on-path, path-data-parser and fdlibm. The chart tick logic incorporates work from d3-array.
+The drawing engine includes work derived from rough.js, hachure-fill, points-on-curve, points-on-path, path-data-parser and fdlibm. The chart tick logic incorporates work from d3-array, and the hierarchy layouts are ported from d3-hierarchy.
 
 - [Drawing engine notices](../../../packages/core/THIRD_PARTY_NOTICES.md)
 - [Chart notices](../../../packages/charts/THIRD_PARTY_NOTICES.md)

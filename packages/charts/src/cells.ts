@@ -3,7 +3,7 @@ import type { Point, Shape } from '@borrowdale/core';
 import type { MarkContext, Placed } from './cartesian.js';
 import type { CheckedPlace } from './cell-series.js';
 import { colorAxisOf, inkOn } from './color-scale.js';
-import type { Rect } from './frame.js';
+import { rectangle, type Rect } from './frame.js';
 import { runsOf, solid, valueCell, valueTitle } from './marks.js';
 import type { ChartNode } from './types.js';
 import type { SeriesOf } from './validate.js';
@@ -27,10 +27,6 @@ const CELL_SHAPES: Record<Heatmap['display'], (box: Rect, share: number) => Shap
     return { kind: 'polygon', points: [[right, middle], [right - quarter, bottom], [left + quarter, bottom], [left, middle], [left + quarter, top], [right - quarter, top]] };
   },
 };
-
-function rectangle({ left, top, right, bottom }: Rect): Shape {
-  return { kind: 'rectangle', x: left, y: top, width: right - left, height: bottom - top };
-}
 
 /** Each cell in the colour of its value; a cell with no value as an outline only. */
 export function drawHeatmap(context: MarkContext, entry: Heatmap): void {

@@ -45,6 +45,8 @@ const MAX_EVERY = 1_000;
 export const MAX_HOLE = 0.95;
 /** The widest gap between a pie's slices or a ring's segments, in degrees. */
 export const MAX_PAD_ANGLE = 10;
+/** The most units a ring's corners are rounded by. */
+export const MAX_CORNER_RADIUS = 1_000;
 /** The narrowest and widest a band axis' weights make a category, against the others. */
 export const MIN_WEIGHT = 0.000001;
 const MAX_WEIGHT = 1_000_000;

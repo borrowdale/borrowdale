@@ -1,3 +1,4 @@
+import type { Shape } from '@borrowdale/core';
 import { fail } from './read.js';
 
 /** Space around the whole chart. */
@@ -15,6 +16,11 @@ export interface Rect {
   top: number;
   right: number;
   bottom: number;
+}
+
+/** A rectangle shape filling `rect`. */
+export function rectangle({ left, top, right, bottom }: Rect): Shape {
+  return { kind: 'rectangle', x: left, y: top, width: right - left, height: bottom - top };
 }
 
 /** Throws when titles, legends and labels have left no room for the plot itself. */

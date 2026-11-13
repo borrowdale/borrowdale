@@ -13,6 +13,7 @@ import { unitSymbol } from './units-series.js';
 import { layoutFunnel } from './funnel.js';
 import { layoutLiquid } from './liquid.js';
 import { layoutVenn } from './venn.js';
+import { layoutHierarchy } from './hierarchy.js';
 import { layoutPie } from './pie.js';
 import { layoutPolar, polarLegendOf } from './polar.js';
 import { fail } from './read.js';
@@ -103,6 +104,9 @@ export function layoutChart(spec: ChartSpec, options: LayoutChartOptions = {}): 
     case 'venn':
       layoutVenn(drawing, chart, rect, paintOf);
       break;
+    case 'hierarchy':
+      layoutHierarchy(drawing, chart, rect, paintOf);
+      break;
     default:
       unknownSystem(chart);
   }
@@ -132,6 +136,7 @@ const LEGENDS = {
   funnel: 'names',
   liquid: 'series',
   venn: 'names',
+  hierarchy: 'names',
 } as const satisfies Record<System, 'names' | 'series'>;
 
 type NamedSystem = { [S in System]: (typeof LEGENDS)[S] extends 'names' ? S : never }[System];
@@ -147,6 +152,10 @@ function namedItems(entry: Extract<CheckedChart, { system: NamedSystem }>['serie
   // A Venn diagram lists its sets, not the overlaps its data also holds.
   if (entry.type === 'venn') {
     return entry.sets.map((set) => ({ name: set.name, color: set.color, path: `${entry.path}.data[${set.index}]`, symbol: undefined }));
+  }
+  // A hierarchy lists the branches below its root, which every node below takes its colour from.
+  if (entry.type === 'hierarchy') {
+    return entry.root.children.map((branch) => ({ name: branch.name, color: branch.color, path: branch.path, symbol: undefined }));
   }
   const symbolOf = (item: { symbol?: Marker | undefined }) =>
     entry.type === 'units' && entry.display !== 'ring' ? unitSymbol(entry.display, item.symbol) : undefined;

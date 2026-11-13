@@ -1,5 +1,5 @@
 // A pie chart: slices of one or more nested rings, and the slice a pie of pie breaks out into parts.
-import { checkSweep, MAX_HOLE, MAX_NAME, MAX_PAD_ANGLE } from './check-axis.js';
+import { checkSweep, MAX_CORNER_RADIUS, MAX_HOLE, MAX_NAME, MAX_PAD_ANGLE } from './check-axis.js';
 import { checkNameColors, readNamedValues } from './named-values.js';
 import { fail, fields, MAX_VALUE, number, show, text, type Fields } from './read.js';
 import type { CheckedChartBase, SeriesOf } from './validate.js';
@@ -14,7 +14,6 @@ export interface CheckedPieChart extends CheckedChartBase {
 }
 
 const MAX_RINGS = 10;
-const MAX_CORNER_RADIUS = 1_000;
 const MAX_OFFSET = 0.5;
 const MIN_OUTER = 0.05;
 

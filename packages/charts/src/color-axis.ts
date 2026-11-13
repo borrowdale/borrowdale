@@ -77,6 +77,7 @@ const ENCODINGS: { [K in SeriesType]: Encoder<K> } = {
   funnel: undefined,
   liquid: undefined,
   venn: undefined,
+  hierarchy: undefined,
 };
 
 const BY_VALUE = (Object.keys(ENCODINGS) as SeriesType[]).filter((type) => ENCODINGS[type] !== undefined);
