@@ -14573,5 +14573,232 @@
     }
    ]
   }
+ },
+ {
+  "name": "venn-two-sets",
+  "spec": {
+   "width": 420,
+   "height": 280,
+   "title": "Readers of two papers",
+   "series": [
+    {
+     "type": "venn",
+     "name": "Readers",
+     "dataLabels": true,
+     "data": [
+      {
+       "sets": [
+        "Morning Post"
+       ],
+       "value": 1200
+      },
+      {
+       "sets": [
+        "Evening Star"
+       ],
+       "value": 800
+      },
+      {
+       "sets": [
+        "Morning Post",
+        "Evening Star"
+       ],
+       "value": 300
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "venn-three-sets",
+  "spec": {
+   "width": 420,
+   "height": 320,
+   "title": "Skills on the team",
+   "series": [
+    {
+     "type": "venn",
+     "name": "Skills",
+     "dataLabels": true,
+     "data": [
+      {
+       "sets": [
+        "Design"
+       ],
+       "value": 30
+      },
+      {
+       "sets": [
+        "Code"
+       ],
+       "value": 45
+      },
+      {
+       "sets": [
+        "Writing"
+       ],
+       "value": 25
+      },
+      {
+       "sets": [
+        "Design",
+        "Code"
+       ],
+       "value": 12
+      },
+      {
+       "sets": [
+        "Design",
+        "Writing"
+       ],
+       "value": 8
+      },
+      {
+       "sets": [
+        "Code",
+        "Writing"
+       ],
+       "value": 10
+      },
+      {
+       "sets": [
+        "Design",
+        "Code",
+        "Writing"
+       ],
+       "value": 4
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "euler-subset",
+  "spec": {
+   "width": 360,
+   "height": 300,
+   "title": "Squares are rectangles",
+   "series": [
+    {
+     "type": "venn",
+     "name": "Shapes",
+     "data": [
+      {
+       "sets": [
+        "Quadrilaterals"
+       ],
+       "value": 100
+      },
+      {
+       "sets": [
+        "Rectangles"
+       ],
+       "value": 40
+      },
+      {
+       "sets": [
+        "Squares"
+       ],
+       "value": 10
+      },
+      {
+       "sets": [
+        "Quadrilaterals",
+        "Rectangles"
+       ],
+       "value": 40
+      },
+      {
+       "sets": [
+        "Quadrilaterals",
+        "Squares"
+       ],
+       "value": 10
+      },
+      {
+       "sets": [
+        "Rectangles",
+        "Squares"
+       ],
+       "value": 10
+      },
+      {
+       "sets": [
+        "Quadrilaterals",
+        "Rectangles",
+        "Squares"
+       ],
+       "value": 10
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "euler-disjoint",
+  "spec": {
+   "width": 420,
+   "height": 260,
+   "title": "Pets at home",
+   "series": [
+    {
+     "type": "venn",
+     "name": "Pets",
+     "dataLabels": true,
+     "data": [
+      {
+       "sets": [
+        "Cats"
+       ],
+       "value": 50
+      },
+      {
+       "sets": [
+        "Dogs"
+       ],
+       "value": 60
+      },
+      {
+       "sets": [
+        "Fish"
+       ],
+       "value": 15
+      },
+      {
+       "sets": [
+        "Cats",
+        "Dogs"
+       ],
+       "value": 15
+      },
+      {
+       "sets": [
+        "Cats",
+        "Fish"
+       ],
+       "value": 0
+      },
+      {
+       "sets": [
+        "Dogs",
+        "Fish"
+       ],
+       "value": 0
+      },
+      {
+       "sets": [
+        "Cats",
+        "Dogs",
+        "Fish"
+       ],
+       "value": 0
+      }
+     ]
+    }
+   ]
+  }
  }
 ]

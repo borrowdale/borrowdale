@@ -1,4 +1,4 @@
-// Render the unit, funnel, pie of pie, liquid, pictorial bar and Marimekko examples as standalone
+// Render the unit, funnel, pie of pie, liquid, pictorial bar, Marimekko and Venn examples as standalone
 // SVG documents with their font embedded.
 // Usage: npm run build && node apps/examples/proportion.mjs
 import { mkdirSync, writeFileSync } from 'node:fs';

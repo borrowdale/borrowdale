@@ -12,6 +12,7 @@ import { layoutUnits } from './units.js';
 import { unitSymbol } from './units-series.js';
 import { layoutFunnel } from './funnel.js';
 import { layoutLiquid } from './liquid.js';
+import { layoutVenn } from './venn.js';
 import { layoutPie } from './pie.js';
 import { layoutPolar, polarLegendOf } from './polar.js';
 import { fail } from './read.js';
@@ -99,6 +100,9 @@ export function layoutChart(spec: ChartSpec, options: LayoutChartOptions = {}): 
     case 'liquid':
       layoutLiquid(drawing, chart, rect, entryPaints);
       break;
+    case 'venn':
+      layoutVenn(drawing, chart, rect, paintOf);
+      break;
     default:
       unknownSystem(chart);
   }
@@ -127,6 +131,7 @@ const LEGENDS = {
   units: 'names',
   funnel: 'names',
   liquid: 'series',
+  venn: 'names',
 } as const satisfies Record<System, 'names' | 'series'>;
 
 type NamedSystem = { [S in System]: (typeof LEGENDS)[S] extends 'names' ? S : never }[System];
@@ -139,6 +144,10 @@ const listsNames = (chart: CheckedChart): chart is Extract<CheckedChart, { syste
  * each with the symbol a unit chart draws its units as. A ring draws segments, shown by a box.
  */
 function namedItems(entry: Extract<CheckedChart, { system: NamedSystem }>['series'][number]) {
+  // A Venn diagram lists its sets, not the overlaps its data also holds.
+  if (entry.type === 'venn') {
+    return entry.sets.map((set) => ({ name: set.name, color: set.color, path: `${entry.path}.data[${set.index}]`, symbol: undefined }));
+  }
   const symbolOf = (item: { symbol?: Marker | undefined }) =>
     entry.type === 'units' && entry.display !== 'ring' ? unitSymbol(entry.display, item.symbol) : undefined;
   const items = (data: readonly { name: string; color: string | undefined; symbol?: Marker | undefined }[], path: string) =>

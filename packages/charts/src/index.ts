@@ -76,3 +76,4 @@ export type { DistributionSeries, HistogramSeries, MarketSeries, RelationshipSer
 export type { UnitsCategory, UnitsSeries } from './units-series.js';
 export type { FunnelSeries, FunnelStage } from './funnel-series.js';
 export type { LiquidSeries } from './liquid-series.js';
+export type { VennArea, VennSeries } from './venn-series.js';
