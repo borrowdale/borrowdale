@@ -32,7 +32,7 @@ const PARENTS = ['Alpha', 'Beta', 'Gamma', 'Delta'];
 const NESTED = { name: 'r', children: PARENTS.map((name) => ({ name, children: [1, 2, 3].map((i) => ({ name: `${name[0]}${i}`, value: 10 * i })) })) };
 /** The parents' names a 600 by 400 nested treemap writes at `fontSize`. */
 const writtenAt = (fontSize: number) =>
-  layoutChart({ width: 600, height: 400, fontSize, legend: 'none', series: [{ type: 'hierarchy', name: 'H', display: 'treemap', nested: true, data: NESTED }] } as ChartSpec)
+  layoutChart({ width: 600, height: 400, fontSize, legend: 'none', series: [{ type: 'hierarchy', name: 'H', display: 'treemap', parents: 'nested', data: NESTED }] } as ChartSpec)
     .labels.filter((label) => PARENTS.includes(label));
 /** Every text drawn, in the order first drawn: with no legend, the names written in the marks. */
 const written = (spec: ChartSpec) => layoutChart(spec).labels;
@@ -212,10 +212,14 @@ describe('hierarchies', () => {
     expect(laying(hierarchy(TREE, { innerRadius: 0.5 }))).toThrow('Invalid chart: series[0] has an unknown key, "innerRadius"');
   });
 
-  it('reject a cascade that is not nested', () => {
-    expect(laying(hierarchy(TREE, { cascade: true, nested: false }))).toThrow(
-      'Invalid chart: series[0].nested must be left out or true: a cascaded treemap draws its parents');
+  it('reject a treemap parents value it does not know', () => {
+    expect(laying(hierarchy(TREE, { parents: 'shown' }))).toThrow(/^Invalid chart: series\[0\]\.parents must be one of /);
   });
+
+  it.each([['nested', { nested: true }], ['cascade', { cascade: true }], ['orientation', { display: 'icicle', orientation: 'up' }]])(
+    'reject %s, an unreleased name for parents or direction', (key, options) => {
+      expect(laying(hierarchy(TREE, options))).toThrow(`Invalid chart: series[0] has an unknown key, "${key}"`);
+    });
 
   it('reject a second series', () => {
     expect(laying({ ...hierarchy(TREE), series: [{ type: 'hierarchy', name: 'H', display: 'pack', data: TREE }, { type: 'hierarchy', name: 'I', display: 'pack', data: TREE }] })).toThrow(
@@ -239,8 +243,8 @@ describe('hierarchies', () => {
   });
 
   it('draw the parents of a nested treemap, each with its name', () => {
-    expect(titles(layoutChart(hierarchy(TREE, { nested: true })))).toEqual(['A: 83', 'A › A3: 31', 'A › A1: 30', 'A › A2: 22', 'B: 11', 'B › B1: 7', 'B › B2: 4', 'C: 4']);
-    expect(written(hierarchy(TREE, { nested: true }))).toContain('A');
+    expect(titles(layoutChart(hierarchy(TREE, { parents: 'nested' })))).toEqual(['A: 83', 'A › A3: 31', 'A › A1: 30', 'A › A2: 22', 'B: 11', 'B › B1: 7', 'B › B2: 4', 'C: 4']);
+    expect(written(hierarchy(TREE, { parents: 'nested' }))).toContain('A');
   });
 
   it.each(['sunburst', 'icicle', 'pack'])('draw every node below the root of a %s', (display) => {
@@ -271,16 +275,16 @@ describe('hierarchies', () => {
   });
 
   it.each([
-    ['treemap', { tile: 'binary', cascade: true }],
+    ['treemap', { tile: 'binary', parents: 'cascaded' }],
     ['sunburst', { startAngle: -90, endAngle: 90, cornerRadius: 4 }],
-    ['icicle', { orientation: 'left' }],
+    ['icicle', { direction: 'left' }],
     ['pack', { padding: 6 }],
   ])('keep every stroke and label of a %s inside the chart', (display, options) => {
     expect(pointsOutside(layoutChart(hierarchy(TREE, { display, ...options })))).toBe(0);
   });
 
   it('put the first level of a flame graph at the bottom', () => {
-    const layout = layoutChart(hierarchy(TREE, { display: 'icicle', orientation: 'up' }));
+    const layout = layoutChart(hierarchy(TREE, { display: 'icicle', direction: 'up' }));
     expect(placesOf(layout, 'A')[0]![1]).toBeGreaterThan(placesOf(layout, 'A3')[0]![1]);
   });
 
@@ -290,7 +294,7 @@ describe('hierarchies', () => {
   });
 
   it('put the first level of a leftward icicle on the right', () => {
-    const layout = layoutChart(hierarchy(TREE, { display: 'icicle', orientation: 'left' }));
+    const layout = layoutChart(hierarchy(TREE, { display: 'icicle', direction: 'left' }));
     expect(placesOf(layout, 'A')[0]![0]).toBeGreaterThan(placesOf(layout, 'A3')[0]![0]);
   });
 
@@ -327,19 +331,19 @@ describe('hierarchies', () => {
 
   // A sketched stroke lies within a few hundredths of a unit of its box, even with roughness 0.
   it('set a cascaded treemap\'s children 6 in from their parent\'s left, and flush with its right', () => {
-    const cascaded = hierarchy(TREE, { cascade: true });
+    const cascaded = hierarchy(TREE, { parents: 'cascaded' });
     expect(Math.abs(boundsOf(cascaded, 'B › B1: 7')[0]! - boundsOf(cascaded, 'B: 11')[0]! - 6)).toBeLessThan(0.1);
     expect(Math.abs(boundsOf(cascaded, 'B: 11')[2]! - boundsOf(cascaded, 'B › B1: 7')[2]!)).toBeLessThan(0.1);
   });
 
   it('keep a nested parent\'s name 2 in from its right edge', () => {
     const narrow = { name: 'r', children: [{ name: 'A very long parent name indeed', children: [{ name: 'x', value: 1 }] }, { name: 'B', value: 4 }] };
-    const spec = hierarchy(narrow, { nested: true, padding: 0 });
+    const spec = hierarchy(narrow, { parents: 'nested', padding: 0 });
     expect(rightOfText(spec, 'A very')).toBeLessThanOrEqual(boundsOf(spec, 'A very long parent name indeed: 1')[2]! - 2);
   });
 
   it('put the first level of a rightward icicle on the left', () => {
-    const layout = layoutChart(hierarchy(TREE, { display: 'icicle', orientation: 'right' }));
+    const layout = layoutChart(hierarchy(TREE, { display: 'icicle', direction: 'right' }));
     expect(placesOf(layout, 'A')[0]![0]).toBeLessThan(placesOf(layout, 'A3')[0]![0]);
   });
 });

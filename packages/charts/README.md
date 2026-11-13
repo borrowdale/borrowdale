@@ -607,15 +607,15 @@ const spec = {
 
 | `display` | Draws | Options |
 |---|---|---|
-| `treemap` | each leaf as a rectangle whose area is in proportion to its value | `tile`: `squarify` (default, near square), `binary` (halved by value), `dice` (side by side), `slice` (stacked) or `sliceDice` (alternating by level); `nested`: also draws each parent, its name in a strip along its top; `cascade`: draws each parent with its children set in from its top and left, as stacked cards; `padding` |
+| `treemap` | each leaf as a rectangle whose area is in proportion to its value | `tile`: `squarify` (default, near square), `binary` (halved by value), `dice` (side by side), `slice` (stacked) or `sliceDice` (alternating by level); `parents`: `hidden` (default, leaves only), `nested` (each parent drawn too, its name in a strip along its top) or `cascaded` (each parent drawn with its children set in from its top and left, as stacked cards); `padding` |
 | `sunburst` | each node as a ring segment, a level to a ring, its angle in proportion to its value | `startAngle` and `endAngle` (`-90` and `90` make a semicircle), `innerRadius`, `cornerRadius` for rounded segments |
-| `icicle` | each node as a rectangle, a level to a band, its length in proportion to its value | `orientation`: `down` (default), `up` (a flame graph), `right` or `left`; `padding` |
+| `icicle` | each node as a rectangle, a level to a band, its length in proportion to its value | `direction`: `down` (default), `up` (a flame graph), `right` or `left`; `padding` |
 | `pack` | each leaf as a circle whose area is in proportion to its value, inside its parent's circle | `padding` |
 
 Every display takes `sort`: siblings are drawn largest first, a tie in the given order, unless `sort`
 is false, which keeps the given order. `padding` is the room between nodes, 0 to 50 units, 2 by
 default. Every node drawn has a tooltip naming its path below the root and its value, as
-`Home › Rent: 1,150`; a treemap that is not nested draws its leaves only. A node that padding leaves
+`Home › Rent: 1,150`; a treemap whose `parents` are `hidden` draws its leaves only. A node that padding leaves
 no width or height is drawn as a line inside the plot, and one too small for any size keeps its tooltip. A name is written inside
 each leaf, each sunburst and icicle segment and each nested treemap parent where it fits, cut short
 with an ellipsis if need be, and left out where not even one character fits; a packed parent's name
@@ -722,7 +722,7 @@ each more than a billionth of the largest, and draws a region of 3 sets within 5
 diagram's area of its size and at no less than a thousandth of its size, or fails. A hierarchy has at
 most 2,000 nodes and 10 levels below its root; the limits are checked as each list of children is
 read, before its entries are. The drawing budget below can be reached first where a tree has many
-thin marks, and how soon depends on their shape and orientation, so take these as a guide. Measured
+thin marks, and how soon depends on their shape and direction, so take these as a guide. Measured
 with the default options on 20 branches of equal leaf counts, adding a leaf to each branch until the
 first layout that does not fit, with every node drawn: a sunburst fits 1,061 nodes on an 800 × 600
 chart and 581 on a 1600 × 1200 one, an icicle 941 and 441 running down and 561 and 261 running

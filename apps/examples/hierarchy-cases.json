@@ -213,7 +213,7 @@
      "name": "Lines of code",
      "display": "treemap",
      "tile": "sliceDice",
-     "nested": true,
+     "parents": "nested",
      "data": {
       "name": "Package",
       "children": [
@@ -475,7 +475,7 @@
      "type": "hierarchy",
      "name": "Lines of code",
      "display": "treemap",
-     "nested": true,
+     "parents": "nested",
      "data": {
       "name": "Package",
       "children": [
@@ -577,7 +577,7 @@
      "type": "hierarchy",
      "name": "Lines of code",
      "display": "treemap",
-     "cascade": true,
+     "parents": "cascaded",
      "data": {
       "name": "Package",
       "children": [
@@ -964,7 +964,7 @@
      "type": "hierarchy",
      "name": "Time spent per call",
      "display": "icicle",
-     "orientation": "up",
+     "direction": "up",
      "data": {
       "name": "main",
       "children": [
@@ -1037,7 +1037,7 @@
      "type": "hierarchy",
      "name": "Household budget",
      "display": "icicle",
-     "orientation": "right",
+     "direction": "right",
      "data": {
       "name": "Household budget",
       "children": [

@@ -56,7 +56,7 @@ export function seriesTag(series: ChartSpec['series'][number]): string {
       return series.display;
     case 'hierarchy':
       if (series.display === 'pack') return 'circle packing';
-      return series.display === 'icicle' && series.orientation === 'up' ? 'flame graph' : series.display;
+      return series.display === 'icicle' && series.direction === 'up' ? 'flame graph' : series.display;
     default:
       return untagged(series);
   }

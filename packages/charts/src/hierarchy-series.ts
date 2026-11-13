@@ -23,9 +23,12 @@ const DEFAULT_PADDING = 2;
 /** How a treemap splits each parent among its children. */
 const TILES = ['squarify', 'binary', 'dice', 'slice', 'sliceDice'] as const;
 export type TreemapTile = (typeof TILES)[number];
+/** How a treemap shows the parents of its leaves. */
+const PARENTS = ['hidden', 'nested', 'cascaded'] as const;
+export type TreemapParents = (typeof PARENTS)[number];
 /** The way an icicle's levels run from the root: a flame graph runs `up`. */
-const ORIENTATIONS = ['down', 'up', 'right', 'left'] as const;
-export type IcicleOrientation = (typeof ORIENTATIONS)[number];
+const DIRECTIONS = ['down', 'up', 'right', 'left'] as const;
+export type IcicleDirection = (typeof DIRECTIONS)[number];
 
 interface HierarchyOptions {
   /**
@@ -34,10 +37,12 @@ interface HierarchyOptions {
    * stacks them, and `sliceDice` alternates the two by level.
    */
   tile?: TreemapTile | undefined;
-  /** Draws each parent of a treemap, its name in a strip along its top. Defaults to false, or to true with `cascade`, which needs it. */
-  nested?: boolean | undefined;
-  /** Draws each parent of a treemap with its children set in from its top and left, as stacked cards. Defaults to false. */
-  cascade?: boolean | undefined;
+  /**
+   * How a treemap shows the parents of its leaves: `hidden` (the default) draws the leaves only;
+   * `nested` draws each parent too, its name in a strip along its top; `cascaded` draws them so, with
+   * their children set in from the left, as stacked cards.
+   */
+  parents?: TreemapParents | undefined;
   /** The room between nodes, in units: 0 to 50. Defaults to 2. */
   padding?: number | undefined;
   /** In degrees clockwise from the top. Defaults to 0. */
@@ -49,7 +54,7 @@ interface HierarchyOptions {
   /** Rounds each segment's corners by this many units, where there is room: 0 to 1,000. Defaults to 0. */
   cornerRadius?: number | undefined;
   /** The way an icicle's levels run from the root: `down` (the default), `up` (a flame graph), `right` or `left`. */
-  orientation?: IcicleOrientation | undefined;
+  direction?: IcicleDirection | undefined;
   /** Orders each node's children largest first, a tie in the given order. Defaults to true; false keeps the given order. */
   sort?: boolean | undefined;
   /** Writes each node's value after its name, where the name fits inside it. */
@@ -58,9 +63,9 @@ interface HierarchyOptions {
 
 /** The options each display takes. */
 export const HIERARCHY_DISPLAYS = {
-  treemap: ['tile', 'nested', 'cascade', 'padding', 'sort', 'dataLabels'],
+  treemap: ['tile', 'parents', 'padding', 'sort', 'dataLabels'],
   sunburst: ['startAngle', 'endAngle', 'innerRadius', 'cornerRadius', 'sort', 'dataLabels'],
-  icicle: ['orientation', 'padding', 'sort', 'dataLabels'],
+  icicle: ['direction', 'padding', 'sort', 'dataLabels'],
   pack: ['padding', 'sort', 'dataLabels'],
 } as const satisfies Record<string, readonly (keyof HierarchyOptions)[]>;
 
@@ -138,21 +143,18 @@ export function readHierarchy(r: Fields, path: string, reserve: (count: number) 
   const root = r.required('data', (at, raw) => node(at, raw, 0));
   if (!(root.value > 0)) fail(`${path}.data`, 'has no value above 0, so there is nothing to draw');
   if (root.value < MIN_TOTAL) fail(`${path}.data`, `has values adding up to ${root.value}, too little to draw: they must add up to at least ${MIN_TOTAL}`);
-  const nested = r.optional('nested', boolean);
-  const cascade = r.optional('cascade', boolean) ?? false;
-  if (cascade && nested === false) fail(`${path}.nested`, 'must be left out or true: a cascaded treemap draws its parents');
+  const parents = r.optional('parents', oneOf(PARENTS)) ?? 'hidden';
   const sweep = display === 'sunburst' ? checkSweep(r, path) : { startAngle: 0, endAngle: 360 };
   return {
     display,
     root,
     tile: r.optional('tile', oneOf(TILES)) ?? 'squarify',
-    nested: cascade || (nested ?? false),
-    cascade,
+    parents,
     padding: r.optional('padding', number(0, MAX_PADDING)) ?? DEFAULT_PADDING,
     ...sweep,
     innerRadius: r.optional('innerRadius', number(0, MAX_HOLE)) ?? 0,
     cornerRadius: r.optional('cornerRadius', number(0, MAX_CORNER_RADIUS)) ?? 0,
-    orientation: r.optional('orientation', oneOf(ORIENTATIONS)) ?? 'down',
+    direction: r.optional('direction', oneOf(DIRECTIONS)) ?? 'down',
     sort: r.optional('sort', boolean) ?? true,
   };
 }

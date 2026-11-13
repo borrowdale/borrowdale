@@ -7,7 +7,7 @@ import type { Drawing } from './drawing.js';
 import { assertRoom, rectangle, type Rect } from './frame.js';
 import { fitSweep, onCircle, RADIANS, sliceShape } from './geometry.js';
 import { binary, dice, pack, partition, placed, slice, sliceDice, squarify, treemap, type LaidOut, type Tiling } from './hierarchy-geometry.js';
-import type { CheckedHierarchyChart, CheckedNode, IcicleOrientation, TreemapTile } from './hierarchy-series.js';
+import type { CheckedHierarchyChart, CheckedNode, IcicleDirection, TreemapTile } from './hierarchy-series.js';
 import { valueLabel } from './named-values.js';
 import { hatched, paints, type Paint } from './palette.js';
 import { unhandled } from './statistics/types.js';
@@ -77,7 +77,8 @@ function drawerOf(drawing: Drawing, series: Hierarchy, rect: Rect, root: LaidNod
       // A nested parent's strip is a line of text tall with INSET above and below it, so its name,
       // inset only at its sides, always has room for a line.
       const header = drawing.lineHeight() + 2 * INSET;
-      const { padding, nested, cascade } = series;
+      const { padding, parents } = series;
+      const [nested, cascade] = [parents !== 'hidden', parents === 'cascaded'];
       treemap(root, TILINGS[series.tile], width, height, {
         inner: padding,
         top: nested ? header : padding,
@@ -94,10 +95,10 @@ function drawerOf(drawing: Drawing, series: Hierarchy, rect: Rect, root: LaidNod
       };
     }
     case 'icicle': {
-      const across = series.orientation === 'down' || series.orientation === 'up';
+      const across = series.direction === 'down' || series.direction === 'up';
       partition(root, across ? width : height, across ? height : width, series.padding);
       return (node) => {
-        const box = within(icicleBox(node, series.orientation, rect), rect);
+        const box = within(icicleBox(node, series.direction, rect), rect);
         return { shape: rectangle(box), filled: true, label: { box: inset(box), start: false } };
       };
     }
@@ -141,9 +142,9 @@ function drawerOf(drawing: Drawing, series: Hierarchy, rect: Rect, root: LaidNod
   }
 }
 
-/** An icicle node's rectangle: its band and its span across it, turned to the orientation. */
-function icicleBox(node: LaidNode, orientation: IcicleOrientation, rect: Rect): Rect {
-  switch (orientation) {
+/** An icicle node's rectangle: its band and its span across it, turned to its direction. */
+function icicleBox(node: LaidNode, direction: IcicleDirection, rect: Rect): Rect {
+  switch (direction) {
     case 'down':
       return { left: rect.left + node.x0, right: rect.left + node.x1, top: rect.top + node.y0, bottom: rect.top + node.y1 };
     case 'up':
@@ -153,7 +154,7 @@ function icicleBox(node: LaidNode, orientation: IcicleOrientation, rect: Rect): 
     case 'left':
       return { left: rect.right - node.y1, right: rect.right - node.y0, top: rect.top + node.x0, bottom: rect.top + node.x1 };
     default:
-      return unhandled(orientation);
+      return unhandled(direction);
   }
 }
 
