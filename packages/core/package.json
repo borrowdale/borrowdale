@@ -1,6 +1,6 @@
 {
   "name": "@borrowdale/core",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Deterministic hand-drawn shapes for SVG and canvas.",
   "license": "MIT",
   "type": "module",
