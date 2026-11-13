@@ -1,5 +1,17 @@
 # @borrowdale/charts
 
+## 0.5.0
+
+### Minor Changes
+
+- 956bbe9: Add charts of parts and units. A `units` series draws each category as a count of equal units: a waffle, the seats of a parliament, rows of pictograms, or a segmented doughnut. A `funnel` series draws stages in turn: a funnel, back to back with another, a pyramid, a funnel area, or the bands of a silhouette given as SVG path data. A `liquid` series shows a level as liquid in a circle or a rectangle. A pie's `breakout` draws one slice's parts as a second pie, a band axis' `weights: "stacks"` sizes a Marimekko chart's columns by their stacks, and a bar's `shape: "pictorial"` repeats a symbol along it.
+
+### Patch Changes
+
+- 8623af9: Errors for a missing image, an image without raster bytes, or one without a Canvas source write the image's name quoted and escaped: a character in the name that could break or disguise a line, such as a bidirectional override, is written as its `\u` escape. The messages show the name in quotes, as in `Missing chart image: "photo"`. A name longer than 100 characters, which only a layout built by hand can hold, is described by its length instead.
+- @borrowdale/core@0.5.0
+  - @borrowdale/text@0.5.0
+
 ## 0.4.0
 
 ### Minor Changes
