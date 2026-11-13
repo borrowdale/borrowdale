@@ -94,7 +94,7 @@ describe('clip nodes in SVG', () => {
   });
 
   it('resolves an image drawn inside a clip inside a mark', () => {
-    expect(rendering(wrappingImage)).toThrow('Missing chart image: photo');
+    expect(rendering(wrappingImage)).toThrow(new Error('Missing chart image: "photo"'));
     expect(toSvgChart(wrappingImage, { images: new Map([['photo', { dataUrl: raster }]]) }))
       .toContain('<use href="#chart-image-0" x="1" y="2" width="3" height="4"/>');
   });
