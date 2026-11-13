@@ -8,6 +8,23 @@ The four packages share one version and are released together. Each release also
 [GitHub](https://github.com/borrowdale/borrowdale/releases), and the
 [commit history](https://github.com/borrowdale/borrowdale/commits/main/) records every source change.
 
+## 0.5.0
+
+Published on 13 November 2026:
+
+- **`@borrowdale/charts`:** charts of parts and units. A `units` series draws each category as a count
+  of equal units: a waffle, the seats of a parliament, rows of pictograms or a segmented doughnut. A
+  `funnel` series draws stages in turn: a funnel, two back to back, a pyramid, a funnel area, or the
+  bands of a silhouette given as SVG path data. A `liquid` series shows a level as liquid in a circle
+  or a rectangle. A pie's `breakout` draws one slice's parts as a second pie, a band axis'
+  `weights: "stacks"` sizes a Marimekko chart's columns by their stacks, and a bar's
+  `shape: "pictorial"` repeats a symbol along it. The errors for a missing or unusable image now
+  write its name quoted and escaped, as in `Missing chart image: "photo"`.
+- **`@borrowdale/core`, `@borrowdale/fills` and `@borrowdale/text`:** only the version changes.
+
+Everything else 0.4.0 offered works as before. The website's playground has 17 parts-and-units
+examples.
+
 ## 0.4.0
 
 Published on 12 November 2026:
