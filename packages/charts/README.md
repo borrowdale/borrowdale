@@ -60,6 +60,7 @@ default branch:
 | `units`, one | none |
 | `funnel`, one, or two funnels back to back | none |
 | `liquid`, one | none |
+| `venn`, one | none |
 
 | `type` | `data` | Options |
 |---|---|---|
@@ -86,6 +87,7 @@ default branch:
 | `units` | `{ name, value, color?, symbol? }` categories | `display`: `waffle`, `parliament`, `rows` or `ring`; see [unit charts](#unit-charts) |
 | `funnel` | `{ name, value, color? }` stages, in order | `display`: `funnel`, `pyramid`, `funnelArea` or `pictorialStacked`; see [funnels](#funnels) |
 | `liquid` | `value`, a level from 0 to 1 | `shape`: `circle` (default) or `rectangle`; `waves`; see [liquid fills](#liquid-fills) |
+| `venn` | `{ sets, value, color? }`: each set, and each overlap of sets | `dataLabels`; see [Venn diagrams](#venn-diagrams) |
 
 A slice's `offset` (0 to 0.5 of the radius) pulls it out from the centre. Give every slice of a pie
 a `radius`, or none: each slice then reaches out in proportion to it, the largest to the full
@@ -472,10 +474,10 @@ Each month is outlined, and named at its first full week; a month with too littl
 for even "…" is left unnamed. Weekday names are written beside or above every row or column, or
 every second or more, as room allows.
 
-## Units, funnels and liquid fills
+## Units, funnels, liquid fills and Venn diagrams
 
 These charts have no axes. Each holds one series, except two funnels back to back, and their legends
-list categories or stages, not series.
+list categories, stages or sets, not series.
 
 ### Unit charts
 
@@ -526,6 +528,48 @@ A `liquid` series shows one `value`, from 0 (empty) to 1 (full), as liquid in a 
 (the default), or a `rectangle` filling the chart. Its surface is a wave of `waves` crests, 1 to 5
 (default 2), and an empty or full container's is flat. The level is written in the middle as a whole
 percentage, kept inside the chart as a data label is: a chart too small for it is an error.
+
+### Venn diagrams
+
+A `venn` series draws 2 or 3 sets as circles, each circle's area in proportion to its set's size and
+each overlap's area in proportion to the overlap's. Its `data` gives each set, `{ sets: ['A'], value }`,
+then the overlap of each pair of sets and, for 3 sets, of all three, `{ sets: ['A', 'B'], value }`, in
+any order. A `value` counts all of its sets' overlap, what is also in a third set included, as
+venn.js does:
+
+```js
+const spec = {
+  width: 420,
+  height: 280,
+  series: [{
+    type: 'venn',
+    name: 'Readers',
+    dataLabels: true,
+    data: [
+      { sets: ['Morning Post'], value: 1200 },
+      { sets: ['Evening Star'], value: 800 },
+      { sets: ['Morning Post', 'Evening Star'], value: 300 },
+    ],
+  }],
+};
+```
+
+Every overlap must be given, with a `value` of 0 where the sets do not overlap: one left out is an
+error, not taken as 0. Sets that do not overlap are drawn apart, and a set inside another (an overlap
+as large as the set) inside it, as an Euler diagram draws them. Each set takes the next palette colour
+and hatching, or its own `color`, so that the overlaps show both; only a set's entry takes a `color`.
+Each circle's tooltip gives its set's size, and `dataLabels` writes in each region the size of what is
+inside exactly its sets: 900, 300 and 500 above. Labels can overlap in thin regions, and a region too
+thin for the search that places them is left unlabelled.
+
+Circles can match the sizes of 2 sets exactly. For 3 sets they generally cannot, so each region's area
+may differ from its size by up to 5% of the whole diagram's area. A spec that circles cannot draw that
+closely, such as three sets whose pairs all overlap but none is in all three, is an error naming a
+region that would be too far off, and so is one that would leave a region out, drawing a region with a
+size at under a thousandth of that size, even within 5%. Four or more sets are an error: circles cannot
+show all of their overlaps. The sizes must also fit together: an overlap no larger than any set or
+overlap it is part of, each set at least as large as its overlaps with the others together, and each
+set above 0 and more than a billionth of the largest.
 
 ## Chart options
 
@@ -622,7 +666,9 @@ within ±10¹⁵. Validation reserves each series' point count before copying it
 soon as the total exceeds the limit, without reading later series. A limit error reports the
 count reached so far, not a count of unread data. A pie holds at most 1,000 slices, and a chart
 at most 10 nested pies. A unit chart draws at most 2,000 units, and a parliament has at most 50 rows
-of seats. A funnel's silhouette is at most 10,000 characters of path data. A Marimekko chart's
+of seats. A funnel's silhouette is at most 10,000 characters of path data. A Venn diagram shows 2 or 3 sets,
+each more than a billionth of the largest, and draws a region of 3 sets within 5% of the whole
+diagram's area of its size and at no less than a thousandth of its size, or fails. A Marimekko chart's
 narrowest column is at least a millionth as wide as its widest. A hex heatmap's columns and rows
 are whole numbers within ±100,000. A calendar counts one point per day of its range, reserved before any cell
 is made, so a range of more than 100,000 days, about 273 years, is an error. The drawing budget
@@ -805,10 +851,11 @@ holds 40 statistical and financial charts, rendered with the other chart kinds b
 by `node apps/examples/grid.mjs`: heatmaps, a punch card, a correlation matrix, a hexagon heatmap,
 warming stripes, a lasagna chart, a heat lane, polar and radar heatmaps, a two-year and a date-range
 calendar, a short calendar across a month's end, a heatmap with long category names, and horizon
-charts on a linear and a time axis. `apps/examples/proportion-cases.json` holds 17 charts of parts
-and units, rendered by `node apps/examples/proportion.mjs`: a waffle, a parliament, pictogram rows, a
-segmented doughnut, a pictorial bar, a Marimekko chart, five funnels, a pyramid, a funnel area, a
-pictorial stack, a pie of pie and two liquid fills.
+charts on a linear and a time axis. `apps/examples/proportion-cases.json` holds 21 charts of parts,
+units and sets, rendered by `node apps/examples/proportion.mjs`: a waffle, a parliament, pictogram
+rows, a segmented doughnut, a pictorial bar, a Marimekko chart, five funnels, a pyramid, a funnel area,
+a pictorial stack, a pie of pie, two liquid fills, two Venn diagrams of two and three sets, and two
+Euler diagrams, one of nested sets and one with a set apart.
 
 | Chart | Preparation and composition |
 |---|---|
