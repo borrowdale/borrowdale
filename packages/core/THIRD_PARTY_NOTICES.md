@@ -1,7 +1,7 @@
 # Third-party notices
 
-`src/engine/` is a TypeScript port of the following packages, and `src/trig.ts` and
-`src/logarithm.ts` draw on fdlibm. Their notices:
+`src/engine/` is a TypeScript port of the following packages, and `src/trig.ts`,
+`src/inverse-trig.ts` and `src/logarithm.ts` draw on fdlibm. Their notices:
 
 ## rough.js 4.6.6
 
@@ -151,8 +151,10 @@ SOFTWARE.
 ## fdlibm 5.3
 
 <https://www.netlib.org/fdlibm/>. `src/trig.ts` uses its polynomial coefficients and
-range-reduction constants for sin, cos and atan, and `src/logarithm.ts` is a port of its natural
-logarithm and exponential (`e_log.c` and `e_exp.c`).
+range-reduction constants for sin and cos, `src/inverse-trig.ts` uses its arc tangent's (`s_atan.c`)
+and is a port of its arc cosine and two-argument arc tangent (`e_acos.c` and `e_atan2.c`, with
+FreeBSD's correction to the latter for very large ratios), and `src/logarithm.ts` is a port of its
+natural logarithm and exponential (`e_log.c` and `e_exp.c`).
 
 ```
 Copyright (C) 1993 by Sun Microsystems, Inc. All rights reserved.

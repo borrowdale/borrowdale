@@ -3,6 +3,7 @@
 // Math.log and Math.exp may differ in the last bit between engines. Ported from fdlibm's e_log.c and
 // e_exp.c (Copyright (C) 1993 by Sun Microsystems, Inc.; see THIRD_PARTY_NOTICES.md): both are within
 // 1 unit in the last place of the true value. Arguments are checked by math.ts.
+import { highWord, withHighWord } from './words.js';
 
 const LN2_HI = 6.93147180369123816490e-1;
 const LN2_LO = 1.90821492927058770002e-10;
@@ -24,21 +25,6 @@ const P2 = -2.77777777770155933842e-3;
 const P3 = 6.61375632143793436117e-5;
 const P4 = -1.65339022054652515390e-6;
 const P5 = 4.13813679705723846039e-8;
-
-// The words of a double, through one big-endian view, since a typed array's byte order is the
-// platform's.
-const view = new DataView(new ArrayBuffer(8));
-
-function highWord(x: number): number {
-  view.setFloat64(0, x);
-  return view.getInt32(0);
-}
-
-function withHighWord(x: number, high: number): number {
-  view.setFloat64(0, x);
-  view.setInt32(0, high);
-  return view.getFloat64(0);
-}
 
 /** The natural logarithm of `input`, a finite number above 0. */
 export function log(input: number): number {
