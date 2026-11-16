@@ -1,3 +1,4 @@
+import { show } from './read.js';
 import type { ChartNode } from './types.js';
 
 /** Visits every node in painting order, entering every node that holds others. */
@@ -23,6 +24,10 @@ function childrenOf(node: ChartNode): readonly ChartNode[] {
   }
 }
 
+/**
+ * Throws for a node of a kind no renderer knows: only a layout built by hand can hold one. Its kind is
+ * written as every rejected value is, so no text from it reaches the message unescaped.
+ */
 export function unknownNode(node: never): never {
-  throw new Error(`Unknown chart node: ${String((node as { kind?: unknown }).kind)}`);
+  throw new Error(`Unknown chart node: ${show((node as { kind?: unknown }).kind)}`);
 }
