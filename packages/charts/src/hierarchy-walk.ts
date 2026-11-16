@@ -1,5 +1,7 @@
 // What every hierarchy display shares as it walks its tree: the orders the layouts visit nodes in,
-// the order siblings are drawn in, and each node's paint and tooltip path below the root.
+// the order siblings are drawn in, and each node's paint and tooltip path below the root. The two
+// visiting orders are a port of d3-hierarchy 3.1.3 (Copyright 2010-2026 Mike Bostock, ISC; see
+// THIRD_PARTY_NOTICES.md), from src/hierarchy/eachBefore.js and src/hierarchy/eachAfter.js.
 import { paints, type Paint } from './palette.js';
 
 /** What separates the names in a node's tooltip. */
