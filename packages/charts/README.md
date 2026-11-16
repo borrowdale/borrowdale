@@ -779,8 +779,12 @@ diagram's area of its size and at no less than a thousandth of its size, or fail
 most 2,000 nodes and 10 levels below its root; the limits are checked as each list of children is
 read, before its entries are. Each node's values add up to 0 or to at least 1e-300, and a packed
 tree's largest value is at least 1e-12, as circles are packed to within 1e-9: scale smaller values
-up, as only their proportions are drawn. The drawing budget below can be reached first where a tree has many
-thin marks, and how soon depends on their shape and direction, so take these as a guide. Measured
+up, as only their proportions are drawn. The layouts work to d3-hierarchy's absolute tolerances, so
+values far below 1 are laid out less exactly: packed leaves near 1e-21 can be drawn outside their
+parent where there is no padding, and a squarified treemap near 1e-200 collapses into one strip at
+any padding. Values scaled nearer 1 are drawn truly. The drawing budget below can be reached first
+where a tree has many thin marks, and how soon depends on their shape and direction, so take these
+as a guide. Measured
 with the default options on 20 branches of equal leaf counts, adding a leaf to each branch until the
 first layout that does not fit, with every node drawn: a sunburst fits 1,061 nodes on an 800 × 600
 chart and 581 on a 1600 × 1200 one, an icicle 941 and 441 running down and 561 and 261 running
