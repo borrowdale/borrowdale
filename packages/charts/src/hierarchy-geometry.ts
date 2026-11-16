@@ -4,6 +4,7 @@
 // pack, siblings and enclose from src/pack/, with its seeded linear congruential generator from
 // src/lcg.js. They use + − × ÷, sqrt, min, max and abs only, so every JavaScript engine places the
 // same nodes. Positions are in the units of the size given; a caller scales and moves them.
+import type { Circle } from './frame.js';
 import { eachAfter, eachBefore, largestFirst } from './hierarchy-walk.js';
 
 /** A node being laid out: its value, the sum of its leaves', and where a layout puts it. */
@@ -229,13 +230,6 @@ export function partition<T>(root: LaidOut<T>, dx: number, dy: number, padding: 
 }
 
 
-/** A circle. */
-interface Disc {
-  x: number;
-  y: number;
-  r: number;
-}
-
 /** d3's linear congruential generator: exact in doubles, as a × s + c stays below 2^53. */
 function lcg(): () => number {
   let s = 1;
@@ -281,21 +275,21 @@ function packChildren<T>(padding: number, k: number, random: () => number) {
 
 /** A circle on the front chain, between its neighbours. */
 interface Link {
-  disc: Disc;
+  circle: Circle;
   next: Link;
   previous: Link;
 }
 
 /** A circle on its own, before it joins the front chain. */
-function link(disc: Disc): Link {
-  const node = { disc } as Link;
+function link(circle: Circle): Link {
+  const node = { circle } as Link;
   node.next = node;
   node.previous = node;
   return node;
 }
 
 /** Places `circles` around each other, front chain first, and centres their enclosing circle on the origin; its radius. */
-function packSiblings(circles: readonly Disc[], random: () => number): number {
+function packSiblings(circles: readonly Circle[], random: () => number): number {
   const n = circles.length;
   if (n === 0) return 0;
   const first = circles[0]!;
@@ -315,33 +309,33 @@ function packSiblings(circles: readonly Disc[], random: () => number): number {
   b.next = a.previous = c;
   c.next = b.previous = a;
   pack: for (let i = 3; i < n; ++i) {
-    place(a.disc, b.disc, circles[i]!);
+    place(a.circle, b.circle, circles[i]!);
     c = link(circles[i]!);
     // The closest intersecting circle on the front chain, by distance along the chain.
     let j = b.next;
     let k = a.previous;
-    let sj = b.disc.r;
-    let sk = a.disc.r;
+    let sj = b.circle.r;
+    let sk = a.circle.r;
     do {
       if (sj <= sk) {
-        if (intersects(j.disc, c.disc)) {
+        if (intersects(j.circle, c.circle)) {
           b = j;
           a.next = b;
           b.previous = a;
           --i;
           continue pack;
         }
-        sj += j.disc.r;
+        sj += j.circle.r;
         j = j.next;
       } else {
-        if (intersects(k.disc, c.disc)) {
+        if (intersects(k.circle, c.circle)) {
           a = k;
           a.next = b;
           b.previous = a;
           --i;
           continue pack;
         }
-        sk += k.disc.r;
+        sk += k.circle.r;
         k = k.previous;
       }
     } while (j !== k.next);
@@ -360,8 +354,8 @@ function packSiblings(circles: readonly Disc[], random: () => number): number {
     }
     b = a.next;
   }
-  const chain = [b.disc];
-  for (c = b.next; c !== b; c = c.next) chain.push(c.disc);
+  const chain = [b.circle];
+  for (c = b.next; c !== b; c = c.next) chain.push(c.circle);
   const e = enclose(chain, random);
   for (const circle of circles) {
     circle.x -= e.x;
@@ -371,7 +365,7 @@ function packSiblings(circles: readonly Disc[], random: () => number): number {
 }
 
 /** Puts `c` touching both `a` and `b`. */
-function place(b: Disc, a: Disc, c: Disc): void {
+function place(b: Circle, a: Circle, c: Circle): void {
   const dx = b.x - a.x;
   const dy = b.y - a.y;
   const d2 = dx * dx + dy * dy;
@@ -398,7 +392,7 @@ function place(b: Disc, a: Disc, c: Disc): void {
 }
 
 /** Whether `a` and `b` overlap by more than 1e-6. */
-function intersects(a: Disc, b: Disc): boolean {
+function intersects(a: Circle, b: Circle): boolean {
   const dr = a.r + b.r - 1e-6;
   const dx = b.x - a.x;
   const dy = b.y - a.y;
@@ -407,8 +401,8 @@ function intersects(a: Disc, b: Disc): boolean {
 
 /** How far from the origin the weighted middle of a circle and the next on the chain lies, squared. */
 function score(node: Link): number {
-  const a = node.disc;
-  const b = node.next.disc;
+  const a = node.circle;
+  const b = node.next.circle;
   const ab = a.r + b.r;
   const dx = (a.x * b.r + b.x * a.r) / ab;
   const dy = (a.y * b.r + b.y * a.r) / ab;
@@ -416,7 +410,7 @@ function score(node: Link): number {
 }
 
 /** The smallest circle enclosing `circles`: Welzl's algorithm, the circles shuffled by `random`. */
-function enclose(circles: readonly Disc[], random: () => number): Disc {
+function enclose(circles: readonly Circle[], random: () => number): Circle {
   const shuffled = [...circles];
   for (let m = shuffled.length; m; ) {
     const i = (random() * m--) | 0;
@@ -424,8 +418,8 @@ function enclose(circles: readonly Disc[], random: () => number): Disc {
     shuffled[m] = shuffled[i]!;
     shuffled[i] = t;
   }
-  let basis: Disc[] = [];
-  let e: Disc | undefined;
+  let basis: Circle[] = [];
+  let e: Circle | undefined;
   for (let i = 0; i < shuffled.length; ) {
     const p = shuffled[i]!;
     if (e && enclosesWeak(e, p)) ++i;
@@ -443,7 +437,7 @@ function enclose(circles: readonly Disc[], random: () => number): Disc {
 }
 
 /** A circle enclosing `circles`, centred on the mean of their centres: not the smallest, but always one. */
-function around(circles: readonly Disc[]): Disc {
+function around(circles: readonly Circle[]): Circle {
   const x = circles.reduce((sum, c) => sum + c.x, 0) / circles.length;
   const y = circles.reduce((sum, c) => sum + c.y, 0) / circles.length;
   const r = Math.max(...circles.map((c) => Math.sqrt((c.x - x) * (c.x - x) + (c.y - y) * (c.y - y)) + c.r));
@@ -454,7 +448,7 @@ function around(circles: readonly Disc[]): Disc {
  * The smallest set of circles from `basis` and `p` whose enclosing circle encloses them all, or
  * undefined where rounding leaves none.
  */
-function extendBasis(basis: readonly Disc[], p: Disc): Disc[] | undefined {
+function extendBasis(basis: readonly Circle[], p: Circle): Circle[] | undefined {
   if (enclosesWeakAll(p, basis)) return [p];
   for (const b of basis) {
     if (enclosesNot(p, b) && enclosesWeakAll(encloseBasis2(b, p), basis)) return [b, p];
@@ -476,7 +470,7 @@ function extendBasis(basis: readonly Disc[], p: Disc): Disc[] | undefined {
 }
 
 /** Whether `a` fails to enclose `b`. */
-function enclosesNot(a: Disc, b: Disc): boolean {
+function enclosesNot(a: Circle, b: Circle): boolean {
   const dr = a.r - b.r;
   const dx = b.x - a.x;
   const dy = b.y - a.y;
@@ -484,7 +478,7 @@ function enclosesNot(a: Disc, b: Disc): boolean {
 }
 
 /** Whether `a` encloses `b`, within 1e-9 of the larger radius. */
-function enclosesWeak(a: Disc, b: Disc): boolean {
+function enclosesWeak(a: Circle, b: Circle): boolean {
   const dr = a.r - b.r + Math.max(a.r, b.r, 1) * 1e-9;
   const dx = b.x - a.x;
   const dy = b.y - a.y;
@@ -492,12 +486,12 @@ function enclosesWeak(a: Disc, b: Disc): boolean {
 }
 
 /** Whether `a` encloses every circle of `basis`, within 1e-9. */
-function enclosesWeakAll(a: Disc, basis: readonly Disc[]): boolean {
+function enclosesWeakAll(a: Circle, basis: readonly Circle[]): boolean {
   return basis.every((b) => enclosesWeak(a, b));
 }
 
 /** The smallest circle enclosing 1 to 3 circles. */
-function encloseBasis(basis: readonly Disc[]): Disc {
+function encloseBasis(basis: readonly Circle[]): Circle {
   const [a, b, c] = basis;
   if (c) return encloseBasis3(a!, b!, c);
   if (b) return encloseBasis2(a!, b);
@@ -505,7 +499,7 @@ function encloseBasis(basis: readonly Disc[]): Disc {
 }
 
 /** The smallest circle enclosing two circles. */
-function encloseBasis2(a: Disc, b: Disc): Disc {
+function encloseBasis2(a: Circle, b: Circle): Circle {
   const x21 = b.x - a.x;
   const y21 = b.y - a.y;
   const r21 = b.r - a.r;
@@ -514,7 +508,7 @@ function encloseBasis2(a: Disc, b: Disc): Disc {
 }
 
 /** The smallest circle enclosing three circles, the one touching all of them. */
-function encloseBasis3(a: Disc, b: Disc, c: Disc): Disc {
+function encloseBasis3(a: Circle, b: Circle, c: Circle): Circle {
   const { x: x1, y: y1, r: r1 } = a;
   const a2 = x1 - b.x;
   const a3 = x1 - c.x;

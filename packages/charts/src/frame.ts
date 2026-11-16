@@ -18,6 +18,13 @@ export interface Rect {
   bottom: number;
 }
 
+/** A circle, by its centre and radius: a Venn diagram's sets, a packed hierarchy's nodes. */
+export interface Circle {
+  x: number;
+  y: number;
+  r: number;
+}
+
 /** A rectangle shape filling `rect`. */
 export function rectangle({ left, top, right, bottom }: Rect): Shape {
   return { kind: 'rectangle', x: left, y: top, width: right - left, height: bottom - top };

@@ -7,12 +7,7 @@
 // overlap of sets 0 and 1. "Inclusive" sizes count everything in the overlap, as a spec gives them;
 // "exclusive" sizes count only the region inside exactly those sets.
 import { acos, atan2, cos, sin } from '@borrowdale/core/math';
-
-export interface Circle {
-  x: number;
-  y: number;
-  r: number;
-}
+import type { Circle } from './frame.js';
 
 type Three<T> = [T, T, T];
 

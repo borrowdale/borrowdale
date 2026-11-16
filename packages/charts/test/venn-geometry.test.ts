@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { distanceFor, drawnInclusive, exclusiveSizes, lensArea, placeCircles, regionErrors, regionSpots, type Circle } from '../src/venn-geometry.js';
+import type { Circle } from '../src/frame.js';
+import { distanceFor, drawnInclusive, exclusiveSizes, lensArea, placeCircles, regionErrors, regionSpots } from '../src/venn-geometry.js';
 
 // The expected areas are computed here, with Math, independently of the portable maths under test.
 const radius = (area: number) => Math.sqrt(area / Math.PI);
