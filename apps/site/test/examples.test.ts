@@ -255,6 +255,24 @@ describe('statistical charts in the notebooks', () => {
     expect(html).toContain('<td>4.45–4.55</td><td>143</td>');
     expect(html).toContain('<td>7.65–7.75</td><td>1</td>');
   });
+  it('counts the events of each magnitude class in each depth layer, as the treemap nests them', () => {
+    const html = quakeDashboard();
+    expect(html).toContain('<th scope="row">Events</th><td>M 4.5–4.9 › Below 70 km</td><td>405</td>');
+    expect(html).toContain('<th scope="row">Events</th><td>M 6.0+ › 300 km or deeper</td><td>1</td>');
+  });
+  it.each([
+    [5, { panel: true, 'M 4.5–4.9': false, 'M 5.0–5.9': true, 'M 6.0+': true }],
+    [7, { panel: true, 'M 4.5–4.9': false, 'M 5.0–5.9': false, 'M 6.0+': true }],
+  ])('nests only the magnitude classes a minimum of %s leaves events in', (magnitude, nested) => {
+    dashboardState.magnitude = magnitude;
+    const html = quakeDashboard();
+    expect({
+      panel: html.includes('Classes within classes'),
+      'M 4.5–4.9': html.includes('<td>M 4.5–4.9 › '),
+      'M 5.0–5.9': html.includes('<td>M 5.0–5.9 › '),
+      'M 6.0+': html.includes('<td>M 6.0+ › '),
+    }).toEqual(nested);
+  });
   it('counts the events in each depth layer the box chart shares with the depth chart', () => {
     const html = quakeDashboard();
     expect(html).toContain('<th scope="row">Events</th><td>Below 70 km</td><td>588</td>');

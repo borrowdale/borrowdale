@@ -535,6 +535,10 @@ export function quakeDashboard() {
     { name: 'M 5.0–5.9', from: 5, to: 6, color: colors[1] },
     { name: 'M 6.0+', from: 6, to: Infinity, color: colors[2] },
   ];
+  // Only the classes the threshold leaves events in, each in its own colour at every threshold; a
+  // class holds the magnitudes from its lower bound up to, not including, its upper one.
+  const shown = classes.filter(({ to }) => to > threshold);
+  const inClass = (magnitude: number, { from, to }: { from: number; to: number }) => magnitude >= from && magnitude < to;
   const squares: ChartSpec = {
     width: 660,
     height: 370,
@@ -546,14 +550,36 @@ export function quakeDashboard() {
         name: 'Events',
         display: 'waffle',
         columns: 40,
-        // Only the classes the threshold leaves events in, each in its own colour at every threshold.
-        data: classes
-          .filter(({ to }) => to > threshold)
-          .map(({ name, from, to, color }) => ({
-            name,
-            value: events.filter((e) => e.magnitude >= from && e.magnitude < to).length,
-            color,
+        data: shown.map((shownClass) => ({
+          name: shownClass.name,
+          value: events.filter((e) => inClass(e.magnitude, shownClass)).length,
+          color: shownClass.color,
+        })),
+      },
+    ],
+  };
+  // Every event once, by its magnitude class and then its depth layer: the classes as nested parents,
+  // each layer's count as a rectangle's area.
+  const nested: ChartSpec = {
+    width: 660,
+    height: 370,
+    title: 'Events by magnitude and depth',
+    legend: 'bottom',
+    series: [
+      {
+        type: 'hierarchy',
+        name: 'Events',
+        display: 'treemap',
+        parents: 'nested',
+        dataLabels: true,
+        data: {
+          name: 'Events',
+          children: shown.map((shownClass) => ({
+            name: shownClass.name,
+            color: shownClass.color,
+            children: layers.map((layer) => ({ name: layer.name, value: layer.magnitudes.filter((m) => inClass(m, shownClass)).length })),
           })),
+        },
       },
     ],
   };
@@ -568,7 +594,7 @@ export function quakeDashboard() {
     ) +
     `<div class="metrics">${metric('RECORDED EVENTS', pretty(events.length, 0), `Magnitude ${threshold}+ · saved feed`)}${metric('LARGEST MAGNITUDE', strongest === null ? '—' : `M ${pretty(strongest)}`, 'Magnitude types are supplied by USGS', 'tint-blue')}${metric('MEDIAN DEPTH', `${pretty(depth)} <em>km</em>`, 'Below the reference surface')}${metric('FEED WINDOW ENDS', day(quakes.generated).slice(5), 'UTC · archived snapshot, not live monitoring')}</div>
  <div class="dashboard-grid">${chartPanel('Thirty days of movement', 'Events per UTC day · current day may be incomplete', daily, 'wide')}${chartPanel('A sense of scale', 'Events in steps of 0.1 magnitude · magnitude is logarithmic', magnitude)}${events.length ? chartPanel('How deep, how strong?', 'Each point is one event · depth increases upward on this axis', depthChart) : '<article class="chart-panel empty"><h2>No events at this threshold.</h2><p>Choose a lower minimum magnitude.</p></article>'}
- ${chartPanel('Around the clock', 'UTC hour of origin · descriptive counts, not a daily risk forecast', hourly)}${chartPanel('The record grows', 'Cumulative event count across the saved feed window', cumulative)}${events.length ? chartPanel('Layers beneath us', 'Event counts grouped by reported depth', depths) + chartPanel('Strength at every depth', 'Magnitudes in each depth layer · boxes span the middle half · dots are events more than 1.5 box heights beyond the box', strength) + chartPanel('On the calendar', 'Events per UTC day · weeks start on Monday · the first and last days may be partial', calendar) + chartPanel('One square, one event', 'Every event in the saved feed at this threshold, by reported magnitude', squares) : ''}</div>` +
+ ${chartPanel('Around the clock', 'UTC hour of origin · descriptive counts, not a daily risk forecast', hourly)}${chartPanel('The record grows', 'Cumulative event count across the saved feed window', cumulative)}${events.length ? chartPanel('Layers beneath us', 'Event counts grouped by reported depth', depths) + chartPanel('Strength at every depth', 'Magnitudes in each depth layer · boxes span the middle half · dots are events more than 1.5 box heights beyond the box', strength) + chartPanel('On the calendar', 'Events per UTC day · weeks start on Monday · the first and last days may be partial', calendar) + chartPanel('One square, one event', 'Every event in the saved feed at this threshold, by reported magnitude', squares) + chartPanel('Classes within classes', 'Events by magnitude class, then by reported depth layer · each area is a count', nested) : ''}</div>` +
     sourceNote(
       `U.S. Geological Survey, <a href="https://earthquake.usgs.gov/earthquakes/feed/v1.0/geojson.php" target="_blank" rel="noreferrer">M4.5+ 30-day GeoJSON feed</a>. USGS-produced data are in the U.S. public domain. Feed generated ${escape(new Date(quakes.generated).toISOString())}. The download preserves the source URL, feed generation time and selected fields. Event estimates may change; this saved demo is not a real-time alert or safety service. The first and last UTC days may represent partial days. <a href="${escape(quakes.sourceUrl)}" target="_blank" rel="noreferrer">Original feed ↗</a>`,
     )
