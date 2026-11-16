@@ -74,7 +74,7 @@ function hierarchyTag(series: Extract<ChartSpec['series'][number], { type: 'hier
     case 'tree':
     case 'radialTree':
       return treeTag(series);
-    case 'indented':
+    case 'indentedTree':
       return 'indented tree';
     case 'wordTree':
       return 'word tree';
@@ -91,7 +91,7 @@ function untaggedDisplay(series: never): string {
 function treeTag(series: Extract<ChartSpec['series'][number], { display: 'tree' | 'radialTree' }>): string {
   if (series.distance === 'length') return 'phylogenetic tree';
   if (series.layout === 'cluster') return 'dendrogram';
-  if (series.display === 'tree' && series.nodeShape === 'box') return 'organisation chart';
+  if (series.display === 'tree' && series.shape === 'box') return 'organisation chart';
   return series.display === 'tree' ? 'tree' : 'radial tree';
 }
 // The type of a series that need not say its display: one that must, added without a case above,

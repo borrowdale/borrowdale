@@ -89,7 +89,7 @@ default branch:
 | `funnel` | `{ name, value, color? }` stages, in order | `display`: `funnel`, `pyramid`, `funnelArea` or `pictorialStacked`; see [funnels](#funnels) |
 | `liquid` | `value`, a level from 0 to 1 | `shape`: `circle` (default) or `rectangle`; `waves`; see [liquid fills](#liquid-fills) |
 | `venn` | `{ sets, value, color? }`: each set, and each overlap of sets | `dataLabels`; see [Venn diagrams](#venn-diagrams) |
-| `hierarchy` | `{ name, value?, color?, children?, length? }`, the root of a tree | `display`: `treemap`, `sunburst`, `icicle`, `pack`, `tree`, `radialTree`, `indented` or `wordTree`; `dataLabels`; see [hierarchies](#hierarchies) |
+| `hierarchy` | `{ name, value?, color?, children?, length? }`, the root of a tree | `display`: `treemap`, `sunburst`, `icicle`, `pack`, `tree`, `radialTree`, `indentedTree` or `wordTree`; `dataLabels`; see [hierarchies](#hierarchies) |
 
 A slice's `offset` (0 to 0.5 of the radius) pulls it out from the centre. Give every slice of a pie
 a `radius`, or none: each slice then reaches out in proportion to it, the largest to the full
@@ -612,9 +612,9 @@ const spec = {
 | `sunburst` | each node as a ring segment, a level to a ring, its angle in proportion to its value | `startAngle` and `endAngle` (`-90` and `90` make a semicircle), `innerRadius`, `cornerRadius` for rounded segments |
 | `icicle` | each node as a rectangle, a level to a band, its length in proportion to its value | `direction`: `down` (default), `up` (a flame graph), `right` or `left`; `padding` |
 | `pack` | each leaf as a circle whose area is in proportion to its value, inside its parent's circle | `padding` |
-| `tree` | each node as a dot joined to its parent by a link, a level to a line | `direction`: `right` (default), `left`, `down` or `up`; `layout`: `tidy` (default, each level on a line) or `cluster` (a dendrogram, every leaf on the last line); `links`: `curved` (default), `elbow` (at right angles) or `straight`; `nodeShape`: `dot` (default) or `box` (each name in a box, as an organisation chart draws them); `distance`: `depth` (default, the levels evenly spaced) or `length` (a phylogenetic tree, see below) |
+| `tree` | each node as a dot joined to its parent by a link, a level to a line | `direction`: `right` (default), `left`, `down` or `up`; `layout`: `tidy` (default, each level on a line) or `cluster` (a dendrogram, every leaf on the last line); `links`: `curved` (default), `elbow` (at right angles) or `straight`; `shape`: `dot` (default) or `box` (each name in a box, as an organisation chart draws them); `distance`: `depth` (default, the levels evenly spaced) or `length` (a phylogenetic tree, see below) |
 | `radialTree` | the same around a circle, the root at its centre and a level to a ring | `startAngle` and `endAngle`; `layout`, `links` and `distance`, as for `tree` |
-| `indented` | each node in a row of its own, below its parent and set in by its depth, as a file browser lists a folder | |
+| `indentedTree` | each node in a row of its own, below its parent and set in by its depth, as a file browser lists a folder | |
 | `wordTree` | each node as its word, from the chart's font size for a value of 0 or none to twice it for the largest value, a level to a column | |
 
 The first four displays fill the plot by value; the root is not drawn, every leaf needs a value, 0

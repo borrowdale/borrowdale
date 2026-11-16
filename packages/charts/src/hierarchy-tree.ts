@@ -38,7 +38,7 @@ const WORD_SPACE = 80;
 const ARC_STEP = 5;
 /** The layout of each `layout`. */
 const LAYOUTS = { tidy, cluster } as const satisfies Record<TreeLayout, (root: PlacedTreeNode, separate: Separation, across: number, along: number) => void>;
-/** The view of a tree of each `nodeShape`. */
+/** The view of a tree of each `shape`. */
 const TREE_VIEWS = { dot: dotTreeView, box: boxTreeView } as const satisfies Record<TreeNodeShape, (context: Context) => View>;
 
 /** Where a view writes a node's name, and how it is anchored there. */
@@ -134,10 +134,10 @@ function viewOf(context: Context): View {
   const { display } = context.series;
   switch (display) {
     case 'tree':
-      return TREE_VIEWS[context.series.nodeShape](context);
+      return TREE_VIEWS[context.series.shape](context);
     case 'radialTree':
       return radialView(context);
-    case 'indented':
+    case 'indentedTree':
       return indentedView(context);
     case 'wordTree':
       return wordView(context);

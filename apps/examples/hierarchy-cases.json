@@ -1888,7 +1888,7 @@
      "display": "tree",
      "direction": "down",
      "links": "elbow",
-     "nodeShape": "box",
+     "shape": "box",
      "data": {
       "name": "Editor-in-chief",
       "children": [
@@ -1947,7 +1947,7 @@
     {
      "type": "hierarchy",
      "name": "Photo library",
-     "display": "indented",
+     "display": "indentedTree",
      "dataLabels": true,
      "data": {
       "name": "Photos",
