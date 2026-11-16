@@ -2,8 +2,9 @@
 // polyline), with each series' moments and periods placed along it by arc length.
 import type { Point, Shape } from '@borrowdale/core';
 import { cos, sin } from '@borrowdale/core/math';
-import { CENTRED, type Drawing, type Extent } from './drawing.js';
+import { CENTRED, type Drawing } from './drawing.js';
 import { aChart, assertRoom, GAP, TICK, type Rect } from './frame.js';
+import { boxAt, LabelRoom } from './label-room.js';
 import { POINT_SIZE, solid } from './marks.js';
 import { INK, type Paint } from './palette.js';
 import { fail } from './read.js';
@@ -21,10 +22,6 @@ const TRACK_WIDTH = 1.5;
 // How many lines out from the track, on each side, an event's label may move to clear the labels
 // before it.
 const LABEL_LEVELS = 3;
-// The side of a cell of the grid that finds labels near a new one: at least 64 units, and 4 lines,
-// so a label is in few cells whatever the font size.
-const CELL = 64;
-const CELL_LINES = 4;
 
 /** A track: its points, and how far along it each one is. */
 interface Track {
@@ -250,56 +247,6 @@ function stretch(track: Track, from: number, to: number): Point[] {
   }
   part.push(pointAt(track, to).point);
   return part;
-}
-
-/** A label's box on the chart, from its extent about the point it is CENTRED on. */
-function boxAt({ left, right, up, down }: Extent, x: number, y: number): Rect {
-  return { left: x - left, right: x + right, top: y - up, bottom: y + down };
-}
-
-/** The boxes of the labels placed so far, in a grid of cells, so a new one is checked only against those near it. */
-class LabelRoom {
-  readonly #cells = new Map<string, Rect[]>();
-  readonly #size: number;
-
-  constructor(line: number) {
-    this.#size = Math.max(CELL, CELL_LINES * line);
-  }
-
-  /** Whether `box` overlaps no box placed so far. A box with no area, as an empty label has, takes no room. */
-  clear(box: Rect): boolean {
-    return !hasArea(box) || !this.#some(box, (key) => this.#cells.get(key)?.some((other) => overlaps(box, other)) ?? false);
-  }
-
-  add(box: Rect): void {
-    if (hasArea(box)) {
-      this.#some(box, (key) => {
-        const cell = this.#cells.get(key) ?? [];
-        cell.push(box);
-        this.#cells.set(key, cell);
-        return false;
-      });
-    }
-  }
-
-  // Whether `found` is true of a cell `box` is in, asked of each in turn until it is.
-  #some({ left, top, right, bottom }: Rect, found: (key: string) => boolean): boolean {
-    const size = this.#size;
-    for (let column = Math.floor(left / size); column <= Math.floor(right / size); column++) {
-      for (let row = Math.floor(top / size); row <= Math.floor(bottom / size); row++) {
-        if (found(`${column} ${row}`)) return true;
-      }
-    }
-    return false;
-  }
-}
-
-function hasArea(box: Rect): boolean {
-  return box.right > box.left && box.bottom > box.top;
-}
-
-function overlaps(a: Rect, b: Rect): boolean {
-  return a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
 }
 
 function offset([x, y]: Point, [nx, ny]: Point, distance: number): Point {
