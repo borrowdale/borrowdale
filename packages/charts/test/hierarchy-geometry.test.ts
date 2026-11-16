@@ -144,6 +144,14 @@ describe('partition', () => {
     expect(box(laidOut(partitioned(0)).get('B2'))).toEqual([356.4356435643565, 150, 372.27722772277235, 300]);
   });
 
+  // A1's band runs from 150 to 300; padding of 200 would end it at 100, before it starts, so both
+  // edges meet halfway, at 125, as d3 collapses a box padding leaves no height.
+  it('collapse a partition band that padding leaves no height to the middle of what is left', () => {
+    const a1 = laidOut(partitioned(200)).get('A1')!;
+
+    expect([a1.y0, a1.y1]).toEqual([125, 125]);
+  });
+
   it('gives each level an equal band', () => {
     const nodes = laidOut(partitioned(0));
     expect([box(nodes.get('A'))[1], box(nodes.get('A'))[3], box(nodes.get('A1'))[3]]).toEqual([0, 150, 300]);
