@@ -16251,5 +16251,854 @@
     }
    ]
   }
+ },
+ {
+  "name": "tree",
+  "spec": {
+   "width": 560,
+   "height": 360,
+   "title": "Romance languages, a simplified family tree",
+   "series": [
+    {
+     "type": "hierarchy",
+     "name": "Romance languages",
+     "display": "tree",
+     "data": {
+      "name": "Latin",
+      "children": [
+       {
+        "name": "Italo-Western",
+        "children": [
+         {
+          "name": "Italo-Dalmatian",
+          "children": [
+           {
+            "name": "Italian"
+           },
+           {
+            "name": "Sicilian"
+           },
+           {
+            "name": "Neapolitan"
+           }
+          ]
+         },
+         {
+          "name": "Western Romance",
+          "children": [
+           {
+            "name": "Ibero-Romance",
+            "children": [
+             {
+              "name": "Spanish"
+             },
+             {
+              "name": "Portuguese"
+             },
+             {
+              "name": "Galician"
+             },
+             {
+              "name": "Catalan"
+             }
+            ]
+           },
+           {
+            "name": "Gallo-Romance",
+            "children": [
+             {
+              "name": "French"
+             },
+             {
+              "name": "Occitan"
+             },
+             {
+              "name": "Walloon"
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "name": "Eastern Romance",
+        "children": [
+         {
+          "name": "Romanian"
+         },
+         {
+          "name": "Aromanian"
+         }
+        ]
+       },
+       {
+        "name": "Sardinian",
+        "children": [
+         {
+          "name": "Logudorese"
+         },
+         {
+          "name": "Campidanese"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  }
+ },
+ {
+  "name": "tree-down",
+  "spec": {
+   "width": 560,
+   "height": 360,
+   "title": "Big cats and their relatives",
+   "series": [
+    {
+     "type": "hierarchy",
+     "name": "Cats",
+     "display": "tree",
+     "direction": "down",
+     "links": "elbow",
+     "data": {
+      "name": "Felidae",
+      "children": [
+       {
+        "name": "Pantherinae",
+        "children": [
+         {
+          "name": "Panthera",
+          "children": [
+           {
+            "name": "Lion"
+           },
+           {
+            "name": "Tiger"
+           },
+           {
+            "name": "Leopard"
+           },
+           {
+            "name": "Jaguar"
+           },
+           {
+            "name": "Snow leopard"
+           }
+          ]
+         },
+         {
+          "name": "Neofelis",
+          "children": [
+           {
+            "name": "Clouded leopard"
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "name": "Felinae",
+        "children": [
+         {
+          "name": "Acinonyx",
+          "children": [
+           {
+            "name": "Cheetah"
+           }
+          ]
+         },
+         {
+          "name": "Puma",
+          "children": [
+           {
+            "name": "Cougar"
+           }
+          ]
+         },
+         {
+          "name": "Lynx",
+          "children": [
+           {
+            "name": "Eurasian lynx"
+           },
+           {
+            "name": "Canada lynx"
+           },
+           {
+            "name": "Bobcat"
+           }
+          ]
+         },
+         {
+          "name": "Felis",
+          "children": [
+           {
+            "name": "Wildcat"
+           },
+           {
+            "name": "Sand cat"
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  }
+ },
+ {
+  "name": "tree-up",
+  "spec": {
+   "width": 480,
+   "height": 320,
+   "title": "Sales by region (illustrative)",
+   "series": [
+    {
+     "type": "hierarchy",
+     "name": "Sales",
+     "display": "tree",
+     "direction": "up",
+     "links": "straight",
+     "dataLabels": true,
+     "data": {
+      "name": "World",
+      "children": [
+       {
+        "name": "Europe",
+        "children": [
+         {
+          "name": "North",
+          "value": 120
+         },
+         {
+          "name": "South",
+          "value": 80
+         }
+        ]
+       },
+       {
+        "name": "Americas",
+        "children": [
+         {
+          "name": "North",
+          "value": 150
+         },
+         {
+          "name": "South",
+          "value": 60
+         }
+        ]
+       },
+       {
+        "name": "Asia",
+        "children": [
+         {
+          "name": "East",
+          "value": 140
+         },
+         {
+          "name": "South",
+          "value": 90
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  }
+ },
+ {
+  "name": "dendrogram",
+  "spec": {
+   "width": 560,
+   "height": 360,
+   "title": "Germanic languages",
+   "series": [
+    {
+     "type": "hierarchy",
+     "name": "Germanic languages",
+     "display": "tree",
+     "layout": "cluster",
+     "links": "elbow",
+     "data": {
+      "name": "Proto-Germanic",
+      "children": [
+       {
+        "name": "West Germanic",
+        "children": [
+         {
+          "name": "Anglo-Frisian",
+          "children": [
+           {
+            "name": "English"
+           },
+           {
+            "name": "Frisian"
+           }
+          ]
+         },
+         {
+          "name": "Low German",
+          "children": [
+           {
+            "name": "Low Saxon"
+           }
+          ]
+         },
+         {
+          "name": "Low Franconian",
+          "children": [
+           {
+            "name": "Dutch"
+           },
+           {
+            "name": "Afrikaans"
+           }
+          ]
+         },
+         {
+          "name": "High German",
+          "children": [
+           {
+            "name": "German"
+           },
+           {
+            "name": "Yiddish"
+           },
+           {
+            "name": "Luxembourgish"
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "name": "North Germanic",
+        "children": [
+         {
+          "name": "West Norse",
+          "children": [
+           {
+            "name": "Icelandic"
+           },
+           {
+            "name": "Faroese"
+           },
+           {
+            "name": "Norwegian"
+           }
+          ]
+         },
+         {
+          "name": "East Norse",
+          "children": [
+           {
+            "name": "Swedish"
+           },
+           {
+            "name": "Danish"
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "name": "East Germanic",
+        "children": [
+         {
+          "name": "Gothic"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  }
+ },
+ {
+  "name": "radial-tree",
+  "spec": {
+   "width": 560,
+   "height": 420,
+   "title": "The planets and their larger moons",
+   "series": [
+    {
+     "type": "hierarchy",
+     "name": "Moons",
+     "display": "radialTree",
+     "data": {
+      "name": "Solar System",
+      "children": [
+       {
+        "name": "Mercury"
+       },
+       {
+        "name": "Venus"
+       },
+       {
+        "name": "Earth",
+        "children": [
+         {
+          "name": "Moon"
+         }
+        ]
+       },
+       {
+        "name": "Mars",
+        "children": [
+         {
+          "name": "Phobos"
+         },
+         {
+          "name": "Deimos"
+         }
+        ]
+       },
+       {
+        "name": "Jupiter",
+        "children": [
+         {
+          "name": "Io"
+         },
+         {
+          "name": "Europa"
+         },
+         {
+          "name": "Ganymede"
+         },
+         {
+          "name": "Callisto"
+         }
+        ]
+       },
+       {
+        "name": "Saturn",
+        "children": [
+         {
+          "name": "Mimas"
+         },
+         {
+          "name": "Enceladus"
+         },
+         {
+          "name": "Tethys"
+         },
+         {
+          "name": "Dione"
+         },
+         {
+          "name": "Rhea"
+         },
+         {
+          "name": "Titan"
+         },
+         {
+          "name": "Iapetus"
+         }
+        ]
+       },
+       {
+        "name": "Uranus",
+        "children": [
+         {
+          "name": "Miranda"
+         },
+         {
+          "name": "Ariel"
+         },
+         {
+          "name": "Umbriel"
+         },
+         {
+          "name": "Titania"
+         },
+         {
+          "name": "Oberon"
+         }
+        ]
+       },
+       {
+        "name": "Neptune",
+        "children": [
+         {
+          "name": "Proteus"
+         },
+         {
+          "name": "Triton"
+         },
+         {
+          "name": "Nereid"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  }
+ },
+ {
+  "name": "radial-dendrogram",
+  "spec": {
+   "width": 560,
+   "height": 360,
+   "title": "The sections of an orchestra",
+   "series": [
+    {
+     "type": "hierarchy",
+     "name": "Orchestra",
+     "display": "radialTree",
+     "layout": "cluster",
+     "links": "elbow",
+     "startAngle": -90,
+     "endAngle": 90,
+     "data": {
+      "name": "Orchestra",
+      "children": [
+       {
+        "name": "Strings",
+        "children": [
+         {
+          "name": "First violins"
+         },
+         {
+          "name": "Second violins"
+         },
+         {
+          "name": "Violas"
+         },
+         {
+          "name": "Cellos"
+         },
+         {
+          "name": "Double basses"
+         },
+         {
+          "name": "Harp"
+         }
+        ]
+       },
+       {
+        "name": "Woodwinds",
+        "children": [
+         {
+          "name": "Piccolo"
+         },
+         {
+          "name": "Flutes"
+         },
+         {
+          "name": "Oboes"
+         },
+         {
+          "name": "Cor anglais"
+         },
+         {
+          "name": "Clarinets"
+         },
+         {
+          "name": "Bassoons"
+         }
+        ]
+       },
+       {
+        "name": "Brass",
+        "children": [
+         {
+          "name": "Horns"
+         },
+         {
+          "name": "Trumpets"
+         },
+         {
+          "name": "Trombones"
+         },
+         {
+          "name": "Tuba"
+         }
+        ]
+       },
+       {
+        "name": "Percussion",
+        "children": [
+         {
+          "name": "Timpani"
+         },
+         {
+          "name": "Snare drum"
+         },
+         {
+          "name": "Bass drum"
+         },
+         {
+          "name": "Cymbals"
+         },
+         {
+          "name": "Xylophone"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  }
+ },
+ {
+  "name": "phylogenetic-tree",
+  "spec": {
+   "width": 560,
+   "height": 360,
+   "title": "Apes, by approximate divergence in millions of years",
+   "series": [
+    {
+     "type": "hierarchy",
+     "name": "Apes",
+     "display": "tree",
+     "layout": "cluster",
+     "links": "elbow",
+     "distance": "length",
+     "data": {
+      "name": "Hominoidea",
+      "children": [
+       {
+        "name": "Gibbons",
+        "length": 18
+       },
+       {
+        "name": "Great apes",
+        "length": 3,
+        "children": [
+         {
+          "name": "Orangutans",
+          "length": 15
+         },
+         {
+          "name": "African apes",
+          "length": 6,
+          "children": [
+           {
+            "name": "Gorillas",
+            "length": 9
+           },
+           {
+            "name": "Hominini",
+            "length": 2.5,
+            "children": [
+             {
+              "name": "Humans",
+              "length": 6.5
+             },
+             {
+              "name": "Pan",
+              "length": 4,
+              "children": [
+               {
+                "name": "Chimpanzees",
+                "length": 2.5
+               },
+               {
+                "name": "Bonobos",
+                "length": 2.5
+               }
+              ]
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  }
+ },
+ {
+  "name": "organisation-chart",
+  "spec": {
+   "width": 640,
+   "height": 360,
+   "title": "A newsroom (illustrative)",
+   "series": [
+    {
+     "type": "hierarchy",
+     "name": "Newsroom",
+     "display": "tree",
+     "direction": "down",
+     "links": "elbow",
+     "nodeShape": "box",
+     "data": {
+      "name": "Editor-in-chief",
+      "children": [
+       {
+        "name": "News editor",
+        "children": [
+         {
+          "name": "Politics"
+         },
+         {
+          "name": "Business"
+         },
+         {
+          "name": "Science"
+         }
+        ]
+       },
+       {
+        "name": "Features editor",
+        "children": [
+         {
+          "name": "Writer"
+         },
+         {
+          "name": "Photographer"
+         }
+        ]
+       },
+       {
+        "name": "Digital editor",
+        "children": [
+         {
+          "name": "Designer"
+         },
+         {
+          "name": "Developer"
+         },
+         {
+          "name": "Data"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  }
+ },
+ {
+  "name": "indented-tree",
+  "spec": {
+   "width": 480,
+   "height": 320,
+   "title": "Disk use of a photo library, in gigabytes (illustrative)",
+   "series": [
+    {
+     "type": "hierarchy",
+     "name": "Photo library",
+     "display": "indented",
+     "dataLabels": true,
+     "data": {
+      "name": "Photos",
+      "children": [
+       {
+        "name": "2024",
+        "children": [
+         {
+          "name": "Holidays",
+          "value": 12.4
+         },
+         {
+          "name": "Family",
+          "value": 8.1
+         }
+        ]
+       },
+       {
+        "name": "2025",
+        "children": [
+         {
+          "name": "Holidays",
+          "value": 15.2
+         },
+         {
+          "name": "Family",
+          "value": 9.8
+         },
+         {
+          "name": "Work",
+          "value": 3.3
+         }
+        ]
+       },
+       {
+        "name": "Screenshots",
+        "value": 1.6
+       }
+      ]
+     }
+    }
+   ]
+  }
+ },
+ {
+  "name": "word-tree",
+  "spec": {
+   "width": 480,
+   "height": 320,
+   "title": "How people describe their commute (illustrative)",
+   "series": [
+    {
+     "type": "hierarchy",
+     "name": "Answers",
+     "display": "wordTree",
+     "data": {
+      "name": "I",
+      "children": [
+       {
+        "name": "like",
+        "children": [
+         {
+          "name": "walking",
+          "value": 4
+         },
+         {
+          "name": "cycling",
+          "value": 3
+         },
+         {
+          "name": "the bus",
+          "value": 2
+         }
+        ]
+       },
+       {
+        "name": "prefer",
+        "children": [
+         {
+          "name": "trains",
+          "value": 4
+         },
+         {
+          "name": "driving",
+          "value": 2
+         }
+        ]
+       },
+       {
+        "name": "avoid",
+        "children": [
+         {
+          "name": "cars",
+          "value": 2
+         },
+         {
+          "name": "crowds",
+          "value": 1
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  }
  }
 ]

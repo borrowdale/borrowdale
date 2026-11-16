@@ -4,6 +4,7 @@
 // pack, siblings and enclose from src/pack/, with its seeded linear congruential generator from
 // src/lcg.js. They use + − × ÷, sqrt, min, max and abs only, so every JavaScript engine places the
 // same nodes. Positions are in the units of the size given; a caller scales and moves them.
+import { eachAfter, eachBefore, largestFirst } from './hierarchy-walk.js';
 
 /** A node being laid out: its value, the sum of its leaves', and where a layout puts it. */
 export interface LaidOut<T> {
@@ -28,7 +29,7 @@ export interface LaidOut<T> {
  */
 export function placed<T extends { value: number; children: readonly T[] }>(tree: T, sort: boolean, depth = 0): LaidOut<T> {
   const children = tree.children.map((child) => placed(child, sort, depth + 1));
-  if (sort) children.sort((a, b) => b.value - a.value);
+  if (sort) children.sort(largestFirst);
   return {
     item: tree,
     value: tree.value,
@@ -37,29 +38,6 @@ export function placed<T extends { value: number; children: readonly T[] }>(tree
     children,
     x0: 0, y0: 0, x1: 0, y1: 0, x: 0, y: 0, r: 0,
   };
-}
-
-/** Every node, each before its children. */
-function eachBefore<T>(root: LaidOut<T>, visit: (node: LaidOut<T>) => void): void {
-  const stack = [root];
-  for (let node = stack.pop(); node !== undefined; node = stack.pop()) {
-    visit(node);
-    for (let i = node.children.length - 1; i >= 0; i--) stack.push(node.children[i]!);
-  }
-}
-
-/**
- * Every node, each after its children, in d3's order: packing draws from one generator as it goes,
- * so the order decides which numbers each enclosing circle shuffles by.
- */
-function eachAfter<T>(root: LaidOut<T>, visit: (node: LaidOut<T>) => void): void {
-  const nodes = [root];
-  const next: LaidOut<T>[] = [];
-  for (let node = nodes.pop(); node !== undefined; node = nodes.pop()) {
-    next.push(node);
-    nodes.push(...node.children);
-  }
-  for (let node = next.pop(); node !== undefined; node = next.pop()) visit(node);
 }
 
 /** How a treemap splits a parent's rectangle among its children. */
@@ -249,6 +227,7 @@ export function partition<T>(root: LaidOut<T>, dx: number, dy: number, padding: 
     node.y1 = y1;
   });
 }
+
 
 /** A circle. */
 interface Disc {

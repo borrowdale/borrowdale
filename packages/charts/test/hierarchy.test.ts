@@ -3,7 +3,7 @@ import { layoutChart, type ChartSpec } from '@borrowdale/charts';
 import { Drawing } from '../src/drawing.js';
 import { legendEntries } from '../src/layout.js';
 import { checkChart } from '../src/validate.js';
-import { laying, placedTexts, placesOf, pointsOnCurves, pointsOutside, shapesOf, titles } from './support/layout.js';
+import { laying, placedTexts, placesOf, pointsOnCurves, pointsOutside, shapesOf, titles, unmarkedSketches } from './support/layout.js';
 
 // Every chart `hierarchy` makes is 400 by 300, its legend left out unless a test asks for it.
 function hierarchy(data: object, options: object = {}, chart: object = {}): ChartSpec {
@@ -25,6 +25,11 @@ const TREE = {
 function chain(levels: number): object {
   return levels === 0 ? { name: 'leaf', value: 1 } : { name: `level ${levels}`, children: [chain(levels - 1)] };
 }
+/** A root and `count` branches of `leaves` leaves each: 1 + `count` × (`leaves` + 1) nodes. */
+const branches = (count: number, leaves: number) => ({
+  name: 'root',
+  children: Array.from({ length: count }, (_, branch) => ({ name: `b${branch}`, children: Array.from({ length: leaves }, (_, leaf) => ({ name: `leaf ${branch}-${leaf}`, value: 1 })) })),
+});
 /** A root, one branch, and `count` leaves below it: `count` + 2 nodes. */
 const many = (count: number) => ({ name: 'root', children: [{ name: 'branch', children: Array.from({ length: count }, (_, i) => ({ name: `n${i}`, value: 1 })) }] });
 // Four parents with room for their names, which a nested treemap writes in a strip along each top.
@@ -40,6 +45,15 @@ const written = (spec: ChartSpec) => layoutChart(spec).labels;
 function fillOf(spec: ChartSpec, title: string): string {
   const [first] = shapesOf(layoutChart(spec), title);
   return first?.kind === 'sketch' ? `${first.sketch.paths[0]!.stroke} ${first.sketch.paths.length}` : '';
+}
+/** The colour the dot of a tree's node titled `title` is filled with. */
+function dotColor(spec: ChartSpec, title: string): string {
+  const [first] = shapesOf(layoutChart(spec), title);
+  return first?.kind === 'sketch' ? first.sketch.paths[0]!.fill : '';
+}
+/** The colour of each link of a tree: the sketches outside its marks, in the order they are drawn. */
+function linkColors(spec: ChartSpec): string[] {
+  return unmarkedSketches(layoutChart(spec)).map((link) => link.sketch.paths[0]!.stroke);
 }
 const legendColors = (spec: ChartSpec) => legendEntries(checkChart(spec)).map((entry) => entry.paint.color);
 const displayOf = (spec: ChartSpec) => {
@@ -230,6 +244,12 @@ describe('hierarchies', () => {
     expect(laying(hierarchy(many(1998)))).not.toThrow();
   });
 
+  // The README's measure, with the default options: 20 branches of 98 leaves each, the most nodes a
+  // hierarchy holds in branches of equal size, fit an 800 × 600 tree.
+  it('draw a tree of 20 branches of 98 leaves on an 800 × 600 chart', () => {
+    expect(laying({ width: 800, height: 600, series: [{ type: 'hierarchy', name: 'H', display: 'tree', data: branches(20, 98) }] })).not.toThrow();
+  });
+
   it('reject an option of another display', () => {
     expect(laying(hierarchy(TREE, { innerRadius: 0.5 }))).toThrow('Invalid chart: series[0] has an unknown key, "innerRadius"');
   });
@@ -301,6 +321,10 @@ describe('hierarchies', () => {
     ['sunburst', { startAngle: -90, endAngle: 90, cornerRadius: 4 }],
     ['icicle', { direction: 'left' }],
     ['pack', { padding: 6 }],
+    ['tree', { direction: 'left', nodeShape: 'box', links: 'elbow' }],
+    ['radialTree', { startAngle: -90, endAngle: 90, links: 'elbow' }],
+    ['indented', {}],
+    ['wordTree', {}],
   ])('keep every stroke and label of a %s inside the chart', (display, options) => {
     expect(pointsOutside(layoutChart(hierarchy(TREE, { display, ...options })))).toBe(0);
   });
@@ -338,6 +362,8 @@ describe('hierarchies', () => {
     ['icicle', { padding: 2 }],
     ['pack', { padding: 2 }],
     ['sunburst', { innerRadius: 0, startAngle: 0, endAngle: 360, cornerRadius: 0 }],
+    ['tree', { direction: 'right', layout: 'tidy', links: 'curved', nodeShape: 'dot', distance: 'depth' }],
+    ['radialTree', { startAngle: 0, endAngle: 360, layout: 'tidy', links: 'curved', distance: 'depth' }],
   ])('draw a %s as its defaults spelt out draw it', (display, options) => {
     expect(drawn(hierarchy(TREE, { display }))).toEqual(drawn(hierarchy(TREE, { display, ...options })));
   });
@@ -420,6 +446,23 @@ describe('hierarchy colours', () => {
   it('colour a node and those below it by its own colour', () => {
     const tree = { name: 'root', children: [{ name: 'A', children: [{ name: 'A1', color: 'red', children: [{ name: 'x', value: 1 }] }] }] };
     expect(fillOf(hierarchy(tree), 'A › A1 › x: 1')).toMatch(/^red /);
+  });
+
+  it('draw the root of a tree in ink', () => {
+    expect(dotColor(hierarchy(TREE, { display: 'tree' }), 'root: 98')).toBe('#333');
+  });
+
+  it('colour every node of a tree below a branch as the branch', () => {
+    expect(dotColor(hierarchy(TREE, { display: 'tree' }), 'B › B2: 4')).toBe('#56b4e9');
+  });
+
+  it('colour a node of a tree and those below it by its own colour', () => {
+    const tree = { name: 'root', children: [{ name: 'A', children: [{ name: 'A1', color: 'red', children: [{ name: 'x', value: 1 }] }] }] };
+    expect(dotColor(hierarchy(tree, { display: 'tree' }), 'A › A1 › x: 1')).toBe('red');
+  });
+
+  it('draw each link of a tree in its child\'s colour', () => {
+    expect(linkColors(hierarchy(TREE, { display: 'tree' }))).toEqual(['#e69f00', '#e69f00', '#e69f00', '#e69f00', '#56b4e9', '#56b4e9', '#56b4e9', '#009e73']);
   });
 
   it('write a sunburst label that fits whole, at a diagonal', () => {

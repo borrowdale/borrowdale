@@ -64,7 +64,7 @@ describe('gallery coverage and actual rendering', () => {
   // A heatmap is tagged by the shape of its cells, and as a correlation when it is one, so the hexagon and
   // correlation views can be found by name. A unit or funnel chart is tagged by its display, and a
   // pictorial bar and a pie of pie by name. A hierarchy is tagged by its display, except that a pack is
-  // circle packing and an upward icicle a flame graph.
+  // circle packing and an upward icicle a flame graph, and a tree by the chart it makes.
   it.each([
     ['heatmap', 'heatmap'],
     ['punch-card', 'circle heatmap'],
@@ -85,6 +85,14 @@ describe('gallery coverage and actual rendering', () => {
     ['icicle-right', 'icicle'],
     ['flame-graph', 'flame graph'],
     ['circle-packing', 'circle packing'],
+    ['tree', 'tree'],
+    ['radial-tree', 'radial tree'],
+    ['dendrogram', 'dendrogram'],
+    ['radial-dendrogram', 'dendrogram'],
+    ['phylogenetic-tree', 'phylogenetic tree'],
+    ['organisation-chart', 'organisation chart'],
+    ['indented-tree', 'indented tree'],
+    ['word-tree', 'word tree'],
   ])('tags the example %s as %s', (name, tag) => {
     expect(galleryTag(name)).toBe(tag);
   });
