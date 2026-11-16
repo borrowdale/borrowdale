@@ -58,6 +58,11 @@ export function labelsOutside(layout: ChartLayout): number {
     .length;
 }
 
+/** The sketches drawn outside every mark, in drawing order: a tree's links. */
+export function unmarkedSketches(layout: ChartLayout): Extract<ChartNode, { kind: 'sketch' }>[] {
+  return layout.nodes.flatMap((node) => (node.kind === 'sketch' ? [node] : []));
+}
+
 export function titles(layout: ChartLayout): string[] {
   return layout.nodes.flatMap((node) => (node.kind === 'mark' ? [node.title] : []));
 }

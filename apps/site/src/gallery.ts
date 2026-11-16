@@ -36,7 +36,7 @@ export const chartExamples = [...chartCases, ...presentationExamples, ...statist
  * What a series is called in the gallery: a statistical, unit or funnel series by its display, a
  * heatmap by its shape, prefixed `correlation` when it is one, a pictorial bar and a pie of pie by
  * name, a hierarchy by its display, a pack as circle packing and an upward icicle as a flame graph,
- * else its type.
+ * a tree by the chart it makes, else its type.
  */
 export function seriesTag(series: ChartSpec['series'][number]): string {
   switch (series.type) {
@@ -55,11 +55,44 @@ export function seriesTag(series: ChartSpec['series'][number]): string {
     case 'funnel':
       return series.display;
     case 'hierarchy':
-      if (series.display === 'pack') return 'circle packing';
-      return series.display === 'icicle' && series.direction === 'up' ? 'flame graph' : series.display;
+      return hierarchyTag(series);
     default:
       return untagged(series);
   }
+}
+// A hierarchy by its display: a pack as circle packing, an upward icicle as a flame graph, and a tree
+// by the chart it makes.
+function hierarchyTag(series: Extract<ChartSpec['series'][number], { type: 'hierarchy' }>): string {
+  switch (series.display) {
+    case 'treemap':
+    case 'sunburst':
+      return series.display;
+    case 'icicle':
+      return series.direction === 'up' ? 'flame graph' : 'icicle';
+    case 'pack':
+      return 'circle packing';
+    case 'tree':
+    case 'radialTree':
+      return treeTag(series);
+    case 'indented':
+      return 'indented tree';
+    case 'wordTree':
+      return 'word tree';
+    default:
+      return untaggedDisplay(series);
+  }
+}
+// A hierarchy display added without a case above fails to compile here.
+function untaggedDisplay(series: never): string {
+  return String(series);
+}
+// A tree by the chart it makes: a phylogenetic tree by its lengths, a dendrogram by its cluster
+// layout, an organisation chart by its boxes, else a tree or a radial tree.
+function treeTag(series: Extract<ChartSpec['series'][number], { display: 'tree' | 'radialTree' }>): string {
+  if (series.distance === 'length') return 'phylogenetic tree';
+  if (series.layout === 'cluster') return 'dendrogram';
+  if (series.display === 'tree' && series.nodeShape === 'box') return 'organisation chart';
+  return series.display === 'tree' ? 'tree' : 'radial tree';
 }
 // The type of a series that need not say its display: one that must, added without a case above,
 // fails to compile here.

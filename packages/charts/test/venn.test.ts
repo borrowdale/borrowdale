@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { layoutChart, type ChartSpec } from '@borrowdale/charts';
 import { legendEntries } from '../src/layout.js';
 import { checkChart } from '../src/validate.js';
-import type { Circle } from '../src/venn-geometry.js';
+import type { Circle } from '../src/frame.js';
 import { labelsOutside, laying, pointsOnCurves, shapesOf, texts, titles } from './support/layout.js';
 
 // Every chart is 300 by 200; the circles fill the plot inside the padding.

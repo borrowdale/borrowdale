@@ -43,6 +43,22 @@ const rendering = (chart: ChartLayout, options: Parameters<typeof toSvgChart>[1]
 // Latin and Cyrillic come from two different Excalifont files.
 const twoScripts: ChartLayout = { ...layout, labels: ['Hi', 'Москва'] };
 
+/** A layout built by hand around one node of `kind`, which no renderer knows. */
+function unknownKind(kind: unknown): ChartLayout {
+  return { width: 10, height: 10, nodes: [{ kind }], labels: [], missing: [] } as unknown as ChartLayout;
+}
+// A kind whose own text would end up in the message if the error wrote it with String().
+const TALKATIVE = { toString: () => 'its own text' };
+
+describe('a layout with a node no renderer knows', () => {
+  it.each([
+    ['a kind with a line break and a direction override', 'x\u202e\ny', 'Unknown chart node: "x\\u202e\\ny"'],
+    ['an object kind, by what it is rather than its own text', TALKATIVE, 'Unknown chart node: an object'],
+  ])('names %s, escaped', (_, kind, message) => {
+    expect(() => toSvgChart(unknownKind(kind))).toThrow(new Error(message));
+  });
+});
+
 describe('toSvgChart', () => {
   it('draws every node in order inside a sized, titled svg', () => {
     expect(toSvgChart(layout)).toBe(

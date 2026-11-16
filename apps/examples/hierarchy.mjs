@@ -1,5 +1,5 @@
-// Render the treemap, sunburst, icicle, flame graph and circle packing examples as standalone SVG
-// documents with their font embedded.
+// Render the treemap, sunburst, icicle, flame graph, circle packing and tree examples as standalone
+// SVG documents with their font embedded.
 // Usage: npm run build && node apps/examples/hierarchy.mjs
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { layoutChart, toSvgChart } from '@borrowdale/charts';

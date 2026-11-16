@@ -2,11 +2,12 @@
 // in proportion to the sizes given. Every size is checked, and the circles placed, as the spec is read,
 // so that each error names the entry it comes from.
 import { MAX_NAME } from './check-axis.js';
+import type { Circle } from './frame.js';
 import { color, fail, fields, list, MAX_VALUE, number, show, text, uniqueBy, type Fields } from './read.js';
 import { formatNumber, formatValue, PLAIN_FORMAT } from './scale.js';
 import type { SeriesBase } from './types.js';
 import type { CheckedChartBase, SeriesOf } from './validate.js';
-import { exclusiveSizes, placeCircles, regionErrors, type Circle } from './venn-geometry.js';
+import { exclusiveSizes, placeCircles, regionErrors } from './venn-geometry.js';
 
 export interface VennArea {
   /** The names of 1 to 3 sets, each at most 100 characters: one set, or the overlap of all of those named. */

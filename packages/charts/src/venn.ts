@@ -1,10 +1,10 @@
 // Lays out a Venn diagram: the circles placed as the spec was read, scaled to fill the chart, each
 // hatched in its set's paint so that overlaps show both, and each region's own size written in it.
 import type { Drawing } from './drawing.js';
-import { assertRoom, type Rect } from './frame.js';
+import { assertRoom, type Circle, type Rect } from './frame.js';
 import { valueLabel } from './named-values.js';
 import { hatched, type Paint } from './palette.js';
-import { circleBounds, regionSpots, type Circle } from './venn-geometry.js';
+import { circleBounds, regionSpots } from './venn-geometry.js';
 import { sizeText, type CheckedVennChart } from './venn-series.js';
 
 /** `paintOf` gives each set name its legend entry's paint. */

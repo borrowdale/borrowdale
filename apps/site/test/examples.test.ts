@@ -64,7 +64,7 @@ describe('gallery coverage and actual rendering', () => {
   // A heatmap is tagged by the shape of its cells, and as a correlation when it is one, so the hexagon and
   // correlation views can be found by name. A unit or funnel chart is tagged by its display, and a
   // pictorial bar and a pie of pie by name. A hierarchy is tagged by its display, except that a pack is
-  // circle packing and an upward icicle a flame graph.
+  // circle packing and an upward icicle a flame graph, and a tree by the chart it makes.
   it.each([
     ['heatmap', 'heatmap'],
     ['punch-card', 'circle heatmap'],
@@ -85,6 +85,14 @@ describe('gallery coverage and actual rendering', () => {
     ['icicle-right', 'icicle'],
     ['flame-graph', 'flame graph'],
     ['circle-packing', 'circle packing'],
+    ['tree', 'tree'],
+    ['radial-tree', 'radial tree'],
+    ['dendrogram', 'dendrogram'],
+    ['radial-dendrogram', 'dendrogram'],
+    ['phylogenetic-tree', 'phylogenetic tree'],
+    ['organisation-chart', 'organisation chart'],
+    ['indented-tree', 'indented tree'],
+    ['word-tree', 'word tree'],
   ])('tags the example %s as %s', (name, tag) => {
     expect(galleryTag(name)).toBe(tag);
   });
@@ -246,6 +254,24 @@ describe('statistical charts in the notebooks', () => {
     const html = quakeDashboard();
     expect(html).toContain('<td>4.45–4.55</td><td>143</td>');
     expect(html).toContain('<td>7.65–7.75</td><td>1</td>');
+  });
+  it('counts the events of each magnitude class in each depth layer, as the treemap nests them', () => {
+    const html = quakeDashboard();
+    expect(html).toContain('<th scope="row">Events</th><td>M 4.5–4.9 › Below 70 km</td><td>405</td>');
+    expect(html).toContain('<th scope="row">Events</th><td>M 6.0+ › 300 km or deeper</td><td>1</td>');
+  });
+  it.each([
+    [5, { panel: true, 'M 4.5–4.9': false, 'M 5.0–5.9': true, 'M 6.0+': true }],
+    [7, { panel: true, 'M 4.5–4.9': false, 'M 5.0–5.9': false, 'M 6.0+': true }],
+  ])('nests only the magnitude classes a minimum of %s leaves events in', (magnitude, nested) => {
+    dashboardState.magnitude = magnitude;
+    const html = quakeDashboard();
+    expect({
+      panel: html.includes('Classes within classes'),
+      'M 4.5–4.9': html.includes('<td>M 4.5–4.9 › '),
+      'M 5.0–5.9': html.includes('<td>M 5.0–5.9 › '),
+      'M 6.0+': html.includes('<td>M 6.0+ › '),
+    }).toEqual(nested);
   });
   it('counts the events in each depth layer the box chart shares with the depth chart', () => {
     const html = quakeDashboard();

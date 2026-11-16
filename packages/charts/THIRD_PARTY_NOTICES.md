@@ -26,7 +26,9 @@ THIS SOFTWARE.
 
 The hierarchy layouts in `src/hierarchy-geometry.ts` (the treemap, its squarify, binary, dice, slice
 and slice-dice tilings, the partition behind icicles and sunbursts, and circle packing with its
-enclosing circle and seeded shuffle) are ported from the following package. Its notice:
+enclosing circle and seeded shuffle), in `src/tree-geometry.ts` (the tidy tree and the cluster
+behind trees, dendrograms and word trees) and in `src/hierarchy-walk.ts` (the orders the layouts visit
+nodes in) are ported from the following package. Its notice:
 
 ## d3-hierarchy 3.1.3
 

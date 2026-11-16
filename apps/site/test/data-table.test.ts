@@ -1,8 +1,26 @@
 import { describe, expect, it } from 'vitest';
-import type { ChartSpec } from '@borrowdale/charts';
+import { layoutChart, type ChartSpec } from '@borrowdale/charts';
 import { dataRows } from '../src/data-table';
 
 const chart = (series: object[]) => ({ width: 300, height: 200, series }) as ChartSpec;
+/** The names of a chart's data rows. */
+const rowNames = (spec: ChartSpec) => dataRows(spec).map((row) => row[1]);
+/** The paths the chart's marks name in their tooltips, without the values after them. */
+const tooltipPaths = (spec: ChartSpec) =>
+  layoutChart(spec).nodes.flatMap((node) => (node.kind === 'mark' ? [node.title.slice(0, node.title.lastIndexOf(': '))] : []));
+/** A treemap of `data`, in the order given, so its leaves' rows and marks come in one order. */
+const inOrder = (data: object) => chart([{ type: 'hierarchy', name: 'Energy', display: 'treemap', sort: false, data }]);
+// Three levels below the root; and a branch whose name is empty, which a path still names.
+const THREE_LEVELS = inOrder({
+  name: 'All',
+  children: [{ name: 'Fossil', children: [{ name: 'Coal', children: [{ name: 'Hard', value: 2 }, { name: 'Brown', value: 1 }] }] }, { name: 'Wind', value: 3 }],
+});
+const EMPTY_BRANCH = inOrder({ name: 'All', children: [{ name: '', children: [{ name: 'X', value: 1 }] }, { name: 'Y', value: 2 }] });
+
+/** `own`, with `inherited` behind it as its prototype: fields it inherits rather than holds. */
+function inheriting(own: object, inherited: object): object {
+  return Object.assign(Object.create(inherited) as object, own);
+}
 
 describe('data rows of the proportion charts', () => {
   it('list each category of a unit chart and each stage of a funnel', () => {
@@ -30,6 +48,33 @@ describe('data rows of the proportion charts', () => {
   it('give a hierarchy a row per leaf, named by its path below the root', () => {
     const tree = { name: 'All', children: [{ name: 'Fossil', children: [{ name: 'Coal', value: 1300 }] }, { name: 'Nuclear', value: 40 }] };
     expect(dataRows(chart([{ type: 'hierarchy', name: 'Energy', display: 'treemap', data: tree }]))).toEqual([['Energy', 'Fossil › Coal', '1,300'], ['Energy', 'Nuclear', '40']]);
+  });
+
+  it.each([
+    ['three levels deep', THREE_LEVELS],
+    ['under a branch with an empty name', EMPTY_BRANCH],
+  ])("name each hierarchy row by the path the chart's tooltip names it by, %s", (_, spec) => {
+    expect(rowNames(spec)).toEqual(tooltipPaths(spec));
+  });
+
+  it('give a leaf written with children: undefined its row, as the chart draws it', () => {
+    const tree = { name: 'All', children: [{ name: 'Coal', value: 3, children: undefined }, { name: 'Wind', value: 2 }] };
+    expect(dataRows(chart([{ type: 'hierarchy', name: 'Energy', display: 'treemap', data: tree }]))).toEqual([['Energy', 'Coal', '3'], ['Energy', 'Wind', '2']]);
+  });
+
+  it('give a leaf a value it inherits no row value, as the chart reads only its own', () => {
+    const tree = { name: 'All', children: [{ name: 'Team', children: [inheriting({ name: 'Ada' }, { value: 9 })] }, { name: 'Lin', value: 2 }] };
+    expect(dataRows(chart([{ type: 'hierarchy', name: 'Staff', display: 'tree', data: tree }]))).toEqual([['Staff', 'Team › Ada', 'No data'], ['Staff', 'Lin', '2']]);
+  });
+
+  it('give a leaf its row though it inherits children, as the chart reads only its own', () => {
+    const tree = { name: 'All', children: [{ name: 'Team', children: [inheriting({ name: 'Ada', value: 2 }, { children: [{ name: 'ghost', value: 1 }] })] }] };
+    expect(dataRows(chart([{ type: 'hierarchy', name: 'Staff', display: 'tree', data: tree }]))).toEqual([['Staff', 'Team › Ada', '2']]);
+  });
+
+  it('give a leaf of a tree with no value a row of no data', () => {
+    const staff = { name: 'All', children: [{ name: 'Team', children: [{ name: 'Ada' }] }, { name: 'Lin', value: 2 }] };
+    expect(dataRows(chart([{ type: 'hierarchy', name: 'Staff', display: 'tree', data: staff }]))).toEqual([['Staff', 'Team › Ada', 'No data'], ['Staff', 'Lin', '2']]);
   });
 });
 

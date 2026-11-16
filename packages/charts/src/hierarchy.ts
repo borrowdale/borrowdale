@@ -1,19 +1,22 @@
-// Lays out a hierarchy: the tree placed by its display's layout and scaled to the chart. Each node
-// below the root is drawn as a rectangle, a ring segment or a circle in its branch's paint, with its
-// path and value as its tooltip, except a parent in a treemap that is not nested. Its name is written
-// inside it where it fits, except in a packed parent, where it would lie over the children.
+// Lays out a hierarchy: the tree placed by its display's layout and scaled to the chart. A tree drawn
+// as nodes and links is laid out by `layoutTree`. Otherwise each node below the root is drawn as a
+// rectangle, a ring segment or a circle in its branch's paint, with its path and value as its tooltip,
+// except a parent in a treemap that is not nested. Its name is written inside it where it fits, except
+// in a packed parent, where it would lie over the children.
 import type { Shape } from '@borrowdale/core';
 import type { Drawing } from './drawing.js';
 import { assertRoom, rectangle, type Rect } from './frame.js';
 import { fitSweep, onCircle, RADIANS, sliceShape } from './geometry.js';
 import { binary, dice, pack, partition, placed, slice, sliceDice, squarify, treemap, type LaidOut, type Tiling } from './hierarchy-geometry.js';
-import type { CheckedHierarchyChart, CheckedNode, IcicleDirection, TreemapTile } from './hierarchy-series.js';
+import { isNodeLink, type CheckedHierarchyChart, type CheckedNode, type HierarchyDirection, type TreemapTile } from './hierarchy-series.js';
+import { layoutTree, type TreeSeries } from './hierarchy-tree.js';
+import { branches } from './hierarchy-walk.js';
 import { valueLabel } from './named-values.js';
-import { hatched, paints, type Paint } from './palette.js';
+import { hatched, type Paint } from './palette.js';
 import { unhandled } from './statistics/types.js';
 import type { ChartNode } from './types.js';
 
-type Hierarchy = CheckedHierarchyChart['series'][number];
+type Hierarchy = Exclude<CheckedHierarchyChart['series'][number], TreeSeries>;
 type LaidNode = LaidOut<CheckedNode>;
 
 const TILINGS = { squarify, binary, dice, slice, sliceDice } as const satisfies Record<TreemapTile, Tiling>;
@@ -21,8 +24,6 @@ const TILINGS = { squarify, binary, dice, slice, sliceDice } as const satisfies 
 const CASCADE = 6;
 /** The room kept between a label and the edges of its mark, in units. */
 const INSET = 2;
-/** What separates the names in a node's tooltip. */
-const PATH_SEPARATOR = ' › ';
 /**
  * How far every other level turns its hatching, in degrees. The palette's angles, -41, -11, 49 and 79,
  * lie 30 and 90 degrees apart, so a turn of 45 never lands on one: a parent and its child never hatch
@@ -35,27 +36,26 @@ const LEVEL_TURN = 45;
 export function layoutHierarchy(drawing: Drawing, chart: CheckedHierarchyChart, rect: Rect, paintOf: ReadonlyMap<string, Paint>): void {
   assertRoom(rect, chart.width, chart.height);
   const series = chart.series[0]!;
+  if (isTree(series)) return layoutTree(drawing, series, rect, paintOf);
   const root = placed(series.root, series.sort);
   const draw = drawerOf(drawing, series, rect, root);
-  // Each node takes its own colour, else its parent's paint; a branch below the root starts from its
-  // legend entry's. The hatching turns LEVEL_TURN degrees on every other level.
-  const visit = (node: LaidNode, inherited: Paint, above: string): void => {
-    const base = node.item.color === undefined ? inherited : paints([{ color: node.item.color, path: node.item.path }])[0]!;
-    const path = above === '' ? node.item.name : `${above}${PATH_SEPARATOR}${node.item.name}`;
+  // The hatching turns LEVEL_TURN degrees on every other level.
+  for (const { node, paint: base, path } of branches(root, paintOf)) {
     const drawn = node.value > 0 ? draw(node) : undefined;
-    if (drawn !== undefined) {
-      const paint = { color: base.color, hachureAngle: base.hachureAngle + (node.depth % 2 === 0 ? LEVEL_TURN : 0) };
-      // A node too small to draw keeps its tooltip, so every value above 0 is still named.
-      const style = drawn.filled ? hatched(paint) : { stroke: paint.color, fill: 'none' };
-      const nodes: ChartNode[] = drawn.shape === undefined ? [] : [drawing.shape(drawn.shape, style, [series.name, node.item.path], series.style)];
-      const name = series.dataLabels ? valueLabel(node.item) : node.item.name;
-      const text = drawn.label && drawing.inside(name, drawn.label.box, drawn.label.start);
-      if (text) nodes.push(text);
-      drawing.mark(valueLabel({ name: path, value: node.value }), nodes);
-    }
-    for (const child of node.children) visit(child, base, path);
-  };
-  for (const branch of root.children) visit(branch, paintOf.get(branch.item.name)!, '');
+    if (drawn === undefined) continue;
+    const paint = { color: base.color, hachureAngle: base.hachureAngle + (node.depth % 2 === 0 ? LEVEL_TURN : 0) };
+    // A node too small to draw keeps its tooltip, so every value above 0 is still named.
+    const style = drawn.filled ? hatched(paint) : { stroke: paint.color, fill: 'none' };
+    const nodes: ChartNode[] = drawn.shape === undefined ? [] : [drawing.shape(drawn.shape, style, [series.name, node.item.path], series.style)];
+    const name = series.dataLabels ? valueLabel(node.item) : node.item.name;
+    const text = drawn.label && drawing.inside(name, drawn.label.box, drawn.label.start);
+    if (text) nodes.push(text);
+    drawing.mark(valueLabel({ name: path, value: node.value }), nodes);
+  }
+}
+
+function isTree(series: CheckedHierarchyChart['series'][number]): series is TreeSeries {
+  return isNodeLink(series.display);
 }
 
 /** What a node is drawn as (nothing when it has no size), whether it is filled, and the box its name may go in. */
@@ -143,7 +143,7 @@ function drawerOf(drawing: Drawing, series: Hierarchy, rect: Rect, root: LaidNod
 }
 
 /** An icicle node's rectangle: its band and its span across it, turned to its direction. */
-function icicleBox(node: LaidNode, direction: IcicleDirection, rect: Rect): Rect {
+function icicleBox(node: LaidNode, direction: HierarchyDirection, rect: Rect): Rect {
   switch (direction) {
     case 'down':
       return { left: rect.left + node.x0, right: rect.left + node.x1, top: rect.top + node.y0, bottom: rect.top + node.y1 };

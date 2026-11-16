@@ -72,6 +72,11 @@ export class Drawing {
     return [...this.#missing];
   }
 
+  /** The chart's font size: text is written at it unless given another. */
+  get fontSize(): number {
+    return this.#chart.fontSize;
+  }
+
   /** The height of one line of text, ascent plus descent. */
   lineHeight(fontSize = this.#chart.fontSize): number {
     const { ascent, descent } = measureText('', { font: this.#chart.font, fontSize });
@@ -184,13 +189,24 @@ export class Drawing {
    * to name, which keep their tooltips.
    */
   inside(text: string, box: Rect, start = false): ChartNode | undefined {
-    const fitted = fitText(text, Math.max(0, box.right - box.left), { font: this.#chart.font, fontSize: this.#chart.fontSize });
-    if (fitted === undefined || fitted === '' || (fitted !== text && /^(?:\u2026|\.\.\.)$/.test(fitted))) return undefined;
+    const fitted = this.fittedName(text, box.right - box.left);
+    if (fitted === undefined) return undefined;
     const extent = this.extent(fitted, start ? START : CENTRED);
     if (extent.up + extent.down > box.bottom - box.top) return undefined;
     this.#place();
     const y = (box.top + box.bottom) / 2;
     return this.text(fitted, { ...(start ? START : CENTRED), x: start ? box.left : (box.left + box.right) / 2, y });
+  }
+
+  /**
+   * A mark's name cut short with an ellipsis to fit `room`, as `inside` cuts it: nothing for empty
+   * text, or when no character of it fits beside the ellipsis, so the mark goes unnamed. Unlike `fit`,
+   * it never throws.
+   */
+  fittedName(text: string, room: number, fontSize = this.#chart.fontSize): string | undefined {
+    const fitted = fitText(text, Math.max(0, room), { font: this.#chart.font, fontSize });
+    if (fitted === undefined || fitted === '' || (fitted !== text && /^(?:…|\.\.\.)$/.test(fitted))) return undefined;
+    return fitted;
   }
 
   /**
