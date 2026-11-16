@@ -1,4 +1,4 @@
-import type { CellPlace, ChartSpec, ChartValue, HistogramSeries, RelationshipSeries, TreeNode } from '@borrowdale/charts';
+import { hierarchyPath, type CellPlace, type ChartSpec, type ChartValue, type HistogramSeries, type RelationshipSeries, type TreeNode } from '@borrowdale/charts';
 import { escape } from './drawing';
 
 type FitMethod = NonNullable<Extract<RelationshipSeries, { display: 'regression' }>['method']>;
@@ -64,7 +64,7 @@ function seriesRows(series: ChartSpec['series'][number], categories: readonly st
     case 'venn':
       return series.data.map((area) => [series.name, area.sets.join(' ∩ '), format(area.value)]);
     case 'hierarchy':
-      return leafRows(series.data, '').map(([path, value]) => [series.name, path, written(value, format)]);
+      return leafRows(series.data, []).map(([path, value]) => [series.name, path, written(value, format)]);
     case 'relationship':
       if (series.display === 'regression') {
         return [[series.name, '', `${fitNames[series.method ?? 'linear']} fit to ${series.data.length} observations`]];
@@ -106,11 +106,11 @@ function seriesRows(series: ChartSpec['series'][number], categories: readonly st
 // One row per leaf below the root, named by its path from the root's children down, as its tooltip is,
 // with no data for a tree's leaf that gives no value. It walks the spec as given, so it relies on the
 // chart having been laid out, and so validated, first.
-function leafRows(node: TreeNode, above: string): [string, number | null][] {
+function leafRows(node: TreeNode, above: readonly string[]): [string, number | null][] {
   return (node.children ?? []).flatMap((child): [string, number | null][] => {
-    const path = above === '' ? child.name : `${above} › ${child.name}`;
-    if (Object.hasOwn(child, 'children') && child.children !== undefined) return leafRows(child, path);
-    return [[path, Object.hasOwn(child, 'value') ? (child.value ?? null) : null]];
+    const names = [...above, child.name];
+    if (Object.hasOwn(child, 'children') && child.children !== undefined) return leafRows(child, names);
+    return [[hierarchyPath(names), Object.hasOwn(child, 'value') ? (child.value ?? null) : null]];
   });
 }
 type Cell = ChartValue | null;

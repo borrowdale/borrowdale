@@ -5,6 +5,15 @@ import { paints, type Paint } from './palette.js';
 /** What separates the names in a node's tooltip. */
 const PATH_SEPARATOR = ' › ';
 
+/**
+ * The path below a hierarchy's root to a node, from the names on the way down, as the node's tooltip
+ * names it: `hierarchyPath(['Home', 'Rent'])` is `'Home › Rent'`. It is text to show, not a key: a
+ * name may itself hold the separator, and the text is not escaped for markup.
+ */
+export function hierarchyPath(names: readonly string[]): string {
+  return names.join(PATH_SEPARATOR);
+}
+
 /** Every node, each before its children. */
 export function eachBefore<N extends { children: readonly N[] }>(root: N, visit: (node: N) => void): void {
   const stack = [root];
@@ -52,12 +61,11 @@ export function branches<N extends { item: { name: string; color: string | undef
   paintOf: ReadonlyMap<string, Paint>,
 ): Branching<N>[] {
   const drawn: Branching<N>[] = [];
-  const visit = (node: N, inherited: Paint, above: string): void => {
+  const visit = (node: N, inherited: Paint, names: readonly string[]): void => {
     const paint = node.item.color === undefined ? inherited : paints([{ color: node.item.color, path: node.item.path }])[0]!;
-    const path = above === '' ? node.item.name : `${above}${PATH_SEPARATOR}${node.item.name}`;
-    drawn.push({ node, paint, path });
-    for (const child of node.children) visit(child, paint, path);
+    drawn.push({ node, paint, path: hierarchyPath(names) });
+    for (const child of node.children) visit(child, paint, [...names, child.item.name]);
   };
-  for (const branch of root.children) visit(branch, paintOf.get(branch.item.name)!, '');
+  for (const branch of root.children) visit(branch, paintOf.get(branch.item.name)!, [branch.item.name]);
   return drawn;
 }

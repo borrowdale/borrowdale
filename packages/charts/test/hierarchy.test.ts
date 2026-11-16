@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { layoutChart, type ChartSpec } from '@borrowdale/charts';
+import { hierarchyPath, layoutChart, type ChartSpec } from '@borrowdale/charts';
 import { Drawing } from '../src/drawing.js';
 import { legendEntries } from '../src/layout.js';
 import { checkChart } from '../src/validate.js';
@@ -427,6 +427,16 @@ describe('labels inside marks', () => {
 
   it('leave out an empty name', () => {
     expect(inside('', 200, 40)).toBeUndefined();
+  });
+});
+
+describe('hierarchy paths', () => {
+  it.each([
+    [['Home'], 'Home'],
+    [['Home', 'Rent'], 'Home › Rent'],
+    [['Home', 'Energy', 'Gas'], 'Home › Energy › Gas'],
+  ])('write the path through %j as %s', (names, path) => {
+    expect(hierarchyPath(names)).toBe(path);
   });
 });
 

@@ -78,3 +78,4 @@ export type { FunnelSeries, FunnelStage } from './funnel-series.js';
 export type { LiquidSeries } from './liquid-series.js';
 export type { VennArea, VennSeries } from './venn-series.js';
 export type { HierarchyDisplay, HierarchyNode, HierarchySeries, TreeNode } from './hierarchy-series.js';
+export { hierarchyPath } from './hierarchy-walk.js';
