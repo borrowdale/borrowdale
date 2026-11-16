@@ -89,7 +89,7 @@ default branch:
 | `funnel` | `{ name, value, color? }` stages, in order | `display`: `funnel`, `pyramid`, `funnelArea` or `pictorialStacked`; see [funnels](#funnels) |
 | `liquid` | `value`, a level from 0 to 1 | `shape`: `circle` (default) or `rectangle`; `waves`; see [liquid fills](#liquid-fills) |
 | `venn` | `{ sets, value, color? }`: each set, and each overlap of sets | `dataLabels`; see [Venn diagrams](#venn-diagrams) |
-| `hierarchy` | `{ name, value?, color?, children? }`, the root of a tree | `display`: `treemap`, `sunburst`, `icicle` or `pack`; `dataLabels`; see [hierarchies](#hierarchies) |
+| `hierarchy` | `{ name, value?, color?, children?, length? }`, the root of a tree | `display`: `treemap`, `sunburst`, `icicle`, `pack`, `tree`, `radialTree`, `indented` or `wordTree`; `dataLabels`; see [hierarchies](#hierarchies) |
 
 A slice's `offset` (0 to 0.5 of the radius) pulls it out from the centre. Give every slice of a pie
 a `radius`, or none: each slice then reaches out in proportion to it, the largest to the full
@@ -577,12 +577,13 @@ set above 0 and more than a billionth of the largest.
 
 A `hierarchy` series draws a tree of named values. Its `data` is the tree's root: each node has a
 `name`, unique among its siblings, and either `children` or, as a leaf, a `value`. A parent takes no
-`value`: it is the sum of its children's. The root is not drawn, and takes no `color`. Each branch
-below it takes the next palette colour and hatching, and every node below the branch takes the same,
-unless a node gives its own `color`, which its descendants then take. The legend lists the branches,
-a branch of 0 included, and the hatching turns 45 degrees on every other level, so a parent and its
-child never hatch alike, and no node hatches like another branch's legend entry unless its own `color`
-repeats a palette colour. `display` picks the
+`value`: it is the sum of its children's. The root takes no `color`. Each branch below it takes the
+next palette colour and hatching, and every node below the branch takes the same, unless a node
+gives its own `color`, which its descendants then take. The legend lists the branches, a branch of 0
+included, and the hatching turns 45 degrees on every other level, so a parent and its child never
+hatch alike, and no node hatches like another branch's legend entry unless its own `color` repeats a
+palette colour. A tree draws its dots solid and its boxes as outlines in the same colours, and a
+word tree writes its words in ink, its links in their branches' colours. `display` picks the
 drawing:
 
 ```js
@@ -611,16 +612,71 @@ const spec = {
 | `sunburst` | each node as a ring segment, a level to a ring, its angle in proportion to its value | `startAngle` and `endAngle` (`-90` and `90` make a semicircle), `innerRadius`, `cornerRadius` for rounded segments |
 | `icicle` | each node as a rectangle, a level to a band, its length in proportion to its value | `direction`: `down` (default), `up` (a flame graph), `right` or `left`; `padding` |
 | `pack` | each leaf as a circle whose area is in proportion to its value, inside its parent's circle | `padding` |
+| `tree` | each node as a dot joined to its parent by a link, a level to a line | `direction`: `right` (default), `left`, `down` or `up`; `layout`: `tidy` (default, each level on a line) or `cluster` (a dendrogram, every leaf on the last line); `links`: `curved` (default), `elbow` (at right angles) or `straight`; `nodeShape`: `dot` (default) or `box` (each name in a box, as an organisation chart draws them); `distance`: `depth` (default, the levels evenly spaced) or `length` (a phylogenetic tree, see below) |
+| `radialTree` | the same around a circle, the root at its centre and a level to a ring | `startAngle` and `endAngle`; `layout`, `links` and `distance`, as for `tree` |
+| `indented` | each node in a row of its own, below its parent and set in by its depth, as a file browser lists a folder | |
+| `wordTree` | each node as its word, from the chart's font size for a value of 0 or none to twice it for the largest value, a level to a column | |
 
-Every display takes `sort`: siblings are drawn largest first, a tie in the given order, unless `sort`
-is false, which keeps the given order. `padding` is the room between nodes, 0 to 50 units, 2 by
-default. Every node drawn has a tooltip naming its path below the root and its value, as
-`Home › Rent: 1,150`; a treemap whose `parents` are `hidden` draws its leaves only. A node that padding leaves
-no width or height is drawn as a line inside the plot, and one too small for any size keeps its tooltip. A name is written inside
-each leaf, each sunburst and icicle segment and each nested treemap parent where it fits, cut short
-with an ellipsis if need be, and left out where not even one character fits; a packed parent's name
-would lie over its children, so it has none. `dataLabels` writes the value after the name. A node of
-0 is not drawn. The layouts are d3-hierarchy's, computed with the same arithmetic in every JavaScript engine.
+The first four displays fill the plot by value; the root is not drawn, every leaf needs a value, 0
+or more, and they must add up to more than 0. The last four draw the tree as nodes and links: the
+root is drawn too, in ink, and a leaf may leave out its `value`, as an organisation chart's do. A
+parent's value is then missing too, and its tooltip names it without one; a node of 0 or of no value
+is drawn like any other. A tree's levels are spaced evenly by default; with `distance: 'length'`,
+every node below the root gives its `length` from its parent, 0 to 10¹⁵, and lies that far beyond
+it, so a phylogenetic tree draws its branch lengths. A `length` is refused on the root, and on a
+series that does not space its levels by it, where it would draw nothing; a tree of boxes, spaced a
+level apart, takes none.
+
+```js
+const apes = {
+  type: 'hierarchy',
+  name: 'Apes',
+  display: 'tree',
+  layout: 'cluster',
+  links: 'elbow',
+  distance: 'length',
+  data: {
+    name: 'Hominoidea',
+    children: [
+      { name: 'Gibbons', length: 18 },
+      { name: 'Great apes', length: 3, children: [{ name: 'Orangutans', length: 15 }, { name: 'Gorillas', length: 15 }] },
+    ],
+  },
+};
+```
+
+Every display takes `sort`: siblings are drawn largest first, a tie in the given order and a missing
+value after every value, unless `sort` is false, which keeps the given order. `padding`, which a
+treemap, an icicle and circle packing take, is the room between nodes, 0 to 50 units, 2 by default.
+Every node drawn has a tooltip naming its path below the root and its value, as `Home › Rent:
+1,150`, and a tree's root its own name and value; `hierarchyPath(['Home', 'Rent'])` writes such a
+path, for a table or a caption to match, as text to show rather than a key, since a name may itself
+hold the separator; a treemap whose `parents` are `hidden` draws its leaves only. A node that
+padding leaves no width or height is drawn as a line inside the plot, and one too small for any size
+keeps its tooltip. A name is written inside each leaf, each sunburst and icicle segment and each
+nested treemap parent where it fits, cut short with an ellipsis if need be, and left out where not
+even one character fits; a packed parent's name would lie over its children, so it has none.
+`dataLabels` writes the value after the name. A node of 0 is not drawn by the displays that fill the
+plot.
+
+A tree writes each leaf's name beyond it, away from the root, and each parent's just off the line
+through it, on the root's side and away from the link that arrives from its own parent, so clear of
+its links: before it, above or below the line, on a tree that runs across, and to the right or left
+of it on one that runs up or down, in the room on that side; where its name has no room there, or
+would cross another or leave the plot, and the link arrives along the line, as an elbow does, or the
+node is the root or level with its parent, on the other side. A radial tree writes a parent's name
+inside its ring, where the link to it arrives, and its root's name below the centre, else beside,
+above or off a corner of it. A tree keeps room at the ends for the leaves' and the root's names, at
+most a quarter of the plot, or of a radial tree's radius. A name is cut short with an ellipsis to
+the room it has, and left out where it would cross a name already written, or leave the plot, and
+its node keeps its tooltip. Each link takes its child's colour. An elbow turns at the parent, so a
+dendrogram's and a phylogenetic tree's branches run along the levels from it; between boxes, it
+turns halfway between the levels, as an organisation chart's lines do. The boxes of a level are one
+size: across the levels, as large as the gaps between neighbours there allow, and narrow enough at
+the end of a row to keep inside the plot, but no smaller than a dot, so a row too crowded for dots
+overlaps; and no larger than the level's longest name and a line need. An indented tree writes no
+names where its rows are shorter than a line of text. The layouts are d3-hierarchy's, computed with
+the same arithmetic in every JavaScript engine.
 
 ## Chart options
 
@@ -728,7 +784,12 @@ thin marks, and how soon depends on their shape and direction, so take these as 
 with the default options on 20 branches of equal leaf counts, adding a leaf to each branch until the
 first layout that does not fit, with every node drawn: a sunburst fits 1,061 nodes on an 800 × 600
 chart and 581 on a 1600 × 1200 one, an icicle 941 and 441 running down and 561 and 261 running
-right, and a treemap and circle packing 1,981, 98 leaves a branch, at both sizes. A count past the
+right, and a treemap and circle packing 1,981, 98 leaves a branch, at both sizes. A tree running
+right fits 1,981 nodes on the smaller chart and 1,721 on the larger, a radial tree 1,981 and 1,821,
+and an indented tree and a word tree 1,981 at both sizes: a larger chart draws longer links, of more
+strokes. These counts are for the default `roughness`; with `roughness: 0` a tree and a radial tree
+reach the budget sooner, at about 70% to 85% of them, and an indented tree and a word tree still fit
+1,981. A count past the
 first failure can fit again, as hatching depends on each mark's exact shape. A Marimekko chart's
 narrowest column is at least a millionth as wide as its widest. A hex heatmap's columns and rows
 are whole numbers within ±100,000. A calendar counts one point per day of its range, reserved before any cell
@@ -917,10 +978,11 @@ category names, and horizon charts on a linear and a time axis.
 `node apps/examples/proportion.mjs`: a waffle, a parliament, pictogram rows, a segmented doughnut, a
 pictorial bar, a Marimekko chart, five funnels, a pyramid, a funnel area, a pictorial stack, a pie of
 pie, two liquid fills, two Venn diagrams of two and three sets, and two Euler diagrams, one of nested
-sets and one with a set apart. `apps/examples/hierarchy-cases.json` holds 13 hierarchies, rendered by
+sets and one with a set apart. `apps/examples/hierarchy-cases.json` holds 23 hierarchies, rendered by
 `node apps/examples/hierarchy.mjs`: treemaps tiled each of the five ways, nested and cascaded; a
-sunburst and a rounded half sunburst; an icicle down, an icicle to the right, and a flame graph; and
-circle packing.
+sunburst and a rounded half sunburst; an icicle down, an icicle to the right, and a flame graph;
+circle packing; trees running right, down and up; a dendrogram; a radial tree and a half radial
+dendrogram; a phylogenetic tree; an organisation chart; an indented tree; and a word tree.
 
 | Chart | Preparation and composition |
 |---|---|
@@ -946,8 +1008,8 @@ sequentially rather than independently from zero.
 
 ## License
 
-MIT. The tick steps are adapted from ISC-licensed code of d3-array, and the treemap, partition and
-circle-packing layouts are ported from ISC-licensed d3-hierarchy; see
+MIT. The tick steps are adapted from ISC-licensed code of d3-array, and the treemap, partition,
+circle-packing, tidy tree and cluster layouts are ported from ISC-licensed d3-hierarchy; see
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 Weighted categories retain proportional bar widths with equal inner and outer gaps. Equal weights produce the same bands as omitted weights. Categorical line markers and value labels share their series tooltip group.
