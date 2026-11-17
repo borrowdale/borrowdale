@@ -651,8 +651,9 @@ treemap, an icicle and circle packing take, is the room between nodes, 0 to 50 u
 Every node drawn has a tooltip naming its path below the root and its value, as `Home › Rent:
 1,150`, and a tree's root its own name and value; an empty name keeps its place in a path, as in
 ` › Rent`. `hierarchyPath(['Home', 'Rent'])` writes such a path, for a table or a caption to match,
-as text to show rather than a key, since a name may itself hold the separator; a treemap whose
-`parents` are `hidden` draws its leaves only. A node that
+as text to show rather than a key, since a name may itself hold the separator. It is plain text,
+not HTML: escape it before putting it into a page. A treemap whose `parents` are `hidden` draws its
+leaves only. A node that
 padding leaves no width or height is drawn as a line inside the plot, and one too small for any size
 keeps its tooltip. A name is written inside each leaf, each sunburst and icicle segment and each
 nested treemap parent where it fits, cut short with an ellipsis if need be, and left out where not
