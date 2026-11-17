@@ -1,5 +1,11 @@
 # @borrowdale/fills
 
+## 0.8.0
+
+### Patch Changes
+
+- @borrowdale/core@0.8.0
+
 ## 0.7.0
 
 ### Patch Changes

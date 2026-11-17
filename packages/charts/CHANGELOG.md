@@ -1,5 +1,18 @@
 # @borrowdale/charts
 
+## 0.8.0
+
+### Minor Changes
+
+- 2f10ceb: Add trees. A `hierarchy` series now also draws its tree as nodes joined by links: a `tree` running right, left, down or up, tidy or as a dendrogram (`layout: 'cluster'`), its links `curved`, at right angles (`elbow`) or `straight`, each node a dot or, with `shape: 'box'`, its name in a box, as an organisation chart draws it; a `radialTree` around a whole or part circle; an `indentedTree`, which lists it; and a `wordTree`, each word larger for a larger value. With `distance: 'length'`, every node below the root gives its `length` from its parent, so a phylogenetic tree draws its branch lengths. These four displays draw the root, and a leaf may leave out its value, its parents' tooltips then naming them without one. Names are written beside their nodes, cut short to the room they have and left out where they would cross another name or leave the plot. The layouts are d3-hierarchy's tidy tree and cluster, placed with the same arithmetic in every engine. Adding these `display` values widens `HierarchySeries`, and `TreeNode` is the type of their data. `hierarchyPath(names)` writes a node's path as its tooltip names it, `Home › Rent`, for a table or a caption to match.
+
+### Patch Changes
+
+- 7988912: In a treemap, sunburst, icicle or circle packing, a tooltip whose path below the root starts with an empty name now keeps that name's place, as an empty name further down already did: ` › Rent: 1,150` rather than `Rent: 1,150`.
+- 4fe7379: The error for a layout node of an unknown kind, which only a layout built by hand can hold, now writes that kind quoted and escaped, as every other rejected value is written, rather than as raw text.
+- @borrowdale/core@0.8.0
+  - @borrowdale/text@0.8.0
+
 ## 0.7.0
 
 ### Minor Changes
