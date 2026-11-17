@@ -8,6 +8,28 @@ The four packages share one version and are released together. Each release also
 [GitHub](https://github.com/borrowdale/borrowdale/releases), and the
 [commit history](https://github.com/borrowdale/borrowdale/commits/main/) records every source change.
 
+## 0.8.0
+
+Published on 17 November 2026:
+
+- **`@borrowdale/charts`:** trees. A `hierarchy` series now also draws its tree as nodes joined by
+  links, with four more `display`s: a `tree`, running right, left, down or up, tidy or as a
+  dendrogram (`layout: 'cluster'`), its links `curved`, `elbow` or `straight`, and each node a dot or,
+  with `shape: 'box'`, its name in a box, as an organisation chart draws it; a `radialTree` around a
+  whole or part circle; an `indentedTree`, which lists the tree; and a `wordTree`, each word larger
+  for a larger value. With `distance: 'length'`, a tree or a radial tree places each node its
+  `length` from its parent, as a phylogenetic tree does. These displays draw the root, and a leaf may
+  leave out its value. The limits are the same: at most 2,000 nodes and 10 levels below the root.
+  `hierarchyPath(names)` writes a node's path as its tooltip names it, for a table or a caption to
+  match.
+- **Two fixes in `@borrowdale/charts`:** the error for a layout node of an unknown kind, which only a
+  layout built by hand can hold, writes that kind quoted and escaped; and a tooltip whose path starts
+  with an empty name keeps that name's place, as in ` › Rent: 1,150`.
+- **`@borrowdale/core`, `@borrowdale/fills` and `@borrowdale/text`:** only the version changes.
+
+Everything else 0.7.0 offered works as before. The website's playground has 10 tree examples, and
+the earthquake dashboard nests its magnitude classes by depth in a treemap.
+
 ## 0.7.0
 
 Published on 13 November 2026:
