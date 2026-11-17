@@ -82,11 +82,11 @@ interface HierarchyOptions {
   /** How a parent is joined to each child: `straight`, `elbow` (at right angles) or `curved` (the default). */
   links?: TreeLinks | undefined;
   /** A `tree`'s nodes: `dot` (the default) draws a dot at each; `box` draws its name in a box, as an organisation chart does. */
-  nodeShape?: TreeNodeShape | undefined;
+  shape?: TreeNodeShape | undefined;
   /**
    * `depth` (the default) spaces the levels evenly; `length` places each node its `length` beyond its
    * parent, as a phylogenetic tree places them by their branch lengths: at least one above 0, and not
-   * with `nodeShape: 'box'`.
+   * with `shape: 'box'`.
    */
   distance?: TreeDistance | undefined;
   /**
@@ -108,9 +108,9 @@ const SPACE_FILLING_DISPLAYS = {
 
 /** The options each display that draws nodes joined by links takes: its leaves may have no value. */
 const NODE_LINK_DISPLAYS = {
-  tree: ['direction', 'layout', 'links', 'nodeShape', 'distance', 'sort', 'dataLabels'],
+  tree: ['direction', 'layout', 'links', 'shape', 'distance', 'sort', 'dataLabels'],
   radialTree: ['startAngle', 'endAngle', 'layout', 'links', 'distance', 'sort', 'dataLabels'],
-  indented: ['sort', 'dataLabels'],
+  indentedTree: ['sort', 'dataLabels'],
   wordTree: ['sort', 'dataLabels'],
 } as const satisfies Record<string, readonly (keyof HierarchyOptions)[]>;
 
@@ -152,7 +152,7 @@ export type TreeNode =
  * rectangles, a `sunburst` of rings, an `icicle` of bands (a flame graph runs `up`), or circles
  * packed in circles (`pack`), each leaf's area, or its length across its band, in proportion to its
  * value, the root not drawn; or nodes joined by links from the root, as a `tree`, a `radialTree`, an
- * `indented` list or a `wordTree`. Each branch below the root takes the next palette colour, and the
+ * `indentedTree` list or a `wordTree`. Each branch below the root takes the next palette colour, and the
  * legend lists them.
  */
 export type HierarchySeries = SeriesBase & { type: 'hierarchy' } & (
@@ -258,9 +258,9 @@ function readSpaceFilling(r: Fields, path: string, reserve: (count: number) => v
 /** A tree drawn as nodes and links: a leaf's value may be left out, and its parent's is then missing. */
 function readNodeLink(r: Fields, path: string, reserve: (count: number) => void, display: NodeLinkDisplay) {
   const distance = r.optional('distance', oneOf(DISTANCES)) ?? 'depth';
-  const nodeShape = r.optional('nodeShape', oneOf(NODE_SHAPES)) ?? 'dot';
-  if (nodeShape === 'box' && distance === 'length') {
-    fail(`${path}.nodeShape`, "must be 'dot' with distance: 'length': boxes are spaced a level apart, so they cannot show lengths");
+  const shape = r.optional('shape', oneOf(NODE_SHAPES)) ?? 'dot';
+  if (shape === 'box' && distance === 'length') {
+    fail(`${path}.shape`, "must be 'dot' with distance: 'length': boxes are spaced a level apart, so they cannot show lengths");
   }
   // A length is read where the levels are spaced by it, and refused elsewhere, where it would draw
   // nothing.
@@ -292,7 +292,7 @@ function readNodeLink(r: Fields, path: string, reserve: (count: number) => void,
     root,
     layout: r.optional('layout', oneOf(LAYOUTS)) ?? 'tidy',
     links: r.optional('links', oneOf(LINKS)) ?? 'curved',
-    nodeShape,
+    shape,
     distance,
     direction: r.optional('direction', oneOf(DIRECTIONS)) ?? 'right',
     ...checkSweep(r, path),

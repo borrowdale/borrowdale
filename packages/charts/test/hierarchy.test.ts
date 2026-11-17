@@ -321,9 +321,9 @@ describe('hierarchies', () => {
     ['sunburst', { startAngle: -90, endAngle: 90, cornerRadius: 4 }],
     ['icicle', { direction: 'left' }],
     ['pack', { padding: 6 }],
-    ['tree', { direction: 'left', nodeShape: 'box', links: 'elbow' }],
+    ['tree', { direction: 'left', shape: 'box', links: 'elbow' }],
     ['radialTree', { startAngle: -90, endAngle: 90, links: 'elbow' }],
-    ['indented', {}],
+    ['indentedTree', {}],
     ['wordTree', {}],
   ])('keep every stroke and label of a %s inside the chart', (display, options) => {
     expect(pointsOutside(layoutChart(hierarchy(TREE, { display, ...options })))).toBe(0);
@@ -362,7 +362,7 @@ describe('hierarchies', () => {
     ['icicle', { padding: 2 }],
     ['pack', { padding: 2 }],
     ['sunburst', { innerRadius: 0, startAngle: 0, endAngle: 360, cornerRadius: 0 }],
-    ['tree', { direction: 'right', layout: 'tidy', links: 'curved', nodeShape: 'dot', distance: 'depth' }],
+    ['tree', { direction: 'right', layout: 'tidy', links: 'curved', shape: 'dot', distance: 'depth' }],
     ['radialTree', { startAngle: 0, endAngle: 360, layout: 'tidy', links: 'curved', distance: 'depth' }],
   ])('draw a %s as its defaults spelt out draw it', (display, options) => {
     expect(drawn(hierarchy(TREE, { display }))).toEqual(drawn(hierarchy(TREE, { display, ...options })));

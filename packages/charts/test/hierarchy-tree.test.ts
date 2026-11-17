@@ -151,11 +151,11 @@ describe('hierarchies drawn as nodes and links', () => {
   });
 
   it('write each name of an organisation chart', () => {
-    expect(names(layoutChart(tree(FAMILY, { nodeShape: 'box', direction: 'down' })))).toEqual(['root', 'A', 'A1', 'A2', 'B']);
+    expect(names(layoutChart(tree(FAMILY, { shape: 'box', direction: 'down' })))).toEqual(['root', 'A', 'A1', 'A2', 'B']);
   });
 
   it('leave out every name of an indented tree whose rows are shorter than a line', () => {
-    expect(names(layoutChart(tree(wide(60), { display: 'indented' }, { height: 100 })))).toEqual([]);
+    expect(names(layoutChart(tree(wide(60), { display: 'indentedTree' }, { height: 100 })))).toEqual([]);
   });
 
   it('write a word tree\'s largest value larger than its smallest', () => {
@@ -176,9 +176,9 @@ describe('hierarchies drawn as nodes and links', () => {
   });
 
   it.each([
-    ['boxes running down', LONG_AT_EDGE, { nodeShape: 'box', direction: 'down' }],
-    ['boxes running down, at the right end', LONG_AT_RIGHT, { nodeShape: 'box', direction: 'down' }],
-    ['boxes running right', LONG_AT_EDGE, { nodeShape: 'box', direction: 'right' }],
+    ['boxes running down', LONG_AT_EDGE, { shape: 'box', direction: 'down' }],
+    ['boxes running down, at the right end', LONG_AT_RIGHT, { shape: 'box', direction: 'down' }],
+    ['boxes running right', LONG_AT_EDGE, { shape: 'box', direction: 'right' }],
     ['dots running up', LONG_AT_EDGE, { direction: 'up', links: 'elbow' }],
   ])("keep every stroke of a tree of %s inside the chart, a node alone at a row's end included", (_, data, options) => {
     expect(pointsOutside(layoutChart(tree(data, options)))).toBe(0);
@@ -228,7 +228,7 @@ describe('hierarchies drawn as nodes and links', () => {
     ['Ada', 'Lin', { width: 800, height: 600, fontSize: 19 }],
     ['Ada', 'Tony', { width: 800, height: 600 }],
   ])('write whole the names %s and %s in the boxes sized for them', (first, second, chart) => {
-    expect(names(layoutChart(tree({ name: 'CEO', children: [{ name: first }, { name: second }] }, { nodeShape: 'box', direction: 'down' }, chart)))).toEqual(['CEO', first, second]);
+    expect(names(layoutChart(tree({ name: 'CEO', children: [{ name: first }, { name: second }] }, { shape: 'box', direction: 'down' }, chart)))).toEqual(['CEO', first, second]);
   });
 
   it('write whole the widest leaf name of a radial tree, in the room kept for it at the rim', () => {
@@ -294,11 +294,13 @@ describe('hierarchy specs drawn as nodes and links', () => {
     ['a length the levels are not spaced by', tree(one({ name: 'A', length: 2 })), "series[0].data.children[0].length must be left out, or the series given distance: 'length': with distance: 'depth', lengths are not drawn"],
     ['a length on the root', tree({ ...one({ name: 'A', length: 1 }), length: 1 }, { distance: 'length' }), 'series[0].data.length must be left out: the root is where lengths start from'],
     ['a missing length', tree(one({ name: 'A' }), { distance: 'length' }), 'series[0].data.children[0].length is missing'],
-    ['a length on an indented tree', tree(one({ name: 'A', length: 1 }), { display: 'indented' }), "series[0].data.children[0].length must be left out: only a tree or a radialTree given distance: 'length' draws lengths"],
+    ['a length on an indented tree', tree(one({ name: 'A', length: 1 }), { display: 'indentedTree' }), "series[0].data.children[0].length must be left out: only a tree or a radialTree given distance: 'length' draws lengths"],
     ['no length above 0', tree(one({ name: 'A', length: 0 }), { distance: 'length' }), 'series[0].data has no length above 0, so every node would lie on the root'],
-    ['boxes on a radial tree', tree(one({ name: 'A' }), { display: 'radialTree', nodeShape: 'box' }), 'series[0] has an unknown key, "nodeShape"'],
-    ['boxes spaced by length', tree(one({ name: 'A', length: 1 }), { nodeShape: 'box', distance: 'length' }), "series[0].nodeShape must be 'dot' with distance: 'length': boxes are spaced a level apart, so they cannot show lengths"],
-    ['boxes spaced by length, before a missing length', tree(one({ name: 'A' }), { nodeShape: 'box', distance: 'length' }), "series[0].nodeShape must be 'dot' with distance: 'length': boxes are spaced a level apart, so they cannot show lengths"],
+    ['boxes on a radial tree', tree(one({ name: 'A' }), { display: 'radialTree', shape: 'box' }), 'series[0] has an unknown key, "shape"'],
+    ['the indented tree by an earlier name', tree(one({ name: 'A' }), { display: 'indented' }), 'series[0].display must be one of treemap, sunburst, icicle, pack, tree, radialTree, indentedTree, wordTree, got "indented"'],
+    ['a node shape by an earlier key', tree(one({ name: 'A' }), { nodeShape: 'box' }), 'series[0] has an unknown key, "nodeShape"'],
+    ['boxes spaced by length', tree(one({ name: 'A', length: 1 }), { shape: 'box', distance: 'length' }), "series[0].shape must be 'dot' with distance: 'length': boxes are spaced a level apart, so they cannot show lengths"],
+    ['boxes spaced by length, before a missing length', tree(one({ name: 'A' }), { shape: 'box', distance: 'length' }), "series[0].shape must be 'dot' with distance: 'length': boxes are spaced a level apart, so they cannot show lengths"],
     ['a root alone, before a bad sort', tree({ name: 'root' }, { sort: 1 }), 'series[0].data.children is missing: a tree of one node has no links to draw'],
     ['a sunburst\'s bad startAngle, before a bad innerRadius', tree(one({ name: 'A', value: 1 }), { display: 'sunburst', startAngle: 500, innerRadius: 5 }), 'series[0].startAngle must be a number from -360 to 360, got 500'],
     ['a treemap\'s bad parents, before a bad tile', tree(one({ name: 'A', value: 1 }), { display: 'treemap', tile: 'bogus', parents: 'bogus' }), 'series[0].parents must be one of hidden, nested, cascaded, got "bogus"'],
