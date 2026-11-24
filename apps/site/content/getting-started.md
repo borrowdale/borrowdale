@@ -58,6 +58,7 @@ Open http://127.0.0.1:5173/. The site imports the `@borrowdale/*` packages from 
 
 ```sh
 npm run site:build
+npx playwright-core install chromium   # once: the layout tests render pages in Chromium
 npm test --workspace @borrowdale/site
 ```
 

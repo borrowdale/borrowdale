@@ -75,7 +75,8 @@ async function bundleSource(entry: URL, name: string): Promise<string> {
   return chunk.code;
 }
 
-async function launch(engine: Engine): Promise<Browser> {
+/** Launches a headless `engine` the way every browser test does, naming the install command when the launch fails. */
+export async function launch(engine: Engine): Promise<Browser> {
   try {
     return await BROWSERS[engine].launch(LAUNCH[engine]);
   } catch (error) {
